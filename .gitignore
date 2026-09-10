@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+.env
+.env.local
+*.local
+npm-debug.log*
+.DS_Store
+/coverage
+/build
+next-env.d.ts
+# Never commit secrets or origin TLS material
+/deploy/secrets
+*.key
+*.pem
+deploy/.env.production

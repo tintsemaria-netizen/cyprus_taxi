@@ -1,0 +1,257 @@
+import { prisma } from '@/lib/db';
+import { computeFreshness, poorAccuracy } from '@/lib/freshness';
+import { demoEstimate } from '@/lib/places';
+import { allowedNext } from '@/lib/status-machine';
+import { BookingStatus } from '@prisma/client';
+
+// ---- Passenger tracking view (scoped, minimal fields) ----
+export async function trackingView(bookingId: string) {
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: { events: { orderBy: { createdAt: 'asc' } } },
+  });
+  if (!booking) return null;
+
+  const active = await prisma.assignment.findFirst({ where: { activeBookingId: booking.id } });
+  let vehicle = null as null | {
+    driverName: string;
+    make: string;
+    model: string;
+    color: string;
+    plate: string;
+    vClass: string;
+    phone: string | null;
+  };
+  let location = null as null | {
+    lat: number;
+    lng: number;
+    freshness: string;
+    poorAccuracy: boolean;
+    sampledAt: string;
+  };
+  let pickupEta: string | null = null;
+
+  if (active) {
+    vehicle = {
+      driverName: active.driverPublicName,
+      make: active.vehicleMake,
+      model: active.vehicleModel,
+      color: active.vehicleColor,
+      plate: active.vehiclePlate,
+      vClass: active.vehicleClass,
+      phone: active.driverPhone || null,
+    };
+    const loc = await prisma.latestDriverLocation.findUnique({ where: { driverId: active.driverId } });
+    if (loc) {
+      const freshness = computeFreshness(loc.sampledAt, loc.receivedAt);
+      // Do not expose an active precise position once disconnected.
+      if (freshness !== 'disconnected') {
+        location = {
+          lat: loc.lat,
+          lng: loc.lng,
+          freshness,
+          poorAccuracy: poorAccuracy(loc.accuracyM),
+          sampledAt: loc.sampledAt.toISOString(),
+        };
+        if (booking.status === 'EN_ROUTE' && freshness === 'fresh') {
+          const est = demoEstimate({ lat: loc.lat, lng: loc.lng }, { lat: booking.pickupLat, lng: booking.pickupLng });
+          pickupEta = `≈ ${est.etaMinutes} min (estimate)`;
+        }
+      }
+    }
+  }
+
+  return {
+    reference: booking.reference,
+    status: booking.status,
+    revision: booking.revision,
+    scheduledAt: booking.scheduledAt?.toISOString() ?? null,
+    pickup: { lat: booking.pickupLat, lng: booking.pickupLng, label: booking.pickupLabel },
+    dropoff: { lat: booking.dropoffLat, lng: booking.dropoffLng, label: booking.dropoffLabel },
+    passengerName: booking.passengerName,
+    vClass: booking.vClass,
+    passengerCount: booking.passengerCount,
+    fareWording: 'Fare confirmed by dispatcher',
+    vehicle,
+    location,
+    pickupEta: pickupEta ?? (booking.status === 'EN_ROUTE' ? 'ETA unavailable' : null),
+    canCancel: ['REQUESTED', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(booking.status),
+    timeline: booking.events.map((e) => ({ type: e.type, at: e.createdAt.toISOString(), status: e.afterStatus })),
+  };
+}
+
+// ---- Driver current-trip view ----
+export async function driverCurrentTrip(driverId: string) {
+  const active = await prisma.assignment.findFirst({
+    where: { activeDriverId: driverId },
+    include: { booking: true },
+  });
+  const driver = await prisma.driver.findUnique({ where: { id: driverId } });
+  if (!active) {
+    return { onDuty: driver?.onDuty ?? false, available: driver?.available ?? false, trip: null };
+  }
+  const b = active.booking;
+  return {
+    onDuty: driver?.onDuty ?? false,
+    available: driver?.available ?? false,
+    trip: {
+      bookingId: b.id,
+      reference: b.reference,
+      status: b.status,
+      revision: b.revision,
+      pickup: { lat: b.pickupLat, lng: b.pickupLng, label: b.pickupLabel },
+      dropoff: { lat: b.dropoffLat, lng: b.dropoffLng, label: b.dropoffLabel },
+      passengerName: b.passengerName,
+      passengerPhone: b.phone, // driver may contact passenger
+      note: b.note,
+      passengerCount: b.passengerCount,
+      vClass: b.vClass,
+      allowedNext: allowedNext(b.status as BookingStatus, 'DRIVER'),
+    },
+  };
+}
+
+// ---- Dispatch queue ----
+export interface QueueFilters {
+  status?: BookingStatus;
+  vClass?: 'COMFORT' | 'XL';
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export async function dispatchQueue(f: QueueFilters) {
+  const page = Math.max(1, f.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, f.pageSize ?? 25));
+  const where: Record<string, unknown> = {};
+  if (f.status) where.status = f.status;
+  if (f.vClass) where.vClass = f.vClass;
+  if (f.q) {
+    where.OR = [
+      { reference: { contains: f.q, mode: 'insensitive' } },
+      { phone: { contains: f.q } },
+    ];
+  }
+  const [rows, total] = await Promise.all([
+    prisma.booking.findMany({
+      where,
+      orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'desc' }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: { assignments: { where: { activeBookingId: { not: null } }, take: 1 } },
+    }),
+    prisma.booking.count({ where }),
+  ]);
+  return {
+    page,
+    pageSize,
+    total,
+    bookings: rows.map((b) => ({
+      id: b.id,
+      reference: b.reference,
+      status: b.status,
+      revision: b.revision,
+      vClass: b.vClass,
+      passengerCount: b.passengerCount,
+      pickupLabel: b.pickupLabel,
+      dropoffLabel: b.dropoffLabel,
+      scheduledAt: b.scheduledAt?.toISOString() ?? null,
+      createdAt: b.createdAt.toISOString(),
+      assignedDriver: b.assignments[0]?.driverPublicName ?? null,
+      dueSoon: b.scheduledAt ? b.scheduledAt.getTime() - Date.now() < 30 * 60 * 1000 : false,
+    })),
+  };
+}
+
+export async function dispatchDetail(id: string) {
+  const b = await prisma.booking.findUnique({
+    where: { id },
+    include: {
+      events: { orderBy: { createdAt: 'asc' } },
+      assignments: { orderBy: { assignedAt: 'desc' } },
+    },
+  });
+  if (!b) return null;
+  const active = b.assignments.find((a) => a.activeBookingId);
+  return {
+    id: b.id,
+    reference: b.reference,
+    status: b.status,
+    revision: b.revision,
+    pickup: { lat: b.pickupLat, lng: b.pickupLng, label: b.pickupLabel },
+    dropoff: { lat: b.dropoffLat, lng: b.dropoffLng, label: b.dropoffLabel },
+    passengerName: b.passengerName,
+    phone: b.phone,
+    note: b.note,
+    vClass: b.vClass,
+    passengerCount: b.passengerCount,
+    scheduledAt: b.scheduledAt?.toISOString() ?? null,
+    createdAt: b.createdAt.toISOString(),
+    allowedNext: allowedNext(b.status as BookingStatus, 'STAFF'),
+    activeAssignment: active
+      ? { driverName: active.driverPublicName, plate: active.vehiclePlate, make: active.vehicleMake, model: active.vehicleModel, color: active.vehicleColor }
+      : null,
+    timeline: b.events.map((e) => ({
+      type: e.type,
+      at: e.createdAt.toISOString(),
+      before: e.beforeStatus,
+      after: e.afterStatus,
+      actorType: e.actorType,
+      reason: e.reason,
+    })),
+  };
+}
+
+// ---- Available drivers for the assignment dialog ----
+export async function availableDrivers() {
+  const busy = await prisma.assignment.findMany({
+    where: { activeDriverId: { not: null } },
+    select: { activeDriverId: true },
+  });
+  const busyIds = new Set(busy.map((b) => b.activeDriverId));
+  const drivers = await prisma.driver.findMany({
+    where: { active: true, onDuty: true, available: true },
+    include: { user: true, location: true, bindings: { where: { endedAt: null }, include: { vehicle: true } } },
+  });
+  return drivers
+    .filter((d) => d.user.active && !busyIds.has(d.id))
+    .map((d) => {
+      const binding = d.bindings[0];
+      const loc = d.location;
+      const freshness = loc ? computeFreshness(loc.sampledAt, loc.receivedAt) : 'disconnected';
+      return {
+        driverId: d.id,
+        name: d.publicName,
+        vehicle: binding
+          ? { vehicleId: binding.vehicle.id, plate: binding.vehicle.plate, vClass: binding.vehicle.vClass, seats: binding.vehicle.seats, label: `${binding.vehicle.make} ${binding.vehicle.model}` }
+          : null,
+        gpsFreshness: freshness,
+      };
+    });
+}
+
+// ---- Fleet map (on-duty latest positions) ----
+export async function fleet() {
+  const drivers = await prisma.driver.findMany({
+    where: { onDuty: true, active: true },
+    include: { location: true, assignments: { where: { activeDriverId: { not: null } }, take: 1, include: { booking: true } } },
+  });
+  return drivers
+    .map((d) => {
+      const loc = d.location;
+      if (!loc) return null;
+      const freshness = computeFreshness(loc.sampledAt, loc.receivedAt);
+      return {
+        driverId: d.id,
+        name: d.publicName,
+        lat: loc.lat,
+        lng: loc.lng,
+        freshness,
+        poorAccuracy: poorAccuracy(loc.accuracyM),
+        booking: d.assignments[0]?.booking
+          ? { reference: d.assignments[0].booking.reference, status: d.assignments[0].booking.status }
+          : null,
+      };
+    })
+    .filter(Boolean);
+}

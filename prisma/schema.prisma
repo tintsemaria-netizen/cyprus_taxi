@@ -1,0 +1,248 @@
+// Taxi Cyprus — data model (SPEC §7)
+// Concurrency invariants ("one ACTIVE assignment per booking/driver/vehicle") are
+// enforced by the database via nullable+unique "active*" columns: while an assignment
+// is active these equal the related id; when ended they are set NULL. Postgres allows
+// many NULLs in a UNIQUE column, so ended assignments never collide, but two active
+// assignments for the same driver/vehicle/booking are impossible.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  DISPATCHER
+  DRIVER
+}
+
+enum VehicleClass {
+  COMFORT
+  XL
+}
+
+enum BookingStatus {
+  REQUESTED
+  ASSIGNED
+  EN_ROUTE
+  ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+}
+
+model StaffUser {
+  id             String    @id @default(uuid())
+  login          String    @unique
+  passwordHash   String
+  role           Role
+  active         Boolean   @default(true)
+  sessionVersion Int       @default(1)
+  displayName    String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  driver   Driver?
+  sessions AuthSession[]
+}
+
+model Driver {
+  id          String   @id @default(uuid())
+  user        StaffUser @relation(fields: [userId], references: [id])
+  userId      String    @unique
+  publicName  String
+  phone       String    // operational contact shown to matched passenger
+  onDuty      Boolean   @default(false)
+  available   Boolean   @default(false)
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  bindings    DriverVehicleBinding[]
+  assignments Assignment[]
+  location    LatestDriverLocation?
+}
+
+model Vehicle {
+  id        String       @id @default(uuid())
+  plate     String       @unique
+  make      String
+  model     String
+  color     String
+  vClass    VehicleClass
+  seats     Int
+  active    Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  bindings    DriverVehicleBinding[]
+  assignments Assignment[]
+}
+
+model DriverVehicleBinding {
+  id         String    @id @default(uuid())
+  driver     Driver    @relation(fields: [driverId], references: [id])
+  driverId   String
+  vehicle    Vehicle   @relation(fields: [vehicleId], references: [id])
+  vehicleId  String
+  startedAt  DateTime  @default(now())
+  endedAt    DateTime?
+
+  // one current binding per driver and per vehicle (NULL when ended)
+  activeDriverId  String? @unique
+  activeVehicleId String? @unique
+
+  @@index([driverId])
+  @@index([vehicleId])
+}
+
+model Booking {
+  id             String        @id @default(uuid())
+  reference      String        @unique
+  pickupLat      Float
+  pickupLng      Float
+  pickupLabel    String
+  dropoffLat     Float
+  dropoffLng     Float
+  dropoffLabel   String
+  passengerName  String
+  phone          String
+  note           String?
+  vClass         VehicleClass
+  passengerCount Int
+  requestedAt    DateTime      @default(now())
+  scheduledAt    DateTime?
+  status         BookingStatus @default(REQUESTED)
+  revision       Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  assignments  Assignment[]
+  events       BookingEvent[]
+  grants       TrackingGrant[]
+
+  @@index([status, createdAt])
+  @@index([status, scheduledAt])
+  @@index([phone])
+}
+
+model Assignment {
+  id           String    @id @default(uuid())
+  booking      Booking   @relation(fields: [bookingId], references: [id])
+  bookingId    String
+  driver       Driver    @relation(fields: [driverId], references: [id])
+  driverId     String
+  vehicle      Vehicle   @relation(fields: [vehicleId], references: [id])
+  vehicleId    String
+
+  // Historical snapshots captured at assignment time (SPEC §4)
+  driverPublicName String
+  driverPhone      String
+  vehiclePlate     String
+  vehicleMake      String
+  vehicleModel     String
+  vehicleColor     String
+  vehicleClass     VehicleClass
+
+  assignedAt DateTime  @default(now())
+  endedAt    DateTime?
+  actor      String
+  reason     String?
+
+  // active* columns enforce single active assignment per booking/driver/vehicle
+  activeBookingId String? @unique
+  activeDriverId  String? @unique
+  activeVehicleId String? @unique
+
+  @@index([bookingId])
+  @@index([driverId])
+}
+
+model BookingEvent {
+  id           String   @id @default(uuid())
+  booking      Booking  @relation(fields: [bookingId], references: [id])
+  bookingId    String
+  type         String
+  actorType    String   // STAFF | DRIVER | PASSENGER | SYSTEM
+  actorId      String?
+  beforeStatus String?
+  afterStatus  String?
+  reason       String?
+  createdAt    DateTime @default(now())
+
+  @@index([bookingId, createdAt])
+}
+
+model LatestDriverLocation {
+  driver      Driver   @relation(fields: [driverId], references: [id])
+  driverId    String   @id
+  lat         Float
+  lng         Float
+  accuracyM   Float
+  heading     Float?
+  speed       Float?
+  sampledAt   DateTime
+  receivedAt  DateTime @default(now())
+  gpsSession  String
+  sequence    Int
+}
+
+model TrackingGrant {
+  id          String    @id @default(uuid())
+  booking     Booking   @relation(fields: [bookingId], references: [id])
+  bookingId   String
+  tokenDigest String    @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([bookingId])
+}
+
+model AuthSession {
+  id            String    @id @default(uuid())
+  sessionDigest String    @unique
+  user          StaffUser @relation(fields: [userId], references: [id])
+  userId        String
+  sessionVersion Int
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model IdempotencyReceipt {
+  id          String   @id @default(uuid())
+  scope       String
+  key         String
+  requestHash String
+  responseJson String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@unique([scope, key])
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String   // JSON-encoded value
+  updatedAt DateTime @updatedAt
+}
+
+model AuditEvent {
+  id        String   @id @default(uuid())
+  actorId   String?
+  actorRole String?
+  action    String
+  target    String?
+  detail    String?  // redacted, no secrets
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+coverage
+Taxi-Cyprus-Claude-Repo-Package
+Screenshot_1.png
+Screenshot_3.png
+.env
+.env.local
+deploy/.env.production
+deploy/secrets
+npm-debug.log*
