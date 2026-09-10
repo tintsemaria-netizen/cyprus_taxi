@@ -1,6 +1,7 @@
 # Taxi Cyprus — Beta release report
 
 **Status: DEPLOYED — publicly reachable beta.** Date: 2026-09-11.
+Release commit: `bad20ba88320b2e5242f4c7f20710de570fa44b5` (branch `main`, local; not yet pushed to GitHub — no push credentials in this environment). Repository: https://github.com/tintsemaria-netizen/cyprus_taxi
 
 ## Reachable URLs (live)
 
