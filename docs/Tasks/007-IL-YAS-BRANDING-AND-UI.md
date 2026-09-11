@@ -1,6 +1,6 @@
 Task 007 — IL-Yas branding and responsive booking UI
 
-Status: TODO
+Status: DONE (2026-09-11) — rebranded to IL-Yas; new lime Y logo + palette + generated icons; user-facing strings renamed (repo/domain/API/DB/cookies unchanged); tsc+build pass; redeployed (release 8d5e054, title/manifest/icons verified live). Real-browser layout QA + mobile screenshots UNVERIFIED (headless server, no browser/display).
 Repository: https://github.com/tintsemaria-netizen/cyprus_taxi
 Existing beta: https://cyprustaxi.ackedberryes.store
 
