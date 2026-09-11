@@ -24,7 +24,13 @@ export const createBookingSchema = z.object({
   pickup: coord,
   dropoff: coord,
   when: z.enum(['NOW', 'SCHEDULE']),
-  scheduledAt: z.string().datetime().optional(),
+  // Naive Europe/Nicosia wall time "YYYY-MM-DDTHH:mm" (interpreted server-side).
+  scheduledAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'Use a valid date and time.')
+    .optional(),
+  // Optional DST-fold disambiguation (offset in minutes east of UTC).
+  scheduleOffsetMin: z.number().int().optional(),
   vClass: z.enum(['COMFORT', 'XL']),
   passengerCount: z.number().int().min(1).max(6),
   passengerName: z.string().min(1).max(100),

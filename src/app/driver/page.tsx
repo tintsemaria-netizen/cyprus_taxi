@@ -108,10 +108,11 @@ function Driver() {
       });
       setGps((g) => ({ ...g, last: new Date().toLocaleTimeString('en-GB'), error: null }));
     } catch (e) {
-      if (e instanceof ApiRequestError && e.body.code === 'NO_ACTIVE_TRIP') {
+      // Duty/activation revoked → stop sharing. Out-of-order/transient errors are
+      // ignored; the newest sample sends on the next tick.
+      if (e instanceof ApiRequestError && (e.body.code === 'OFF_DUTY' || e.body.code === 'INACTIVE')) {
         stopGps();
       }
-      // out-of-order / transient errors are ignored; newest sample sends next tick
     }
   }
 
@@ -168,11 +169,11 @@ function Driver() {
             {gps.active ? (
               <button className="btn-ghost" onClick={stopGps}>Stop</button>
             ) : (
-              <button className="btn-primary" onClick={startGps} disabled={!data.trip}>Start sharing</button>
+              <button className="btn-primary" onClick={startGps}>Start sharing</button>
             )}
           </div>
           {gps.error && <p className="mt-2 text-xs text-danger">{gps.error}</p>}
-          <p className="mt-2 text-[11px] text-muted">Foreground GPS only. Switching apps or locking the screen may pause updates. Real device GPS — never simulated.</p>
+          <p className="mt-2 text-[11px] text-muted">Foreground GPS only, while on duty. Switching apps or locking the screen may pause updates. Real device GPS — never simulated.</p>
         </div>
       )}
 

@@ -10,7 +10,39 @@ function tileOrigin(): string {
   }
 }
 
-export function middleware(_req: NextRequest) {
+const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+// CSRF/origin defence for cookie-authorized mutations: if a browser sends an
+// Origin header, its host must match the request host (blocks cross-site and
+// sibling-subdomain origins). Non-browser API clients send no Origin and are
+// allowed — they cannot be victims of CSRF since they carry no ambient cookies.
+function originAllowed(req: NextRequest): boolean {
+  if (!MUTATING.has(req.method)) return true;
+  const origin = req.headers.get('origin');
+  if (!origin) return true; // non-browser client
+  let originHost: string;
+  try {
+    originHost = new URL(origin).host;
+  } catch {
+    return false;
+  }
+  const reqHost = req.headers.get('host') || '';
+  let baseHost = '';
+  try {
+    baseHost = new URL(process.env.APP_BASE_URL || '').host;
+  } catch {
+    /* ignore */
+  }
+  return originHost === reqHost || (baseHost !== '' && originHost === baseHost);
+}
+
+export function middleware(req: NextRequest) {
+  if (req.nextUrl.pathname.startsWith('/api/') && !originAllowed(req)) {
+    return NextResponse.json(
+      { error: { code: 'BAD_ORIGIN', message: 'Cross-origin request rejected.', fieldErrors: {}, requestId: '' } },
+      { status: 403, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
   const res = NextResponse.next();
   const tiles = tileOrigin();
   const csp = [

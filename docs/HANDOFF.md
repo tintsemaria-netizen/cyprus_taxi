@@ -14,6 +14,16 @@ Beta is IMPLEMENTED, TESTED and DEPLOYED publicly at https://cyprustaxi.ackedber
 - Migrations run automatically on container start (`prisma migrate deploy`).
 - Re-seed demo / bootstrap admin: `docker compose ... exec -e DEMO_PASSWORD=… taxi-app npm run seed`; `... exec -e ADMIN_LOGIN=admin -e ADMIN_PASSWORD=… taxi-app npm run bootstrap:admin`.
 
+## Task 004 (2026-09-11) — DONE
+Applied the code-review corrections in docs/Tasks/Task.md: transaction rollback + row-lock
+serialization in assignments.ts, atomic+encrypted idempotency (bookings.ts/tracking.ts/crypto.ts),
+GPS pre-assignment/duty/ordering (location.ts), BookingApp focus + Nicosia-tz schedule
+(timezone.ts), tracking no-fallback, origin guard (middleware), queue ordering, seed hardening,
+and DB-test gating + regressions. Ran guarded legacy receipt migration (scripts/migrate-receipts.ts)
+against prod. Rebuilt image, redeployed, smoke-tested live. Isolated test DB: run `taxi_cyprus_test`
+in a throwaway postgres, `prisma migrate deploy`, `tsx prisma/seed.ts` (DEMO_MODE=true DEMO_PASSWORD=…),
+then `DATABASE_URL=…_test npx vitest run`.
+
 ## Next actions (optional, not blocking)
 - Validate driver GPS on a physical phone over HTTPS; record result.
 - Run the ~10-min synthetic load exercise; record machine/results.

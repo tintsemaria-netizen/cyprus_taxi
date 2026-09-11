@@ -135,7 +135,9 @@ export async function dispatchQueue(f: QueueFilters) {
   const [rows, total] = await Promise.all([
     prisma.booking.findMany({
       where,
-      orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'desc' }],
+      // Immediate requests (null scheduledAt) first, newest first; then scheduled
+      // requests ordered by pickup time ascending. Explicit NULL handling.
+      orderBy: [{ scheduledAt: { sort: 'asc', nulls: 'first' } }, { createdAt: 'desc' }],
       skip: (page - 1) * pageSize,
       take: pageSize,
       include: { assignments: { where: { activeBookingId: { not: null } }, take: 1 } },

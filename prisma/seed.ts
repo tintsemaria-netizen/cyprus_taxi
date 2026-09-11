@@ -9,7 +9,17 @@ import bcrypt from 'bcryptjs';
 try { (process as unknown as { loadEnvFile: (p?: string) => void }).loadEnvFile('.env'); } catch { /* env already set */ }
 
 const prisma = new PrismaClient();
-const DEMO_PW = process.env.DEMO_PASSWORD || 'demo-password-2026';
+
+// Guard: synthetic seed only runs in explicit demo mode with a supplied password.
+if ((process.env.DEMO_MODE || '').toLowerCase() !== 'true') {
+  console.error('Refusing to seed: DEMO_MODE must be "true". This seed creates synthetic demo data only.');
+  process.exit(1);
+}
+const DEMO_PW: string = process.env.DEMO_PASSWORD ?? '';
+if (DEMO_PW.length < 8) {
+  console.error('Refusing to seed: set DEMO_PASSWORD (>=8 chars). No default credentials are provided.');
+  process.exit(1);
+}
 
 async function staff(login: string, role: 'ADMIN' | 'DISPATCHER' | 'DRIVER', displayName: string) {
   const passwordHash = await bcrypt.hash(DEMO_PW, 10);
@@ -79,7 +89,7 @@ async function main() {
   }
 
   console.log('Demo seed complete. Staff logins: admin / dispatcher / andreas / maria / petros');
-  console.log(`Demo password (all): ${DEMO_PW}`);
+  console.log('All demo staff use the DEMO_PASSWORD you supplied (not printed here).');
 }
 
 main()

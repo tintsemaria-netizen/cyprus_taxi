@@ -40,8 +40,12 @@ export default function TrackApp() {
   const [showDetails, setShowDetails] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const inFlight = useRef(false);
+  const ready = useRef(false); // start polling only after initial exchange/load
 
   const load = useCallback(async () => {
+    if (inFlight.current) return; // never overlap requests
+    inFlight.current = true;
     try {
       const v = await api<TrackView>('/tracking/booking');
       setView(v);
@@ -51,12 +55,16 @@ export default function TrackApp() {
       if (e instanceof ApiRequestError && e.status === 401) {
         setPhase('noauth');
       } else {
+        // Do not keep showing apparently-live vehicle data after an update failure.
         setReconnecting(true);
       }
+    } finally {
+      inFlight.current = false;
     }
   }, []);
 
-  // Exchange fragment token on first mount, then poll.
+  // Exchange fragment token on first mount, THEN poll. A failed exchange must not
+  // fall back to a previously stored booking cookie (SPEC §3 tracking).
   useEffect(() => {
     (async () => {
       const hash = window.location.hash;
@@ -65,18 +73,20 @@ export default function TrackApp() {
         try {
           await api('/tracking/exchange', { method: 'POST', body: { token: decodeURIComponent(m[1]) } });
         } catch {
-          /* fall through; load() will show noauth if needed */
+          history.replaceState(null, '', window.location.pathname);
+          setPhase('noauth'); // invalid/expired link — do NOT reveal any old cookie's booking
+          return;
         }
-        // Remove token from the address bar immediately.
         history.replaceState(null, '', window.location.pathname);
       }
       await load();
+      ready.current = true;
     })();
   }, [load]);
 
   useEffect(() => {
     function tick() {
-      if (document.visibilityState === 'visible') load();
+      if (ready.current && document.visibilityState === 'visible') load();
     }
     pollRef.current = setInterval(tick, 5000);
     document.addEventListener('visibilitychange', tick);

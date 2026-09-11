@@ -31,6 +31,7 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error }: Prop
   const [loading, setLoading] = useState(false);
   const [demo, setDemo] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reqSeq = useRef(0);
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,16 +53,18 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error }: Prop
       return;
     }
     setLoading(true);
+    const my = ++reqSeq.current;
     timer.current = setTimeout(async () => {
       try {
         const res = await api<{ demo: boolean; results: Result[] }>(`/places/search?q=${encodeURIComponent(t)}`);
+        if (my !== reqSeq.current) return; // a newer query superseded this one
         setResults(res.results);
         setDemo(res.demo);
         setOpen(true);
       } catch {
-        setResults([]);
+        if (my === reqSeq.current) setResults([]);
       } finally {
-        setLoading(false);
+        if (my === reqSeq.current) setLoading(false);
       }
     }, 250);
   }

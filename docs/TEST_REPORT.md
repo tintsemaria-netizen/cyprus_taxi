@@ -37,6 +37,13 @@ Booking (idempotent; retry returned same reference) → tracking token exchange 
 
 App container restarted; 3 bookings persisted; DB-backed staff session survived the restart.
 
+## Task 004 corrections — re-verification (2026-09-11)
+
+- **Automated: 17/17 passing** on an isolated `taxi_cyprus_test` DB (name gated; run fails loudly if not `_test`). New regression tests: encrypted-receipt-at-rest (no raw token), `USE_ASSIGN` guard, competing-revisions (one 409 via `SELECT … FOR UPDATE`), failed-reassignment rollback (old assignment/driver/revision preserved), GPS on-duty-pre-assignment accepted / off-duty rejected / older-cross-session rejected.
+- **tsc + production build:** pass.
+- **Live HTTPS smoke after redeploy:** idempotent retry returns same reference; scheduled booking sent as Europe/Nicosia wall time `11:19` → stored `08:19Z` (UTC+3); too-soon schedule → `SCHEDULE_TOO_SOON`; cross-origin POST → `BAD_ORIGIN`, same-origin login → OK; generic status `ASSIGNED` → `USE_ASSIGN`; full assign → EN_ROUTE → ARRIVED → IN_PROGRESS → COMPLETED.
+- **Encrypted at rest:** receipts are `v1:`-prefixed AES-256-GCM; guarded legacy migration re-encrypted the 1 pre-existing plaintext row → 0 plaintext token rows remain. DB backed up first (`deploy/backups/`).
+
 ## Not run / pending
 
 - Physical-device GPS on a real phone (needs a device on the HTTPS site) — **unverified**.
