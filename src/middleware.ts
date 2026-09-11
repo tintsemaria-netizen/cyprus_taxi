@@ -71,5 +71,5 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   // Apply to everything except static assets.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg|icon-maskable.svg|manifest.webmanifest).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons/|manifest.webmanifest).*)'],
 };

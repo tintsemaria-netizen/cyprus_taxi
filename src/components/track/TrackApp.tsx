@@ -269,7 +269,7 @@ export default function TrackApp() {
                 {terminal && (
                   <div className="mt-4">
                     <div className="rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-                      {view.status === 'COMPLETED' ? 'Thanks for riding with Taxi Cyprus.' : 'This booking was canceled.'}
+                      {view.status === 'COMPLETED' ? 'Thanks for riding with IL-Yas.' : 'This booking was canceled.'}
                     </div>
                     <a href="/" className="btn-primary mt-3 w-full">Book another ride</a>
                   </div>

@@ -219,7 +219,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
             {/* fixed selection pin at the visual centre */}
             <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full">
               <svg width="34" height="46" viewBox="0 0 34 46" aria-hidden>
-                <path d="M17 0C7.6 0 0 7.6 0 17c0 12 17 29 17 29s17-17 17-29C34 7.6 26.4 0 17 0z" fill="#C8FF52" stroke="#0d1608" strokeWidth="2" />
+                <path d="M17 0C7.6 0 0 7.6 0 17c0 12 17 29 17 29s17-17 17-29C34 7.6 26.4 0 17 0z" fill="#C8FF46" stroke="#0d1608" strokeWidth="2" />
                 <circle cx="17" cy="17" r="6" fill="#0d1608" />
               </svg>
             </div>

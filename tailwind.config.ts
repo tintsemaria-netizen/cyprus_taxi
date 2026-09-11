@@ -5,15 +5,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Approved dark graphite + lime tokens (SPEC §2)
-        page: '#111719',
-        panel: '#1B2226',
-        elevated: '#252D31',
-        edge: '#343D42',
-        accent: '#C8FF52',
-        'accent-dim': '#A9DE3A',
-        ink: '#F5F7F6',
-        muted: '#A4AFB6',
+        // IL-Yas brand palette (Task 007): charcoal / surface / lime / off-white.
+        page: '#10191C',
+        panel: '#1D282D',
+        elevated: '#26333A',
+        edge: '#33424A',
+        accent: '#C8FF46',
+        'accent-dim': '#AEE23A',
+        ink: '#F4F7F5',
+        muted: '#9FB0B6',
         danger: '#FF6B6B',
         warn: '#FFC857',
         ok: '#4ADE80',

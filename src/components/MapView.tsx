@@ -44,7 +44,7 @@ function demoStyle(): maplibregl.StyleSpecification {
   };
 }
 
-const COLORS = { pickup: '#C8FF52', dropoff: '#F5F7F6', vehicle: '#C8FF52' };
+const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46' };
 
 export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -151,7 +151,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         type: 'line',
         source: id,
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#C8FF52', 'line-width': 4, 'line-opacity': 0.9 },
+        paint: { 'line-color': '#C8FF46', 'line-width': 4, 'line-opacity': 0.9 },
       });
     }
   }, [route, ready]);

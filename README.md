@@ -1,6 +1,8 @@
-# Taxi Cyprus
+# IL-Yas
 
-Web-first taxi booking and vehicle-tracking application. Dark graphite UI with lime accents.
+> Product name: **IL-Yas**. The repository name, domain (`cyprustaxi.ackedberryes.store`), API paths, database names, cookies and secrets are intentionally unchanged — the rename is a visible rebrand only.
+
+Web-first taxi booking and vehicle-tracking application. Dark charcoal UI with lime accents.
 Passenger booking + secure tracking, dispatcher assignment + fleet map, driver foreground GPS,
 admin, and a durable PostgreSQL backend. Built with Next.js 15 (App Router) + TypeScript + Prisma.
 
