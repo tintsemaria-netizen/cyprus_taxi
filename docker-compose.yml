@@ -39,6 +39,7 @@ services:
       NEXT_PUBLIC_MAP_TILES: ${NEXT_PUBLIC_MAP_TILES}
       NEXT_PUBLIC_MAP_ATTRIBUTION: ${NEXT_PUBLIC_MAP_ATTRIBUTION}
       TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS}
+      APP_RELEASE: ${APP_RELEASE:-unknown}
     # Bind only to loopback; nginx on the host proxies this vhost.
     ports:
       - '127.0.0.1:${APP_HOST_PORT}:3000'

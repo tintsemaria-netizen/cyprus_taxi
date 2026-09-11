@@ -66,6 +66,10 @@ async function validateCandidate(
   acknowledgeNoGps: boolean | undefined,
   excludeBookingId?: string,
 ) {
+  // Lock driver + vehicle rows so concurrent deactivation/binding changes serialize
+  // against this assignment (consistent order: booking → driver → vehicle).
+  await tx.$executeRaw`SELECT 1 FROM "Driver" WHERE id = ${driverId} FOR UPDATE`;
+  await tx.$executeRaw`SELECT 1 FROM "Vehicle" WHERE id = ${vehicleId} FOR UPDATE`;
   const driver = await tx.driver.findUnique({ where: { id: driverId }, include: { location: true, user: true } });
   if (!driver || !driver.active || !driver.user.active) throw unprocessable('DRIVER_UNAVAILABLE', 'Driver is not active.');
   if (!driver.onDuty || !driver.available) throw unprocessable('DRIVER_UNAVAILABLE', 'Driver is not on duty and available.');

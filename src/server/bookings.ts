@@ -10,7 +10,7 @@ import { Prisma } from '@prisma/client';
 
 export type CreateResult =
   | { ok: true; body: BookingCreatedBody }
-  | { ok: false; status: number; code: string; message: string; fieldErrors?: Record<string, string> };
+  | { ok: false; status: number; code: string; message: string; fieldErrors?: Record<string, string>; extra?: Record<string, unknown> };
 
 export interface BookingCreatedBody {
   bookingId: string;
@@ -88,7 +88,12 @@ export async function createBooking(
     const conv = nicosiaWallTimeToUtc(input.scheduledAt, input.scheduleOffsetMin);
     if (!conv.ok) {
       if (conv.reason === 'GAP') return fail(422, 'SCHEDULE_NONEXISTENT', 'That local time does not exist (clocks spring forward).', { scheduledAt: 'Pick a valid time.' });
-      return fail(422, 'SCHEDULE_AMBIGUOUS', 'That local time is ambiguous (clocks fall back). Choose which occurrence.', { scheduledAt: 'Ambiguous time — choose an offset.' });
+      return {
+        ok: false, status: 422, code: 'SCHEDULE_AMBIGUOUS',
+        message: 'That local time is ambiguous (clocks fall back). Choose which occurrence.',
+        fieldErrors: { scheduledAt: 'Ambiguous time — choose an occurrence.' },
+        extra: { scheduleOptions: conv.options ?? [] },
+      };
     }
     const when = conv.utc;
     const now = Date.now();

@@ -1,7 +1,9 @@
 # Taxi Cyprus — Beta release report
 
-**Status: DEPLOYED — publicly reachable beta.** Date: 2026-09-11.
-Release commit: `bad20ba88320b2e5242f4c7f20710de570fa44b5` (branch `main`, local; not yet pushed to GitHub — no push credentials in this environment). Repository: https://github.com/tintsemaria-netizen/cyprus_taxi
+**Status: DEPLOYED — publicly reachable beta.** Last updated: 2026-09-11 (Tasks 004 + 005 + 006 applied).
+Repository: https://github.com/tintsemaria-netizen/cyprus_taxi (branch `main`, pushed). The live release id
+is exposed (non-secret) at `GET /api/v1/health/live` → `release`, set from the deployed commit SHA. See the
+git log for the exact current SHA; deployment records it in `deploy/.env.production` (`APP_RELEASE`).
 
 ## Reachable URLs (live)
 

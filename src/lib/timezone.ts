@@ -47,28 +47,47 @@ export type WallConversion =
   | { ok: true; utc: Date }
   | { ok: false; reason: 'GAP' | 'AMBIGUOUS'; options?: string[] };
 
+// Strict full-format validator: real calendar date + 24h time.
+function parseWall(local: string): Wall | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(local);
+  if (!m) return null;
+  const w: Wall = { y: +m[1], mo: +m[2], d: +m[3], h: +m[4], mi: +m[5] };
+  if (w.mo < 1 || w.mo > 12 || w.d < 1 || w.d > 31 || w.h > 23 || w.mi > 59) return null;
+  // Reject impossible calendar days (e.g. Feb 30) by round-tripping through Date.
+  const probe = new Date(Date.UTC(w.y, w.mo - 1, w.d));
+  if (probe.getUTCFullYear() !== w.y || probe.getUTCMonth() !== w.mo - 1 || probe.getUTCDate() !== w.d) return null;
+  return w;
+}
+
 // Parse "YYYY-MM-DDTHH:mm" (no timezone) as Europe/Nicosia wall time.
+// Enumerates every distinct UTC offset the zone uses in a wide window around the
+// target so autumn folds (two valid instants) and spring gaps (none) are both
+// detected regardless of which side of the transition the naive guess lands on.
 export function nicosiaWallTimeToUtc(local: string, preferOffsetMin?: number): WallConversion {
-  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(local);
-  if (!m) return { ok: false, reason: 'GAP' };
-  const want: Wall = { y: +m[1], mo: +m[2], d: +m[3], h: +m[4], mi: +m[5] };
+  const want = parseWall(local);
+  if (!want) return { ok: false, reason: 'GAP' };
   const guess = Date.UTC(want.y, want.mo - 1, want.d, want.h, want.mi);
 
-  const off1 = offsetMinutes(guess, TZ);
-  const cand1 = guess - off1 * 60000;
-  const off2 = offsetMinutes(cand1, TZ);
-  const cand2 = guess - off2 * 60000;
+  // Collect the distinct offsets in effect within ±18h of the guess (covers any
+  // DST transition on the day, in either direction).
+  const offsets = new Set<number>();
+  for (let k = -18; k <= 18; k++) offsets.add(offsetMinutes(guess + k * 3600_000, TZ));
 
-  const candidates = Array.from(new Set([cand1, cand2]));
-  const valid = candidates.filter((c) => sameWall(wallInTz(c, TZ), want));
+  // A UTC instant t represents the wall time iff t = guess - offset(t). Test each
+  // candidate offset and keep those that round-trip to exactly the requested wall time.
+  const valid: number[] = [];
+  for (const off of offsets) {
+    const cand = guess - off * 60000;
+    if (sameWall(wallInTz(cand, TZ), want) && !valid.includes(cand)) valid.push(cand);
+  }
 
   if (valid.length === 0) return { ok: false, reason: 'GAP' }; // spring-forward nonexistent time
   if (valid.length === 1) return { ok: true, utc: new Date(valid[0]) };
 
-  // Ambiguous (autumn fold): require an explicit choice unless one was provided.
+  // Ambiguous (autumn fold): require an explicit offset choice unless provided.
   if (typeof preferOffsetMin === 'number') {
     const chosen = valid.find((c) => offsetMinutes(c, TZ) === preferOffsetMin);
     if (chosen !== undefined) return { ok: true, utc: new Date(chosen) };
   }
-  return { ok: false, reason: 'AMBIGUOUS', options: valid.map((c) => `${offsetMinutes(c, TZ)}`) };
+  return { ok: false, reason: 'AMBIGUOUS', options: valid.map((c) => `${offsetMinutes(c, TZ)}`).sort((a, b) => Number(b) - Number(a)) };
 }

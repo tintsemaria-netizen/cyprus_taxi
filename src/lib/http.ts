@@ -13,10 +13,11 @@ export function apiError(
   code: string,
   message: string,
   fieldErrors: FieldErrors = {},
+  extra?: Record<string, unknown>,
 ) {
   const rid = requestId();
   const res = NextResponse.json(
-    { error: { code, message, fieldErrors, requestId: rid } },
+    { error: { code, message, fieldErrors, requestId: rid, ...(extra || {}) } },
     { status },
   );
   applyPrivateHeaders(res);

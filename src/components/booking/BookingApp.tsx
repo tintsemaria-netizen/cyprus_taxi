@@ -6,6 +6,7 @@ import MapView, { MapMarker } from '@/components/MapView';
 import { Logo } from '@/components/Brand';
 import { PlacesInput, Selected } from './PlacesInput';
 import { DemoBanner } from '@/components/DemoBanner';
+import MapPicker from './MapPicker';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 
 interface PublicConfig {
@@ -30,6 +31,8 @@ export default function BookingApp() {
   const [dropoffText, setDropoffText] = useState('');
   const [when, setWhen] = useState<'NOW' | 'SCHEDULE'>('NOW');
   const [scheduledAt, setScheduledAt] = useState('');
+  const [scheduleOffsetMin, setScheduleOffsetMin] = useState<number | undefined>(undefined);
+  const [ambiguous, setAmbiguous] = useState<string[] | null>(null);
   const [vClass, setVClass] = useState<'COMFORT' | 'XL'>('COMFORT');
   const [pax, setPax] = useState(1);
   const [name, setName] = useState('');
@@ -39,7 +42,7 @@ export default function BookingApp() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [pickTarget, setPickTarget] = useState<'pickup' | 'dropoff' | null>(null);
+  const [picker, setPicker] = useState<'pickup' | 'dropoff' | null>(null);
 
   // Idempotency key persists across retries of the SAME payload; it is only
   // regenerated when the meaningful payload changes (SPEC §3.7).
@@ -59,8 +62,8 @@ export default function BookingApp() {
 
   const maxPax = cfg?.classes.find((c) => c.key === vClass)?.maxPassengers ?? (vClass === 'XL' ? 6 : 4);
 
-  function payloadSignature(): string {
-    return JSON.stringify({ pickup, dropoff, when, scheduledAt, vClass, pax, name: name.trim(), phone: phone.trim(), note: note.trim() });
+  function payloadSignature(offset = scheduleOffsetMin): string {
+    return JSON.stringify({ pickup, dropoff, when, scheduledAt, scheduleOffsetMin: offset, vClass, pax, name: name.trim(), phone: phone.trim(), note: note.trim() });
   }
 
   function validate(): boolean {
@@ -87,11 +90,12 @@ export default function BookingApp() {
     setStep('review');
   }
 
-  async function submit() {
+  async function submit(offsetOverride?: number) {
     if (!pickup || !dropoff) return;
-    // If the payload changed since the key was minted (shouldn't happen from review,
-    // but guard anyway), refresh the key so an edited payload isn't a key conflict.
-    const sig = payloadSignature();
+    const effOffset = offsetOverride ?? scheduleOffsetMin;
+    // If the payload changed since the key was minted (e.g. the user just chose a
+    // DST occurrence), refresh the key so an edited payload isn't a key conflict.
+    const sig = payloadSignature(effOffset);
     if (sig !== idemPayloadSig.current) {
       idemKey.current = uuid();
       idemPayloadSig.current = sig;
@@ -105,6 +109,7 @@ export default function BookingApp() {
         when,
         // Send the raw wall-clock string; the server interprets it as Europe/Nicosia.
         scheduledAt: when === 'SCHEDULE' ? scheduledAt : undefined,
+        scheduleOffsetMin: when === 'SCHEDULE' ? effOffset : undefined,
         vClass,
         passengerCount: pax,
         passengerName: name.trim(),
@@ -120,6 +125,14 @@ export default function BookingApp() {
       router.push('/track');
     } catch (err) {
       if (err instanceof ApiRequestError) {
+        if (err.body.code === 'SCHEDULE_AMBIGUOUS') {
+          // Keep the user on review and let them pick which occurrence they meant.
+          const opts = (err.body as unknown as { scheduleOptions?: string[] }).scheduleOptions || [];
+          setAmbiguous(opts.length ? opts : ['180', '120']);
+          setBanner(err.body.message);
+          setSubmitting(false);
+          return;
+        }
         if (err.body.fieldErrors && Object.keys(err.body.fieldErrors).length) {
           setErrors(err.body.fieldErrors);
           setStep('form');
@@ -132,17 +145,16 @@ export default function BookingApp() {
     }
   }
 
-  function onMapClick(p: { lat: number; lng: number }) {
-    if (!pickTarget) return;
-    const sel = { lat: p.lat, lng: p.lng, label: `Pin ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}` };
-    if (pickTarget === 'pickup') {
+  function onPickerConfirm(sel: Selected) {
+    // Update ONLY the field being edited; all other inputs are preserved.
+    if (picker === 'pickup') {
       setPickup(sel);
       setPickupText(sel.label);
-    } else {
+    } else if (picker === 'dropoff') {
       setDropoff(sel);
       setDropoffText(sel.label);
     }
-    setPickTarget(null);
+    setPicker(null);
   }
 
   const scheduleMin = useMemo(() => {
@@ -172,15 +184,8 @@ export default function BookingApp() {
 
       <div className="relative flex-1">
         <div className="absolute inset-0">
-          <MapView markers={markers} center={{ lat: 34.92, lng: 33.2 }} zoom={9} interactive onMapClick={onMapClick} className="h-full w-full" />
+          <MapView markers={markers} center={{ lat: 34.92, lng: 33.2 }} zoom={9} interactive className="h-full w-full" />
         </div>
-
-        {pickTarget && (
-          <div className="absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-full border border-accent/40 bg-page/90 px-4 py-2 text-sm text-accent">
-            Tap the map to set {pickTarget === 'pickup' ? 'pickup' : 'destination'} ·{' '}
-            <button className="underline" onClick={() => setPickTarget(null)}>cancel</button>
-          </div>
-        )}
 
         <div className="pointer-events-none absolute inset-0 flex flex-col justify-end sm:block">
           <div className="pointer-events-auto w-full sm:absolute sm:left-4 sm:top-4 sm:h-[calc(100%-2rem)] sm:w-[380px]">
@@ -197,7 +202,7 @@ export default function BookingApp() {
                     <div className="space-y-3">
                       <PlacesInput kind="From" value={pickup} text={pickupText} onText={setPickupText} onSelect={setPickup} error={errors.pickup} />
                       <div className="flex items-center justify-between">
-                        <button type="button" className="chip hover:border-accent/50" onClick={() => setPickTarget('pickup')}>⌖ Set pickup on map</button>
+                        <button type="button" className="chip hover:border-accent/50" onClick={() => setPicker('pickup')}>⌖ Set pickup on map</button>
                         <button
                           type="button"
                           className="chip hover:border-accent/50"
@@ -213,7 +218,7 @@ export default function BookingApp() {
                         </button>
                       </div>
                       <PlacesInput kind="To" value={dropoff} text={dropoffText} onText={setDropoffText} onSelect={setDropoff} error={errors.dropoff} />
-                      <button type="button" className="chip hover:border-accent/50" onClick={() => setPickTarget('dropoff')}>⌖ Set destination on map</button>
+                      <button type="button" className="chip hover:border-accent/50" onClick={() => setPicker('dropoff')}>⌖ Set destination on map</button>
                     </div>
 
                     <div className="mt-5">
@@ -226,7 +231,7 @@ export default function BookingApp() {
                       </div>
                       {when === 'SCHEDULE' && (
                         <div className="mt-2">
-                          <input type="datetime-local" className={`field ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => setScheduledAt(e.target.value)} />
+                          <input type="datetime-local" className={`field ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
                           <p className="mt-1 text-xs text-muted">Time is <strong>{cfg?.timezone ?? 'Europe/Nicosia'}</strong> (Cyprus) regardless of your device. A scheduled ride is a request awaiting dispatcher confirmation.</p>
                           {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
                         </div>
@@ -305,7 +310,28 @@ export default function BookingApp() {
                       {note && <Row label="Note" value={note} />}
                       <Row label="Fare" value="Confirmed by dispatcher" />
                     </div>
-                    <button className="btn-primary mt-5 w-full" onClick={submit} disabled={submitting}>{submitting ? 'Sending…' : 'Confirm request'}</button>
+                    {ambiguous ? (
+                      <div className="mt-4 rounded-[12px] border border-warn/40 bg-warn/10 p-3">
+                        <p className="text-sm text-warn">On this night the clocks change and this time occurs twice. Which one do you mean?</p>
+                        <div className="mt-2 grid gap-2">
+                          {ambiguous.map((off) => {
+                            const hrs = Number(off) / 60;
+                            return (
+                              <button
+                                key={off}
+                                className="btn-ghost w-full text-sm"
+                                disabled={submitting}
+                                onClick={() => { setScheduleOffsetMin(Number(off)); setAmbiguous(null); submit(Number(off)); }}
+                              >
+                                {scheduledAt.replace('T', ' ')} · {hrs >= 3 ? 'earlier (summer time' : 'later (winter time'}, UTC+{hrs})
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <button className="btn-primary mt-5 w-full" onClick={() => submit()} disabled={submitting}>{submitting ? 'Sending…' : 'Confirm request'}</button>
+                    )}
                     <p className="mt-2 text-center text-[11px] text-muted">You&apos;ll get a private tracking link. No driver is reserved until a dispatcher assigns one.</p>
                   </div>
                 )}
@@ -314,6 +340,16 @@ export default function BookingApp() {
           </div>
         </div>
       </div>
+
+      {picker && (
+        <MapPicker
+          kind={picker}
+          initial={picker === 'pickup' ? pickup : dropoff}
+          fallback={picker === 'pickup' ? (dropoff ?? null) : (pickup ?? null)}
+          onConfirm={onPickerConfirm}
+          onCancel={() => setPicker(null)}
+        />
+      )}
     </div>
   );
 }

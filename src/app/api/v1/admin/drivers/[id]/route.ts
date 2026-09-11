@@ -31,7 +31,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!driver) return Errors.notFound();
 
   let temporaryPassword: string | undefined;
+  let blocked = false;
   await prisma.$transaction(async (tx) => {
+    // Deactivation must not silently invalidate an active assignment: lock the driver
+    // row and re-check for an active trip inside the transaction (serializes with assign).
+    if (parsed.data.active === false) {
+      await tx.$executeRaw`SELECT 1 FROM "Driver" WHERE id = ${id} FOR UPDATE`;
+      const active = await tx.assignment.findFirst({ where: { activeDriverId: id } });
+      if (active) { blocked = true; return; }
+    }
     const driverData: Record<string, unknown> = {};
     if (parsed.data.publicName) driverData.publicName = parsed.data.publicName;
     if (parsed.data.phone) driverData.phone = parsed.data.phone;
@@ -53,5 +61,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await tx.auditEvent.create({ data: { actorId: ctx.user.id, actorRole: 'ADMIN', action: 'UPDATE_DRIVER', target: id } });
   });
 
+  if (blocked) return Errors.conflict('Driver has an active assignment; reassign or complete it first.');
   return apiOk({ ok: true, ...(temporaryPassword ? { temporaryPassword } : {}) });
 }

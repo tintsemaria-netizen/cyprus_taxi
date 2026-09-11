@@ -16,9 +16,10 @@ export async function POST(req: Request) {
   if (!validCoord(from as never) || !validCoord(to as never)) {
     return Errors.validation({ _: 'from and to must be valid coordinates.' });
   }
-  // Synthetic estimates are demo-only. In real mode without a configured router,
-  // report ETA unavailable instead of a fabricated straight-line figure.
-  if (!config.demoMode && !process.env.ROUTER_PROVIDER) {
+  // Synthetic estimates are demo-only. No real routing ADAPTER is implemented yet,
+  // so in live mode we always report ETA unavailable — a provider name/key is not an
+  // implemented adapter and must never trigger the straight-line demo estimate.
+  if (!config.demoMode) {
     return apiOk({ available: false, reason: 'No routing provider configured.' });
   }
   // DEMO estimate — clearly labelled, never presented as a real road route.

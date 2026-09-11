@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { canTransition, allowedNext, isTerminal } from '@/lib/status-machine';
 import { haversineMeters, pointInPolygon, DEMO_CYPRUS_POLYGON, validCoord } from '@/lib/geo';
 import { computeFreshness } from '@/lib/freshness';
-import { bookingReference } from '@/lib/crypto';
+import { bookingReference, encryptReceipt, decryptReceipt } from '@/lib/crypto';
+import { nicosiaWallTimeToUtc } from '@/lib/timezone';
 
 describe('status machine', () => {
   it('allows only legal transitions', () => {
@@ -56,5 +57,54 @@ describe('freshness', () => {
 describe('booking reference', () => {
   it('has expected shape', () => {
     expect(bookingReference()).toMatch(/^CY-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+  });
+});
+
+describe('Europe/Nicosia wall-time conversion', () => {
+  const iso = (r: ReturnType<typeof nicosiaWallTimeToUtc>) => (r.ok ? r.utc.toISOString() : `!${r.reason}`);
+
+  it('summer (UTC+3) and winter (UTC+2)', () => {
+    expect(iso(nicosiaWallTimeToUtc('2026-09-11T12:00'))).toBe('2026-09-11T09:00:00.000Z');
+    expect(iso(nicosiaWallTimeToUtc('2026-01-15T12:00'))).toBe('2026-01-15T10:00:00.000Z');
+  });
+
+  it('spring-forward gap is rejected', () => {
+    const r = nicosiaWallTimeToUtc('2026-03-29T03:30');
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('GAP');
+  });
+
+  it('autumn fold is ambiguous and honours an explicit offset choice', () => {
+    const r = nicosiaWallTimeToUtc('2026-10-25T03:30');
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.reason).toBe('AMBIGUOUS');
+      expect(r.options).toEqual(['180', '120']);
+    }
+    // UTC+3 occurrence
+    expect(iso(nicosiaWallTimeToUtc('2026-10-25T03:30', 180))).toBe('2026-10-25T00:30:00.000Z');
+    // UTC+2 occurrence
+    expect(iso(nicosiaWallTimeToUtc('2026-10-25T03:30', 120))).toBe('2026-10-25T01:30:00.000Z');
+  });
+
+  it('rejects invalid dates and malformed input', () => {
+    expect(nicosiaWallTimeToUtc('2026-02-30T10:00').ok).toBe(false);
+    expect(nicosiaWallTimeToUtc('not-a-date').ok).toBe(false);
+    expect(nicosiaWallTimeToUtc('2026-13-01T10:00').ok).toBe(false);
+    expect(nicosiaWallTimeToUtc('2026-09-11T25:00').ok).toBe(false);
+  });
+});
+
+describe('receipt encryption', () => {
+  it('round-trips and is not plaintext', () => {
+    const payload = JSON.stringify({ token: 'secret-token', reference: 'CY-XXXX-YYYY' });
+    const enc = encryptReceipt(payload);
+    expect(enc.startsWith('v1:')).toBe(true);
+    expect(enc.includes('secret-token')).toBe(false);
+    expect(decryptReceipt(enc)).toBe(payload);
+  });
+  it('reads legacy plaintext receipts as-is', () => {
+    const legacy = '{"token":"x"}';
+    expect(decryptReceipt(legacy)).toBe(legacy);
   });
 });

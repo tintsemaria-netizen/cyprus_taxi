@@ -39,9 +39,13 @@ export default function TrackApp() {
   const [reconnecting, setReconnecting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [disconnected, setDisconnected] = useState(false); // hide stale live data
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inFlight = useRef(false);
   const ready = useRef(false); // start polling only after initial exchange/load
+  // Keep the (unexchanged) token in memory ONLY so a transient exchange failure can
+  // be retried; it is never written to logs/URL/storage.
+  const tokenRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     if (inFlight.current) return; // never overlap requests
@@ -51,38 +55,56 @@ export default function TrackApp() {
       setView(v);
       setPhase('ready');
       setReconnecting(false);
+      setDisconnected(false);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 401) {
+        // Authorization revoked/expired — clear all protected state.
+        setView(null);
         setPhase('noauth');
       } else {
-        // Do not keep showing apparently-live vehicle data after an update failure.
+        // Transient network/server failure: mark reconnecting and HIDE apparently-live
+        // vehicle data (never keep an old fresh marker/ETA). Show a retry if we have
+        // nothing to display yet.
         setReconnecting(true);
+        setDisconnected(true);
+        setPhase((p) => (p === 'loading' ? 'error' : p));
       }
     } finally {
       inFlight.current = false;
     }
   }, []);
 
-  // Exchange fragment token on first mount, THEN poll. A failed exchange must not
-  // fall back to a previously stored booking cookie (SPEC §3 tracking).
-  useEffect(() => {
-    (async () => {
-      const hash = window.location.hash;
-      const m = hash.match(/token=([^&]+)/);
-      if (m) {
-        try {
-          await api('/tracking/exchange', { method: 'POST', body: { token: decodeURIComponent(m[1]) } });
-        } catch {
-          history.replaceState(null, '', window.location.pathname);
-          setPhase('noauth'); // invalid/expired link — do NOT reveal any old cookie's booking
+  // Attempt (or re-attempt) token exchange + initial load. Distinguishes a rejected
+  // token (discard, show noauth) from a transient failure (stay retryable).
+  const bootstrap = useCallback(async () => {
+    const token = tokenRef.current;
+    if (token) {
+      try {
+        await api('/tracking/exchange', { method: 'POST', body: { token } });
+        tokenRef.current = null; // consumed
+      } catch (e) {
+        if (e instanceof ApiRequestError && (e.status === 401 || e.status === 404 || e.status === 422)) {
+          tokenRef.current = null;
+          setView(null);
+          setPhase('noauth'); // invalid/expired link — never reveal an old cookie's booking
           return;
         }
-        history.replaceState(null, '', window.location.pathname);
+        setPhase('error'); // transient — keep the token for retry
+        return;
       }
-      await load();
-      ready.current = true;
-    })();
+    }
+    await load();
+    ready.current = true;
   }, [load]);
+
+  useEffect(() => {
+    const m = window.location.hash.match(/token=([^&]+)/);
+    if (m) {
+      tokenRef.current = decodeURIComponent(m[1]);
+      history.replaceState(null, '', window.location.pathname); // strip token from the address bar
+    }
+    bootstrap();
+  }, [bootstrap]);
 
   useEffect(() => {
     function tick() {
@@ -125,17 +147,33 @@ export default function TrackApp() {
       </Centered>
     );
   }
+  if (phase === 'error') {
+    return (
+      <Centered>
+        <div className="card max-w-sm p-6 text-center">
+          <Logo className="mb-4 justify-center" />
+          <h1 className="text-lg font-semibold">Can&apos;t reach the server</h1>
+          <p className="mt-2 text-sm text-muted">Check your connection and try again. Your booking is safe.</p>
+          <button className="btn-primary mt-4 w-full" onClick={() => { setPhase('loading'); bootstrap(); }}>Retry</button>
+          <a href="/" className="mt-3 block text-sm text-muted hover:text-ink">Book a new ride</a>
+        </div>
+      </Centered>
+    );
+  }
   if (!view) {
     return <Centered><div className="text-muted">Reconnecting…</div></Centered>;
   }
 
   const terminal = view.status === 'COMPLETED' || view.status === 'CANCELED';
+  // While disconnected we suppress the live vehicle position/ETA entirely — a stale
+  // marker must never look current.
+  const liveLocation = disconnected ? null : view.location;
   const markers: MapMarker[] = [{ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label }];
-  if (view.location) markers.push({ id: 'v', lat: view.location.lat, lng: view.location.lng, kind: 'vehicle', label: 'Your driver', stale: view.location.freshness === 'stale' });
+  if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: 'Your driver', stale: liveLocation.freshness === 'stale' });
 
   const headline =
     view.status === 'EN_ROUTE' && view.vehicle
-      ? `Meet ${view.vehicle.driverName}${view.pickupEta && view.pickupEta.includes('min') ? ' — ' + view.pickupEta.replace('≈ ', '').replace(' (estimate)', '') : ''}`
+      ? `Meet ${view.vehicle.driverName}${!disconnected && view.pickupEta && view.pickupEta.includes('min') ? ' — ' + view.pickupEta.replace('≈ ', '').replace(' (estimate)', '') : ''}`
       : STATUS_LABEL[view.status] ?? view.status;
 
   return (
@@ -191,12 +229,13 @@ export default function TrackApp() {
                   <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-ink" /><span className="text-muted">Destination</span><span className="ml-auto truncate font-medium">{view.dropoff.label}</span></div>
                 </div>
 
-                {view.location && (
+                {liveLocation && (
                   <p className="mt-2 text-[11px] text-muted">
-                    Location {view.location.freshness}{view.location.poorAccuracy ? ' · low accuracy' : ''} · updated {new Date(view.location.sampledAt).toLocaleTimeString('en-GB')}
+                    Location {liveLocation.freshness}{liveLocation.poorAccuracy ? ' · low accuracy' : ''} · updated {new Date(liveLocation.sampledAt).toLocaleTimeString('en-GB')}
                   </p>
                 )}
-                {view.status === 'EN_ROUTE' && !view.location && <p className="mt-2 text-[11px] text-muted">ETA unavailable — waiting for driver GPS.</p>}
+                {disconnected && <p className="mt-2 text-[11px] text-warn">Live position paused — reconnecting…</p>}
+                {view.status === 'EN_ROUTE' && !liveLocation && !disconnected && <p className="mt-2 text-[11px] text-muted">ETA unavailable — waiting for driver GPS.</p>}
 
                 {/* actions */}
                 {!terminal && (

@@ -183,4 +183,19 @@ describe('GPS ingestion', () => {
     expect(off.ok).toBe(false); // off-duty rejected
     if (!off.ok) expect(off.code).toBe('OFF_DUTY');
   });
+
+  it('within a session, a newer timestamp with a LOWER sequence is rejected', async () => {
+    const d = await prisma.driver.findFirst({ where: { publicName: 'Petros' } });
+    if (!d) throw new Error('fixture missing');
+    await prisma.latestDriverLocation.deleteMany({ where: { driverId: d.id } });
+    await prisma.driver.update({ where: { id: d.id }, data: { onDuty: true, available: true, active: true } });
+    const base = Date.now() - 10000;
+    expect((await ingestLocation(d.id, { lat: 34.9, lng: 33.2, accuracyM: 8, sampledAt: new Date(base + 1000).toISOString(), gpsSession: 'S1', sequence: 5 })).ok).toBe(true);
+    // newer time but reversed (lower) sequence in the same session → rejected
+    const rev = await ingestLocation(d.id, { lat: 34.91, lng: 33.21, accuracyM: 8, sampledAt: new Date(base + 2000).toISOString(), gpsSession: 'S1', sequence: 4 });
+    expect(rev.ok).toBe(false);
+    // proper monotonic increase (newer time AND higher sequence) → accepted
+    expect((await ingestLocation(d.id, { lat: 34.92, lng: 33.22, accuracyM: 8, sampledAt: new Date(base + 3000).toISOString(), gpsSession: 'S1', sequence: 6 })).ok).toBe(true);
+    await prisma.driver.update({ where: { id: d.id }, data: { onDuty: false } });
+  });
 });

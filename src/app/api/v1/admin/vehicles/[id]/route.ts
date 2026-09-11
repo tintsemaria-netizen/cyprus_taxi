@@ -32,10 +32,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!vehicle) return Errors.notFound();
 
   // Deactivating a vehicle with an active assignment is blocked (must reassign first).
-  if (parsed.data.active === false && (await prisma.assignment.findFirst({ where: { activeVehicleId: id } }))) {
-    return Errors.conflict('Vehicle has an active assignment; reassign it first.');
-  }
-  await prisma.vehicle.update({ where: { id }, data: parsed.data });
-  await prisma.auditEvent.create({ data: { actorId: ctx.user.id, actorRole: 'ADMIN', action: 'UPDATE_VEHICLE', target: id } });
+  // Lock + re-check inside a transaction so it can't race a concurrent assignment.
+  let blocked = false;
+  await prisma.$transaction(async (tx) => {
+    if (parsed.data.active === false) {
+      await tx.$executeRaw`SELECT 1 FROM "Vehicle" WHERE id = ${id} FOR UPDATE`;
+      if (await tx.assignment.findFirst({ where: { activeVehicleId: id } })) { blocked = true; return; }
+    }
+    await tx.vehicle.update({ where: { id }, data: parsed.data });
+    await tx.auditEvent.create({ data: { actorId: ctx.user.id, actorRole: 'ADMIN', action: 'UPDATE_VEHICLE', target: id } });
+  });
+  if (blocked) return Errors.conflict('Vehicle has an active assignment; reassign it first.');
   return apiOk({ ok: true });
 }

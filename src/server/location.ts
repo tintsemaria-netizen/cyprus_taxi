@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 
 export type IngestResult =
   | { ok: true }
@@ -32,43 +33,53 @@ export async function ingestLocation(
   if (!driver || !driver.active || !driver.user.active) return reject(403, 'INACTIVE', 'Driver is not active.');
   if (!driver.onDuty) return reject(409, 'OFF_DUTY', 'Driver is off duty; location not accepted.');
 
-  const existing = await prisma.latestDriverLocation.findUnique({ where: { driverId } });
-  if (existing) {
-    // Reject out-of-order / replayed samples ACROSS sessions (by time) and within a
-    // session (by sequence). A new session must still not accept an older position.
+  const data = {
+    lat: sample.lat, lng: sample.lng, accuracyM: sample.accuracyM,
+    heading: sample.heading ?? null, speed: sample.speed ?? null,
+    sampledAt, receivedAt: new Date(), gpsSession: sample.gpsSession, sequence: sample.sequence,
+  };
+
+  // Up to two attempts: if no row exists we insert; if a concurrent insert wins the
+  // race we retry as a conditional update (so the newer sample is not silently lost).
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const existing = await prisma.latestDriverLocation.findUnique({ where: { driverId } });
+
+    if (!existing) {
+      try {
+        await prisma.latestDriverLocation.create({ data: { driverId, ...data } });
+        return { ok: true };
+      } catch (e) {
+        // ONLY a uniqueness race is a retry; anything else is a real error (never
+        // mislabelled OUT_OF_ORDER).
+        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') continue;
+        throw e;
+      }
+    }
+
+    // Fast-path rejects with clear codes (the conditional write below is authoritative).
     if (sampledAt.getTime() <= existing.sampledAt.getTime()) {
       return reject(409, 'OUT_OF_ORDER', 'Older or duplicate sample ignored.');
     }
     if (existing.gpsSession === sample.gpsSession && sample.sequence <= existing.sequence) {
       return reject(409, 'OUT_OF_ORDER', 'Older or duplicate sample ignored.');
     }
-    // Guarded conditional write: only replace if the stored row is still older than
-    // this sample, so a concurrent newer sample cannot be clobbered by an older one.
-    const res = await prisma.latestDriverLocation.updateMany({
-      where: { driverId, sampledAt: { lt: sampledAt } },
-      data: {
-        lat: sample.lat, lng: sample.lng, accuracyM: sample.accuracyM,
-        heading: sample.heading ?? null, speed: sample.speed ?? null,
-        sampledAt, receivedAt: new Date(), gpsSession: sample.gpsSession, sequence: sample.sequence,
-      },
-    });
-    if (res.count === 0) return reject(409, 'OUT_OF_ORDER', 'A newer position was recorded concurrently.');
-    return { ok: true };
-  }
 
-  try {
-    await prisma.latestDriverLocation.create({
-      data: {
-        driverId, lat: sample.lat, lng: sample.lng, accuracyM: sample.accuracyM,
-        heading: sample.heading ?? null, speed: sample.speed ?? null,
-        sampledAt, receivedAt: new Date(), gpsSession: sample.gpsSession, sequence: sample.sequence,
+    // Atomic guarded write: replace only if the stored row is BOTH older by time AND
+    // (a new session OR a strictly higher in-session sequence). This preserves both
+    // monotonic requirements even under concurrent samples.
+    const res = await prisma.latestDriverLocation.updateMany({
+      where: {
+        driverId,
+        sampledAt: { lt: sampledAt },
+        OR: [{ gpsSession: { not: sample.gpsSession } }, { sequence: { lt: sample.sequence } }],
       },
+      data,
     });
-    return { ok: true };
-  } catch {
-    // A concurrent request created the row first; treat as a race and drop this sample.
+    if (res.count === 1) return { ok: true };
+    // count 0 → a concurrent newer sample won, or an in-session sequence reversal.
     return reject(409, 'OUT_OF_ORDER', 'A newer position was recorded concurrently.');
   }
+  return reject(409, 'OUT_OF_ORDER', 'Could not store sample after a concurrent update.');
 }
 
 function reject(status: number, code: string, message: string): IngestResult {

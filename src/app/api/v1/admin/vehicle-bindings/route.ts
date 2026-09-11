@@ -25,12 +25,15 @@ export async function POST(req: Request) {
   const driver = await prisma.driver.findUnique({ where: { id: parsed.data.driverId } });
   const vehicle = await prisma.vehicle.findUnique({ where: { id: parsed.data.vehicleId } });
   if (!driver || !vehicle) return Errors.notFound('Driver or vehicle not found.');
-  // Cannot rebind a driver/vehicle currently on an active trip.
-  if (await prisma.assignment.findFirst({ where: { activeDriverId: driver.id } })) return Errors.conflict('Driver is on an active trip.');
-  if (await prisma.assignment.findFirst({ where: { activeVehicleId: vehicle.id } })) return Errors.conflict('Vehicle is on an active trip.');
-
+  let blocked: string | null = null;
   try {
     await prisma.$transaction(async (tx) => {
+      // Lock driver + vehicle rows (same order as assignment) and re-check for an
+      // active trip INSIDE the transaction so binding can't race an assignment.
+      await tx.$executeRaw`SELECT 1 FROM "Driver" WHERE id = ${driver.id} FOR UPDATE`;
+      await tx.$executeRaw`SELECT 1 FROM "Vehicle" WHERE id = ${vehicle.id} FOR UPDATE`;
+      if (await tx.assignment.findFirst({ where: { activeDriverId: driver.id } })) { blocked = 'Driver is on an active trip.'; return; }
+      if (await tx.assignment.findFirst({ where: { activeVehicleId: vehicle.id } })) { blocked = 'Vehicle is on an active trip.'; return; }
       // End any current binding for this driver or vehicle.
       await tx.driverVehicleBinding.updateMany({
         where: { OR: [{ activeDriverId: driver.id }, { activeVehicleId: vehicle.id }] },
@@ -47,5 +50,6 @@ export async function POST(req: Request) {
     }
     throw e;
   }
+  if (blocked) return Errors.conflict(blocked);
   return apiOk({ ok: true }, 201);
 }

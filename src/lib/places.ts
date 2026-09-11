@@ -47,6 +47,24 @@ export function isDemoGeocoder(): boolean {
   return config.demoMode || !process.env.GEOCODER_PROVIDER;
 }
 
+// DEMO reverse geocode: return a known place name ONLY when the point is very close
+// to a fixture (so we never invent an address for an arbitrary pin). Otherwise the
+// caller shows honest coordinates.
+export function reverseLookup(lat: number, lng: number): { label: string } | null {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  let best: { label: string; dist: number } | null = null;
+  for (const p of CYPRUS_PLACES) {
+    const dLat = toRad(p.lat - lat);
+    const dLng = toRad(p.lng - lng);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat)) * Math.cos(toRad(p.lat)) * Math.sin(dLng / 2) ** 2;
+    const dist = 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+    if (!best || dist < best.dist) best = { label: p.label, dist };
+  }
+  // ~180 m threshold — close enough to genuinely be that landmark.
+  return best && best.dist <= 180 ? { label: best.label } : null;
+}
+
 // DEMO router: straight-line distance + a nominal average speed. The result is
 // explicitly labelled an estimate and never presented as a real road route.
 export function demoEstimate(a: LatLng, b: LatLng): { distanceKm: number; etaMinutes: number; estimate: true; demo: true } {

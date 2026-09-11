@@ -26,6 +26,6 @@ export async function POST(req: Request) {
   if (!parsed.success) return Errors.validation(zodFieldErrors(parsed.error));
 
   const result = await createBooking(parsed.data, idempotencyKey);
-  if (!result.ok) return apiError(result.status, result.code, result.message, result.fieldErrors);
+  if (!result.ok) return apiError(result.status, result.code, result.message, result.fieldErrors, result.extra);
   return apiOk(result.body, 201);
 }

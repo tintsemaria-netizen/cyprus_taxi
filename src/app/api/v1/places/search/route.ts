@@ -10,10 +10,11 @@ export async function GET(req: Request) {
   const rl = await rateLimit('places', ip, 60, 60);
   if (!rl.ok) return Errors.throttled(rl.retryAfter);
 
-  // Demo fixtures are used ONLY in explicit demo mode. In real-data mode a real
-  // geocoder must be configured; otherwise report the feature unavailable rather
-  // than fabricating places.
-  if (!config.demoMode && !process.env.GEOCODER_PROVIDER) {
+  // Demo fixtures are used ONLY in explicit demo mode. No real geocoder ADAPTER is
+  // implemented yet, so in live mode we ALWAYS report unavailable — a provider name
+  // or key in the environment is not an implemented adapter and must never cause the
+  // static fixture list to run. (When a real adapter exists, dispatch to it here.)
+  if (!config.demoMode) {
     return apiOk({ demo: false, unavailable: true, results: [] });
   }
 
