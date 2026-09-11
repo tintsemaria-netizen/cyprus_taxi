@@ -24,6 +24,15 @@ against prod. Rebuilt image, redeployed, smoke-tested live. Isolated test DB: ru
 in a throwaway postgres, `prisma migrate deploy`, `tsx prisma/seed.ts` (DEMO_MODE=true DEMO_PASSWORD=…),
 then `DATABASE_URL=…_test npx vitest run`.
 
+## Tasks 005 + 006 (2026-09-11) — DONE (code + deploy)
+Deployed release e8463870 (see /api/v1/health/live `release`). 005: DST fold ambiguity
+(timezone.ts + booking UI chooser), live-mode fixture gating, TrackApp outage/recovery,
+GPS write-condition/create-retry + driver/vehicle row-lock guards for deactivation/binding,
+health release id. 006: full-screen MapPicker (src/components/booking/MapPicker.tsx) +
+/api/v1/places/reverse. 24/24 tests on isolated _test DB. UNVERIFIED and left for a session
+with a real browser/phone: browser QA + mobile screenshots (Task 006), physical-device GPS,
+10-min load test.
+
 ## Next actions (optional, not blocking)
 - Validate driver GPS on a physical phone over HTTPS; record result.
 - Run the ~10-min synthetic load exercise; record machine/results.

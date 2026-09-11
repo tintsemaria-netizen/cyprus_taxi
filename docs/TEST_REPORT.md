@@ -44,6 +44,19 @@ App container restarted; 3 bookings persisted; DB-backed staff session survived 
 - **Live HTTPS smoke after redeploy:** idempotent retry returns same reference; scheduled booking sent as Europe/Nicosia wall time `11:19` → stored `08:19Z` (UTC+3); too-soon schedule → `SCHEDULE_TOO_SOON`; cross-origin POST → `BAD_ORIGIN`, same-origin login → OK; generic status `ASSIGNED` → `USE_ASSIGN`; full assign → EN_ROUTE → ARRIVED → IN_PROGRESS → COMPLETED.
 - **Encrypted at rest:** receipts are `v1:`-prefixed AES-256-GCM; guarded legacy migration re-encrypted the 1 pre-existing plaintext row → 0 plaintext token rows remain. DB backed up first (`deploy/backups/`).
 
+## Tasks 005 + 006 — re-verification (2026-09-11)
+
+- **Automated: 24/24** on an isolated `taxi_cyprus_test` DB. New: DST summer/winter/gap/**fold-with-both-choices**/invalid; receipt encrypt round-trip + legacy plaintext read; GPS within-session reversed-sequence rejection; (existing) reassignment rollback, competing revisions, encrypted-at-rest, atomicity.
+- **tsc + production build:** pass (build still skips lint — reported separately, not claimed).
+- **Live HTTPS smoke (release `e8463870…` shown at `/api/v1/health/live`):** autumn fold → `SCHEDULE_AMBIGUOUS` with `scheduleOptions:["180","120"]`; fold+offset → resolves (then `SCHEDULE_TOO_FAR`); spring gap → `SCHEDULE_NONEXISTENT`; reverse-geocode returns a fixture only when within ~180 m (else `null` → client shows coordinates); **admin deactivate-while-assigned → CONFLICT**, allowed after completion.
+- **Task 006 map picker:** implemented (full-screen selection mode, center-pin draft, browser geolocation + My location + accuracy circle, confirm/cancel/Escape/Back, resize handling, field preservation, async race guards). Page serves 200 with the picker wired in.
+
+### Explicitly UNVERIFIED (no capability on this headless server)
+- Real-browser interaction QA at 1440×900 / 390×844 / 360px and **mobile screenshots** (Task 006 asks for these) — no browser/display available; not captured.
+- Physical-phone foreground GPS (Android Chrome / iPhone Safari) — no device.
+- ~10-minute synthetic load exercise — not run.
+These are reported as pending, never as passed.
+
 ## Not run / pending
 
 - Physical-device GPS on a real phone (needs a device on the HTTPS site) — **unverified**.
