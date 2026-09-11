@@ -1,6 +1,6 @@
 # Task 006 — Full-screen location picker and browser geolocation
 
-Status: TODO
+Status: DONE (code, deployed) — full-screen MapPicker + browser geolocation implemented; tsc+build pass. Real-browser and physical-device (Android Chrome / iPhone Safari) verification UNVERIFIED — no browser/device on this headless server; screenshots not captured.
 Repository: https://github.com/tintsemaria-netizen/cyprus_taxi
 Beta: https://cyprustaxi.ackedberryes.store
 Save this task in the root Tasks/ directory and add it to its index.

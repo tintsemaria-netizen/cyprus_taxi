@@ -1,6 +1,6 @@
 # Task 005 — close verified residual defects and validate the web beta
 
-Status: TODO
+Status: DONE (2026-09-11) — all five areas implemented; 24/24 tests on an isolated _test DB; tsc+build pass; redeployed. Browser and physical-device gates remain UNVERIFIED (no browser/phone on this headless server).
 Repository: https://github.com/tintsemaria-netizen/cyprus_taxi
 Reviewed main: 73501623eceab40d65dcf16334225542435374d2
 Authorized beta: cyprustaxi.ackedberryes.store / 92.39.53.229
