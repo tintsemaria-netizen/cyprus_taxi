@@ -50,6 +50,25 @@ watermark, attribution "Tiles © Esri · © OpenStreetMap contributors"). This r
 a demo basemap; a licensed/authorized provider should be configured for production
 via `NEXT_PUBLIC_MAP_TILES` / `NEXT_PUBLIC_MAP_ATTRIBUTION`.
 
+## Picker "map not loading" fix (Task 009 §3A)
+
+Root cause found via a canvas/container measurement in the browser: the picker map
+container (`absolute inset-0`) resolved to **height 0** in the fixed-overlay flex
+layout, so MapLibre fell back to a 300px canvas and painted nothing (while the
+in-flow booking map rendered fine). Fixed with an explicit `h-full w-full` on the
+container (container/canvas now 598px). Added a loading state, a ResizeObserver +
+delayed resizes, Confirm gated until the map can display the point, a Retry that
+recreates the map, and unmounting the background booking map while the picker is
+open. Verified: `docs/qa-screenshots/mobile-picker-pickup.png` and
+`live-mobile-picker.png` show the Esri Cyprus basemap (Nicosia/Larnaca/Limassol
+labels, roads) with the lime centre pin.
+
+## Live deployed smoke
+
+A separate run against **https://cyprustaxi.ackedberryes.store** (release
+`2b8b455…`) opened the picker and confirmed real Esri tiles load (HTTP 200, zero
+blocked) — `docs/qa-screenshots/live-mobile-picker.png`.
+
 ## Not covered here
 
 - **Physical Android Chrome / iPhone Safari** — requires real devices; **pending** (emulation is not a physical-device GPS test).

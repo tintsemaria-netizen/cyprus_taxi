@@ -33,6 +33,16 @@ health release id. 006: full-screen MapPicker (src/components/booking/MapPicker.
 with a real browser/phone: browser QA + mobile screenshots (Task 006), physical-device GPS,
 10-min load test.
 
+## Tasks 008 + 009 (2026-09-12) — DONE (code + browser QA + deploy)
+Picker coord/address consistency (versioned draft) + lifecycle; fixed picker-not-loading
+(container h-full — was 0-height → 300px canvas); map provider switched to Esri Dark Gray
+(OSM 403s apps, Carto watermarks); Referrer-Policy strict-origin on pages / no-referrer on
+/track+/api. Root Tasks/ folder created with index; pointer at docs/Tasks/. Browser QA via
+Playwright in the official Docker image (host OS too old locally): `docs/BROWSER_QA.md`;
+screenshots in `docs/qa-screenshots/`. Totals: vitest 24/24 + Playwright 6/6. Live release
+2b8b455 verified (headers + real-tile picker). PENDING: physical Android/iPhone GPS, 10-min
+load, real geocoding/routing provider.
+
 ## Next actions (optional, not blocking)
 - Validate driver GPS on a physical phone over HTTPS; record result.
 - Run the ~10-min synthetic load exercise; record machine/results.

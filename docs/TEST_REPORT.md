@@ -57,6 +57,15 @@ App container restarted; 3 bookings persisted; DB-backed staff session survived 
 - ~10-minute synthetic load exercise — not run.
 These are reported as pending, never as passed.
 
+## Tasks 008 + 009 — re-verification (2026-09-12)
+
+- **Automated: vitest 24/24** (14 unit + 10 DB on an isolated `taxi_cyprus_test` DB) + **Playwright 6/6** (real chromium, in the official Playwright Docker image; this host's OS is too old for local browsers). Details/commands: `docs/BROWSER_QA.md`.
+- **Browser checks:** layout no-overflow at 1440/390/360; picker opens full-screen for both fields; form + other stop survive confirm; **coord/address consistency REGRESSION** (a delayed/stale reverse label is never confirmed — coordinate fallback instead); **real Esri tiles load HTTP 200** (zero blocked).
+- **Picker-not-loading fix** (root cause: container height 0 → 300px canvas; fixed with `h-full w-full`) — screenshots show the picker rendering the Cyprus basemap.
+- **Map provider:** OSM public tiles 403-block apps and Carto now watermarks → switched to **Esri Dark Gray** (no key/watermark). **Referrer-Policy** now `strict-origin-when-cross-origin` on ordinary pages (tile providers get the origin), `no-referrer` on `/track` + `/api` — verified on the live headers.
+- **Live deploy (release `2b8b455…`):** headers verified; live picker renders real tiles (`docs/qa-screenshots/live-mobile-picker.png`).
+- **tsc + production build:** pass. Lint is still skipped by the build (reported, not claimed).
+
 ## Not run / pending
 
 - Physical-device GPS on a real phone (needs a device on the HTTPS site) — **unverified**.
