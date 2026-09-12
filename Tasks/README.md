@@ -15,6 +15,7 @@ Status legend per stage — **impl** (code), **auto** (unit/DB tests), **browser
 | [007](007-IL-YAS-BRANDING-AND-UI.md) | Rebrand to IL-Yas (logo, palette, icons, metadata) | ✅ | ➖ | ⬜ | ⬜ | ✅ |
 | [008](008-MAP-PICKER-CORRECTNESS-AND-BROWSER-QA.md) | Picker coord/address consistency, lifecycle, **browser QA** | ✅ | ✅ | ✅ | ⬜ | ✅ |
 | [009](009-FIX-OSM-TILE-403.md) | Restore blocked map tiles + fix picker not loading | ✅ | ✅ | ✅ | ⬜ | ✅ |
+| [010](010-MAP-STABILITY-REAL-ADDRESSES-AND-BOOKING-FIXES.md) | Picker flicker/endless-resolving hotfix (done); Google Maps migration (pending keys) | ◑ | ✅ | ✅ | ⬜ | ✅ |
 
 ✅ done · ⬜ pending · ➖ n/a. **Automated + browser QA are done** (24 vitest + 6
 Playwright, see `docs/BROWSER_QA.md` and `docs/qa-screenshots/`). The remaining open

@@ -43,6 +43,21 @@ screenshots in `docs/qa-screenshots/`. Totals: vitest 24/24 + Playwright 6/6. Li
 2b8b455 verified (headers + real-tile picker). PENDING: physical Android/iPhone GPS, 10-min
 load, real geocoding/routing provider.
 
+## Task 010 (2026-09-12) — P0/P1 hotfix DONE + deployed; Google migration PENDING keys
+Fixed picker flicker + endless "resolving…" (tolerance-based move detection; 350ms
+debounced + deduped reverse; api-client AbortSignal + 8s timeout → coordinate fallback;
+stable panel height; per-map generation guard; retry preserves draft). PlacesInput
+request-identity + cancel-on-select/unmount. Europe/Nicosia schedule min (Intl). Strict
+/places/reverse validation. Public-config retry UI. Release 149e821. Tests: vitest 24/24,
+Playwright 10/10 (stability suite run against live). Map provider is MapTiler (streets-v2-dark).
+
+**Google migration (Task 010 §C) NOT started — needs credentials.** To do it, provide a Google
+Cloud project (billing on) with: Maps JavaScript API, Places API (New), Geocoding API, Routes API
+enabled; a **browser key** website-restricted to https://cyprustaxi.ackedberryes.store (+ dev
+origins); a **separate server key** (never NEXT_PUBLIC); and a **Map ID**. Then wire NEXT_PUBLIC_*
+(browser key + Map ID) via Docker build args and server key via runtime env, update CSP for Google
+hosts, and migrate all map surfaces + Places autocomplete + Geocoding reverse + Routes.
+
 ## Next actions (optional, not blocking)
 - Validate driver GPS on a physical phone over HTTPS; record result.
 - Run the ~10-min synthetic load exercise; record machine/results.

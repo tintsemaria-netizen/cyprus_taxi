@@ -1,6 +1,9 @@
 # Task 010 — Migrate beta to Google Maps, stop flicker and fix booking regressions
 
-Status: TODO
+Status: PARTIAL — P0/P1 stability hotfix DONE, deployed and browser-verified (release 149e821); Google migration PENDING credentials.
+- DONE (A/B/D): picker flicker + endless "resolving..." fixed (tolerance-based move detection, 350ms debounced + deduped reverse, 8s ab.ort/timeout fallback, stable panel height, per-map generation guard, retry preserves draft). PlacesInput request-identity on every edit + cancel-on-select/unmount. Europe/Nicosia schedule min. Strict /places/reverse coord validation. Public-config failure + retry UI.
+- Verified: vitest 24/24; Playwright 10/10 incl. new idle-invariant / resize-no-lookup / hung->timeout / one-pan-one-lookup regressions, run against the LIVE deployed site.
+- NOT DONE (C + real Places/Geocoding/Routes): the Google Maps Platform migration needs a Google Cloud project with billing and a browser key (website-restricted to cyprustaxi.ackedberryes.store), a separate server key, a Map ID, and enabled APIs (Maps JS, Places API New, Geocoding, Routes). None provided, so NOT started — the working MapLibre + MapTiler map was preserved rather than deploying a blank Google map. Reverse/search remain demo fixtures; routing remains unavailable in live mode. Provide the keys to proceed.
 Application: IL-Yas
 Repository: https://github.com/tintsemaria-netizen/cyprus_taxi
 Beta: https://cyprustaxi.ackedberryes.store

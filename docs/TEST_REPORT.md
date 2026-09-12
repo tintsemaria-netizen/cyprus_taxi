@@ -66,6 +66,28 @@ These are reported as pending, never as passed.
 - **Live deploy (release `2b8b455…`):** headers verified; live picker renders real tiles (`docs/qa-screenshots/live-mobile-picker.png`).
 - **tsc + production build:** pass. Lint is still skipped by the build (reported, not claimed).
 
+## Task 010 P0/P1 stability hotfix (2026-09-12)
+
+Confirmed cause of the reported **flicker + endless "resolving…"**: MapLibre's `resize()`
+emits `move`/`moveend` with an unchanged centre, and the picker invalidated + re-requested
+on every event → an infinite resolve→panel-resize→move→invalidate loop; plus the API helper
+had no timeout so a hung reverse fetch left the spinner on forever.
+
+Fixes verified:
+- **vitest 24/24** (14 unit + 10 DB on isolated `_test` DB) · **Playwright 10/10** (6 picker + 4 stability).
+- New **stability.spec.ts** regressions, run against the **live deployed site** (release `149e821`):
+  - **Idle invariant** — 0 reverse calls in 8s after settle (loop gone).
+  - **Resize with constant coordinate** — 0 reverse calls from viewport/orientation resize.
+  - **Hung request** — 8s client timeout → coordinate fallback; "resolving…" clears.
+  - **One settled pan** → a single debounced lookup; exact coordinates kept.
+- Reverse-endpoint validation: absent/blank `lat`/`lng` → 422; genuine `0,0` → 200.
+- tsc + production build pass.
+
+**NOT done (needs credentials):** the Google Maps Platform migration (Maps JS + Places API New +
+Geocoding + Routes) requires a Google Cloud key with billing — not provided. The working
+MapLibre+MapTiler map was preserved; reverse/search remain demo fixtures and routing stays
+"unavailable" in live mode. Physical-device GPS and load test still pending.
+
 ## Not run / pending
 
 - Physical-device GPS on a real phone (needs a device on the HTTPS site) — **unverified**.
