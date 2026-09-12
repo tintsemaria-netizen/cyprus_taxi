@@ -1,17 +1,20 @@
-node_modules
-.next
-out
+/build
+/coverage
+deploy/backups
+deploy/.env.production
+/deploy/secrets
+.DS_Store
 .env
 .env.local
-*.local
-npm-debug.log*
-.DS_Store
-/coverage
-/build
-next-env.d.ts
-# Never commit secrets or origin TLS material
-/deploy/secrets
 *.key
+*.local
+# Never commit secrets or origin TLS material
+.next
+next-env.d.ts
+node_modules
+npm-debug.log*
+out
 *.pem
-deploy/.env.production
-deploy/backups
+tests-e2e/node_modules
+tests-e2e/screenshots
+tests-e2e/test-results

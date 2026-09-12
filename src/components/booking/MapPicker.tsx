@@ -14,7 +14,7 @@ function demoStyle(): maplibregl.StyleSpecification {
     version: 8,
     sources: { osm: { type: 'raster', tiles: [publicMapConfig.tiles], tileSize: 256, attribution: publicMapConfig.attribution } },
     layers: [
-      { id: 'bg', type: 'background', paint: { 'background-color': '#0e1416' } },
+      { id: 'bg', type: 'background', paint: { 'background-color': '#0e1518' } },
       { id: 'osm', type: 'raster', source: 'osm', paint: { 'raster-opacity': 0.85, 'raster-saturation': -0.3, 'raster-brightness-max': 0.85 } },
     ],
   };
@@ -22,41 +22,55 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 interface Props {
   kind: 'pickup' | 'dropoff';
-  initial: Selected | null;      // saved coordinate for this field (reopen at it)
-  fallback: { lat: number; lng: number } | null; // e.g. the other stop
+  initial: Selected | null;
+  fallback: { lat: number; lng: number } | null;
   onConfirm: (sel: Selected) => void;
   onCancel: () => void;
 }
 
 type GeoState = 'idle' | 'locating' | 'ok' | 'denied' | 'unavailable' | 'timeout';
 
+const coordLabel = (lat: number, lng: number) => `Pin ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+
 export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const userMarker = useRef<maplibregl.Marker | null>(null);
-  const userMoved = useRef(false);       // user has manually panned/zoomed
-  const closed = useRef(false);          // picker dismissed — ignore late async
-  const revSeq = useRef(0);              // reverse-geocode request id
-  const geoReqSeq = useRef(0);           // geolocation request id
-  const [center, setCenter] = useState<{ lat: number; lng: number }>(initial ?? fallback ?? CYPRUS_CENTER);
+
+  // --- versioned draft: coordinate + its resolved label move together ---
+  const draftRev = useRef(0);                       // bumps on every coordinate change
+  const centerRef = useRef<{ lat: number; lng: number }>(initial ?? fallback ?? CYPRUS_CENTER);
+  const addrRef = useRef<{ rev: number; label: string } | null>(
+    initial ? { rev: 0, label: initial.label } : null,
+  );
+  const revSeq = useRef(0);                          // latest reverse-geocode request id
+
+  const closed = useRef(false);                      // dismissed → ignore all late async
+  const userMoveCount = useRef(0);                   // increments ONLY on user gestures
+  const geoGen = useRef(0);                          // increments per geolocation request
+  const popped = useRef(false);                      // history entry consumed
+
+  const [center, setCenter] = useState(centerRef.current);
   const [addr, setAddr] = useState<string | null>(initial?.label ?? null);
+  const [resolving, setResolving] = useState(false);
   const [geo, setGeo] = useState<GeoState>('idle');
+  const [accuracyM, setAccuracyM] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
   const label = kind === 'pickup' ? 'Set pickup location' : 'Set destination';
 
-  // Lock background scroll while the picker is open; restore on close.
+  // Lock background scroll; restore on close.
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  // Escape (desktop) and browser/mobile Back dismiss without committing.
+  // Owned Escape + history handlers so cleanup actually removes them.
   useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') cancel(); }
-    function onPop() { cancel(); }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') cancel(); };
+    const onPop = () => { popped.current = true; cancel(); };
     window.addEventListener('keydown', onKey);
-    history.pushState({ picker: true }, '');
+    history.pushState({ ilyasPicker: true }, '');
     window.addEventListener('popstate', onPop);
     return () => {
       window.removeEventListener('keydown', onKey);
@@ -65,13 +79,23 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Initialise the map.
+  // Any coordinate change invalidates the current label + pending request identity.
+  function onCoordChange(lat: number, lng: number) {
+    draftRev.current += 1;
+    revSeq.current += 1;                 // any in-flight reverse response is now stale
+    centerRef.current = { lat, lng };
+    addrRef.current = null;
+    setCenter({ lat, lng });
+    setAddr(null);
+    setResolving(true);
+  }
+
   useEffect(() => {
-    let cancelledSetup = false;
+    let disposed = false;
     (async () => {
       try {
         const maplibre = (await import('maplibre-gl')).default;
-        if (cancelledSetup || !containerRef.current) return;
+        if (disposed || closed.current || !containerRef.current) return;
         const start = initial ?? fallback ?? CYPRUS_CENTER;
         const map = new maplibre.Map({
           container: containerRef.current,
@@ -82,26 +106,30 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
         });
         map.on('error', () => { if (!map.loaded()) setFailed(true); });
         map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'bottom-right');
-        // User interaction marks the camera as user-controlled (blocks late auto-centre).
-        map.on('dragstart', () => { userMoved.current = true; });
-        map.on('zoomstart', (e) => { if ((e as unknown as { originalEvent?: unknown }).originalEvent) userMoved.current = true; });
-        // Draft coordinate tracks the map centre under the fixed pin.
-        map.on('move', () => { const c = map.getCenter(); setCenter({ lat: c.lat, lng: c.lng }); });
-        map.on('moveend', () => { const c = map.getCenter(); reverseGeocode(c.lat, c.lng); });
-        map.on('load', () => { map.resize(); if (initial) reverseGeocode(initial.lat, initial.lng); });
+        // User gestures mark the camera as user-controlled.
+        const userGesture = (e: { originalEvent?: unknown }) => { if (e.originalEvent) userMoveCount.current += 1; };
+        map.on('dragstart', userGesture);
+        map.on('zoomstart', userGesture);
+        map.on('rotatestart', userGesture);
+        // Coordinate tracks the centre under the fixed pin; label invalidates immediately.
+        map.on('move', () => { const c = map.getCenter(); onCoordChange(c.lat, c.lng); });
+        map.on('moveend', () => { const c = map.getCenter(); reverseGeocode(c.lat, c.lng, draftRev.current); });
+        map.on('load', () => {
+          if (disposed || closed.current) return;
+          map.resize();
+          reverseGeocode(start.lat, start.lng, draftRev.current);
+        });
         mapRef.current = map;
-
-        // Request device location on open only when this field has no saved coordinate.
-        if (!initial) requestLocation(false);
+        if (!initial) requestLocation(false); // auto-locate only when this field is empty
       } catch {
-        setFailed(true);
+        if (!disposed) setFailed(true);
       }
     })();
     const onResize = () => mapRef.current?.resize();
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onResize);
     return () => {
-      cancelledSetup = true;
+      disposed = true;
       window.removeEventListener('resize', onResize);
       window.removeEventListener('orientationchange', onResize);
       mapRef.current?.remove();
@@ -110,113 +138,128 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function reverseGeocode(lat: number, lng: number) {
+  // Reverse-geocode tied to a specific draft revision. Applies ONLY if that draft is
+  // still current (and the picker is open); ignores every stale success and failure.
+  async function reverseGeocode(lat: number, lng: number, rev: number) {
     const my = ++revSeq.current;
+    setResolving(true);
     try {
       const r = await api<{ place: { label: string } | null; unavailable?: boolean }>(`/places/reverse?lat=${lat}&lng=${lng}`);
-      if (my !== revSeq.current || closed.current) return; // stale
-      setAddr(r.place?.label ?? null);
+      if (closed.current || my !== revSeq.current || rev !== draftRev.current) return; // stale
+      if (r.place?.label) { addrRef.current = { rev, label: r.place.label }; setAddr(r.place.label); }
+      else { addrRef.current = null; setAddr(null); }
+      setResolving(false);
     } catch {
-      if (my === revSeq.current) setAddr(null);
+      if (closed.current || my !== revSeq.current || rev !== draftRev.current) return;
+      addrRef.current = null; setAddr(null); setResolving(false);
     }
   }
 
-  function showUser(lat: number, lng: number, accuracyM: number) {
-    const map = mapRef.current;
-    if (!map) return;
+  function showUser(lat: number, lng: number, acc: number) {
     (async () => {
       const maplibre = (await import('maplibre-gl')).default;
+      const map = mapRef.current;
+      if (!map || closed.current) return;
       if (!userMarker.current) {
         const el = document.createElement('div');
         el.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#4C9AFF;border:2px solid #fff;box-shadow:0 0 0 2px rgba(76,154,255,0.4)';
-        el.title = 'Your location';
+        el.title = 'Your device location';
         userMarker.current = new maplibre.Marker({ element: el });
       }
       userMarker.current.setLngLat([lng, lat]).addTo(map);
-      // Accuracy circle
-      const circle = accuracyCircle(lat, lng, accuracyM);
-      const src = map.getSource('acc') as maplibregl.GeoJSONSource | undefined;
-      if (src) src.setData(circle as GeoJSON.GeoJSON);
-      else {
-        map.addSource('acc', { type: 'geojson', data: circle as GeoJSON.GeoJSON });
-        map.addLayer({ id: 'acc', type: 'fill', source: 'acc', paint: { 'fill-color': '#4C9AFF', 'fill-opacity': 0.12 } });
-      }
+      const add = () => {
+        if (!mapRef.current || closed.current) return;
+        const data = accuracyCircle(lat, lng, acc) as GeoJSON.GeoJSON;
+        const src = map.getSource('acc') as maplibregl.GeoJSONSource | undefined;
+        if (src) src.setData(data);
+        else {
+          map.addSource('acc', { type: 'geojson', data });
+          map.addLayer({ id: 'acc', type: 'fill', source: 'acc', paint: { 'fill-color': '#4C9AFF', 'fill-opacity': 0.12 } });
+        }
+      };
+      // Adding sources/layers requires a ready style.
+      if (map.isStyleLoaded()) add(); else map.once('load', add);
     })();
   }
 
-  // explicit=true when the user pressed "My location" (always recenters).
+  // explicit=true → "My location" button; recenters unless the user has dragged since
+  // this exact click. auto (false) → only recenters if the user has never moved.
   function requestLocation(explicit: boolean) {
-    if (!('geolocation' in navigator)) { setGeo('unavailable'); return; }
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) { setGeo('unavailable'); return; }
     setGeo('locating');
-    const my = ++geoReqSeq.current;
+    const gen = ++geoGen.current;
+    const moveAtRequest = userMoveCount.current;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        if (closed.current || my !== geoReqSeq.current) return;
+        if (closed.current || gen !== geoGen.current) return;
         setGeo('ok');
+        setAccuracyM(pos.coords.accuracy ?? null);
         showUser(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy ?? 0);
-        // A late result must not hijack the camera after a manual move (unless explicit).
-        if (explicit || !userMoved.current) {
+        const mayRecenter = explicit ? userMoveCount.current === moveAtRequest : userMoveCount.current === 0;
+        if (mayRecenter) {
           const zoom = pos.coords.accuracy && pos.coords.accuracy > 1000 ? 12 : 15;
           mapRef.current?.easeTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom, duration: 500 });
         }
       },
       (err) => {
-        if (closed.current || my !== geoReqSeq.current) return;
+        if (closed.current || gen !== geoGen.current) return;
         setGeo(err.code === err.PERMISSION_DENIED ? 'denied' : err.code === err.TIMEOUT ? 'timeout' : 'unavailable');
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     );
   }
 
+  function finish() {
+    if (!popped.current && history.state && (history.state as { ilyasPicker?: boolean }).ilyasPicker) {
+      history.back(); // consume our own entry without leaving a phantom
+    }
+  }
   function confirm() {
+    if (closed.current) return;
     closed.current = true;
     const c = mapRef.current?.getCenter();
-    const lat = c ? c.lat : center.lat;
-    const lng = c ? c.lng : center.lng;
-    const l = addr ?? `Pin ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-    popHistory();
+    const lat = c ? c.lat : centerRef.current.lat;
+    const lng = c ? c.lng : centerRef.current.lng;
+    // Commit ONE consistent snapshot: label only if it belongs to this exact draft.
+    const snap = addrRef.current;
+    const l = snap && snap.rev === draftRev.current ? snap.label : coordLabel(lat, lng);
+    finish();
     onConfirm({ lat, lng, label: l });
   }
   function cancel() {
     if (closed.current) return;
     closed.current = true;
-    popHistory();
+    finish();
     onCancel();
-  }
-  // Consume the history entry we pushed, without triggering our own popstate cancel.
-  function popHistory() {
-    window.removeEventListener('popstate', () => {});
-    if (history.state && (history.state as { picker?: boolean }).picker) history.back();
   }
 
   const geoMsg: Record<GeoState, string | null> = {
     idle: null, locating: 'Finding your location…', ok: null,
-    denied: 'Location permission denied — pan the map to your pickup, or enable location in your browser.',
+    denied: 'Location permission denied — pan the map to your point, or enable location in your browser settings.',
     unavailable: 'Location unavailable — pan the map to choose.',
-    timeout: 'Location timed out — pan the map or try again.',
+    timeout: 'Location timed out — pan the map or press “My location” to retry.',
   };
+  const coarse = accuracyM !== null && accuracyM > 150;
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col bg-page" style={{ height: '100dvh' }}>
-      {/* header */}
       <div className="z-10 flex items-center gap-3 border-b border-edge bg-page/95 px-4 py-3" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
         <button className="btn-ghost !min-h-0 !py-1.5 text-sm" onClick={cancel} aria-label="Back">‹ Back</button>
         <h2 className="font-semibold">{label}</h2>
       </div>
 
-      {/* map + fixed centre pin */}
       <div className="relative flex-1">
         {failed ? (
           <div className="flex h-full items-center justify-center px-6 text-center text-muted">
             <div>
               <div className="text-sm text-ink">Map unavailable</div>
-              <div className="mt-1 text-xs">Enter the address by name instead, or retry.</div>
+              <div className="mt-1 text-xs">Close this and enter the address by name instead.</div>
+              <button className="btn-ghost mt-4" onClick={cancel}>Close</button>
             </div>
           </div>
         ) : (
           <>
             <div ref={containerRef} className="absolute inset-0" aria-label="Map — drag to position the pin" role="application" />
-            {/* fixed selection pin at the visual centre */}
             <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full">
               <svg width="34" height="46" viewBox="0 0 34 46" aria-hidden>
                 <path d="M17 0C7.6 0 0 7.6 0 17c0 12 17 29 17 29s17-17 17-29C34 7.6 26.4 0 17 0z" fill="#C8FF46" stroke="#0d1608" strokeWidth="2" />
@@ -233,13 +276,16 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
         )}
       </div>
 
-      {/* bottom confirmation panel */}
       <div className="border-t border-edge bg-panel p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
         {geoMsg[geo] && <p className="mb-2 text-xs text-warn">{geoMsg[geo]}</p>}
+        {geo === 'ok' && coarse && <p className="mb-2 text-[11px] text-muted">Your device location is approximate (±{Math.round(accuracyM as number)} m).</p>}
         <div className="mb-3">
           <div className="label">Selected {kind === 'pickup' ? 'pickup' : 'destination'}</div>
-          <div className="mt-0.5 truncate text-sm font-medium">{addr ?? `Pin ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`}</div>
-          {!addr && <div className="text-[11px] text-muted">No street address available — using map coordinates.</div>}
+          <div className="mt-0.5 truncate text-sm font-medium">
+            {addr ?? coordLabel(center.lat, center.lng)}
+            {resolving && !addr && <span className="ml-2 text-[11px] text-muted">resolving…</span>}
+          </div>
+          {!addr && <div className="text-[11px] text-muted">No street address for this point — using map coordinates.</div>}
         </div>
         <div className="flex gap-2">
           <button className="btn-ghost flex-1" onClick={cancel}>Cancel</button>
@@ -252,11 +298,12 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
   );
 }
 
-// Approximate an accuracy circle as a polygon (radius in metres) for display.
+// Honest accuracy circle: renders the reported radius. Extremely large fixes are
+// visually capped (with a disclosure in the panel), never shrunk to look precise.
 function accuracyCircle(lat: number, lng: number, radiusM: number): GeoJSON.Feature {
   const points = 48;
   const coords: [number, number][] = [];
-  const r = Math.min(radiusM, 3000); // cap for display sanity
+  const r = Math.min(Math.max(radiusM, 5), 20000);
   const dLat = r / 111320;
   const dLng = r / (111320 * Math.cos((lat * Math.PI) / 180));
   for (let i = 0; i <= points; i++) {

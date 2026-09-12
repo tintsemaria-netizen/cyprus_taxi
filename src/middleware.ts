@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Derive the tile host so CSP can allow exactly that origin for map imagery.
+const DEFAULT_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
 function tileOrigin(): string {
   try {
-    return new URL((process.env.NEXT_PUBLIC_MAP_TILES || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png').replace(/\{[^}]+\}/g, '0')).origin;
+    return new URL((process.env.NEXT_PUBLIC_MAP_TILES || DEFAULT_TILES).replace(/\{[^}]+\}/g, '0')).origin;
   } catch {
-    return 'https://tile.openstreetmap.org';
+    return 'https://server.arcgisonline.com';
   }
 }
 
@@ -52,8 +53,8 @@ export function middleware(req: NextRequest) {
     "worker-src 'self' blob:",
     "child-src 'self' blob:",
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: ${tiles}`,
-    `connect-src 'self' ${tiles}`,
+    `img-src 'self' data: blob: ${tiles} https://server.arcgisonline.com https://*.arcgisonline.com`,
+    `connect-src 'self' ${tiles} https://server.arcgisonline.com https://*.arcgisonline.com`,
     "font-src 'self' data:",
     "object-src 'none'",
     "base-uri 'self'",

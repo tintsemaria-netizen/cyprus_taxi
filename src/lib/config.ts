@@ -41,9 +41,15 @@ export const config = {
   currency: 'EUR',
 } as const;
 
-// Public map config (safe for browser bundle)
+// Public map config (safe for browser bundle). Default demo tiles use Esri's Dark
+// Gray Canvas basemap: a clean labelled dark map served without an API key or
+// watermark. (OpenStreetMap's volunteer servers block app/bulk usage with 403, and
+// Carto's public tiles are now watermarked "API key required".) Note the Esri URL
+// order is {z}/{y}/{x}. For production, configure an authorized/licensed provider.
 export const publicMapConfig = {
   style: process.env.NEXT_PUBLIC_MAP_STYLE || 'demo-raster',
-  tiles: process.env.NEXT_PUBLIC_MAP_TILES || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  attribution: process.env.NEXT_PUBLIC_MAP_ATTRIBUTION || '© OpenStreetMap contributors',
+  tiles:
+    process.env.NEXT_PUBLIC_MAP_TILES ||
+    'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+  attribution: process.env.NEXT_PUBLIC_MAP_ATTRIBUTION || 'Tiles © Esri · © OpenStreetMap contributors',
 };
