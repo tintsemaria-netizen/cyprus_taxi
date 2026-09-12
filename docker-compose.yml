@@ -23,7 +23,13 @@ services:
       retries: 10
 
   taxi-app:
-    build: .
+    build:
+      context: .
+      args:
+        # Baked into the client bundle at build time (may include a map provider key).
+        NEXT_PUBLIC_MAP_STYLE: ${NEXT_PUBLIC_MAP_STYLE}
+        NEXT_PUBLIC_MAP_TILES: ${NEXT_PUBLIC_MAP_TILES}
+        NEXT_PUBLIC_MAP_ATTRIBUTION: ${NEXT_PUBLIC_MAP_ATTRIBUTION}
     container_name: taxicy-app
     restart: unless-stopped
     depends_on:

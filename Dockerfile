@@ -11,6 +11,15 @@ RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# NEXT_PUBLIC_* values are inlined into the client bundle at build time. The map
+# tile URL may carry a provider key, so it is passed as a build arg (kept out of
+# source and the git repo) rather than hardcoded.
+ARG NEXT_PUBLIC_MAP_STYLE
+ARG NEXT_PUBLIC_MAP_TILES
+ARG NEXT_PUBLIC_MAP_ATTRIBUTION
+ENV NEXT_PUBLIC_MAP_STYLE=$NEXT_PUBLIC_MAP_STYLE
+ENV NEXT_PUBLIC_MAP_TILES=$NEXT_PUBLIC_MAP_TILES
+ENV NEXT_PUBLIC_MAP_ATTRIBUTION=$NEXT_PUBLIC_MAP_ATTRIBUTION
 RUN npx prisma generate && npm run build
 
 FROM node:22-alpine AS runner
