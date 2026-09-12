@@ -39,7 +39,20 @@ export const config = {
   trustedProxyHops: num('TRUSTED_PROXY_HOPS', 2),
   timezone: 'Europe/Nicosia',
   currency: 'EUR',
+  // Server-only Google Maps key (Geocoding + Routes). Never exposed to the client.
+  googleServerKey: () => process.env.GOOGLE_MAPS_SERVER_API_KEY || '',
 } as const;
+
+// Public Google Maps config (safe for the browser bundle). When a browser key is
+// present the app renders Google maps; otherwise it falls back to the MapLibre
+// raster map (dev without a key). Cyprus viewport bias for geocoding.
+export const googlePublic = {
+  apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+  mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || '',
+  enabled: !!(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '').trim(),
+};
+
+export const CYPRUS_BOUNDS = { south: 34.55, west: 32.25, north: 35.72, east: 34.65 };
 
 // Public map config (safe for browser bundle). Default demo tiles use Esri's Dark
 // Gray Canvas basemap: a clean labelled dark map served without an API key or

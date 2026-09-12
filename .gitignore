@@ -21,3 +21,4 @@ tests-e2e/screenshots-live
 tests-e2e/test-results
 *.tsbuildinfo
 tsconfig.tsbuildinfo
+docs/GoogleMaps

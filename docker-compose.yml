@@ -30,6 +30,8 @@ services:
         NEXT_PUBLIC_MAP_STYLE: ${NEXT_PUBLIC_MAP_STYLE}
         NEXT_PUBLIC_MAP_TILES: ${NEXT_PUBLIC_MAP_TILES}
         NEXT_PUBLIC_MAP_ATTRIBUTION: ${NEXT_PUBLIC_MAP_ATTRIBUTION}
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+        NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: ${NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}
     container_name: taxicy-app
     restart: unless-stopped
     depends_on:
@@ -46,6 +48,8 @@ services:
       NEXT_PUBLIC_MAP_ATTRIBUTION: ${NEXT_PUBLIC_MAP_ATTRIBUTION}
       TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS}
       APP_RELEASE: ${APP_RELEASE:-unknown}
+      # Server-only Google key for Geocoding + Routes (never exposed to the browser).
+      GOOGLE_MAPS_SERVER_API_KEY: ${GOOGLE_MAPS_SERVER_API_KEY:-}
     # Bind only to loopback; nginx on the host proxies this vhost.
     ports:
       - '127.0.0.1:${APP_HOST_PORT}:3000'

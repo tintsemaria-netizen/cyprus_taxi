@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import MapView, { MapMarker } from '@/components/MapView';
+import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
 import { api, ApiRequestError } from '@/lib/api-client';
 
@@ -185,7 +185,7 @@ export default function TrackApp() {
 
       <div className="relative flex-1">
         <div className="absolute inset-0">
-          <MapView markers={markers} center={view.pickup} zoom={12} interactive className="h-full w-full" />
+          <AutoMapView markers={markers} center={view.pickup} zoom={12} interactive className="h-full w-full" />
         </div>
 
         {/* status pill */}

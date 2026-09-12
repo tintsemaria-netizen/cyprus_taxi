@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { StaffShell } from '@/components/staff/StaffShell';
 import { StatusBadge } from '@/components/staff/StatusBadge';
-import MapView, { MapMarker } from '@/components/MapView';
+import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { api, ApiRequestError } from '@/lib/api-client';
 
 export const dynamic = 'force-dynamic';
@@ -119,7 +119,7 @@ function BookingDetail() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_360px]">
         <div className="card overflow-hidden">
-          <MapView markers={markers} className="h-64 w-full" interactive={false} />
+          <AutoMapView markers={markers} className="h-64 w-full" interactive={false} />
           <div className="space-y-3 p-4">
             <Field label="Pickup" value={d.pickup.label} dot="accent" />
             <Field label="Destination" value={d.dropoff.label} dot="ink" />

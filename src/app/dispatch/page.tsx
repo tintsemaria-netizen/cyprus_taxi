@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StaffShell } from '@/components/staff/StaffShell';
-import MapView, { MapMarker } from '@/components/MapView';
+import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { StatusBadge } from '@/components/staff/StatusBadge';
 import { api } from '@/lib/api-client';
 
@@ -106,7 +106,7 @@ function Dispatch() {
 
       {/* Fleet map */}
       <div className={`relative ${tab === 'list' ? 'hidden lg:block' : 'block'}`}>
-        <MapView markers={markers} center={{ lat: 34.92, lng: 33.2 }} zoom={9} interactive className="h-full w-full" />
+        <AutoMapView markers={markers} center={{ lat: 34.92, lng: 33.2 }} zoom={9} interactive className="h-full w-full" />
         <button className="chip absolute left-3 top-3 z-10 lg:hidden" onClick={() => setTab('list')}>‹ List</button>
         <div className="absolute right-3 top-3 z-10 chip !bg-page/90">{fleet.length} on-duty vehicle(s)</div>
       </div>

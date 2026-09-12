@@ -46,16 +46,24 @@ export function middleware(req: NextRequest) {
   }
   const res = NextResponse.next();
   const tiles = tileOrigin();
+  // Google Maps JS SDK resource hosts (script, WebGL tiles, fonts).
+  const g = {
+    script: 'https://maps.googleapis.com https://maps.gstatic.com',
+    img: 'https://maps.googleapis.com https://maps.gstatic.com https://*.googleapis.com https://*.gstatic.com https://*.ggpht.com',
+    connect: 'https://maps.googleapis.com https://*.googleapis.com',
+    style: 'https://fonts.googleapis.com',
+    font: 'https://fonts.gstatic.com',
+  };
   const csp = [
     "default-src 'self'",
-    // Next.js injects inline bootstrap scripts; MapLibre uses blob workers.
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
+    // Next.js injects inline bootstrap scripts; MapLibre/Google use blob workers.
+    `script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: ${g.script}`,
     "worker-src 'self' blob:",
     "child-src 'self' blob:",
-    "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: ${tiles} https://server.arcgisonline.com https://*.arcgisonline.com https://api.maptiler.com`,
-    `connect-src 'self' ${tiles} https://server.arcgisonline.com https://*.arcgisonline.com https://api.maptiler.com`,
-    "font-src 'self' data:",
+    `style-src 'self' 'unsafe-inline' ${g.style}`,
+    `img-src 'self' data: blob: ${tiles} https://server.arcgisonline.com https://*.arcgisonline.com https://api.maptiler.com ${g.img}`,
+    `connect-src 'self' ${tiles} https://server.arcgisonline.com https://*.arcgisonline.com https://api.maptiler.com ${g.connect}`,
+    `font-src 'self' data: ${g.font}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import MapView, { MapMarker } from '@/components/MapView';
+import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
 import { PlacesInput, Selected } from './PlacesInput';
 import { DemoBanner } from '@/components/DemoBanner';
-import MapPicker from './MapPicker';
+import AutoMapPicker from './AutoMapPicker';
 import { nicosiaInputValue } from '@/lib/timezone';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 
@@ -77,6 +77,31 @@ export default function BookingApp() {
     if (pickup) m.push({ id: 'p', lat: pickup.lat, lng: pickup.lng, kind: 'pickup', label: pickup.label });
     if (dropoff) m.push({ id: 'd', lat: dropoff.lat, lng: dropoff.lng, kind: 'dropoff', label: dropoff.label });
     return m;
+  }, [pickup, dropoff]);
+
+  // Real driving route (distance + trip duration + geometry) between the two stops.
+  // Debounced, aborted on change, stale-guarded — NOT recomputed on every render.
+  const [route, setRoute] = useState<{ line: [number, number][]; km: number | null; min: number | null; unavailable?: boolean } | null>(null);
+  useEffect(() => {
+    if (!pickup || !dropoff) { setRoute(null); return; }
+    const controller = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const r = await api<{ available?: boolean; path?: [number, number][]; distanceKm?: number; etaMinutes?: number; reason?: string }>(
+          '/routes/estimate',
+          { method: 'POST', body: { from: { lat: pickup.lat, lng: pickup.lng }, to: { lat: dropoff.lat, lng: dropoff.lng } }, signal: controller.signal, timeoutMs: 9000 },
+        );
+        if (r.available === false) { setRoute({ line: [], km: null, min: null, unavailable: true }); return; }
+        setRoute({
+          line: (r.path ?? []).map(([lat, lng]) => [lng, lat] as [number, number]),
+          km: r.distanceKm ?? null,
+          min: r.etaMinutes ?? null,
+        });
+      } catch {
+        setRoute(null); // transient/cancelled — clear stale geometry, keep the form
+      }
+    }, 400);
+    return () => { clearTimeout(t); controller.abort(); };
   }, [pickup, dropoff]);
 
   const maxPax = cfg?.classes.find((c) => c.key === vClass)?.maxPassengers ?? (vClass === 'XL' ? 6 : 4);
@@ -217,7 +242,7 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-[#0e1518]" />
           ) : (
-            <MapView markers={markers} center={{ lat: 34.92, lng: 33.2 }} zoom={9} interactive className="h-full w-full" />
+            <AutoMapView markers={markers} route={route?.line} center={{ lat: 34.92, lng: 33.2 }} zoom={9} interactive className="h-full w-full" />
           )}
         </div>
 
@@ -324,6 +349,15 @@ export default function BookingApp() {
                       </div>
                     </div>
 
+                    {pickup && dropoff && route && (
+                      <p className="mt-4 rounded-[12px] border border-edge bg-elevated px-3 py-2 text-xs text-muted">
+                        {route.unavailable
+                          ? 'Route estimate unavailable right now.'
+                          : route.min != null
+                            ? <>Estimated trip: <span className="text-ink font-medium">≈ {route.min} min · {route.km} km</span> driving. Fare confirmed by dispatcher.</>
+                            : 'Estimating route…'}
+                      </p>
+                    )}
                     <button className="btn-primary mt-5 w-full" onClick={toReview}>Request a ride</button>
                     <p className="mt-3 text-center text-[11px] text-muted">Fare confirmed by dispatcher.</p>
                   </div>
@@ -376,7 +410,7 @@ export default function BookingApp() {
       </div>
 
       {picker && (
-        <MapPicker
+        <AutoMapPicker
           kind={picker}
           initial={picker === 'pickup' ? pickup : dropoff}
           fallback={picker === 'pickup' ? (dropoff ?? null) : (pickup ?? null)}
