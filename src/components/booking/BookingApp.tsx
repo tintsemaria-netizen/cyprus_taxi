@@ -82,6 +82,21 @@ export default function BookingApp() {
     window.addEventListener('orientationchange', upd);
     return () => { window.removeEventListener('resize', upd); window.removeEventListener('orientationchange', upd); };
   }, []);
+  // Live on-duty cars shown on the booking map (anonymized positions), polled.
+  const [fleet, setFleet] = useState<{ lat: number; lng: number; stale?: boolean }[]>([]);
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      if (document.visibilityState !== 'visible') return;
+      api<{ vehicles: { lat: number; lng: number; stale?: boolean }[] }>('/public/fleet', { timeoutMs: 8000 })
+        .then((r) => { if (alive) setFleet(r.vehicles); })
+        .catch(() => { /* keep last known; transient */ });
+    };
+    load();
+    const t = setInterval(load, 12000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
+
   const fitPadding = useMemo(
     () => (vp.w < 640
       // Mobile: the booking sheet covers most of the screen, so fit the island into
@@ -261,7 +276,7 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-[#0e1518]" />
           ) : (
-            <AutoMapView markers={markers} route={route?.line} center={{ lat: 34.92, lng: 33.2 }} zoom={9} interactive fitPadding={fitPadding} className="h-full w-full" />
+            <AutoMapView markers={markers} route={route?.line} fleet={fleet} center={{ lat: 34.92, lng: 33.2 }} zoom={9} interactive fitPadding={fitPadding} className="h-full w-full" />
           )}
         </div>
 

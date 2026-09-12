@@ -233,6 +233,26 @@ export async function availableDrivers() {
 }
 
 // ---- Fleet map (on-duty latest positions) ----
+// Passenger-facing "cars nearby" feed. ANONYMIZED: only position + freshness — no
+// driver id/name/plate and no booking, so it never reveals driver identity or which
+// trip a car is on. On-duty active drivers with a non-disconnected fix only.
+export async function publicFleet() {
+  const drivers = await prisma.driver.findMany({
+    where: { onDuty: true, active: true },
+    include: { location: true },
+  });
+  const now = new Date();
+  const out: { lat: number; lng: number; stale: boolean }[] = [];
+  for (const d of drivers) {
+    const loc = d.location;
+    if (!loc) continue;
+    const f = computeFreshness(loc.sampledAt, loc.receivedAt, now);
+    if (f === 'disconnected') continue; // don't show cars whose fix has gone stale
+    out.push({ lat: loc.lat, lng: loc.lng, stale: f === 'stale' });
+  }
+  return out;
+}
+
 export async function fleet() {
   const drivers = await prisma.driver.findMany({
     where: { onDuty: true, active: true },

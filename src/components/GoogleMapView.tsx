@@ -17,6 +17,8 @@ interface Props {
   // Padding (px) so fitted content lands in the VISIBLE area (e.g. above a mobile
   // booking sheet or beside a desktop side panel).
   fitPadding?: { top: number; right: number; bottom: number; left: number };
+  // Live on-duty cars to overlay (anonymized). Rendered but NOT included in the fit.
+  fleet?: { lat: number; lng: number; stale?: boolean }[];
 }
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
@@ -31,10 +33,11 @@ function markerEl(mk: MapMarker): HTMLElement {
   return el;
 }
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [] }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markerObjs = useRef<any[]>([]);
+  const fleetObjs = useRef<any[]>([]);
   const polyRef = useRef<any>(null);
   const gRef = useRef<any>(null);
   const [failed, setFailed] = useState(false);
@@ -122,6 +125,21 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       map.fitBounds(b, pad);
     }
   }, [markers, ready, fitPadding]);
+
+  // Live on-duty cars overlay (does not affect the fit).
+  useEffect(() => {
+    const map = mapRef.current, g = gRef.current;
+    if (!map || !g || !ready) return;
+    fleetObjs.current.forEach((m) => (m.map = null));
+    fleetObjs.current = [];
+    for (const v of fleet) {
+      const el = document.createElement('div');
+      el.style.cssText = `width:26px;height:26px;border-radius:7px;background:#C8FF46;border:2px solid #0d1608;box-shadow:0 0 0 3px rgba(200,255,70,0.2);opacity:${v.stale ? 0.5 : 1};display:flex;align-items:center;justify-content:center;font-size:13px`;
+      el.textContent = '🚕';
+      el.title = 'On-duty car';
+      fleetObjs.current.push(new g.marker.AdvancedMarkerElement({ map, position: { lat: v.lat, lng: v.lng }, content: el }));
+    }
+  }, [fleet, ready]);
 
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
