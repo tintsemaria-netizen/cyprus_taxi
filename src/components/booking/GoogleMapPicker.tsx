@@ -182,23 +182,28 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
     setGeo('locating');
     const g = ++geoGen.current;
     const moveAtRequest = userMoveCount.current;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        if (closed.current || g !== geoGen.current || gen !== mapGen.current) return;
-        setGeo('ok'); setAccuracyM(pos.coords.accuracy ?? null);
-        showUser(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy ?? 0, gen);
-        const mayRecenter = explicit ? userMoveCount.current === moveAtRequest : userMoveCount.current === 0;
-        if (mayRecenter && mapRef.current) {
-          mapRef.current.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-          mapRef.current.setZoom(pos.coords.accuracy && pos.coords.accuracy > 1000 ? 13 : 16);
-        }
-      },
-      (err) => {
-        if (closed.current || g !== geoGen.current || gen !== mapGen.current) return;
-        setGeo(err.code === err.PERMISSION_DENIED ? 'denied' : err.code === err.TIMEOUT ? 'timeout' : 'unavailable');
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
-    );
+    const onOk = (pos: GeolocationPosition) => {
+      if (closed.current || g !== geoGen.current || gen !== mapGen.current) return;
+      setGeo('ok'); setAccuracyM(pos.coords.accuracy ?? null);
+      showUser(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy ?? 0, gen);
+      const mayRecenter = explicit ? userMoveCount.current === moveAtRequest : userMoveCount.current === 0;
+      if (mayRecenter && mapRef.current) {
+        mapRef.current.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        mapRef.current.setZoom(pos.coords.accuracy && pos.coords.accuracy > 1000 ? 13 : 16);
+      }
+    };
+    const onErr = (err: GeolocationPositionError, triedLow: boolean) => {
+      if (closed.current || g !== geoGen.current || gen !== mapGen.current) return;
+      if (err.code === err.PERMISSION_DENIED) { setGeo('denied'); return; }
+      if (!triedLow) {
+        // High-accuracy GPS often times out indoors / on desktops without GPS. Fall
+        // back to coarse (network/wifi) location, which is faster and more reliable.
+        navigator.geolocation.getCurrentPosition(onOk, (e) => onErr(e, true), { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 });
+        return;
+      }
+      setGeo(err.code === err.TIMEOUT ? 'timeout' : 'unavailable');
+    };
+    navigator.geolocation.getCurrentPosition(onOk, (e) => onErr(e, false), { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 });
   }
 
   function finish() {
