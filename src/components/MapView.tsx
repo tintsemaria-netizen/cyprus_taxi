@@ -22,6 +22,7 @@ interface Props {
   interactive?: boolean;
   onMapClick?: (p: { lat: number; lng: number }) => void;
   className?: string;
+  fitPadding?: { top: number; right: number; bottom: number; left: number };
 }
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
@@ -46,7 +47,7 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerObjs = useRef<maplibregl.Marker[]>([]);
@@ -124,7 +125,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       if (markers.length >= 2) {
         const b = new maplibre.LngLatBounds();
         markers.forEach((m) => b.extend([m.lng, m.lat]));
-        map.fitBounds(b, { padding: 70, maxZoom: 12, duration: 400 });
+        map.fitBounds(b, { padding: fitPadding ?? 70, maxZoom: 12, duration: 400 });
       } else if (markers.length === 1) {
         map.easeTo({ center: [markers[0].lng, markers[0].lat], zoom: 12, duration: 400 });
       }

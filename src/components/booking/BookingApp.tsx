@@ -72,6 +72,25 @@ export default function BookingApp() {
     return () => clearInterval(t);
   }, [when]);
 
+  // Fit the overview map into the VISIBLE area (clear of the bottom sheet on mobile /
+  // the left panel on desktop) so it never frames empty sea behind the form.
+  const [vp, setVp] = useState({ w: 1440, h: 900 });
+  useEffect(() => {
+    const upd = () => setVp({ w: window.innerWidth, h: window.innerHeight });
+    upd();
+    window.addEventListener('resize', upd);
+    window.addEventListener('orientationchange', upd);
+    return () => { window.removeEventListener('resize', upd); window.removeEventListener('orientationchange', upd); };
+  }, []);
+  const fitPadding = useMemo(
+    () => (vp.w < 640
+      // Mobile: the booking sheet covers most of the screen, so fit the island into
+      // the small visible band at the top (large bottom padding).
+      ? { top: 16, right: 24, bottom: Math.round(vp.h * 0.62), left: 24 }
+      : { top: 40, right: 60, bottom: 40, left: 420 }),
+    [vp],
+  );
+
   const markers = useMemo<MapMarker[]>(() => {
     const m: MapMarker[] = [];
     if (pickup) m.push({ id: 'p', lat: pickup.lat, lng: pickup.lng, kind: 'pickup', label: pickup.label });
@@ -242,13 +261,13 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-[#0e1518]" />
           ) : (
-            <AutoMapView markers={markers} route={route?.line} center={{ lat: 34.92, lng: 33.2 }} zoom={9} interactive className="h-full w-full" />
+            <AutoMapView markers={markers} route={route?.line} center={{ lat: 34.92, lng: 33.2 }} zoom={9} interactive fitPadding={fitPadding} className="h-full w-full" />
           )}
         </div>
 
         <div className="pointer-events-none absolute inset-0 flex flex-col justify-end sm:block">
           <div className="pointer-events-auto w-full sm:absolute sm:left-4 sm:top-4 sm:h-[calc(100%-2rem)] sm:w-[380px]">
-            <div className="card flex max-h-[78dvh] flex-col overflow-hidden sm:max-h-full">
+            <div className="card flex max-h-[64dvh] flex-col overflow-hidden sm:max-h-full">
               <div className="overflow-y-auto p-4 sm:p-5" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
                 {step === 'form' ? (
                   /* ---- FORM (inlined so inputs keep focus across renders) ---- */
