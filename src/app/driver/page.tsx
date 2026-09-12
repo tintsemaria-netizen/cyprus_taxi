@@ -68,6 +68,28 @@ function Driver() {
     setGps((g) => ({ ...g, active: false }));
   }
 
+  function beginWatch(highAccuracy: boolean) {
+    if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current);
+    watchId.current = navigator.geolocation.watchPosition(
+      (pos) => { lastPos.current = pos; setGps((g) => ({ ...g, error: null })); },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setGps((g) => ({ ...g, active: false, error: 'Location permission denied. Allow location for this site to share GPS.' }));
+          stopGps();
+          return;
+        }
+        // Transient timeout / position-unavailable (common indoors / on desktops).
+        // Fall back once from precise GPS to network location, and keep trying —
+        // watchPosition recovers automatically once a fix is available.
+        if (highAccuracy) { beginWatch(false); return; }
+        setGps((g) => ({ ...g, error: lastPos.current ? null : 'Acquiring GPS… keep location on; a moving vehicle outdoors gets the best fix.' }));
+      },
+      highAccuracy
+        ? { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+        : { enableHighAccuracy: false, maximumAge: 60000, timeout: 30000 },
+    );
+  }
+
   function startGps() {
     if (!('geolocation' in navigator)) {
       setGps({ active: false, error: 'Geolocation not supported on this device/browser.', last: null });
@@ -76,14 +98,7 @@ function Driver() {
     session.current = uuid();
     seq.current = 0;
     setGps({ active: true, error: null, last: null });
-    watchId.current = navigator.geolocation.watchPosition(
-      (pos) => { lastPos.current = pos; setGps((g) => ({ ...g, error: null })); },
-      (err) => {
-        setGps((g) => ({ ...g, active: err.code !== err.PERMISSION_DENIED && g.active, error: err.code === err.PERMISSION_DENIED ? 'Location permission denied. Enable it to share GPS.' : 'GPS error — retrying.' }));
-        if (err.code === err.PERMISSION_DENIED) stopGps();
-      },
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
-    );
+    beginWatch(true);
     // Coalesce + send at most once per 5s (real samples only).
     sendTimer.current = setInterval(sendSample, 5000);
   }
@@ -172,7 +187,7 @@ function Driver() {
               <button className="btn-primary" onClick={startGps}>Start sharing</button>
             )}
           </div>
-          {gps.error && <p className="mt-2 text-xs text-danger">{gps.error}</p>}
+          {gps.error && <p className={`mt-2 text-xs ${gps.error.startsWith('Acquiring') ? 'text-warn' : 'text-danger'}`}>{gps.error}</p>}
           <p className="mt-2 text-[11px] text-muted">Foreground GPS only, while on duty. Switching apps or locking the screen may pause updates. Real device GPS — never simulated.</p>
         </div>
       )}
