@@ -46,11 +46,14 @@ export function middleware(req: NextRequest) {
   }
   const res = NextResponse.next();
   const tiles = tileOrigin();
-  // Google Maps JS SDK resource hosts (script, WebGL tiles, fonts).
+  // Google Maps JS SDK resource hosts (per Google's CSP guidance). The vector/WebGL
+  // map's shared-label worker fetches label images from *.gstatic.com AND data: URIs
+  // via connect-src, so both must be allowed there (this only surfaces on real GPU
+  // vector rendering, not software-WebGL raster fallback).
   const g = {
-    script: 'https://maps.googleapis.com https://maps.gstatic.com',
-    img: 'https://maps.googleapis.com https://maps.gstatic.com https://*.googleapis.com https://*.gstatic.com https://*.ggpht.com',
-    connect: 'https://maps.googleapis.com https://*.googleapis.com',
+    script: 'https://maps.googleapis.com https://maps.gstatic.com https://*.googleapis.com',
+    img: 'https://maps.googleapis.com https://maps.gstatic.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com',
+    connect: 'https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://*.gstatic.com',
     style: 'https://fonts.googleapis.com',
     font: 'https://fonts.gstatic.com',
   };
@@ -62,7 +65,7 @@ export function middleware(req: NextRequest) {
     "child-src 'self' blob:",
     `style-src 'self' 'unsafe-inline' ${g.style}`,
     `img-src 'self' data: blob: ${tiles} https://server.arcgisonline.com https://*.arcgisonline.com https://api.maptiler.com ${g.img}`,
-    `connect-src 'self' ${tiles} https://server.arcgisonline.com https://*.arcgisonline.com https://api.maptiler.com ${g.connect}`,
+    `connect-src 'self' data: blob: ${tiles} https://server.arcgisonline.com https://*.arcgisonline.com https://api.maptiler.com ${g.connect}`,
     `font-src 'self' data: ${g.font}`,
     "object-src 'none'",
     "base-uri 'self'",

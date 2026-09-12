@@ -15,6 +15,7 @@ Status legend per stage — **impl** (code), **auto** (unit/DB tests), **browser
 | [007](007-IL-YAS-BRANDING-AND-UI.md) | Rebrand to IL-Yas (logo, palette, icons, metadata) | ✅ | ➖ | ⬜ | ⬜ | ✅ |
 | [008](008-MAP-PICKER-CORRECTNESS-AND-BROWSER-QA.md) | Picker coord/address consistency, lifecycle, **browser QA** | ✅ | ✅ | ✅ | ⬜ | ✅ |
 | [009](009-FIX-OSM-TILE-403.md) | Restore blocked map tiles + fix picker not loading | ✅ | ✅ | ✅ | ⬜ | ✅ |
+| [011](011-GOOGLE-MAPS-CSP-FIX.md) | Fix CSP connect-src blocking the Google vector map | ✅ | ✅ | ✅ | ⬜ | ✅ |
 | [010](010-MAP-STABILITY-REAL-ADDRESSES-AND-BOOKING-FIXES.md) | Picker flicker hotfix + FULL Google Maps migration (maps/geocode/routes) | ✅ | ✅ | ✅ | ⬜ | ✅ |
 
 ✅ done · ⬜ pending · ➖ n/a. **Automated + browser QA are done** (24 vitest + 6
