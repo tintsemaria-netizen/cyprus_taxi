@@ -43,6 +43,16 @@ function sameWall(a: Wall, b: Wall): boolean {
   return a.y === b.y && a.mo === b.mo && a.d === b.d && a.h === b.h && a.mi === b.mi;
 }
 
+// Format an instant as a Europe/Nicosia wall-time string "YYYY-MM-DDTHH:mm" suitable
+// for a <input type="datetime-local"> min/value, independent of the visitor's own
+// timezone. Client-safe (uses Intl). Keeps the picker's min consistent with the
+// server, which interprets the field as Cyprus wall time.
+export function nicosiaInputValue(instant: Date): string {
+  const w = wallInTz(instant.getTime(), TZ);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${w.y}-${p(w.mo)}-${p(w.d)}T${p(w.h)}:${p(w.mi)}`;
+}
+
 export type WallConversion =
   | { ok: true; utc: Date }
   | { ok: false; reason: 'GAP' | 'AMBIGUOUS'; options?: string[] };

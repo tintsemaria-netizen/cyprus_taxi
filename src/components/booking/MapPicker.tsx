@@ -8,6 +8,13 @@ import { api } from '@/lib/api-client';
 import type { Selected } from './PlacesInput';
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
+// ~1e-6° ≈ 0.11 m. Below this the centre is treated as unchanged, so resize/zoom
+// events that don't move the geographic centre never invalidate the draft or issue
+// a reverse lookup. Far smaller than any meaningful pickup adjustment.
+const MOVE_TOLERANCE = 1e-6;
+const REVERSE_DEBOUNCE_MS = 350;
+const REVERSE_TIMEOUT_MS = 8000;
+const LOAD_TIMEOUT_MS = 15000;
 
 function demoStyle(): maplibregl.StyleSpecification {
   return {
@@ -15,7 +22,7 @@ function demoStyle(): maplibregl.StyleSpecification {
     sources: { osm: { type: 'raster', tiles: [publicMapConfig.tiles], tileSize: 256, attribution: publicMapConfig.attribution } },
     layers: [
       { id: 'bg', type: 'background', paint: { 'background-color': '#0e1518' } },
-      { id: 'osm', type: 'raster', source: 'osm', paint: { 'raster-opacity': 0.85, 'raster-saturation': -0.3, 'raster-brightness-max': 0.85 } },
+      { id: 'osm', type: 'raster', source: 'osm', paint: { 'raster-opacity': 0.9 } },
     ],
   };
 }
@@ -31,24 +38,33 @@ interface Props {
 type GeoState = 'idle' | 'locating' | 'ok' | 'denied' | 'unavailable' | 'timeout';
 
 const coordLabel = (lat: number, lng: number) => `Pin ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+const coordKey = (lat: number, lng: number) => `${lat.toFixed(6)},${lng.toFixed(6)}`;
+const near = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) =>
+  Math.abs(a.lat - b.lat) < MOVE_TOLERANCE && Math.abs(a.lng - b.lng) < MOVE_TOLERANCE;
 
 export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const userMarker = useRef<maplibregl.Marker | null>(null);
 
-  // --- versioned draft: coordinate + its resolved label move together ---
-  const draftRev = useRef(0);                       // bumps on every coordinate change
+  // Versioned draft: coordinate + its resolved label move together (Task 008).
+  const draftRev = useRef(0);
   const centerRef = useRef<{ lat: number; lng: number }>(initial ?? fallback ?? CYPRUS_CENTER);
-  const addrRef = useRef<{ rev: number; label: string } | null>(
-    initial ? { rev: 0, label: initial.label } : null,
-  );
-  const revSeq = useRef(0);                          // latest reverse-geocode request id
+  const addrRef = useRef<{ rev: number; label: string } | null>(initial ? { rev: 0, label: initial.label } : null);
 
-  const closed = useRef(false);                      // dismissed → ignore all late async
-  const userMoveCount = useRef(0);                   // increments ONLY on user gestures
-  const geoGen = useRef(0);                          // increments per geolocation request
-  const popped = useRef(false);                      // history entry consumed
+  // Flicker/idle control.
+  const lastProcessed = useRef<{ lat: number; lng: number }>(centerRef.current); // last centre we acted on
+  const lastReverseKey = useRef<string | null>(initial ? coordKey(initial.lat, initial.lng) : null); // dedup (incl. null result)
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reverseAbort = useRef<AbortController | null>(null);
+  const revSeq = useRef(0);
+
+  // Lifecycle guards.
+  const mapGen = useRef(0);          // increments per (re)created map; stale callbacks bail
+  const closed = useRef(false);
+  const userMoveCount = useRef(0);
+  const geoGen = useRef(0);
+  const popped = useRef(false);
 
   const [center, setCenter] = useState(centerRef.current);
   const [addr, setAddr] = useState<string | null>(initial?.label ?? null);
@@ -60,14 +76,12 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
   const [retryKey, setRetryKey] = useState(0);
   const label = kind === 'pickup' ? 'Set pickup location' : 'Set destination';
 
-  // Lock background scroll; restore on close.
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  // Owned Escape + history handlers so cleanup actually removes them.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') cancel(); };
     const onPop = () => { popped.current = true; cancel(); };
@@ -81,28 +95,71 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Any coordinate change invalidates the current label + pending request identity.
-  function onCoordChange(lat: number, lng: number) {
+  // A REAL geographic change: bump the draft, invalidate the label, and schedule a
+  // single debounced reverse lookup once movement settles.
+  function onRealMove(lat: number, lng: number, gen: number) {
     draftRev.current += 1;
-    revSeq.current += 1;                 // any in-flight reverse response is now stale
+    revSeq.current += 1;                 // any in-flight reverse is now stale
+    reverseAbort.current?.abort();       // cancel obsolete request
     centerRef.current = { lat, lng };
+    lastProcessed.current = { lat, lng };
     addrRef.current = null;
     setCenter({ lat, lng });
     setAddr(null);
     setResolving(true);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    const rev = draftRev.current;
+    debounceTimer.current = setTimeout(() => reverseGeocode(lat, lng, rev, gen), REVERSE_DEBOUNCE_MS);
+  }
+
+  // Reverse lookup for a specific coordinate/draft/map-generation. Bounded by an
+  // 8s timeout; applies only if still the current request. Deduped by coordinate
+  // (a null/no-address result is a COMPLETED result, never retried in a loop).
+  async function reverseGeocode(lat: number, lng: number, rev: number, gen: number) {
+    if (closed.current || gen !== mapGen.current) return;
+    const key = coordKey(lat, lng);
+    if (lastReverseKey.current === key && rev === draftRev.current) { setResolving(false); return; }
+    const my = ++revSeq.current;
+    const controller = new AbortController();
+    reverseAbort.current = controller;
+    setResolving(true);
+    let result: { place: { label: string } | null } | null = null;
+    let errored = false;
+    try {
+      result = await api<{ place: { label: string } | null }>(`/places/reverse?lat=${lat}&lng=${lng}`, {
+        signal: controller.signal,
+        timeoutMs: REVERSE_TIMEOUT_MS,
+      });
+    } catch {
+      errored = true; // timeout / network / abort → coordinate fallback (no retry loop)
+    }
+    // Ignore stale: superseded request, changed draft, different map, or closed.
+    if (closed.current || gen !== mapGen.current || my !== revSeq.current || rev !== draftRev.current) return;
+    lastReverseKey.current = key; // mark this coordinate as resolved (success OR null OR error)
+    if (!errored && result?.place?.label) {
+      addrRef.current = { rev, label: result.place.label };
+      setAddr(result.place.label);
+    } else {
+      addrRef.current = null;
+      setAddr(null);
+    }
+    setResolving(false);
   }
 
   useEffect(() => {
     let disposed = false;
     let ro: ResizeObserver | null = null;
-    let timers: ReturnType<typeof setTimeout>[] = [];
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const gen = ++mapGen.current;
     setFailed(false);
     setMapLoaded(false);
+    let loadTimer: ReturnType<typeof setTimeout> | null = null;
     (async () => {
       try {
         const maplibre = (await import('maplibre-gl')).default;
-        if (disposed || closed.current || !containerRef.current) return;
-        const start = initial ?? fallback ?? CYPRUS_CENTER;
+        if (disposed || closed.current || gen !== mapGen.current || !containerRef.current) return;
+        // Retry preserves the current draft: centre on the last draft coordinate.
+        const start = centerRef.current;
         const map = new maplibre.Map({
           container: containerRef.current,
           style: demoStyle(),
@@ -110,38 +167,53 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
           zoom: initial ? 15 : fallback ? 13 : 10,
           attributionControl: { compact: true },
         });
-        map.on('error', () => { if (!map.loaded()) setFailed(true); });
+        mapRef.current = map;
         map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'bottom-right');
         const userGesture = (e: { originalEvent?: unknown }) => { if (e.originalEvent) userMoveCount.current += 1; };
         map.on('dragstart', userGesture);
         map.on('zoomstart', userGesture);
         map.on('rotatestart', userGesture);
-        map.on('move', () => { const c = map.getCenter(); onCoordChange(c.lat, c.lng); });
-        map.on('moveend', () => { const c = map.getCenter(); reverseGeocode(c.lat, c.lng, draftRev.current); });
+        // Only a real geographic centre change counts — resize/zoom-in-place is ignored.
+        map.on('move', () => {
+          if (gen !== mapGen.current) return;
+          const c = map.getCenter();
+          if (near({ lat: c.lat, lng: c.lng }, lastProcessed.current)) return;
+          onRealMove(c.lat, c.lng, gen);
+        });
+        // Fatal-init detection: if the style never loads, show the recoverable error
+        // state. Individual tile errors are NOT fatal and are ignored here.
+        loadTimer = setTimeout(() => { if (!disposed && gen === mapGen.current && !map.loaded()) setFailed(true); }, LOAD_TIMEOUT_MS);
         map.on('load', () => {
-          if (disposed || closed.current) return;
+          if (disposed || closed.current || gen !== mapGen.current) return;
+          if (loadTimer) clearTimeout(loadTimer);
           setMapLoaded(true);
           map.resize();
-          reverseGeocode(start.lat, start.lng, draftRev.current);
+          const c = map.getCenter();
+          lastProcessed.current = { lat: c.lat, lng: c.lng };
+          centerRef.current = { lat: c.lat, lng: c.lng };
+          // Resolve the ACTUAL current point (not a captured start), unless a saved
+          // label for this exact point is already present.
+          if (!(addrRef.current && addrRef.current.rev === draftRev.current)) {
+            reverseGeocode(c.lat, c.lng, draftRev.current, gen);
+          }
         });
-        mapRef.current = map;
-        // This map lives in a fixed overlay: ensure it sizes to the visible container
-        // after layout settles, and on any later container resize/orientation change.
-        ro = new ResizeObserver(() => mapRef.current?.resize());
+        ro = new ResizeObserver(() => { if (gen === mapGen.current) mapRef.current?.resize(); });
         if (containerRef.current) ro.observe(containerRef.current);
-        [50, 200, 500].forEach((ms) => timers.push(setTimeout(() => mapRef.current?.resize(), ms)));
-        // Map init proceeds independently of geolocation.
-        if (!initial) requestLocation(false);
+        [60, 220, 520].forEach((ms) => timers.push(setTimeout(() => { if (gen === mapGen.current) mapRef.current?.resize(); }, ms)));
+        if (!initial) requestLocation(false, gen);
       } catch {
-        if (!disposed) setFailed(true);
+        if (!disposed && gen === mapGen.current) setFailed(true);
       }
     })();
-    const onResize = () => mapRef.current?.resize();
+    const onResize = () => { if (gen === mapGen.current) mapRef.current?.resize(); };
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onResize);
     return () => {
       disposed = true;
+      if (loadTimer) clearTimeout(loadTimer);
       timers.forEach(clearTimeout);
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      reverseAbort.current?.abort();
       ro?.disconnect();
       window.removeEventListener('resize', onResize);
       window.removeEventListener('orientationchange', onResize);
@@ -151,28 +223,11 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [retryKey]);
 
-  // Reverse-geocode tied to a specific draft revision. Applies ONLY if that draft is
-  // still current (and the picker is open); ignores every stale success and failure.
-  async function reverseGeocode(lat: number, lng: number, rev: number) {
-    const my = ++revSeq.current;
-    setResolving(true);
-    try {
-      const r = await api<{ place: { label: string } | null; unavailable?: boolean }>(`/places/reverse?lat=${lat}&lng=${lng}`);
-      if (closed.current || my !== revSeq.current || rev !== draftRev.current) return; // stale
-      if (r.place?.label) { addrRef.current = { rev, label: r.place.label }; setAddr(r.place.label); }
-      else { addrRef.current = null; setAddr(null); }
-      setResolving(false);
-    } catch {
-      if (closed.current || my !== revSeq.current || rev !== draftRev.current) return;
-      addrRef.current = null; setAddr(null); setResolving(false);
-    }
-  }
-
-  function showUser(lat: number, lng: number, acc: number) {
+  function showUser(lat: number, lng: number, acc: number, gen: number) {
     (async () => {
       const maplibre = (await import('maplibre-gl')).default;
       const map = mapRef.current;
-      if (!map || closed.current) return;
+      if (!map || closed.current || gen !== mapGen.current) return;
       if (!userMarker.current) {
         const el = document.createElement('div');
         el.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#4C9AFF;border:2px solid #fff;box-shadow:0 0 0 2px rgba(76,154,255,0.4)';
@@ -181,7 +236,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
       }
       userMarker.current.setLngLat([lng, lat]).addTo(map);
       const add = () => {
-        if (!mapRef.current || closed.current) return;
+        if (!mapRef.current || closed.current || gen !== mapGen.current) return;
         const data = accuracyCircle(lat, lng, acc) as GeoJSON.GeoJSON;
         const src = map.getSource('acc') as maplibregl.GeoJSONSource | undefined;
         if (src) src.setData(data);
@@ -190,24 +245,21 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
           map.addLayer({ id: 'acc', type: 'fill', source: 'acc', paint: { 'fill-color': '#4C9AFF', 'fill-opacity': 0.12 } });
         }
       };
-      // Adding sources/layers requires a ready style.
       if (map.isStyleLoaded()) add(); else map.once('load', add);
     })();
   }
 
-  // explicit=true → "My location" button; recenters unless the user has dragged since
-  // this exact click. auto (false) → only recenters if the user has never moved.
-  function requestLocation(explicit: boolean) {
+  function requestLocation(explicit: boolean, gen = mapGen.current) {
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) { setGeo('unavailable'); return; }
     setGeo('locating');
-    const gen = ++geoGen.current;
+    const g = ++geoGen.current;
     const moveAtRequest = userMoveCount.current;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        if (closed.current || gen !== geoGen.current) return;
+        if (closed.current || g !== geoGen.current || gen !== mapGen.current) return;
         setGeo('ok');
         setAccuracyM(pos.coords.accuracy ?? null);
-        showUser(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy ?? 0);
+        showUser(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy ?? 0, gen);
         const mayRecenter = explicit ? userMoveCount.current === moveAtRequest : userMoveCount.current === 0;
         if (mayRecenter) {
           const zoom = pos.coords.accuracy && pos.coords.accuracy > 1000 ? 12 : 15;
@@ -215,7 +267,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
         }
       },
       (err) => {
-        if (closed.current || gen !== geoGen.current) return;
+        if (closed.current || g !== geoGen.current || gen !== mapGen.current) return;
         setGeo(err.code === err.PERMISSION_DENIED ? 'denied' : err.code === err.TIMEOUT ? 'timeout' : 'unavailable');
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
@@ -223,9 +275,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
   }
 
   function finish() {
-    if (!popped.current && history.state && (history.state as { ilyasPicker?: boolean }).ilyasPicker) {
-      history.back(); // consume our own entry without leaving a phantom
-    }
+    if (!popped.current && history.state && (history.state as { ilyasPicker?: boolean }).ilyasPicker) history.back();
   }
   function confirm() {
     if (closed.current) return;
@@ -233,7 +283,6 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
     const c = mapRef.current?.getCenter();
     const lat = c ? c.lat : centerRef.current.lat;
     const lng = c ? c.lng : centerRef.current.lng;
-    // Commit ONE consistent snapshot: label only if it belongs to this exact draft.
     const snap = addrRef.current;
     const l = snap && snap.rev === draftRev.current ? snap.label : coordLabel(lat, lng);
     finish();
@@ -276,7 +325,6 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
         ) : (
           <>
             <div ref={containerRef} className="absolute inset-0 h-full w-full" aria-label="Map — drag to position the pin" role="application" />
-            {/* Fixed selection pin appears only once the map can actually display it. */}
             {mapLoaded && (
               <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full">
                 <svg width="34" height="46" viewBox="0 0 34 46" aria-hidden>
@@ -304,13 +352,14 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
       <div className="border-t border-edge bg-panel p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
         {geoMsg[geo] && <p className="mb-2 text-xs text-warn">{geoMsg[geo]}</p>}
         {geo === 'ok' && coarse && <p className="mb-2 text-[11px] text-muted">Your device location is approximate (±{Math.round(accuracyM as number)} m).</p>}
-        <div className="mb-3">
+        {/* Fixed height so resolving/label/fallback never change layout (no resize→move feedback). */}
+        <div className="mb-3 h-[3.25rem]">
           <div className="label">Selected {kind === 'pickup' ? 'pickup' : 'destination'}</div>
           <div className="mt-0.5 truncate text-sm font-medium">
             {addr ?? coordLabel(center.lat, center.lng)}
             {resolving && !addr && <span className="ml-2 text-[11px] text-muted">resolving…</span>}
           </div>
-          {!addr && <div className="text-[11px] text-muted">No street address for this point — using map coordinates.</div>}
+          <div className="text-[11px] text-muted">{addr ? ' ' : 'No street address for this point — using map coordinates.'}</div>
         </div>
         <div className="flex gap-2">
           <button className="btn-ghost flex-1" onClick={cancel}>Cancel</button>
@@ -323,8 +372,6 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
   );
 }
 
-// Honest accuracy circle: renders the reported radius. Extremely large fixes are
-// visually capped (with a disclosure in the panel), never shrunk to look precise.
 function accuracyCircle(lat: number, lng: number, radiusM: number): GeoJSON.Feature {
   const points = 48;
   const coords: [number, number][] = [];

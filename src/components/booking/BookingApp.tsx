@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import MapView, { MapMarker } from '@/components/MapView';
 import { Logo } from '@/components/Brand';
 import { PlacesInput, Selected } from './PlacesInput';
 import { DemoBanner } from '@/components/DemoBanner';
 import MapPicker from './MapPicker';
+import { nicosiaInputValue } from '@/lib/timezone';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 
 interface PublicConfig {
@@ -49,9 +50,27 @@ export default function BookingApp() {
   const idemKey = useRef<string>('');
   const idemPayloadSig = useRef<string>('');
 
-  useEffect(() => {
-    api<PublicConfig>('/public/config').then(setCfg).catch(() => setCfg(null));
+  const [cfgError, setCfgError] = useState(false);
+  const [cfgLoading, setCfgLoading] = useState(true);
+  const [scheduleTick, setScheduleTick] = useState(0);
+
+  const loadConfig = useCallback(() => {
+    setCfgLoading(true);
+    setCfgError(false);
+    api<PublicConfig>('/public/config', { timeoutMs: 8000 })
+      .then((c) => { setCfg(c); setCfgError(false); })
+      .catch(() => setCfgError(true))
+      .finally(() => setCfgLoading(false));
   }, []);
+
+  useEffect(() => { loadConfig(); }, [loadConfig]);
+
+  // Keep the schedule minimum fresh (in Cyprus wall time) while scheduling is open.
+  useEffect(() => {
+    if (when !== 'SCHEDULE') return;
+    const t = setInterval(() => setScheduleTick((n) => n + 1), 30000);
+    return () => clearInterval(t);
+  }, [when]);
 
   const markers = useMemo<MapMarker[]>(() => {
     const m: MapMarker[] = [];
@@ -157,11 +176,12 @@ export default function BookingApp() {
     setPicker(null);
   }
 
+  // Minimum scheduled time expressed in Europe/Nicosia wall time (matches the server),
+  // regardless of the visitor's own timezone. Refreshes as time advances (scheduleTick).
   const scheduleMin = useMemo(() => {
-    const d = new Date(Date.now() + (cfg?.schedule.minMinutes ?? 30) * 60000);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }, [cfg]);
+    return nicosiaInputValue(new Date(Date.now() + (cfg?.schedule.minMinutes ?? 30) * 60000));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cfg, scheduleTick]);
 
   const classes = cfg?.classes ?? [
     { key: 'COMFORT' as const, label: 'Comfort', maxPassengers: 4 },
@@ -171,6 +191,14 @@ export default function BookingApp() {
   return (
     <div className="relative flex h-[100dvh] flex-col overflow-hidden">
       {cfg?.demoMode && <DemoBanner />}
+      {cfgError && (
+        <div className="flex items-center justify-center gap-3 bg-warn/15 border-b border-warn/30 px-3 py-1.5 text-[11px] sm:text-xs text-warn">
+          <span>Couldn&apos;t load service settings — booking may be unavailable. The map still works.</span>
+          <button className="rounded border border-warn/40 px-2 py-0.5 hover:bg-warn/10" onClick={loadConfig} disabled={cfgLoading}>
+            {cfgLoading ? 'Retrying…' : 'Retry'}
+          </button>
+        </div>
+      )}
       <header className="z-20 flex items-center justify-between border-b border-edge bg-page/90 px-4 py-3 backdrop-blur sm:px-6">
         <Logo />
         <nav className="hidden items-center gap-6 text-sm text-muted sm:flex">
