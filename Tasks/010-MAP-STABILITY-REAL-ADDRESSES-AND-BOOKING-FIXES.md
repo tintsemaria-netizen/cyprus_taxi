@@ -1,9 +1,12 @@
 # Task 010 — Migrate beta to Google Maps, stop flicker and fix booking regressions
 
-Status: PARTIAL — P0/P1 stability hotfix DONE, deployed and browser-verified (release 149e821); Google migration PENDING credentials.
+Status: DONE (2026-09-12) — P0/P1 stability hotfix AND the Google Maps migration are implemented, deployed and verified live.
 - DONE (A/B/D): picker flicker + endless "resolving..." fixed (tolerance-based move detection, 350ms debounced + deduped reverse, 8s ab.ort/timeout fallback, stable panel height, per-map generation guard, retry preserves draft). PlacesInput request-identity on every edit + cancel-on-select/unmount. Europe/Nicosia schedule min. Strict /places/reverse coord validation. Public-config failure + retry UI.
 - Verified: vitest 24/24; Playwright 10/10 incl. new idle-invariant / resize-no-lookup / hung->timeout / one-pan-one-lookup regressions, run against the LIVE deployed site.
-- NOT DONE (C + real Places/Geocoding/Routes): the Google Maps Platform migration needs a Google Cloud project with billing and a browser key (website-restricted to cyprustaxi.ackedberryes.store), a separate server key, a Map ID, and enabled APIs (Maps JS, Places API New, Geocoding, Routes). None provided, so NOT started — the working MapLibre + MapTiler map was preserved rather than deploying a blank Google map. Reverse/search remain demo fixtures; routing remains unavailable in live mode. Provide the keys to proceed.
+- DONE (C/D + routes): all map surfaces now render Google Maps (Map ID dark) via AutoMapView/AutoMapPicker; GoogleMapPicker reimplements the stability invariants with Google idle/camera events (verified live). Backend: /places/reverse=Google reverse geocode, /places/search=Google forward geocode (Cyprus-biased, real addresses), /routes/estimate=Google Routes DRIVE (distance/duration/decoded polyline). Booking renders the real driving-route polyline + trip-duration estimate. Keys: browser key + Map ID via Docker build args, server key via runtime env; never committed (gitignored env + docs/GoogleMaps).
+- CAVEAT: Places API (New) autocomplete is NOT enabled on the Google project (blocked), so the address box uses Google Geocoding (real Cyprus addresses, but not as-you-type predictions). Enable "Places API (New)" to upgrade to session-token autocomplete.
+- Verified live: server geocode/route return 200; the browser map renders with NO auth errors (23 googleapis requests, all 200); full flow search->select stops->real road route polyline; stability 4/4 on the Google picker; vitest 24/24.
+- SECURITY: restrict the browser key to https://cyprustaxi.ackedberryes.store in the Google console (it is visible in the client by design). Keep the server key server-only.
 Application: IL-Yas
 Repository: https://github.com/tintsemaria-netizen/cyprus_taxi
 Beta: https://cyprustaxi.ackedberryes.store

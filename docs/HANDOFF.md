@@ -58,6 +58,22 @@ origins); a **separate server key** (never NEXT_PUBLIC); and a **Map ID**. Then 
 (browser key + Map ID) via Docker build args and server key via runtime env, update CSP for Google
 hosts, and migrate all map surfaces + Places autocomplete + Geocoding reverse + Routes.
 
+## Task 010 §C/D (2026-09-12) — Google Maps migration DONE + deployed
+All map surfaces render Google Maps (browser key + Map ID, dark) via AutoMapView/
+AutoMapPicker (MapLibre kept only as no-key dev fallback). GoogleMapPicker reuses the
+stability invariants via Google idle/camera events. Backend adapters (server key,
+src/server/google.ts): /places/reverse (reverse geocode), /places/search (forward
+geocode, Cyprus-biased), /routes/estimate (Routes DRIVE, decoded polyline). Booking
+renders the real road route + trip-duration estimate. Keys: NEXT_PUBLIC browser key +
+Map ID via Docker build args; GOOGLE_MAPS_SERVER_API_KEY runtime env. Keys are in the
+gitignored deploy/.env.production and docs/GoogleMaps only — NEVER committed. CSP updated
+for Google hosts. Release 30f16fd. Verified live (map renders no-auth-errors; server
+geocode/route 200; full search→route flow; stability 4/4; vitest 24/24).
+
+Caveats / next: **Places API (New) is not enabled** on the Google project (autocomplete
+blocked) → search uses Geocoding (real addresses, not typeahead). **Restrict the browser
+key** to the beta hostname in the Google console. Physical-device GPS + load test still pending.
+
 ## Next actions (optional, not blocking)
 - Validate driver GPS on a physical phone over HTTPS; record result.
 - Run the ~10-min synthetic load exercise; record machine/results.

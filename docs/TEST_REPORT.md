@@ -88,6 +88,15 @@ Geocoding + Routes) requires a Google Cloud key with billing — not provided. T
 MapLibre+MapTiler map was preserved; reverse/search remain demo fixtures and routing stays
 "unavailable" in live mode. Physical-device GPS and load test still pending.
 
+## Task 010 §C/D — Google Maps migration (2026-09-12)
+
+- **Server adapters (live, release 30f16fd):** `/places/reverse` → `provider:google` real address; `/places/search` → real Cyprus addresses; `/routes/estimate` → `provider:google`, 74.5 km / 56 min / 546-point polyline.
+- **Browser rendering (live Playwright):** Google Maps SDK loads and the picker map renders with **no auth errors** (23 `googleapis.com` requests, all 200). Screenshot `docs/qa-screenshots/google-picker.png` shows the dark Google map with a **real reverse-geocoded address** in the panel.
+- **Full flow (live):** type in From/To → Google Geocoding results → select both → **real road-route polyline** on the map + trip-duration estimate. Screenshot `docs/qa-screenshots/google-booking-route.png`.
+- **Stability on the Google picker (live):** idle-invariant / resize-no-lookup / hung-timeout / one-pan-one-lookup all pass (4/4) with Google idle events.
+- **vitest 24/24; tsc + build pass.**
+- **Caveat:** Places API (New) autocomplete is not enabled on the project → search uses Google Geocoding (real addresses, not as-you-type predictions).
+
 ## Not run / pending
 
 - Physical-device GPS on a real phone (needs a device on the HTTPS site) — **unverified**.
