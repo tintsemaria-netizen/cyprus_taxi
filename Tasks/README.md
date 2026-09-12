@@ -14,6 +14,7 @@ Status legend per stage — **impl** (code), **auto** (unit/DB tests), **browser
 | [006](006-FULLSCREEN-MAP-PICKER-AND-GEOLOCATION.md) | Full-screen map picker + browser geolocation | ✅ | ➖ | ⬜ | ⬜ | ✅ |
 | [007](007-IL-YAS-BRANDING-AND-UI.md) | Rebrand to IL-Yas (logo, palette, icons, metadata) | ✅ | ➖ | ⬜ | ⬜ | ✅ |
 | [008](008-MAP-PICKER-CORRECTNESS-AND-BROWSER-QA.md) | Picker coord/address consistency, lifecycle, **browser QA** | ✅ | ✅ | ✅ | ⬜ | ✅ |
+| [009](009-FIX-OSM-TILE-403.md) | Restore blocked map tiles + fix picker not loading | ✅ | ✅ | ✅ | ⬜ | ✅ |
 
 ✅ done · ⬜ pending · ➖ n/a. **Automated + browser QA are done** (24 vitest + 6
 Playwright, see `docs/BROWSER_QA.md` and `docs/qa-screenshots/`). The remaining open

@@ -56,6 +56,8 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
   const [geo, setGeo] = useState<GeoState>('idle');
   const [accuracyM, setAccuracyM] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const label = kind === 'pickup' ? 'Set pickup location' : 'Set destination';
 
   // Lock background scroll; restore on close.
@@ -92,6 +94,10 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
 
   useEffect(() => {
     let disposed = false;
+    let ro: ResizeObserver | null = null;
+    let timers: ReturnType<typeof setTimeout>[] = [];
+    setFailed(false);
+    setMapLoaded(false);
     (async () => {
       try {
         const maplibre = (await import('maplibre-gl')).default;
@@ -101,26 +107,31 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
           container: containerRef.current,
           style: demoStyle(),
           center: [start.lng, start.lat],
-          zoom: initial ? 15 : fallback ? 12 : 8,
+          zoom: initial ? 15 : fallback ? 13 : 10,
           attributionControl: { compact: true },
         });
         map.on('error', () => { if (!map.loaded()) setFailed(true); });
         map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'bottom-right');
-        // User gestures mark the camera as user-controlled.
         const userGesture = (e: { originalEvent?: unknown }) => { if (e.originalEvent) userMoveCount.current += 1; };
         map.on('dragstart', userGesture);
         map.on('zoomstart', userGesture);
         map.on('rotatestart', userGesture);
-        // Coordinate tracks the centre under the fixed pin; label invalidates immediately.
         map.on('move', () => { const c = map.getCenter(); onCoordChange(c.lat, c.lng); });
         map.on('moveend', () => { const c = map.getCenter(); reverseGeocode(c.lat, c.lng, draftRev.current); });
         map.on('load', () => {
           if (disposed || closed.current) return;
+          setMapLoaded(true);
           map.resize();
           reverseGeocode(start.lat, start.lng, draftRev.current);
         });
         mapRef.current = map;
-        if (!initial) requestLocation(false); // auto-locate only when this field is empty
+        // This map lives in a fixed overlay: ensure it sizes to the visible container
+        // after layout settles, and on any later container resize/orientation change.
+        ro = new ResizeObserver(() => mapRef.current?.resize());
+        if (containerRef.current) ro.observe(containerRef.current);
+        [50, 200, 500].forEach((ms) => timers.push(setTimeout(() => mapRef.current?.resize(), ms)));
+        // Map init proceeds independently of geolocation.
+        if (!initial) requestLocation(false);
       } catch {
         if (!disposed) setFailed(true);
       }
@@ -130,13 +141,15 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
     window.addEventListener('orientationchange', onResize);
     return () => {
       disposed = true;
+      timers.forEach(clearTimeout);
+      ro?.disconnect();
       window.removeEventListener('resize', onResize);
       window.removeEventListener('orientationchange', onResize);
       mapRef.current?.remove();
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [retryKey]);
 
   // Reverse-geocode tied to a specific draft revision. Applies ONLY if that draft is
   // still current (and the picker is open); ignores every stale success and failure.
@@ -252,23 +265,35 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
         {failed ? (
           <div className="flex h-full items-center justify-center px-6 text-center text-muted">
             <div>
-              <div className="text-sm text-ink">Map unavailable</div>
-              <div className="mt-1 text-xs">Close this and enter the address by name instead.</div>
-              <button className="btn-ghost mt-4" onClick={cancel}>Close</button>
+              <div className="text-sm text-ink">Map temporarily unavailable</div>
+              <div className="mt-1 text-xs">Your entered details are safe.</div>
+              <div className="mt-4 flex justify-center gap-2">
+                <button className="btn-primary" onClick={() => setRetryKey((k) => k + 1)}>Retry</button>
+                <button className="btn-ghost" onClick={cancel}>Enter address instead</button>
+              </div>
             </div>
           </div>
         ) : (
           <>
-            <div ref={containerRef} className="absolute inset-0" aria-label="Map — drag to position the pin" role="application" />
-            <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full">
-              <svg width="34" height="46" viewBox="0 0 34 46" aria-hidden>
-                <path d="M17 0C7.6 0 0 7.6 0 17c0 12 17 29 17 29s17-17 17-29C34 7.6 26.4 0 17 0z" fill="#C8FF46" stroke="#0d1608" strokeWidth="2" />
-                <circle cx="17" cy="17" r="6" fill="#0d1608" />
-              </svg>
-            </div>
+            <div ref={containerRef} className="absolute inset-0 h-full w-full" aria-label="Map — drag to position the pin" role="application" />
+            {/* Fixed selection pin appears only once the map can actually display it. */}
+            {mapLoaded && (
+              <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full">
+                <svg width="34" height="46" viewBox="0 0 34 46" aria-hidden>
+                  <path d="M17 0C7.6 0 0 7.6 0 17c0 12 17 29 17 29s17-17 17-29C34 7.6 26.4 0 17 0z" fill="#C8FF46" stroke="#0d1608" strokeWidth="2" />
+                  <circle cx="17" cy="17" r="6" fill="#0d1608" />
+                </svg>
+              </div>
+            )}
+            {!mapLoaded && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-muted">
+                <span className="animate-pulse">Loading map…</span>
+              </div>
+            )}
             <button
-              className="absolute right-3 top-3 z-10 rounded-full border border-edge bg-page/90 px-3 py-2 text-sm text-ink hover:border-accent/50"
+              className="absolute right-3 top-3 z-10 rounded-full border border-edge bg-page/90 px-3 py-2 text-sm text-ink hover:border-accent/50 disabled:opacity-50"
               onClick={() => requestLocation(true)}
+              disabled={!mapLoaded}
             >
               ⌖ My location
             </button>
@@ -289,7 +314,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
         </div>
         <div className="flex gap-2">
           <button className="btn-ghost flex-1" onClick={cancel}>Cancel</button>
-          <button className="btn-primary flex-1" onClick={confirm} disabled={failed}>
+          <button className="btn-primary flex-1" onClick={confirm} disabled={failed || !mapLoaded}>
             {kind === 'pickup' ? 'Confirm pickup' : 'Confirm destination'}
           </button>
         </div>

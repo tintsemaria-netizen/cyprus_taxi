@@ -47,14 +47,16 @@ test('picker opens full-screen for BOTH fields; screenshots', async ({ page }) =
   await page.getByText('Set pickup on map').click();
   await expect(page.getByRole('heading', { name: 'Set pickup location' })).toBeVisible();
   await expect(page.getByText('My location')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Confirm pickup' })).toBeVisible();
-  await page.waitForTimeout(1500);
+  // Map must actually LOAD: Confirm is disabled until the map can display the point.
+  await expect(page.getByRole('button', { name: 'Confirm pickup' })).toBeEnabled({ timeout: 15000 });
+  await page.waitForTimeout(2500); // let tiles paint
   await page.screenshot({ path: `${SHOTS}/mobile-picker-pickup.png` });
   await page.getByRole('button', { name: 'Back' }).click();
 
   await page.getByText('Set destination on map').click();
   await expect(page.getByRole('heading', { name: 'Set destination' })).toBeVisible();
-  await page.waitForTimeout(1500);
+  await expect(page.getByRole('button', { name: 'Confirm destination' })).toBeEnabled({ timeout: 15000 });
+  await page.waitForTimeout(2500);
   await page.screenshot({ path: `${SHOTS}/mobile-picker-destination.png` });
   await page.getByRole('button', { name: 'Back' }).click();
   await expect(page.getByRole('heading', { name: 'Where to next?' })).toBeVisible();
@@ -72,7 +74,7 @@ test('form state and other stop survive picker confirm', async ({ page, context 
   // pick a destination via the picker, then confirm
   await page.getByText('Set destination on map').click();
   await expect(page.getByRole('heading', { name: 'Set destination' })).toBeVisible();
-  await page.waitForTimeout(1000);
+  await expect(page.getByRole('button', { name: 'Confirm destination' })).toBeEnabled({ timeout: 15000 });
   await panMap(page);
   await page.getByRole('button', { name: 'Confirm destination' }).click();
 
@@ -94,7 +96,7 @@ test('REGRESSION: a delayed (stale) reverse response is never applied as the con
   await openBooking(page);
   await page.getByText('Set pickup on map').click();
   await expect(page.getByRole('heading', { name: 'Set pickup location' })).toBeVisible();
-  await page.waitForTimeout(800);
+  await expect(page.getByRole('button', { name: 'Confirm pickup' })).toBeEnabled({ timeout: 15000 });
   await panMap(page);                 // move to a new point
   await page.getByRole('button', { name: 'Confirm pickup' }).click(); // confirm BEFORE the 3s response
   const pickup = await page.getByPlaceholder('Pickup location').inputValue();

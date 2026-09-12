@@ -184,7 +184,13 @@ export default function BookingApp() {
 
       <div className="relative flex-1">
         <div className="absolute inset-0">
-          <MapView markers={markers} center={{ lat: 34.92, lng: 33.2 }} zoom={9} interactive className="h-full w-full" />
+          {/* The full-screen picker is its own map; unmount this background map while it's
+              open (frees the WebGL context and avoids two simultaneous map instances). */}
+          {picker ? (
+            <div className="h-full w-full bg-[#0e1518]" />
+          ) : (
+            <MapView markers={markers} center={{ lat: 34.92, lng: 33.2 }} zoom={9} interactive className="h-full w-full" />
+          )}
         </div>
 
         <div className="pointer-events-none absolute inset-0 flex flex-col justify-end sm:block">

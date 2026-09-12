@@ -11,5 +11,15 @@ export default defineConfig({
     trace: 'off',
     screenshot: 'off',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // Headless chromium here falls back to software WebGL; opt in explicitly so
+        // MapLibre renders reliably (matches guidance in the runtime warning).
+        launchOptions: { args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] },
+      },
+    },
+  ],
 });

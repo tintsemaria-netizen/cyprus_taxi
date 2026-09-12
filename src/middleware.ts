@@ -65,7 +65,12 @@ export function middleware(req: NextRequest) {
   res.headers.set('Content-Security-Policy', csp);
   res.headers.set('X-Content-Type-Options', 'nosniff');
   res.headers.set('X-Frame-Options', 'DENY');
-  res.headers.set('Referrer-Policy', 'no-referrer');
+  // Tile providers may require a Referer. Send only the ORIGIN (never the path/query,
+  // so tracking references and tokens never leak) on ordinary pages; keep strict
+  // no-referrer on the tracking page and all API/private responses.
+  const p = req.nextUrl.pathname;
+  const strictNoRef = p === '/track' || p.startsWith('/api/');
+  res.headers.set('Referrer-Policy', strictNoRef ? 'no-referrer' : 'strict-origin-when-cross-origin');
   res.headers.set('Permissions-Policy', 'geolocation=(self), camera=(), microphone=(), payment=()');
   return res;
 }

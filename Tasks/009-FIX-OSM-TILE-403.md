@@ -1,6 +1,6 @@
 # Task 009 — Restore blocked tiles and fix map picker loading
 
-Status: TODO
+Status: DONE (2026-09-12) — root cause confirmed: OSM public tiles 403-block app/datacenter usage AND the global no-referrer header stripped the Referer OSM needs. Fix: switched demo basemap to Esri Dark Gray (no key/watermark) and set Referrer-Policy=strict-origin-when-cross-origin on ordinary pages (no-referrer kept on /track + /api). §3A picker-not-loading fixed: ResizeObserver + delayed resizes size the fixed-overlay map, loading state, Confirm gated until the map can display the point, Retry recreates the map. Browser-verified (Playwright 6/6) with screenshots showing tiles rendering.
 Priority: High — visible beta map failure
 Application: IL-Yas
 Repository: https://github.com/tintsemaria-netizen/cyprus_taxi

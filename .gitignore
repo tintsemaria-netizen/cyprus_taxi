@@ -18,3 +18,5 @@ out
 tests-e2e/node_modules
 tests-e2e/screenshots
 tests-e2e/test-results
+*.tsbuildinfo
+tsconfig.tsbuildinfo
