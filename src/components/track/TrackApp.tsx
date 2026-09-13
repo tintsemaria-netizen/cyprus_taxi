@@ -19,12 +19,16 @@ interface TrackView {
   vehicle: null | { driverName: string; make: string; model: string; color: string; plate: string; vClass: string; phone: string | null };
   location: null | { lat: number; lng: number; freshness: string; poorAccuracy: boolean; sampledAt: string };
   pickupEta: string | null;
+  fareCents: number | null;
   canCancel: boolean;
+  canRetry: boolean;
   timeline: { type: string; at: string; status: string | null }[];
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  REQUESTED: 'Waiting for dispatcher',
+  REQUESTED: 'Scheduled ride',
+  SEARCHING: 'Finding you a driver',
+  NO_DRIVER: 'No drivers available',
   ASSIGNED: 'Driver assigned',
   EN_ROUTE: 'Driver on the way',
   ARRIVED: 'Driver has arrived',
@@ -39,6 +43,7 @@ export default function TrackApp() {
   const [reconnecting, setReconnecting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [disconnected, setDisconnected] = useState(false); // hide stale live data
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inFlight = useRef(false);
@@ -132,6 +137,19 @@ export default function TrackApp() {
     }
   }
 
+  async function retry() {
+    if (!view) return;
+    setRetrying(true);
+    try {
+      await api('/tracking/research', { method: 'POST', body: { expectedRevision: view.revision } });
+      await load();
+    } catch (e) {
+      if (e instanceof ApiRequestError) alert(e.body.message);
+    } finally {
+      setRetrying(false);
+    }
+  }
+
   if (phase === 'loading') {
     return <Centered><div className="animate-pulse text-muted">Loading your ride…</div></Centered>;
   }
@@ -203,9 +221,13 @@ export default function TrackApp() {
               <div className="p-4 sm:p-5">
                 <h1 className="text-xl font-bold">{headline}</h1>
                 {view.status === 'REQUESTED' && (
-                  <p className="mt-1 text-sm text-muted">
-                    {view.scheduledAt ? 'Scheduled request — awaiting dispatcher.' : 'We’re finding you a driver.'}
-                  </p>
+                  <p className="mt-1 text-sm text-muted">Scheduled request — we’ll dispatch a driver near your pickup time.</p>
+                )}
+                {view.status === 'SEARCHING' && (
+                  <p className="mt-1 text-sm text-muted">Matching you with the nearest available driver…</p>
+                )}
+                {view.status === 'NO_DRIVER' && (
+                  <p className="mt-1 text-sm text-muted">No drivers are free nearby right now. You can search again or cancel.</p>
                 )}
 
                 {view.vehicle ? (
@@ -217,9 +239,10 @@ export default function TrackApp() {
                     </div>
                     <span className="rounded-[8px] border border-edge px-2 py-1 text-xs font-mono">{view.vehicle.plate}</span>
                   </div>
-                ) : !terminal ? (
-                  <div className="mt-4 rounded-[12px] border border-edge bg-elevated p-3 text-sm text-muted">
-                    No driver reserved yet — a dispatcher will assign one shortly.
+                ) : view.status === 'SEARCHING' ? (
+                  <div className="mt-4 flex items-center gap-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm text-muted">
+                    <span className="inline-block h-3 w-3 animate-ping rounded-full bg-accent" />
+                    Reserving the nearest driver for you…
                   </div>
                 ) : null}
 
@@ -250,13 +273,18 @@ export default function TrackApp() {
                       <div className="rounded-[12px] border border-edge bg-elevated p-3 text-xs text-muted">
                         <div>Reference: <span className="font-mono text-ink">{view.reference}</span></div>
                         <div className="mt-1">Class: {view.vClass} · {view.passengerCount} passenger(s)</div>
-                        <div className="mt-1">Fare: {view.fareWording}</div>
+                        <div className="mt-1">Fare: {view.fareCents != null ? `≈ €${(view.fareCents / 100).toFixed(2)} (metered estimate)` : view.fareWording}</div>
                         <ul className="mt-2 space-y-1">
                           {view.timeline.map((t, i) => (
                             <li key={i}>· {t.type.replace(/_/g, ' ').toLowerCase()} — {new Date(t.at).toLocaleTimeString('en-GB')}</li>
                           ))}
                         </ul>
                       </div>
+                    )}
+                    {view.canRetry && (
+                      <button className="btn-primary w-full" onClick={retry} disabled={retrying}>
+                        {retrying ? 'Searching…' : 'Search again'}
+                      </button>
                     )}
                     {view.canCancel && (
                       <button className="w-full rounded-[12px] border border-danger/40 px-4 py-2.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-50" onClick={cancel} disabled={cancelling}>

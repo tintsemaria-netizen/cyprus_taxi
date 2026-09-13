@@ -27,12 +27,14 @@ enum VehicleClass {
 
 enum BookingStatus {
   REQUESTED
+  SEARCHING
   ASSIGNED
   EN_ROUTE
   ARRIVED
   IN_PROGRESS
   COMPLETED
   CANCELED
+  NO_DRIVER
 }
 
 model StaffUser {
@@ -64,6 +66,7 @@ model Driver {
 
   bindings    DriverVehicleBinding[]
   assignments Assignment[]
+  offers      DriverOffer[]
   location    LatestDriverLocation?
 }
 
@@ -128,10 +131,53 @@ model Booking {
   assignments  Assignment[]
   events       BookingEvent[]
   grants       TrackingGrant[]
+  dispatchJob  DispatchJob?
+  offers       DriverOffer[]
 
   @@index([status, createdAt])
   @@index([status, scheduledAt])
   @@index([phone])
+}
+
+// Durable per-booking dispatch attempt (Task 012 §4). The background worker leases a
+// job, offers eligible drivers one at a time, and gives up at the deadline (NO_DRIVER).
+model DispatchJob {
+  id             String    @id @default(uuid())
+  booking        Booking   @relation(fields: [bookingId], references: [id])
+  bookingId      String    @unique
+  deadlineAt     DateTime
+  triedDriverIds String[]  @default([])
+  radiusStage    Int       @default(0)
+  leaseOwner     String?
+  leaseUntil     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([leaseUntil])
+}
+
+// An expiring offer to a single reserved driver. active* nullable-unique columns give
+// DB-enforced "one active offer per booking and per driver", reserving capacity so a
+// driver can't be double-offered or assigned elsewhere while an offer is outstanding.
+model DriverOffer {
+  id            String    @id @default(uuid())
+  booking       Booking   @relation(fields: [bookingId], references: [id])
+  bookingId     String
+  driver        Driver    @relation(fields: [driverId], references: [id])
+  driverId      String
+  vehicleId     String
+  pickupEtaSec  Int?
+  pickupDistanceM Int?
+  status        String    @default("OFFERED") // OFFERED | ACCEPTED | REJECTED | EXPIRED | CANCELED
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+  respondedAt   DateTime?
+
+  activeBookingId String? @unique
+  activeDriverId  String? @unique
+
+  @@index([bookingId])
+  @@index([driverId])
 }
 
 model Assignment {

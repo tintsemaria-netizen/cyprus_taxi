@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import { computeFreshness, poorAccuracy } from '@/lib/freshness';
 import { demoEstimate } from '@/lib/places';
-import { allowedNext } from '@/lib/status-machine';
+import { allowedNext, PASSENGER_CANCELABLE } from '@/lib/status-machine';
 import { googleConfigured, googleRoute } from '@/server/google';
 import { BookingStatus } from '@prisma/client';
 
@@ -92,7 +92,9 @@ export async function trackingView(bookingId: string) {
     vehicle,
     location,
     pickupEta: pickupEta ?? (booking.status === 'EN_ROUTE' ? 'ETA unavailable' : null),
-    canCancel: ['REQUESTED', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(booking.status),
+    fareCents: booking.fareCents ?? null,
+    canCancel: PASSENGER_CANCELABLE.includes(booking.status),
+    canRetry: booking.status === 'NO_DRIVER',
     timeline: booking.events.map((e) => ({ type: e.type, at: e.createdAt.toISOString(), status: e.afterStatus })),
   };
 }

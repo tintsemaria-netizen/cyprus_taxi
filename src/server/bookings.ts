@@ -123,6 +123,10 @@ export async function createBooking(
   // the encrypted response. If the claim collides (concurrent create), the whole
   // transaction rolls back (no orphan booking) and we replay the winner's receipt.
   const reference = await uniqueReference();
+  // Immediate rides enter autonomous dispatch right away (SEARCHING + a DispatchJob the
+  // background worker picks up). Scheduled rides stay REQUESTED until their lead window
+  // (scheduled-ride automation promotes them to SEARCHING later).
+  const initialStatus = scheduledAt ? 'REQUESTED' : 'SEARCHING';
   try {
     const body = await prisma.$transaction(async (tx) => {
       await tx.idempotencyReceipt.create({
@@ -134,11 +138,14 @@ export async function createBooking(
           pickupLat: input.pickup.lat, pickupLng: input.pickup.lng, pickupLabel: input.pickup.label,
           dropoffLat: input.dropoff.lat, dropoffLng: input.dropoff.lng, dropoffLabel: input.dropoff.label,
           passengerName: input.passengerName, phone: input.phone, note: input.note || null,
-          vClass: input.vClass, passengerCount: input.passengerCount, scheduledAt, status: 'REQUESTED',
+          vClass: input.vClass, passengerCount: input.passengerCount, scheduledAt, status: initialStatus,
           ...(fare ? { quoteId: input.quoteId, fareCents: fare.fareCents, priceType: fare.priceType, fareBreakdown: fare.fareBreakdown } : {}),
         },
       });
-      await tx.bookingEvent.create({ data: { bookingId: b.id, type: 'CREATED', actorType: 'PASSENGER', afterStatus: 'REQUESTED' } });
+      await tx.bookingEvent.create({ data: { bookingId: b.id, type: 'CREATED', actorType: 'PASSENGER', afterStatus: initialStatus } });
+      if (initialStatus === 'SEARCHING') {
+        await tx.dispatchJob.create({ data: { bookingId: b.id, deadlineAt: new Date(Date.now() + 180 * 1000) } });
+      }
       const grant = await createGrantTx(tx, b.id, scheduledAt ?? new Date());
       const built: BookingCreatedBody = {
         bookingId: b.id,

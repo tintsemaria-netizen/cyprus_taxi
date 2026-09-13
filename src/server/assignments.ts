@@ -98,7 +98,7 @@ async function validateCandidate(
   return { driver, vehicle };
 }
 
-async function createAssignment(
+export async function createAssignment(
   tx: Prisma.TransactionClient,
   booking: { id: string },
   driver: { id: string; publicName: string; phone: string },
@@ -140,14 +140,20 @@ export async function assignBooking(params: {
     const booking = await loadLockedBooking(tx, params.bookingId);
     if (!booking) throw notFound();
     if (booking.revision !== params.expectedRevision) throw conflict();
-    if (booking.status !== 'REQUESTED') throw conflict('Booking is no longer awaiting assignment.');
+    // Manual dispatch is an audited override that also works while autonomous dispatch is
+    // searching (SEARCHING) or has given up (NO_DRIVER), not only for scheduled REQUESTED.
+    if (!['REQUESTED', 'SEARCHING', 'NO_DRIVER'].includes(booking.status)) throw conflict('Booking is no longer awaiting assignment.');
 
     const { driver, vehicle } = await validateCandidate(tx, booking, params.driverId, params.vehicleId, params.acknowledgeNoGps);
     await createAssignment(tx, booking, driver, vehicle, params.actorId);
 
+    // Tear down any in-flight autonomous dispatch for this booking.
+    await tx.driverOffer.updateMany({ where: { bookingId: booking.id, status: 'OFFERED' }, data: { status: 'CANCELED', respondedAt: new Date(), activeBookingId: null, activeDriverId: null } });
+    await tx.dispatchJob.deleteMany({ where: { bookingId: booking.id } });
+
     const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: 'ASSIGNED', revision: { increment: 1 } } });
     await tx.bookingEvent.create({
-      data: { bookingId: booking.id, type: 'ASSIGNED', actorType: 'STAFF', actorId: params.actorId, beforeStatus: 'REQUESTED', afterStatus: 'ASSIGNED' },
+      data: { bookingId: booking.id, type: 'ASSIGNED', actorType: 'STAFF', actorId: params.actorId, beforeStatus: booking.status, afterStatus: 'ASSIGNED' },
     });
     return { revision: updated.revision, status: updated.status };
   });

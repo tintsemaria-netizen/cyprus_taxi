@@ -22,6 +22,17 @@ interface Trip {
 }
 interface CurrentTrip { onDuty: boolean; available: boolean; trip: Trip | null; }
 
+interface Offer {
+  offerId: string;
+  expiresAt: string;
+  pickupEtaSec: number | null;
+  pickup: { lat: number; lng: number; label: string };
+  dropoff: { label: string };
+  vClass: string;
+  passengerCount: number;
+  fareCents: number | null;
+}
+
 const DRIVER_ACTION: Record<string, string> = {
   EN_ROUTE: "I'm on the way",
   ARRIVED: "I've arrived",
@@ -38,6 +49,9 @@ function Driver() {
   const [data, setData] = useState<CurrentTrip | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [gps, setGps] = useState<{ active: boolean; error: string | null; last: string | null }>({ active: false, error: null, last: null });
+  const [offer, setOffer] = useState<Offer | null>(null);
+  const [nowMs, setNowMs] = useState<number>(0);
+  const [offerBusy, setOfferBusy] = useState(false);
   const watchId = useRef<number | null>(null);
   const sendTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastPos = useRef<GeolocationPosition | null>(null);
@@ -141,6 +155,49 @@ function Driver() {
     }
   }
 
+  // Poll for a live dispatch offer whenever the driver is on duty and idle.
+  useEffect(() => {
+    if (!data?.onDuty || data.trip) { setOffer(null); return; }
+    let alive = true;
+    const poll = async () => {
+      try {
+        const r = await api<{ offer: Offer | null }>('/driver/offers');
+        if (alive) setOffer(r.offer);
+      } catch { /* transient */ }
+    };
+    poll();
+    const t = setInterval(poll, 2000);
+    return () => { alive = false; clearInterval(t); };
+  }, [data?.onDuty, data?.trip]);
+
+  // Drive the offer countdown.
+  useEffect(() => {
+    if (!offer) return;
+    setNowMs(Date.now());
+    const t = setInterval(() => setNowMs(Date.now()), 250);
+    return () => clearInterval(t);
+  }, [offer]);
+
+  async function acceptCurrentOffer(id: string) {
+    setOfferBusy(true);
+    try {
+      await api(`/driver/offers/${id}/accept`, { method: 'POST' });
+      setOffer(null);
+      await load();
+    } catch (e) {
+      if (e instanceof ApiRequestError) setBanner(e.body.message);
+      setOffer(null);
+    } finally {
+      setOfferBusy(false);
+    }
+  }
+
+  async function declineCurrentOffer(id: string) {
+    setOfferBusy(true);
+    try { await api(`/driver/offers/${id}/reject`, { method: 'POST' }); } catch { /* ignore */ }
+    finally { setOffer(null); setOfferBusy(false); }
+  }
+
   async function driverStatus(to: string) {
     if (!data?.trip) return;
     if ((to === 'IN_PROGRESS' || to === 'COMPLETED') && !confirm(`${to === 'IN_PROGRESS' ? 'Start' : 'Complete'} the trip?`)) return;
@@ -192,6 +249,33 @@ function Driver() {
         </div>
       )}
 
+      {/* Live dispatch offer */}
+      {offer && !data.trip && (() => {
+        const secsLeft = Math.max(0, Math.ceil((new Date(offer.expiresAt).getTime() - nowMs) / 1000));
+        const etaMin = offer.pickupEtaSec != null ? Math.max(1, Math.round(offer.pickupEtaSec / 60)) : null;
+        return (
+          <div className="card mt-4 border-2 border-accent p-4">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-accent">New ride offer</span>
+              <span className={`chip ${secsLeft <= 5 ? '!text-danger' : ''}`}>⏳ {secsLeft}s</span>
+            </div>
+            <div className="mt-3 space-y-2 text-sm">
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" /><span className="text-muted">Pickup</span><span className="ml-auto text-right font-medium">{offer.pickup.label}</span></div>
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-ink" /><span className="text-muted">Destination</span><span className="ml-auto text-right font-medium">{offer.dropoff.label}</span></div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
+              {etaMin != null && <span className="rounded-full bg-elevated px-2 py-1">≈ {etaMin} min to pickup</span>}
+              <span className="rounded-full bg-elevated px-2 py-1">{offer.passengerCount}p · {offer.vClass}</span>
+              {offer.fareCents != null && <span className="rounded-full bg-elevated px-2 py-1">≈ €{(offer.fareCents / 100).toFixed(2)}</span>}
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button className="btn-ghost !text-danger border border-danger/40" disabled={offerBusy} onClick={() => declineCurrentOffer(offer.offerId)}>Decline</button>
+              <button className="btn-primary" disabled={offerBusy || secsLeft === 0} onClick={() => acceptCurrentOffer(offer.offerId)}>Accept</button>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Trip */}
       <div className="card mt-4 p-4">
         {data.trip ? (
@@ -225,7 +309,7 @@ function Driver() {
           <div className="py-8 text-center">
             <div className="text-2xl">🚕</div>
             <p className="mt-2 font-medium">No assigned trip</p>
-            <p className="text-sm text-muted">{data.onDuty ? 'Waiting for the dispatcher to assign you a booking.' : 'Go on duty to receive assignments.'}</p>
+            <p className="text-sm text-muted">{data.onDuty ? 'Waiting for a nearby ride request. Keep location sharing on to receive offers.' : 'Go on duty to receive ride offers.'}</p>
           </div>
         )}
       </div>

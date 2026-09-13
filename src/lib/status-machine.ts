@@ -6,7 +6,22 @@ type Actor = 'STAFF' | 'DRIVER' | 'PASSENGER';
 
 const TRANSITIONS: Record<BookingStatus, Partial<Record<BookingStatus, Actor[]>>> = {
   REQUESTED: {
+    // Manual admin override (Task 012 keeps manual dispatch as an audited fallback);
+    // scheduled rides also start REQUESTED and are promoted to SEARCHING by automation.
+    SEARCHING: ['STAFF'],
     ASSIGNED: ['STAFF'],
+    CANCELED: ['STAFF', 'PASSENGER'],
+  },
+  SEARCHING: {
+    // ASSIGNED is normally reached by a driver accepting an offer (handled atomically in
+    // the dispatch layer); STAFF may also manually assign as an audited override.
+    ASSIGNED: ['STAFF'],
+    NO_DRIVER: ['STAFF'],
+    CANCELED: ['STAFF', 'PASSENGER'],
+  },
+  NO_DRIVER: {
+    SEARCHING: ['STAFF', 'PASSENGER'], // retry the search
+    ASSIGNED: ['STAFF'], // manual override
     CANCELED: ['STAFF', 'PASSENGER'],
   },
   ASSIGNED: {
@@ -54,6 +69,8 @@ export function isTerminal(s: BookingStatus): boolean {
 // Statuses in which a passenger may cancel (SPEC §3.11).
 export const PASSENGER_CANCELABLE: BookingStatus[] = [
   'REQUESTED',
+  'SEARCHING',
+  'NO_DRIVER',
   'ASSIGNED',
   'EN_ROUTE',
   'ARRIVED',

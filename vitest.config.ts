@@ -9,5 +9,9 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.test.ts'],
     testTimeout: 20000,
+    // DB test files share one isolated Postgres; run files sequentially in a single
+    // process so their table cleanups never race across workers.
+    fileParallelism: false,
+    poolOptions: { forks: { singleFork: true } },
   },
 });

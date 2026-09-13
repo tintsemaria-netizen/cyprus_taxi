@@ -43,6 +43,8 @@ beforeAll(async () => {
   }
   await prisma.$queryRaw`SELECT 1`;
   // Clean transactional tables for a deterministic run (keeps seeded staff/drivers/vehicles).
+  await prisma.driverOffer.deleteMany({});
+  await prisma.dispatchJob.deleteMany({});
   await prisma.bookingEvent.deleteMany({});
   await prisma.assignment.deleteMany({});
   await prisma.trackingGrant.deleteMany({});
@@ -103,8 +105,8 @@ describe('assignment + status concurrency', () => {
     const r = await changeStatus({ bookingId: b.id, to: 'ASSIGNED', expectedRevision: b.revision, actor: 'STAFF', actorId: 't' });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.code).toBe('USE_ASSIGN');
-    // booking remains REQUESTED with no assignment
-    expect((await prisma.booking.findUnique({ where: { id: b.id } }))!.status).toBe('REQUESTED');
+    // booking remains in its pre-assignment state (SEARCHING for an immediate ride) with no assignment
+    expect((await prisma.booking.findUnique({ where: { id: b.id } }))!.status).toBe('SEARCHING');
   });
 
   it('two concurrent assigns of one driver: exactly one wins', async () => {
