@@ -20,6 +20,9 @@ interface TrackView {
   location: null | { lat: number; lng: number; freshness: string; poorAccuracy: boolean; sampledAt: string };
   pickupEta: string | null;
   fareCents: number | null;
+  startCode: string | null;
+  waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
+  receipt: null | { estimateCents: number | null; waitingCents: number; finalCents: number | null; currency: string; priceType: string; paymentMethod: string; paymentStatus: string };
   canCancel: boolean;
   canRetry: boolean;
   timeline: { type: string; at: string; status: string | null }[];
@@ -44,6 +47,7 @@ export default function TrackApp() {
   const [showDetails, setShowDetails] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [nowMs, setNowMs] = useState(0);
   const [disconnected, setDisconnected] = useState(false); // hide stale live data
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inFlight = useRef(false);
@@ -136,6 +140,15 @@ export default function TrackApp() {
       setCancelling(false);
     }
   }
+
+  // Tick the pickup-waiting timer once per second while the driver is waiting.
+  const arrived = view?.status === 'ARRIVED';
+  useEffect(() => {
+    if (!arrived) return;
+    setNowMs(Date.now());
+    const t = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [arrived]);
 
   async function retry() {
     if (!view) return;
@@ -246,6 +259,28 @@ export default function TrackApp() {
                   </div>
                 ) : null}
 
+                {/* start code — shown to the driver at pickup */}
+                {view.startCode && (
+                  <div className="mt-4 rounded-[12px] border border-accent/50 bg-accent/10 p-3 text-center">
+                    <div className="text-[11px] uppercase tracking-wide text-muted">Show this code to your driver</div>
+                    <div className="mt-1 font-mono text-3xl font-bold tracking-[0.4em] text-accent">{view.startCode}</div>
+                  </div>
+                )}
+
+                {/* pickup waiting timer (after arrival) */}
+                {view.status === 'ARRIVED' && view.waiting && (() => {
+                  const elapsed = Math.max(0, Math.floor((nowMs - new Date(view.waiting.arrivedAt).getTime()) / 1000));
+                  const freeLeft = Math.max(0, view.waiting.graceSeconds - elapsed);
+                  const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+                  return (
+                    <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
+                      {freeLeft > 0
+                        ? <span>Your driver is waiting · <span className="font-mono text-accent">{mmss(freeLeft)}</span> free time left</span>
+                        : <span className="text-warn">Free waiting time elapsed{view.waiting.paidRateCentsPerMin > 0 ? ` · €${(view.waiting.paidRateCentsPerMin / 100).toFixed(2)}/min applies` : ''}.</span>}
+                    </div>
+                  );
+                })()}
+
                 {/* stops */}
                 <div className="mt-4 space-y-2 text-sm">
                   <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" /><span className="text-muted">Pickup</span><span className="ml-auto truncate font-medium">{view.pickup.label}</span></div>
@@ -296,9 +331,30 @@ export default function TrackApp() {
 
                 {terminal && (
                   <div className="mt-4">
-                    <div className="rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-                      {view.status === 'COMPLETED' ? 'Thanks for riding with IL-Yas.' : 'This booking was canceled.'}
-                    </div>
+                    {view.status === 'COMPLETED' && view.receipt ? (
+                      <div className="rounded-[12px] border border-edge bg-elevated p-3 text-sm">
+                        <div className="mb-2 font-semibold">Trip receipt</div>
+                        {view.receipt.estimateCents != null && (
+                          <div className="flex justify-between"><span className="text-muted">Fare estimate</span><span>€{(view.receipt.estimateCents / 100).toFixed(2)}</span></div>
+                        )}
+                        {view.receipt.waitingCents > 0 && (
+                          <div className="flex justify-between"><span className="text-muted">Waiting</span><span>€{(view.receipt.waitingCents / 100).toFixed(2)}</span></div>
+                        )}
+                        <div className="mt-2 border-t border-edge pt-2 text-[11px] text-muted">
+                          {view.receipt.priceType === 'REGULATED_METER_ESTIMATE'
+                            ? 'Estimate only — the final regulated meter amount is settled with the driver.'
+                            : 'Fare as quoted.'}
+                        </div>
+                        <div className="mt-1 flex justify-between text-[11px] text-muted">
+                          <span>Payment: {view.receipt.paymentMethod === 'CASH_TO_DRIVER' ? 'cash to driver' : view.receipt.paymentMethod}</span>
+                          <span>{view.receipt.paymentStatus === 'PENDING' ? 'to be collected' : 'collected'}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-[12px] border border-edge bg-elevated p-3 text-sm">
+                        {view.status === 'COMPLETED' ? 'Thanks for riding with IL-Yas.' : 'This booking was canceled.'}
+                      </div>
+                    )}
                     <a href="/" className="btn-primary mt-3 w-full">Book another ride</a>
                   </div>
                 )}

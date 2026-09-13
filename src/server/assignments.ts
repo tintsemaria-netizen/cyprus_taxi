@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { Prisma, BookingStatus, Role } from '@prisma/client';
 import { canTransition, isTerminal, PASSENGER_CANCELABLE } from '@/lib/status-machine';
 import { computeFreshness } from '@/lib/freshness';
+import { generateStartCode } from '@/server/dispatch/lifecycle';
 
 export type Actor = 'STAFF' | 'DRIVER' | 'PASSENGER';
 
@@ -126,6 +127,10 @@ export async function createAssignment(
     },
   });
   await tx.driver.update({ where: { id: driver.id }, data: { available: false } });
+  // Assign a passenger-facing 4-digit start code once (kept stable across reassignments
+  // so the passenger's shown code stays valid). Driver enters it to start the trip (M3).
+  const b = await tx.booking.findUnique({ where: { id: booking.id }, select: { startCode: true } });
+  if (!b?.startCode) await tx.booking.update({ where: { id: booking.id }, data: { startCode: generateStartCode() } });
 }
 
 export async function assignBooking(params: {

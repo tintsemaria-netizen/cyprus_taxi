@@ -4,7 +4,9 @@ Read docs/SPEC.md in full, then docs/IMPLEMENTATION_STATUS.md and docs/HANDOFF.m
 
 Repository: https://github.com/tintsemaria-netizen/cyprus_taxi
 
-Selected design: dark graphite with lime accents. Web first, native Android/iOS later. Beta includes passenger booking/tracking, dispatcher assignment/fleet map, driver foreground GPS, admin and durable PostgreSQL data. Manual dispatch and payment to driver. Never silently substitute simulated GPS for real tracking.
+Selected design: dark graphite with lime accents. Web first, native Android/iOS later. Beta includes passenger booking/tracking, driver foreground GPS, admin and durable PostgreSQL data. Payment to driver. Never silently substitute simulated GPS for real tracking.
+
+Operating model (Task 012, supersedes older manual-dispatch text): normal operation is AUTONOMOUS — a background dispatch worker matches passengers to drivers by real road pickup ETA, sends expiring driver offers, and completes assignment on driver acceptance with no dispatcher in the loop. Manual/dispatcher assignment is retained only as an audited admin override, never a dependency of a routine trip. See Tasks/012-AUTONOMOUS-DISPATCH-PRICING-AND-LIVE-ETA.md.
 
 Before session/context limits update docs/HANDOFF.md and task status with exact next actions, Git state and evidence. Resume from those files. Do not bypass limits, switch accounts or invent session-management commands. Verify supported Claude Code continuation commands locally before using them.
 

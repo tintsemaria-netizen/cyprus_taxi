@@ -18,6 +18,8 @@ interface Trip {
   note: string | null;
   passengerCount: number;
   vClass: string;
+  scheduledAt: string | null;
+  waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
   allowedNext: string[];
 }
 interface CurrentTrip { onDuty: boolean; available: boolean; trip: Trip | null; }
@@ -33,14 +35,6 @@ interface Offer {
   fareCents: number | null;
 }
 
-const DRIVER_ACTION: Record<string, string> = {
-  EN_ROUTE: "I'm on the way",
-  ARRIVED: "I've arrived",
-  IN_PROGRESS: 'Start trip',
-  COMPLETED: 'Complete trip',
-  CANCELED: 'Cancel',
-};
-
 export default function Page() {
   return <StaffShell roles={['DRIVER']}>{() => <Driver />}</StaffShell>;
 }
@@ -52,6 +46,7 @@ function Driver() {
   const [offer, setOffer] = useState<Offer | null>(null);
   const [nowMs, setNowMs] = useState<number>(0);
   const [offerBusy, setOfferBusy] = useState(false);
+  const [startCode, setStartCode] = useState('');
   const watchId = useRef<number | null>(null);
   const sendTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastPos = useRef<GeolocationPosition | null>(null);
@@ -170,13 +165,14 @@ function Driver() {
     return () => { alive = false; clearInterval(t); };
   }, [data?.onDuty, data?.trip]);
 
-  // Drive the offer countdown.
+  // Drive the offer countdown and the pickup-waiting timer.
+  const ticking = !!offer || data?.trip?.status === 'ARRIVED';
   useEffect(() => {
-    if (!offer) return;
+    if (!ticking) return;
     setNowMs(Date.now());
-    const t = setInterval(() => setNowMs(Date.now()), 250);
+    const t = setInterval(() => setNowMs(Date.now()), 500);
     return () => clearInterval(t);
-  }, [offer]);
+  }, [ticking]);
 
   async function acceptCurrentOffer(id: string) {
     setOfferBusy(true);
@@ -198,12 +194,14 @@ function Driver() {
     finally { setOffer(null); setOfferBusy(false); }
   }
 
-  async function driverStatus(to: string) {
+  // M3 trip lifecycle: EN_ROUTE via the generic status endpoint; arrive/start/complete/
+  // release via dedicated endpoints (proximity, start-code and fare rules live server-side).
+  async function tripAction(path: string, body: Record<string, unknown>, opts?: { stopGps?: boolean }) {
     if (!data?.trip) return;
-    if ((to === 'IN_PROGRESS' || to === 'COMPLETED') && !confirm(`${to === 'IN_PROGRESS' ? 'Start' : 'Complete'} the trip?`)) return;
     try {
-      await api(`/driver/bookings/${data.trip.bookingId}/status`, { method: 'POST', body: { to, expectedRevision: data.trip.revision } });
-      if (to === 'COMPLETED') stopGps();
+      await api(`/driver/bookings/${data.trip.bookingId}/${path}`, { method: 'POST', body: { expectedRevision: data.trip.revision, ...body } });
+      if (opts?.stopGps) stopGps();
+      setStartCode('');
       await load();
     } catch (e) {
       if (e instanceof ApiRequestError) setBanner(e.body.message);
@@ -296,13 +294,47 @@ function Driver() {
                 <a href={`geo:${data.trip.dropoff.lat},${data.trip.dropoff.lng}`} className="btn-ghost !min-h-0 flex-1 !py-2 text-sm">🧭 Navigate</a>
               </div>
             </div>
+            {/* Pickup waiting timer (after arrival) */}
+            {data.trip.status === 'ARRIVED' && data.trip.waiting && (() => {
+              const elapsed = Math.max(0, Math.floor((nowMs - new Date(data.trip.waiting.arrivedAt).getTime()) / 1000));
+              const freeLeft = Math.max(0, data.trip.waiting.graceSeconds - elapsed);
+              const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+              return (
+                <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
+                  {freeLeft > 0 ? (
+                    <span>Free waiting: <span className="font-mono text-accent">{mmss(freeLeft)}</span> left</span>
+                  ) : (
+                    <span className="text-warn">Free waiting elapsed{data.trip.waiting.paidRateCentsPerMin > 0 ? ` · paid waiting €${(data.trip.waiting.paidRateCentsPerMin / 100).toFixed(2)}/min` : ' (no pre-pickup charge)'}</span>
+                  )}
+                </div>
+              );
+            })()}
+
             <div className="mt-4 grid gap-2">
-              {data.trip.allowedNext.map((s) => (
-                <button key={s} className={`btn-primary w-full ${s === 'CANCELED' ? '!bg-elevated !text-danger border border-danger/40' : ''}`} onClick={() => driverStatus(s)}>
-                  {DRIVER_ACTION[s] ?? s}
+              {data.trip.status === 'ASSIGNED' && (
+                <button className="btn-primary w-full" onClick={() => tripAction('status', { to: 'EN_ROUTE' })}>I&apos;m on the way</button>
+              )}
+              {data.trip.status === 'EN_ROUTE' && (
+                <button className="btn-primary w-full" onClick={() => tripAction('arrive', {})}>I&apos;ve arrived</button>
+              )}
+              {data.trip.status === 'ARRIVED' && (
+                <div className="grid gap-2">
+                  <input
+                    inputMode="numeric" maxLength={4} placeholder="Passenger start code (4 digits)"
+                    value={startCode} onChange={(e) => setStartCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    className="w-full rounded-[12px] border border-edge bg-page px-3 py-2.5 text-center font-mono text-lg tracking-[0.4em]"
+                  />
+                  <button className="btn-primary w-full" disabled={startCode.length !== 4} onClick={() => tripAction('start', { code: startCode })}>Start trip</button>
+                </div>
+              )}
+              {data.trip.status === 'IN_PROGRESS' && (
+                <button className="btn-primary w-full" onClick={() => confirm('Complete the trip?') && tripAction('complete', {}, { stopGps: true })}>Complete trip</button>
+              )}
+              {['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(data.trip.status) && (
+                <button className="btn-primary w-full !bg-elevated !text-danger border border-danger/40" onClick={() => confirm('Release this ride? It will be offered to another driver.') && tripAction('cancel', {})}>
+                  Can&apos;t take it — release
                 </button>
-              ))}
-              {data.trip.allowedNext.length === 0 && <p className="text-center text-sm text-muted">Trip finished.</p>}
+              )}
             </div>
           </div>
         ) : (

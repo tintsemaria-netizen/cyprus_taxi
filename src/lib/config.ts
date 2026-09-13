@@ -35,6 +35,18 @@ export const config = {
     freshSeconds: num('GPS_FRESH_SECONDS', 30),
     staleSeconds: num('GPS_STALE_SECONDS', 120),
   },
+  // Autonomous dispatch tunables (Task 012 §4.4/§6.4 — our own beta engineering
+  // defaults, clearly labelled, not statutory Cyprus rules).
+  dispatch: {
+    scheduleLeadMinutes: num('DISPATCH_SCHEDULE_LEAD_MINUTES', 15), // promote a scheduled ride to SEARCHING this long before pickup
+    searchDeadlineSeconds: num('DISPATCH_SEARCH_DEADLINE_SECONDS', 180),
+    arrivalRadiusMeters: num('DISPATCH_ARRIVAL_RADIUS_METERS', 150), // driver must be within this of pickup to mark ARRIVED (airport zones exempt)
+    waitingGraceSeconds: num('DISPATCH_WAITING_GRACE_SECONDS', 180), // free wait after arrival (TEST default 3 min)
+    // Pre-pickup paid waiting rate. Kept 0 for REGULATED_METER_ESTIMATE by default because
+    // the app-side pre-boarding waiting penalty is not verified against RTD rules (§6.4).
+    waitingRateCentsPerMin: num('DISPATCH_WAITING_RATE_CENTS_PER_MIN', 0),
+    gpsLossRematchSeconds: num('DISPATCH_GPS_LOSS_REMATCH_SECONDS', 90), // prolonged pre-pickup GPS loss → expire assignment + rematch
+  },
   minStopDistanceMeters: num('MIN_STOP_DISTANCE_METERS', 50),
   trustedProxyHops: num('TRUSTED_PROXY_HOPS', 2),
   timezone: 'Europe/Nicosia',

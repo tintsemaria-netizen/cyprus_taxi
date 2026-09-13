@@ -125,6 +125,8 @@ model Booking {
   fareCents      Int?          // snapshotted estimate total (cents)
   priceType      String?       // REGULATED_METER_ESTIMATE | REGULATED_FIXED | UPFRONT_DYNAMIC
   fareBreakdown  String?       // JSON snapshot of the quote breakdown
+  startCode      String?       // 4-digit trip-start code (shown to passenger; driver enters it to start) — M3
+  arrivedAt      DateTime?     // server time the driver marked ARRIVED at pickup — M3
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -133,10 +135,45 @@ model Booking {
   grants       TrackingGrant[]
   dispatchJob  DispatchJob?
   offers       DriverOffer[]
+  waiting      WaitingSession?
+  fare         Fare?
 
   @@index([status, createdAt])
   @@index([status, scheduledAt])
   @@index([phone])
+}
+
+// Pickup waiting after ARRIVED (Task 012 §6.4). Persisted timestamps so a refresh/restart
+// can never reset or double-count waiting; the clock is server-authoritative.
+model WaitingSession {
+  id                  String    @id @default(uuid())
+  booking             Booking   @relation(fields: [bookingId], references: [id])
+  bookingId           String    @unique
+  arrivedAt           DateTime  // when the driver arrived / free wait started
+  graceSeconds        Int       // free waiting window
+  paidRateCentsPerMin Int       // pre-pickup paid rate (0 in regulated meter mode by default)
+  endedAt             DateTime? // set on trip start or cancellation
+  accruedCents        Int       @default(0) // finalized paid-wait amount once ended
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+// Immutable fare record written once at COMPLETED (Task 012 §6.4). Payment collection
+// status is tracked separately from trip completion (payment to driver, cash by default).
+model Fare {
+  id            String   @id @default(uuid())
+  booking       Booking  @relation(fields: [bookingId], references: [id])
+  bookingId     String   @unique
+  priceType     String   // REGULATED_METER_ESTIMATE | REGULATED_FIXED | UPFRONT_DYNAMIC
+  currency      String   @default("EUR")
+  estimateCents Int?     // quoted estimate at booking time
+  waitingCents  Int      @default(0)
+  adjustmentsCents Int   @default(0)
+  finalCents    Int?     // authoritative final amount where captured; null = follow meter/estimate
+  basis         String   // JSON: estimate vs final basis + breakdown snapshot
+  paymentMethod String   @default("CASH_TO_DRIVER")
+  paymentStatus String   @default("PENDING") // PENDING | COLLECTED (never auto-COLLECTED on COMPLETED)
+  createdAt     DateTime @default(now())
 }
 
 // Durable per-booking dispatch attempt (Task 012 §4). The background worker leases a

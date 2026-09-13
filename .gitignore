@@ -22,3 +22,6 @@ tests-e2e/test-results
 *.tsbuildinfo
 tsconfig.tsbuildinfo
 docs/GoogleMaps
+
+# Twilio credentials (SMS) — never commit
+Twilio

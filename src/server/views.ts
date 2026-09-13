@@ -78,11 +78,22 @@ export async function trackingView(bookingId: string) {
     }
   }
 
+  // M3: reveal the start code to the authorized passenger once a driver is assigned
+  // (they show it to the driver at pickup); expose waiting state and the final receipt.
+  const showCode = ['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(booking.status);
+  const waiting = booking.status === 'ARRIVED' ? await prisma.waitingSession.findUnique({ where: { bookingId: booking.id } }) : null;
+  const fareRec = booking.status === 'COMPLETED' ? await prisma.fare.findUnique({ where: { bookingId: booking.id } }) : null;
+
   return {
     reference: booking.reference,
     status: booking.status,
     revision: booking.revision,
     scheduledAt: booking.scheduledAt?.toISOString() ?? null,
+    startCode: showCode ? booking.startCode ?? null : null,
+    waiting: waiting ? { arrivedAt: waiting.arrivedAt.toISOString(), graceSeconds: waiting.graceSeconds, paidRateCentsPerMin: waiting.paidRateCentsPerMin } : null,
+    receipt: fareRec
+      ? { estimateCents: fareRec.estimateCents, waitingCents: fareRec.waitingCents, finalCents: fareRec.finalCents, currency: fareRec.currency, priceType: fareRec.priceType, paymentMethod: fareRec.paymentMethod, paymentStatus: fareRec.paymentStatus }
+      : null,
     pickup: { lat: booking.pickupLat, lng: booking.pickupLng, label: booking.pickupLabel },
     dropoff: { lat: booking.dropoffLat, lng: booking.dropoffLng, label: booking.dropoffLabel },
     passengerName: booking.passengerName,
@@ -110,6 +121,7 @@ export async function driverCurrentTrip(driverId: string) {
     return { onDuty: driver?.onDuty ?? false, available: driver?.available ?? false, trip: null };
   }
   const b = active.booking;
+  const waiting = b.status === 'ARRIVED' ? await prisma.waitingSession.findUnique({ where: { bookingId: b.id } }) : null;
   return {
     onDuty: driver?.onDuty ?? false,
     available: driver?.available ?? false,
@@ -125,6 +137,8 @@ export async function driverCurrentTrip(driverId: string) {
       note: b.note,
       passengerCount: b.passengerCount,
       vClass: b.vClass,
+      scheduledAt: b.scheduledAt?.toISOString() ?? null,
+      waiting: waiting ? { arrivedAt: waiting.arrivedAt.toISOString(), graceSeconds: waiting.graceSeconds, paidRateCentsPerMin: waiting.paidRateCentsPerMin } : null,
       allowedNext: allowedNext(b.status as BookingStatus, 'DRIVER'),
     },
   };

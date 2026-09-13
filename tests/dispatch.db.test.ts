@@ -58,6 +58,8 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   // Clean transactional + dispatch tables (respect FKs: children before bookings).
+  await prisma.fare.deleteMany({});
+  await prisma.waitingSession.deleteMany({});
   await prisma.driverOffer.deleteMany({});
   await prisma.dispatchJob.deleteMany({});
   await prisma.bookingEvent.deleteMany({});

@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db';
+import { config } from '@/lib/config';
 import { findBestCandidate, RADIUS_STAGES_KM } from './eligibility';
 import { createOffer, expireOffer } from './offers';
+import { rematchBooking } from './lifecycle';
 
 // Durable-ish in-process dispatch worker (Task 012 §4). Postgres-backed jobs with a lease
 // so multiple instances/ticks are safe; recovers on restart because state lives in the DB
@@ -34,6 +36,11 @@ export async function runOnce(): Promise<void> {
   try {
     state.lastTickAt = Date.now();
     const now = new Date();
+
+    // 0) Promote scheduled rides whose dispatch lead window has arrived, and rematch
+    //    pre-pickup trips whose driver's GPS has been lost too long.
+    await promoteScheduled(now);
+    await rematchOnGpsLoss(now);
 
     // 1) Resolve timed-out offers (release reservation, remember the driver).
     const expired = await prisma.driverOffer.findMany({ where: { status: 'OFFERED', expiresAt: { lt: now } }, select: { id: true } });
@@ -96,4 +103,48 @@ async function processJob(jobId: string): Promise<void> {
   if (stage !== job.radiusStage) await prisma.dispatchJob.update({ where: { id: jobId }, data: { radiusStage: stage } });
   if (!candidate) return; // no eligible driver right now — retry next tick until the deadline
   await createOffer(job.bookingId, candidate);
+}
+
+// Scheduled rides sit as REQUESTED until their lead window, then enter live dispatch.
+// The search deadline runs to pickup time (never reserving a driver for hours ahead).
+async function promoteScheduled(now: Date): Promise<void> {
+  const leadMs = config.dispatch.scheduleLeadMinutes * 60 * 1000;
+  const due = await prisma.booking.findMany({
+    where: { status: 'REQUESTED', scheduledAt: { not: null, lte: new Date(now.getTime() + leadMs) } },
+    select: { id: true },
+    take: 25,
+  });
+  for (const s of due) {
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${s.id} FOR UPDATE`;
+      const b = await tx.booking.findUnique({ where: { id: s.id } });
+      if (!b || b.status !== 'REQUESTED' || !b.scheduledAt) return;
+      const deadline = new Date(Math.max(now.getTime() + config.dispatch.searchDeadlineSeconds * 1000, b.scheduledAt.getTime()));
+      await tx.dispatchJob.deleteMany({ where: { bookingId: b.id } });
+      await tx.dispatchJob.create({ data: { bookingId: b.id, deadlineAt: deadline } });
+      await tx.booking.update({ where: { id: b.id }, data: { status: 'SEARCHING', revision: { increment: 1 } } });
+      await tx.bookingEvent.create({ data: { bookingId: b.id, type: 'SCHEDULED_PROMOTED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'SEARCHING' } });
+    });
+  }
+}
+
+// Prolonged pre-pickup GPS loss expires the assignment and rematches. Only ASSIGNED /
+// EN_ROUTE (never ARRIVED or IN_PROGRESS — an in-trip GPS drop must not reassign anyone).
+async function rematchOnGpsLoss(now: Date): Promise<void> {
+  const cutoff = now.getTime() - config.dispatch.gpsLossRematchSeconds * 1000;
+  const active = await prisma.assignment.findMany({
+    where: { activeBookingId: { not: null }, booking: { status: { in: ['ASSIGNED', 'EN_ROUTE'] } } },
+    select: { activeBookingId: true, driverId: true, assignedAt: true },
+  });
+  for (const a of active) {
+    const loc = await prisma.latestDriverLocation.findUnique({ where: { driverId: a.driverId } });
+    const lastAt = loc ? Math.max(loc.sampledAt.getTime(), loc.receivedAt.getTime()) : a.assignedAt.getTime();
+    if (lastAt >= cutoff) continue; // still fresh enough
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${a.activeBookingId!} FOR UPDATE`;
+      const b = await tx.booking.findUnique({ where: { id: a.activeBookingId! } });
+      if (!b || !['ASSIGNED', 'EN_ROUTE'].includes(b.status)) return; // re-check under lock
+      await rematchBooking(tx, b.id, a.driverId, 'prolonged pre-pickup GPS loss', 'SYSTEM');
+    });
+  }
 }
