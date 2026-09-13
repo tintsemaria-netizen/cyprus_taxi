@@ -1,8 +1,8 @@
-> STATUS (2026-09-13): M0 + M1 DONE, deployed (release 6239837), verified live. M2–M4 STAGED (not yet implemented).
+> STATUS (2026-09-13): M0 + M1 + M2 DONE, deployed (release f293eef), verified live. M3–M4 STAGED (not yet implemented).
 > - DONE M0: 4 project skills (.claude/skills/ilyas-*); market research docs/research/CYPRUS-TAXI-MARKET-AND-FARES.md (verified urban/rural tariff).
 > - DONE M1: versioned pricing/quote engine (src/lib/tariff.ts, Quote model, /api/v1/quote) shown before booking + snapshotted on the booking; real Google driver→pickup ETA in trackingView (cached ≤20s); public fleet availability states (available/busy). vitest 27/27.
-> - PENDING M2: durable auto-dispatch worker (DB-backed jobs), eligibility+ETA ranking, expiring DriverOffers, atomic accept, concurrency/restart recovery, NO_DRIVER — the core "no dispatcher" engine.
-> - PENDING M3: driver offer UI + passenger SEARCHING/matched states, waiting/finalization rules, scheduled-ride automation.
+> - DONE M2: durable auto-dispatch worker (DB-backed DispatchJob + lease, 2s tick, started via instrumentation.ts); eligibility+real-ETA ranking with 3/7/15km radius stages and idle fairness (src/server/dispatch/eligibility.ts); expiring 20s DriverOffers with DB-enforced one-active-per-driver/booking; atomic accept under row lock (src/server/dispatch/offers.ts); reject/expire rematch; 180s → NO_DRIVER; passenger retry (/tracking/research). Driver offer card (countdown + accept/decline) and passenger SEARCHING/NO_DRIVER states. Manual dispatch kept as an audited admin override. /health/live reports worker liveness. vitest 34/34. Verified LIVE on prod: booking→SEARCHING→OFFERED (real Google pickup ETA 360s) and forced-deadline→NO_DRIVER, then test state cleaned.
+> - PENDING M3: waiting/finalization rules, scheduled-ride automation (promote REQUESTED→SEARCHING near lead time), complete fleet-state polish. (Driver offer UI + passenger SEARCHING/matched states already delivered in M2.)
 > - PENDING M4: Places (New) autocomplete, dynamic pricing (synthetic), weather adapter, full acceptance + isolated load tests.
 > These remaining milestones are a large, self-contained build; the live beta still uses manual dispatch for assignment while the pricing/ETA/fleet foundations are live.
 
