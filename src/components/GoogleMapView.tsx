@@ -51,7 +51,11 @@ function markerEl(mk: MapMarker): HTMLElement {
 export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
-  const markerObjs = useRef<any[]>([]);
+  // Reconcile markers by id (no recreation flicker) and remember each one's logical
+  // position so a vehicle marker can be tweened between GPS samples.
+  const markerMap = useRef<Map<string, any>>(new Map());
+  const posMap = useRef<Map<string, { lat: number; lng: number }>>(new Map());
+  const animMap = useRef<Map<string, number>>(new Map());
   const fleetObjs = useRef<any[]>([]);
   const polyRef = useRef<any>(null);
   const gRef = useRef<any>(null);
@@ -95,7 +99,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
           g.event.trigger(mapRef.current, 'resize');
           // Only recentre on the very first sizing (before markers/bounds are applied),
           // so a later resize never clobbers a fitted route/markers view.
-          if (firstNudge && markerObjs.current.length === 0) mapRef.current.setCenter(homeRef.current);
+          if (firstNudge && markerMap.current.size === 0) mapRef.current.setCenter(homeRef.current);
           firstNudge = false;
         };
         ro = new ResizeObserver(nudge);
@@ -108,7 +112,10 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       cancelled = true;
       ro?.disconnect();
       timers.forEach(clearTimeout);
-      markerObjs.current = [];
+      animMap.current.forEach((id) => cancelAnimationFrame(id));
+      animMap.current.clear();
+      markerMap.current.clear();
+      posMap.current.clear();
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,12 +124,62 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
     if (!map || !g || !ready) return;
-    markerObjs.current.forEach((m) => (m.map = null));
-    markerObjs.current = [];
-    for (const mk of markers) {
-      const marker = new g.marker.AdvancedMarkerElement({ map, position: { lat: mk.lat, lng: mk.lng }, content: markerEl(mk), title: mk.label });
-      markerObjs.current.push(marker);
+    const incoming = new Set(markers.map((m) => m.id));
+
+    // Remove markers that are gone.
+    for (const [id, marker] of markerMap.current) {
+      if (!incoming.has(id)) {
+        marker.map = null;
+        markerMap.current.delete(id);
+        posMap.current.delete(id);
+        const a = animMap.current.get(id);
+        if (a) { cancelAnimationFrame(a); animMap.current.delete(id); }
+      }
     }
+
+    // Add new / update existing (tween vehicle markers between GPS samples).
+    for (const mk of markers) {
+      let marker = markerMap.current.get(mk.id);
+      if (!marker) {
+        marker = new g.marker.AdvancedMarkerElement({ map, position: { lat: mk.lat, lng: mk.lng }, content: markerEl(mk), title: mk.label });
+        markerMap.current.set(mk.id, marker);
+        posMap.current.set(mk.id, { lat: mk.lat, lng: mk.lng });
+        continue;
+      }
+      marker.title = mk.label ?? '';
+      if (marker.content) (marker.content as HTMLElement).style.opacity = mk.stale ? '0.5' : '1';
+      const from = posMap.current.get(mk.id) ?? { lat: mk.lat, lng: mk.lng };
+      const moved = Math.abs(from.lat - mk.lat) > 1e-7 || Math.abs(from.lng - mk.lng) > 1e-7;
+      const prev = animMap.current.get(mk.id);
+      if (prev) { cancelAnimationFrame(prev); animMap.current.delete(mk.id); }
+      if (mk.kind === 'vehicle' && moved) {
+        const to = { lat: mk.lat, lng: mk.lng };
+        const start = performance.now();
+        const dur = 900; // slightly under the ~5s sample cadence
+        const m = marker;
+        const step = (now: number) => {
+          const t = Math.min(1, (now - start) / dur);
+          const e = t * (2 - t); // easeOutQuad
+          m.position = { lat: from.lat + (to.lat - from.lat) * e, lng: from.lng + (to.lng - from.lng) * e };
+          if (t < 1) animMap.current.set(mk.id, requestAnimationFrame(step));
+          else animMap.current.delete(mk.id);
+        };
+        animMap.current.set(mk.id, requestAnimationFrame(step));
+        posMap.current.set(mk.id, to);
+      } else {
+        marker.position = { lat: mk.lat, lng: mk.lng };
+        posMap.current.set(mk.id, { lat: mk.lat, lng: mk.lng });
+      }
+    }
+  }, [markers, ready, fitPadding]);
+
+  // Frame the view. Keyed on a signature that IGNORES vehicle movement, so a moving
+  // driver dot animates freely without the map re-fitting/zooming every GPS tick — it
+  // only re-frames when the stops (pickup/dropoff) or the marker set change.
+  const fitKey = markers.map((m) => (m.kind === 'vehicle' ? 'v' : `${m.id}:${m.lat.toFixed(4)},${m.lng.toFixed(4)}`)).join('|');
+  useEffect(() => {
+    const map = mapRef.current, g = gRef.current;
+    if (!map || !g || !ready) return;
     const pad = fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 };
     if (markers.length >= 2) {
       const b = new g.LatLngBounds();
@@ -131,14 +188,13 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     } else if (markers.length === 1) {
       framePoint(map, g, markers[0].lat, markers[0].lng, pad);
     } else {
-      // No stops yet: frame the whole island INTO the visible area (fitPadding keeps
-      // it clear of a mobile booking sheet / desktop side panel).
       const b = new g.LatLngBounds();
       b.extend({ lat: CYPRUS_BOUNDS.south, lng: CYPRUS_BOUNDS.west });
       b.extend({ lat: CYPRUS_BOUNDS.north, lng: CYPRUS_BOUNDS.east });
       map.fitBounds(b, pad);
     }
-  }, [markers, ready, fitPadding]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fitKey, ready]);
 
   // Zoom to a focus point (the passenger's detected location) once it resolves, unless a
   // full 2-stop route is already framed.
