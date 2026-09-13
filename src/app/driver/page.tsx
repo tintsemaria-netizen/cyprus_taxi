@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StaffShell } from '@/components/staff/StaffShell';
+import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 
 export const dynamic = 'force-dynamic';
@@ -47,6 +48,9 @@ function Driver() {
   const [nowMs, setNowMs] = useState<number>(0);
   const [offerBusy, setOfferBusy] = useState(false);
   const [startCode, setStartCode] = useState('');
+  const [pos, setPos] = useState<{ lat: number; lng: number } | null>(null); // driver's own live position for the map
+  const posRef = useRef<{ lat: number; lng: number } | null>(null);
+  const [navRoute, setNavRoute] = useState<[number, number][]>([]); // [lng,lat] route to the current target
   const watchId = useRef<number | null>(null);
   const sendTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastPos = useRef<GeolocationPosition | null>(null);
@@ -74,13 +78,21 @@ function Driver() {
     watchId.current = null;
     sendTimer.current = null;
     lastPos.current = null;
+    posRef.current = null;
+    setPos(null);
     setGps((g) => ({ ...g, active: false }));
   }
 
   function beginWatch(highAccuracy: boolean) {
     if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current);
     watchId.current = navigator.geolocation.watchPosition(
-      (pos) => { lastPos.current = pos; setGps((g) => ({ ...g, error: null })); },
+      (p) => {
+        lastPos.current = p;
+        const c = { lat: p.coords.latitude, lng: p.coords.longitude };
+        posRef.current = c;
+        setPos(c);
+        setGps((g) => ({ ...g, error: null }));
+      },
       (err) => {
         if (err.code === err.PERMISSION_DENIED) {
           setGps((g) => ({ ...g, active: false, error: 'Location permission denied. Allow location for this site to share GPS.' }));
@@ -209,7 +221,39 @@ function Driver() {
     }
   }
 
+  // Live navigation route to the current target (pickup before start, destination after).
+  const tripStatus = data?.trip?.status;
+  const tripId = data?.trip?.bookingId;
+  useEffect(() => {
+    const trip = data?.trip;
+    if (!trip) { setNavRoute([]); return; }
+    const target = trip.status === 'IN_PROGRESS' ? trip.dropoff : trip.pickup;
+    let alive = true;
+    const refresh = async () => {
+      const p = posRef.current;
+      if (!p) return;
+      try {
+        const r = await api<{ available?: boolean; path?: [number, number][] }>('/routes/estimate', {
+          method: 'POST', body: { from: p, to: { lat: target.lat, lng: target.lng } }, timeoutMs: 9000,
+        });
+        if (alive && r.available !== false && r.path) setNavRoute(r.path.map(([la, ln]) => [ln, la] as [number, number]));
+      } catch { /* keep last known geometry */ }
+    };
+    refresh();
+    const t = setInterval(refresh, 15000);
+    return () => { alive = false; clearInterval(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripStatus, tripId]);
+
   if (!data) return <div className="p-8 text-muted">Loading…</div>;
+
+  const trip = data.trip;
+  const navMarkers: MapMarker[] = [];
+  if (pos) navMarkers.push({ id: 'me', lat: pos.lat, lng: pos.lng, kind: 'vehicle', label: 'You' });
+  if (trip) {
+    navMarkers.push({ id: 'pk', lat: trip.pickup.lat, lng: trip.pickup.lng, kind: 'pickup', label: 'Pickup' });
+    if (trip.status === 'IN_PROGRESS') navMarkers.push({ id: 'dp', lat: trip.dropoff.lat, lng: trip.dropoff.lng, kind: 'dropoff', label: 'Destination' });
+  }
 
   return (
     <div className="mx-auto max-w-lg p-4 sm:p-6">
@@ -282,6 +326,13 @@ function Driver() {
               <span className="font-mono text-accent">{data.trip.reference}</span>
               <span className="chip">{data.trip.status.replace(/_/g, ' ')}</span>
             </div>
+            {/* Live navigation: route to the pickup, then to the destination after start */}
+            <div className="mt-3 h-56 overflow-hidden rounded-[12px] border border-edge">
+              <AutoMapView markers={navMarkers} route={navRoute} center={pos ?? data.trip.pickup} zoom={13} interactive className="h-full w-full" />
+            </div>
+            <p className="mt-1 text-[11px] text-muted">
+              {data.trip.status === 'IN_PROGRESS' ? 'Route to destination' : 'Route to pickup'}{!pos && ' · start location sharing to show your position'}
+            </p>
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" /><span className="text-muted">Pickup</span><span className="ml-auto text-right font-medium">{data.trip.pickup.label}</span></div>
               <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-ink" /><span className="text-muted">Destination</span><span className="ml-auto text-right font-medium">{data.trip.dropoff.label}</span></div>
@@ -291,7 +342,7 @@ function Driver() {
               {data.trip.note && <div className="mt-1 text-xs text-muted">Note: {data.trip.note}</div>}
               <div className="mt-3 flex gap-2">
                 <a href={`tel:${data.trip.passengerPhone}`} className="btn-ghost !min-h-0 flex-1 !py-2 text-sm">📞 Call passenger</a>
-                <a href={`geo:${data.trip.dropoff.lat},${data.trip.dropoff.lng}`} className="btn-ghost !min-h-0 flex-1 !py-2 text-sm">🧭 Navigate</a>
+                <a href={`https://www.google.com/maps/dir/?api=1&destination=${(data.trip.status === 'IN_PROGRESS' ? data.trip.dropoff : data.trip.pickup).lat},${(data.trip.status === 'IN_PROGRESS' ? data.trip.dropoff : data.trip.pickup).lng}&travelmode=driving`} target="_blank" rel="noreferrer" className="btn-ghost !min-h-0 flex-1 !py-2 text-sm">🧭 Navigate</a>
               </div>
             </div>
             {/* Pickup waiting timer (after arrival) */}

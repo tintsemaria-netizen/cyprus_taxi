@@ -48,6 +48,7 @@ export default function TrackApp() {
   const [cancelling, setCancelling] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [nowMs, setNowMs] = useState(0);
+  const [routeLine, setRouteLine] = useState<[number, number][]>([]); // [lng,lat] driver→pickup / →destination
   const [disconnected, setDisconnected] = useState(false); // hide stale live data
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inFlight = useRef(false);
@@ -127,6 +128,29 @@ export default function TrackApp() {
     };
   }, [load]);
 
+  // Draw the live driving route the passenger's driver is following: driver→pickup while
+  // EN_ROUTE, driver→destination once the trip is IN_PROGRESS. Recomputed when the driver
+  // moves meaningfully (coarse key) or the leg changes; bounded by the 5s poll cadence.
+  const drvLoc = disconnected ? null : view?.location ?? null;
+  const rleg = view?.status === 'IN_PROGRESS' ? 'dropoff' : view?.status === 'EN_ROUTE' ? 'pickup' : null;
+  const routeKey = drvLoc && rleg ? `${rleg}:${drvLoc.lat.toFixed(4)},${drvLoc.lng.toFixed(4)}` : '';
+  useEffect(() => {
+    if (!view || !drvLoc || !rleg) { setRouteLine([]); return; }
+    const to = rleg === 'dropoff' ? view.dropoff : view.pickup;
+    let alive = true;
+    (async () => {
+      try {
+        const r = await api<{ available?: boolean; path?: [number, number][] }>('/routes/estimate', {
+          method: 'POST', body: { from: { lat: drvLoc.lat, lng: drvLoc.lng }, to: { lat: to.lat, lng: to.lng } }, timeoutMs: 9000,
+        });
+        if (alive && r.available !== false && r.path) setRouteLine(r.path.map(([la, ln]) => [ln, la] as [number, number]));
+        else if (alive) setRouteLine([]);
+      } catch { /* keep last geometry */ }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeKey]);
+
   async function cancel() {
     if (!view) return;
     if (!confirm('Cancel this booking?')) return;
@@ -199,7 +223,10 @@ export default function TrackApp() {
   // While disconnected we suppress the live vehicle position/ETA entirely — a stale
   // marker must never look current.
   const liveLocation = disconnected ? null : view.location;
-  const markers: MapMarker[] = [{ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label }];
+  const markers: MapMarker[] = [];
+  // Before pickup, anchor on the pickup; during the trip, anchor on the destination.
+  if (view.status === 'IN_PROGRESS') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
+  else markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label });
   if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: 'Your driver', stale: liveLocation.freshness === 'stale' });
 
   const headline =
@@ -216,7 +243,7 @@ export default function TrackApp() {
 
       <div className="relative flex-1">
         <div className="absolute inset-0">
-          <AutoMapView markers={markers} center={view.pickup} zoom={12} interactive className="h-full w-full" />
+          <AutoMapView markers={markers} route={routeLine.length ? routeLine : undefined} center={view.pickup} zoom={12} interactive className="h-full w-full" />
         </div>
 
         {/* status pill */}
