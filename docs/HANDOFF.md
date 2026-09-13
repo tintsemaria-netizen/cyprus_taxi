@@ -43,6 +43,18 @@ screenshots in `docs/qa-screenshots/`. Totals: vitest 24/24 + Playwright 6/6. Li
 2b8b455 verified (headers + real-tile picker). PENDING: physical Android/iPhone GPS, 10-min
 load, real geocoding/routing provider.
 
+## Task 012 (2026-09-13) — M0/M1 done + deployed; M2–M4 staged
+Autonomous ride-hailing task. DONE: Cyprus fare research (docs/research/), 4 skills (.claude/skills/),
+pricing/quote engine (src/lib/tariff.ts + Quote model + /api/v1/quote + booking fare snapshot),
+real Google driver→pickup ETA in trackingView (cached ≤20s), public fleet availability states.
+Migration `add_quote_and_fare`. Release 6239837. vitest 27/27.
+NEXT (M2, the core): durable auto-dispatch worker — new models (DispatchJob, DriverOffer/Reservation,
+booking states SEARCHING/OFFERED/NO_DRIVER), in-process worker with DB job claim, eligibility prefilter +
+Google pickup-ETA ranking, 20s expiring offers, atomic accept (reuse assignments.ts SYSTEM actor),
+reject/expire/cancel rematch, restart recovery. Then M3 UI (driver offers, passenger SEARCHING/matched)
+and M4 (Places New autocomplete, dynamic pricing synthetic, weather, load test). Keep manual dispatch as
+the audited admin override.
+
 ## Task 010 (2026-09-12) — P0/P1 hotfix DONE + deployed; Google migration PENDING keys
 Fixed picker flicker + endless "resolving…" (tolerance-based move detection; 350ms
 debounced + deduped reverse; api-client AbortSignal + 8s timeout → coordinate fallback;
