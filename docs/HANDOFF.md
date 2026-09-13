@@ -1,5 +1,13 @@
 # Session handoff
 
+## Production domain il-y.taxi + IL-Y rebrand (2026-09-13) — DONE (server + code + deploy)
+Release **8ab7079**. The product is now branded **IL-Y** (visible rebrand only; repo/DB/API/cookies unchanged) on the production domain **il-y.taxi**.
+- **nginx**: `/etc/nginx/sites-available/il-y-taxi.conf` (repo copy `deploy/nginx-il-y-taxi.conf`, symlinked in sites-enabled) serves `il-y.taxi` + `www.il-y.taxi` → app on 127.0.0.1:8097, reusing the self-signed origin cert `/etc/nginx/taxicy-ssl/` (works behind Cloudflare "Full"). `cyprustaxi.ackedberryes.store` stays served.
+- **App**: `APP_BASE_URL=https://il-y.taxi` + `APP_ALLOWED_HOSTS=il-y.taxi,www.il-y.taxi,cyprustaxi.ackedberryes.store` (in `deploy/.env.production` + wired through docker-compose). Tracking links now derive from the **request host** (allowlisted) — correct on whichever domain the passenger uses. Origin guard already accepts same-host, so no CSRF change needed.
+- **Brand**: approved IL-Y kit installed under `public/brand/` and `public/icons/`; `src/components/Brand.tsx` renders the horizontal IL-Y lockup + pin `mark.svg`; favicon/apple-touch/manifest/OpenGraph + all visible "IL-Yas" text → "IL-Y". Source zip `IL-Y-web-assets.zip` gitignored (extracted assets committed).
+- **Verified**: forcing the Host to the origin (DNS not live yet), `https://il-y.taxi/` + `www` = 200, `/brand/logo-horizontal-light.svg`, `/icons/favicon.ico`, `/manifest.webmanifest` = 200, `<title>IL-Y — book a ride</title>`; a booking via the il-y.taxi host returns `tracking.url = https://il-y.taxi/track#...`; cyprustaxi still 200. Test booking cleaned up.
+- **⚠️ DNS NOT LIVE**: `il-y.taxi` has NO public A/NS record yet (checked 8.8.8.8 + 1.1.1.1). The vhost + app are ready; once you point `il-y.taxi` (and `www`) at 92.39.53.229 it serves immediately. **Confirm whether il-y.taxi will be fronted by Cloudflare** (like the beta) — if so the self-signed origin cert is fine on "Full"; if the origin is exposed directly, issue a real cert (Let's Encrypt/`certbot --nginx -d il-y.taxi -d www.il-y.taxi`, needs DNS pointing here first) or Cloudflare Origin CA.
+
 ## Task 012 M2 + M3 (2026-09-13) — DONE (code + tests + deploy)
 Release **84c3b1b** live at https://cyprustaxi.ackedberryes.store (verify via /api/v1/health/live `release`; that endpoint also reports `dispatch.alive`).
 
