@@ -8,27 +8,31 @@ import { createOffer, expireOffer } from './offers';
 
 const TICK_MS = 2000;
 const LEASE_MS = 10_000;
-let running = false;
-let timer: ReturnType<typeof setInterval> | null = null;
-let lastTickAt = 0;
-const workerId = `w-${Math.floor(Date.now() % 1e9)}-${process.pid}`;
+
+// Next.js compiles instrumentation.ts and route handlers into SEPARATE bundles, so a
+// plain module-level singleton would be duplicated. Anchor the worker state on globalThis
+// so the health route and the worker (started from instrumentation) share one instance,
+// and the timer is never started twice.
+interface DispatchState { running: boolean; timer: ReturnType<typeof setInterval> | null; lastTickAt: number; workerId: string; }
+const g = globalThis as unknown as { __ilyasDispatch?: DispatchState };
+const state: DispatchState = (g.__ilyasDispatch ??= { running: false, timer: null, lastTickAt: 0, workerId: `w-${Math.floor(Date.now() % 1e9)}-${process.pid}` });
 
 export function getDispatchHealth() {
-  return { workerId, lastTickAt, alive: lastTickAt > 0 && Date.now() - lastTickAt < TICK_MS * 5 };
+  return { workerId: state.workerId, lastTickAt: state.lastTickAt, alive: state.lastTickAt > 0 && Date.now() - state.lastTickAt < TICK_MS * 5 };
 }
 
 export function startDispatchWorker() {
-  if (timer) return; // already started
-  timer = setInterval(() => { void runOnce(); }, TICK_MS);
+  if (state.timer) return; // already started
+  state.timer = setInterval(() => { void runOnce(); }, TICK_MS);
   // eslint-disable-next-line no-console
-  console.log(`[dispatch] worker ${workerId} started (tick ${TICK_MS}ms)`);
+  console.log(`[dispatch] worker ${state.workerId} started (tick ${TICK_MS}ms)`);
 }
 
 export async function runOnce(): Promise<void> {
-  if (running) return; // never overlap ticks in this process
-  running = true;
+  if (state.running) return; // never overlap ticks in this process
+  state.running = true;
   try {
-    lastTickAt = Date.now();
+    state.lastTickAt = Date.now();
     const now = new Date();
 
     // 1) Resolve timed-out offers (release reservation, remember the driver).
@@ -47,20 +51,20 @@ export async function runOnce(): Promise<void> {
       // Claim a short lease so only one worker/tick processes this job.
       const claimed = await prisma.dispatchJob.updateMany({
         where: { id: j.id, OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }] },
-        data: { leaseOwner: workerId, leaseUntil: new Date(Date.now() + LEASE_MS) },
+        data: { leaseOwner: state.workerId, leaseUntil: new Date(Date.now() + LEASE_MS) },
       });
       if (claimed.count === 0) continue;
       try {
         await processJob(j.id);
       } finally {
-        await prisma.dispatchJob.updateMany({ where: { id: j.id, leaseOwner: workerId }, data: { leaseUntil: null, leaseOwner: null } });
+        await prisma.dispatchJob.updateMany({ where: { id: j.id, leaseOwner: state.workerId }, data: { leaseUntil: null, leaseOwner: null } });
       }
     }
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error('[dispatch] tick error', e);
   } finally {
-    running = false;
+    state.running = false;
   }
 }
 
