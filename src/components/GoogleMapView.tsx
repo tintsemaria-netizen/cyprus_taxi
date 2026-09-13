@@ -19,9 +19,24 @@ interface Props {
   fitPadding?: { top: number; right: number; bottom: number; left: number };
   // Live on-duty cars to overlay (anonymized). Rendered but NOT included in the fit.
   fleet?: { lat: number; lng: number; stale?: boolean; state?: 'available' | 'busy' }[];
+  // Zoom the map to this point (e.g. the passenger's detected location), padding-aware.
+  focus?: { lat: number; lng: number } | null;
 }
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
+
+// Frame a single point into the VISIBLE area (respecting fitPadding so it isn't hidden
+// behind the booking sheet/side panel) at street-level zoom.
+function framePoint(map: any, g: any, lat: number, lng: number, pad: any, maxZoom = 16) {
+  const d = 0.006; // ~650m half-box → ~street zoom
+  const b = new g.LatLngBounds();
+  b.extend({ lat: lat - d, lng: lng - d });
+  b.extend({ lat: lat + d, lng: lng + d });
+  map.fitBounds(b, pad);
+  g.event.addListenerOnce(map, 'idle', () => {
+    if (map.getZoom() > maxZoom) map.setZoom(maxZoom);
+  });
+}
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46' };
 
 function markerEl(mk: MapMarker): HTMLElement {
@@ -33,7 +48,7 @@ function markerEl(mk: MapMarker): HTMLElement {
   return el;
 }
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [] }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markerObjs = useRef<any[]>([]);
@@ -114,8 +129,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       markers.forEach((m) => b.extend({ lat: m.lat, lng: m.lng }));
       map.fitBounds(b, pad);
     } else if (markers.length === 1) {
-      map.panTo({ lat: markers[0].lat, lng: markers[0].lng });
-      map.setZoom(13);
+      framePoint(map, g, markers[0].lat, markers[0].lng, pad);
     } else {
       // No stops yet: frame the whole island INTO the visible area (fitPadding keeps
       // it clear of a mobile booking sheet / desktop side panel).
@@ -125,6 +139,16 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       map.fitBounds(b, pad);
     }
   }, [markers, ready, fitPadding]);
+
+  // Zoom to a focus point (the passenger's detected location) once it resolves, unless a
+  // full 2-stop route is already framed.
+  const focusKey = focus ? `${focus.lat.toFixed(5)},${focus.lng.toFixed(5)}` : '';
+  useEffect(() => {
+    const map = mapRef.current, g = gRef.current;
+    if (!map || !g || !ready || !focus || markers.length >= 2) return;
+    framePoint(map, g, focus.lat, focus.lng, fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusKey, ready]);
 
   // Live on-duty cars overlay (does not affect the fit).
   useEffect(() => {

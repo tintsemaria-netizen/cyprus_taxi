@@ -24,6 +24,7 @@ interface Props {
   className?: string;
   fitPadding?: { top: number; right: number; bottom: number; left: number };
   fleet?: { lat: number; lng: number; stale?: boolean; state?: 'available' | 'busy' }[];
+  focus?: { lat: number; lng: number } | null; // zoom the map to this point (e.g. the user's location)
 }
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
@@ -48,7 +49,7 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, focus }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerObjs = useRef<maplibregl.Marker[]>([]);
@@ -132,6 +133,15 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       }
     })();
   }, [markers, ready]);
+
+  // Zoom to a focus point (e.g. the passenger's detected location), once per change.
+  const focusKey = focus ? `${focus.lat.toFixed(5)},${focus.lng.toFixed(5)}` : '';
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !focus) return;
+    map.easeTo({ center: [focus.lng, focus.lat], zoom: 15, duration: 500 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusKey, ready]);
 
   // Sync route line
   useEffect(() => {

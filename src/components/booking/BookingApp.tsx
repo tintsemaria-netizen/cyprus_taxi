@@ -343,7 +343,7 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-[#0e1518]" />
           ) : (
-            <AutoMapView markers={markers} route={route?.line} fleet={fleet} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} className="h-full w-full" />
+            <AutoMapView markers={markers} route={route?.line} fleet={fleet} focus={myLoc} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} className="h-full w-full" />
           )}
         </div>
 
