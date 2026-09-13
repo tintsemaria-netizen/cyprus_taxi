@@ -23,7 +23,7 @@ interface Props {
   onMapClick?: (p: { lat: number; lng: number }) => void;
   className?: string;
   fitPadding?: { top: number; right: number; bottom: number; left: number };
-  fleet?: { lat: number; lng: number; stale?: boolean }[];
+  fleet?: { lat: number; lng: number; stale?: boolean; state?: 'available' | 'busy' }[];
 }
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };

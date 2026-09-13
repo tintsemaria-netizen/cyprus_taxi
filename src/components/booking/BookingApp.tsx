@@ -83,12 +83,12 @@ export default function BookingApp() {
     return () => { window.removeEventListener('resize', upd); window.removeEventListener('orientationchange', upd); };
   }, []);
   // Live on-duty cars shown on the booking map (anonymized positions), polled.
-  const [fleet, setFleet] = useState<{ lat: number; lng: number; stale?: boolean }[]>([]);
+  const [fleet, setFleet] = useState<{ lat: number; lng: number; stale?: boolean; state?: 'available' | 'busy' }[]>([]);
   useEffect(() => {
     let alive = true;
     const load = () => {
       if (document.visibilityState !== 'visible') return;
-      api<{ vehicles: { lat: number; lng: number; stale?: boolean }[] }>('/public/fleet', { timeoutMs: 8000 })
+      api<{ vehicles: { lat: number; lng: number; stale?: boolean; state?: 'available' | 'busy' }[] }>('/public/fleet', { timeoutMs: 8000 })
         .then((r) => { if (alive) setFleet(r.vehicles); })
         .catch(() => { /* keep last known; transient */ });
     };
@@ -137,6 +137,31 @@ export default function BookingApp() {
     }, 400);
     return () => { clearTimeout(t); controller.abort(); };
   }, [pickup, dropoff]);
+
+  // Fare estimate (server-issued quote) — recomputed when the trip inputs change.
+  interface QuoteBody { quoteId: string; priceType: string; totalCents: number; rangeLowCents: number; rangeHighCents: number; night: boolean; holiday: boolean; routeAvailable: boolean; lines: { code: string; label: string; cents: number }[]; }
+  const [quote, setQuote] = useState<QuoteBody | null>(null);
+  const [quoteErr, setQuoteErr] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pickup || !dropoff) { setQuote(null); setQuoteErr(null); return; }
+    const controller = new AbortController();
+    const t = setTimeout(async () => {
+      setQuoteErr(null);
+      try {
+        const q = await api<QuoteBody>('/quote', {
+          method: 'POST',
+          body: { pickup: { lat: pickup.lat, lng: pickup.lng }, dropoff: { lat: dropoff.lat, lng: dropoff.lng }, vClass, passengerCount: pax, luggageCount: 0 },
+          signal: controller.signal, timeoutMs: 9000,
+        });
+        setQuote(q);
+      } catch (e) {
+        if (e instanceof ApiRequestError) setQuoteErr(e.body.message);
+        setQuote(null);
+      }
+    }, 500);
+    return () => { clearTimeout(t); controller.abort(); };
+  }, [pickup, dropoff, vClass, pax]);
+  const eur = (c: number) => `€${(c / 100).toFixed(2)}`;
 
   const maxPax = cfg?.classes.find((c) => c.key === vClass)?.maxPassengers ?? (vClass === 'XL' ? 6 : 4);
 
@@ -190,6 +215,8 @@ export default function BookingApp() {
         scheduleOffsetMin: when === 'SCHEDULE' ? effOffset : undefined,
         vClass,
         passengerCount: pax,
+        luggageCount: 0,
+        quoteId: quote?.quoteId,
         passengerName: name.trim(),
         phone: phone.trim(),
         note: note.trim() || undefined,
@@ -383,14 +410,25 @@ export default function BookingApp() {
                       </div>
                     </div>
 
-                    {pickup && dropoff && route && (
-                      <p className="mt-4 rounded-[12px] border border-edge bg-elevated px-3 py-2 text-xs text-muted">
-                        {route.unavailable
-                          ? 'Route estimate unavailable right now.'
-                          : route.min != null
-                            ? <>Estimated trip: <span className="text-ink font-medium">≈ {route.min} min · {route.km} km</span> driving. Fare confirmed by dispatcher.</>
-                            : 'Estimating route…'}
-                      </p>
+                    {pickup && dropoff && (
+                      <div className="mt-4 rounded-[12px] border border-edge bg-elevated px-3 py-2.5 text-xs text-muted">
+                        {route?.min != null && (
+                          <div>Estimated trip: <span className="text-ink font-medium">≈ {route.min} min · {route.km} km</span> driving.</div>
+                        )}
+                        {quote ? (
+                          <div className="mt-1">
+                            Estimated fare: <span className="text-accent font-semibold">{eur(quote.totalCents)}</span>
+                            <span className="text-muted"> ({eur(quote.rangeLowCents)}–{eur(quote.rangeHighCents)})</span>
+                            {quote.night && <span className="ml-1">· night tariff</span>}
+                            {quote.holiday && <span className="ml-1">· holiday</span>}
+                            <div className="mt-1 text-[10px] text-muted">Regulated meter estimate — final amount is set by the taximeter. {quote.routeAvailable ? '' : 'Distance approximate (routing unavailable).'}</div>
+                          </div>
+                        ) : quoteErr ? (
+                          <div className="mt-1 text-warn">Couldn&apos;t estimate the fare: {quoteErr}</div>
+                        ) : (
+                          <div className="mt-1">Estimating fare…</div>
+                        )}
+                      </div>
                     )}
                     <button className="btn-primary mt-5 w-full" onClick={toReview}>Request a ride</button>
                     <p className="mt-3 text-center text-[11px] text-muted">Fare confirmed by dispatcher.</p>

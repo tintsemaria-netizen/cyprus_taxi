@@ -6,6 +6,7 @@ import { bookingReference, sha256, encryptReceipt, decryptReceipt } from '@/lib/
 import { createGrantTx } from '@/lib/tracking';
 import { CreateBookingInput } from '@/lib/validation';
 import { nicosiaWallTimeToUtc } from '@/lib/timezone';
+import { consumeQuote } from '@/server/quote';
 import { Prisma } from '@prisma/client';
 
 export type CreateResult =
@@ -104,6 +105,20 @@ export async function createBooking(
     scheduledAt = when;
   }
 
+  // 6b. Optional fare quote: validate ownership/expiry/payload and snapshot it onto the
+  // booking (the client-supplied price is never trusted).
+  let fare: { fareCents: number; priceType: string; fareBreakdown: string } | null = null;
+  if (input.quoteId) {
+    const cq = await consumeQuote(input.quoteId, {
+      pickup: input.pickup, dropoff: input.dropoff, vClass: input.vClass,
+      passengerCount: input.passengerCount, luggageCount: input.luggageCount,
+    });
+    if (!cq.ok) {
+      return fail(422, cq.code, cq.code === 'QUOTE_EXPIRED' ? 'The price estimate expired — refresh it.' : 'The price estimate no longer matches this trip — refresh it.');
+    }
+    fare = { fareCents: cq.totalCents, priceType: cq.priceType, fareBreakdown: cq.breakdown };
+  }
+
   // 7. Atomically claim the key + create booking + event + tracking grant + store
   // the encrypted response. If the claim collides (concurrent create), the whole
   // transaction rolls back (no orphan booking) and we replay the winner's receipt.
@@ -120,6 +135,7 @@ export async function createBooking(
           dropoffLat: input.dropoff.lat, dropoffLng: input.dropoff.lng, dropoffLabel: input.dropoff.label,
           passengerName: input.passengerName, phone: input.phone, note: input.note || null,
           vClass: input.vClass, passengerCount: input.passengerCount, scheduledAt, status: 'REQUESTED',
+          ...(fare ? { quoteId: input.quoteId, fareCents: fare.fareCents, priceType: fare.priceType, fareBreakdown: fare.fareBreakdown } : {}),
         },
       });
       await tx.bookingEvent.create({ data: { bookingId: b.id, type: 'CREATED', actorType: 'PASSENGER', afterStatus: 'REQUESTED' } });

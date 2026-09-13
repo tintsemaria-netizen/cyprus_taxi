@@ -18,7 +18,7 @@ interface Props {
   // booking sheet or beside a desktop side panel).
   fitPadding?: { top: number; right: number; bottom: number; left: number };
   // Live on-duty cars to overlay (anonymized). Rendered but NOT included in the fit.
-  fleet?: { lat: number; lng: number; stale?: boolean }[];
+  fleet?: { lat: number; lng: number; stale?: boolean; state?: 'available' | 'busy' }[];
 }
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
@@ -133,10 +133,12 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     fleetObjs.current.forEach((m) => (m.map = null));
     fleetObjs.current = [];
     for (const v of fleet) {
+      const busy = v.state === 'busy';
+      const bg = busy ? '#5b6b62' : '#C8FF46'; // available = lime, busy = muted grey-green
       const el = document.createElement('div');
-      el.style.cssText = `width:26px;height:26px;border-radius:7px;background:#C8FF46;border:2px solid #0d1608;box-shadow:0 0 0 3px rgba(200,255,70,0.2);opacity:${v.stale ? 0.5 : 1};display:flex;align-items:center;justify-content:center;font-size:13px`;
+      el.style.cssText = `width:26px;height:26px;border-radius:7px;background:${bg};border:2px solid #0d1608;box-shadow:0 0 0 3px rgba(200,255,70,${busy ? 0.08 : 0.2});opacity:${v.stale ? 0.5 : 1};display:flex;align-items:center;justify-content:center;font-size:13px`;
       el.textContent = '🚕';
-      el.title = 'On-duty car';
+      el.title = busy ? 'On a trip' : 'Available';
       fleetObjs.current.push(new g.marker.AdvancedMarkerElement({ map, position: { lat: v.lat, lng: v.lng }, content: el }));
     }
   }, [fleet, ready]);

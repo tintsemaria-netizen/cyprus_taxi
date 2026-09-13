@@ -118,6 +118,10 @@ model Booking {
   scheduledAt    DateTime?
   status         BookingStatus @default(REQUESTED)
   revision       Int           @default(0)
+  quoteId        String?       // fare quote applied at booking time (Task 012)
+  fareCents      Int?          // snapshotted estimate total (cents)
+  priceType      String?       // REGULATED_METER_ESTIMATE | REGULATED_FIXED | UPFRONT_DYNAMIC
+  fareBreakdown  String?       // JSON snapshot of the quote breakdown
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -233,6 +237,33 @@ model Setting {
   key       String   @unique
   value     String   // JSON-encoded value
   updatedAt DateTime @updatedAt
+}
+
+// Server-issued, persisted fare quote (Task 012 §6). Immutable snapshot bound to the
+// normalized request; the client-supplied price is never authoritative.
+model Quote {
+  id              String       @id @default(uuid())
+  pickupLat       Float
+  pickupLng       Float
+  dropoffLat      Float
+  dropoffLng      Float
+  vClass          VehicleClass
+  passengerCount  Int
+  luggageCount    Int          @default(0)
+  distanceMeters  Int
+  durationSeconds Int
+  priceType       String
+  ruleVersion     String
+  currency        String       @default("EUR")
+  totalCents      Int
+  rangeLowCents   Int
+  rangeHighCents  Int
+  breakdown       String       // JSON fare lines
+  requestHash     String       // hash of the normalized inputs; booking re-verifies
+  createdAt       DateTime     @default(now())
+  expiresAt       DateTime
+
+  @@index([createdAt])
 }
 
 model AuditEvent {

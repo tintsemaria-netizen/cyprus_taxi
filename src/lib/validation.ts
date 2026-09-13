@@ -33,6 +33,8 @@ export const createBookingSchema = z.object({
   scheduleOffsetMin: z.number().int().optional(),
   vClass: z.enum(['COMFORT', 'XL']),
   passengerCount: z.number().int().min(1).max(6),
+  luggageCount: z.number().int().min(0).max(10).optional(),
+  quoteId: z.string().uuid().optional(),
   passengerName: z.string().min(1).max(100),
   phone: phoneSchema,
   note: z.string().max(1000).optional(),

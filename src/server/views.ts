@@ -2,7 +2,23 @@ import { prisma } from '@/lib/db';
 import { computeFreshness, poorAccuracy } from '@/lib/freshness';
 import { demoEstimate } from '@/lib/places';
 import { allowedNext } from '@/lib/status-machine';
+import { googleConfigured, googleRoute } from '@/server/google';
 import { BookingStatus } from '@prisma/client';
+
+// Bounded pickup-ETA cache: recompute the real driver→pickup route at most every ~20s
+// per booking (Task 012 §5.2), so per-passenger polling doesn't spam the Routes API.
+const pickupEtaCache = new Map<string, { etaMin: number; at: number }>();
+async function driverToPickupEtaMin(bookingId: string, from: { lat: number; lng: number }, to: { lat: number; lng: number }): Promise<number | null> {
+  const cached = pickupEtaCache.get(bookingId);
+  if (cached && Date.now() - cached.at < 20000) return cached.etaMin;
+  if (googleConfigured()) {
+    try {
+      const r = await googleRoute(from, to);
+      if (r) { pickupEtaCache.set(bookingId, { etaMin: r.etaMinutes, at: Date.now() }); return r.etaMinutes; }
+    } catch { /* fall through to approximate */ }
+  }
+  return demoEstimate(from, to).etaMinutes; // labelled approximate fallback
+}
 
 // ---- Passenger tracking view (scoped, minimal fields) ----
 export async function trackingView(bookingId: string) {
@@ -54,8 +70,9 @@ export async function trackingView(bookingId: string) {
           sampledAt: loc.sampledAt.toISOString(),
         };
         if (booking.status === 'EN_ROUTE' && freshness === 'fresh') {
-          const est = demoEstimate({ lat: loc.lat, lng: loc.lng }, { lat: booking.pickupLat, lng: booking.pickupLng });
-          pickupEta = `≈ ${est.etaMinutes} min (estimate)`;
+          // Real driver→pickup road ETA (traffic-aware via Google), not the trip duration.
+          const etaMin = await driverToPickupEtaMin(booking.id, { lat: loc.lat, lng: loc.lng }, { lat: booking.pickupLat, lng: booking.pickupLng });
+          pickupEta = etaMin != null ? `≈ ${etaMin} min` : 'ETA unavailable';
         }
       }
     }
@@ -237,18 +254,22 @@ export async function availableDrivers() {
 // driver id/name/plate and no booking, so it never reveals driver identity or which
 // trip a car is on. On-duty active drivers with a non-disconnected fix only.
 export async function publicFleet() {
-  const drivers = await prisma.driver.findMany({
-    where: { onDuty: true, active: true },
-    include: { location: true },
-  });
+  const [drivers, busy] = await Promise.all([
+    prisma.driver.findMany({ where: { onDuty: true, active: true }, include: { location: true, user: true } }),
+    prisma.assignment.findMany({ where: { activeDriverId: { not: null } }, select: { activeDriverId: true } }),
+  ]);
+  const busyIds = new Set(busy.map((b) => b.activeDriverId));
   const now = new Date();
-  const out: { lat: number; lng: number; stale: boolean }[] = [];
+  const out: { lat: number; lng: number; stale: boolean; state: 'available' | 'busy' }[] = [];
   for (const d of drivers) {
+    if (!d.user.active) continue; // validate staff account, not only Driver.active
     const loc = d.location;
     if (!loc) continue;
     const f = computeFreshness(loc.sampledAt, loc.receivedAt, now);
     if (f === 'disconnected') continue; // don't show cars whose fix has gone stale
-    out.push({ lat: loc.lat, lng: loc.lng, stale: f === 'stale' });
+    // Busy drivers are visible but a different state; available = on-duty, no active trip.
+    const state = busyIds.has(d.id) || !d.available ? 'busy' : 'available';
+    out.push({ lat: loc.lat, lng: loc.lng, stale: f === 'stale', state });
   }
   return out;
 }
