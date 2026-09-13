@@ -59,6 +59,16 @@ export const config = {
     gpsLossRematchSeconds: num('DISPATCH_GPS_LOSS_REMATCH_SECONDS', 90), // prolonged pre-pickup GPS loss → expire assignment + rematch
   },
   minStopDistanceMeters: num('MIN_STOP_DISTANCE_METERS', 50),
+  // Pricing mode (Task 012 §6.1). Real charges stay REGULATED_METER_ESTIMATE unless a
+  // commercial dynamic rule is authorized; UPFRONT_DYNAMIC is a synthetic/TEST engine.
+  pricing: {
+    mode: (process.env.PRICING_MODE || 'REGULATED_METER_ESTIMATE') as 'REGULATED_METER_ESTIMATE' | 'UPFRONT_DYNAMIC',
+    dynamicMaxMultiplier: num('PRICING_DYNAMIC_MAX', 1.5),
+  },
+  weather: {
+    provider: process.env.WEATHER_PROVIDER || 'none', // none | fixture | open-meteo
+    maxAgeMinutes: num('WEATHER_MAX_AGE_MINUTES', 60),
+  },
   trustedProxyHops: num('TRUSTED_PROXY_HOPS', 2),
   timezone: 'Europe/Nicosia',
   currency: 'EUR',

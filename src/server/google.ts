@@ -58,6 +58,68 @@ export async function googleSearch(q: string, limit = 6): Promise<{ label: strin
   return out;
 }
 
+// ---- Places API (New): autocomplete predictions + selected-place details ----
+// A billing session ties N autocomplete calls + 1 details call together. On a not-enabled
+// / permission-denied response we throw 'places-disabled' so the caller falls back to
+// forward geocoding (Places API (New) may not be enabled on the project — see HANDOFF).
+export interface PlacePrediction { placeId: string; label: string; secondary?: string }
+
+const PLACES_DISABLED = 'places-disabled';
+export function isPlacesDisabled(e: unknown): boolean {
+  return e instanceof Error && e.message === PLACES_DISABLED;
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+export async function googleAutocomplete(input: string, sessionToken: string, limit = 6): Promise<PlacePrediction[]> {
+  const key = config.googleServerKey();
+  const b = CYPRUS_BOUNDS;
+  const body = {
+    input,
+    sessionToken,
+    includedRegionCodes: ['cy'],
+    locationBias: { rectangle: { low: { latitude: b.south, longitude: b.west }, high: { latitude: b.north, longitude: b.east } } },
+  };
+  const res = await fetchWithTimeout('https://places.googleapis.com/v1/places:autocomplete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 401 || res.status === 403) throw new Error(PLACES_DISABLED);
+  const d = (await res.json()) as {
+    suggestions?: { placePrediction?: { placeId: string; text?: { text?: string }; structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } } } }[];
+    error?: { status?: string };
+  };
+  if (d.error) throw new Error(d.error.status === 'PERMISSION_DENIED' ? PLACES_DISABLED : `places:${d.error.status}`);
+  const out: PlacePrediction[] = [];
+  for (const s of d.suggestions ?? []) {
+    const p = s.placePrediction;
+    if (!p) continue;
+    out.push({ placeId: p.placeId, label: p.structuredFormat?.mainText?.text || p.text?.text || 'Unknown', secondary: p.structuredFormat?.secondaryText?.text });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+export async function googlePlaceDetails(placeId: string, sessionToken: string): Promise<{ label: string; lat: number; lng: number } | null> {
+  const key = config.googleServerKey();
+  const url = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?sessionToken=${encodeURIComponent(sessionToken)}`;
+  const res = await fetchWithTimeout(url, { headers: { 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'location,formattedAddress,displayName' } });
+  if (res.status === 401 || res.status === 403) throw new Error(PLACES_DISABLED);
+  const d = (await res.json()) as { location?: { latitude: number; longitude: number }; formattedAddress?: string; displayName?: { text?: string }; error?: { status?: string } };
+  if (d.error) throw new Error(d.error.status === 'PERMISSION_DENIED' ? PLACES_DISABLED : `places:${d.error.status}`);
+  if (!d.location) return null;
+  return { label: d.formattedAddress || d.displayName?.text || 'Selected location', lat: d.location.latitude, lng: d.location.longitude };
+}
+
 export interface RouteResult {
   distanceKm: number;
   etaMinutes: number;

@@ -1,10 +1,16 @@
 import { prisma } from '@/lib/db';
+import { config } from '@/lib/config';
 import { sha256 } from '@/lib/crypto';
 import { haversineMeters } from '@/lib/geo';
 import { computeMeterEstimate } from '@/lib/tariff';
+import { computeDynamicMultiplier, dynamicSurchargeCents } from '@/lib/pricing-dynamic';
+import { marketSnapshot } from '@/server/dispatch/market';
+import { getWeather } from '@/server/weather';
 import { googleConfigured, googleRoute } from '@/server/google';
 
 const QUOTE_TTL_MS = 120_000; // 2 minutes (Task 012 §6.3)
+
+export type PricingMode = 'REGULATED_METER_ESTIMATE' | 'UPFRONT_DYNAMIC';
 
 export interface QuoteInput {
   pickup: { lat: number; lng: number };
@@ -44,9 +50,10 @@ export interface QuoteBody {
   rangeHighCents: number;
   expiresAt: string;
   routeAvailable: boolean;
+  dynamic?: { multiplier: number; applied: boolean; demandSupplyRatio: number | null; reasons: string[]; version: string };
 }
 
-export async function createQuote(input: QuoteInput, at = new Date()): Promise<QuoteResult> {
+export async function createQuote(input: QuoteInput, at = new Date(), mode: PricingMode = config.pricing.mode): Promise<QuoteResult> {
   // Real road distance/duration when Google is configured; otherwise a straight-line
   // approximation clearly flagged (routeAvailable=false).
   let distanceMeters: number;
@@ -77,25 +84,60 @@ export async function createQuote(input: QuoteInput, at = new Date()): Promise<Q
   const requestHash = quoteRequestHash(input);
   const expiresAt = new Date(at.getTime() + QUOTE_TTL_MS);
 
+  // Base fields default to the regulated meter estimate.
+  let priceType: string = est.priceType;
+  let lines = est.lines;
+  let totalCents = est.totalCents;
+  let rangeLowCents = est.rangeLowCents;
+  let rangeHighCents = est.rangeHighCents;
+  let dynamic: QuoteBody['dynamic'];
+
+  // UPFRONT_DYNAMIC (synthetic/TEST unless a commercial rule is authorized): apply a
+  // bounded demand/supply multiplier to ONLY the eligible base (initial hire + distance).
+  if (mode === 'UPFRONT_DYNAMIC') {
+    const [snap, weather] = await Promise.all([
+      marketSnapshot(input.pickup, input.vClass).catch(() => ({ activeRequests: 0, availableDrivers: 0, radiusKm: 7 })),
+      getWeather(input.pickup.lat, input.pickup.lng, at).catch(() => null),
+    ]);
+    const dyn = computeDynamicMultiplier(
+      { activeRequests: snap.activeRequests, availableDrivers: snap.availableDrivers, weatherSeverity: weather?.severity ?? 0 },
+      { maxMultiplier: config.pricing.dynamicMaxMultiplier },
+    );
+    const eligibleBase = est.lines.filter((l) => l.code === 'initial' || l.code === 'distance').reduce((s, l) => s + l.cents, 0);
+    const surcharge = dynamicSurchargeCents(eligibleBase, dyn.multiplier);
+    priceType = 'UPFRONT_DYNAMIC';
+    lines = [...est.lines];
+    if (surcharge > 0) {
+      lines.push({ code: 'dynamic', label: `Dynamic pricing ×${dyn.multiplier.toFixed(2)} (${dyn.reasons.join(', ')})`, cents: surcharge });
+    }
+    totalCents = est.totalCents + surcharge;
+    // An upfront fare is a committed price, not a ±band estimate.
+    rangeLowCents = totalCents;
+    rangeHighCents = totalCents;
+    dynamic = { multiplier: dyn.multiplier, applied: dyn.applied, demandSupplyRatio: dyn.demandSupplyRatio, reasons: dyn.reasons, version: dyn.version };
+    // eslint-disable-next-line no-console
+    console.log(`[pricing] dynamic quote ×${dyn.multiplier} demand=${snap.activeRequests} supply=${snap.availableDrivers} weather=${weather?.severity ?? 0} reasons=${dyn.reasons.join('|')}`);
+  }
+
   const row = await prisma.quote.create({
     data: {
       pickupLat: input.pickup.lat, pickupLng: input.pickup.lng,
       dropoffLat: input.dropoff.lat, dropoffLng: input.dropoff.lng,
       vClass: input.vClass, passengerCount: input.passengerCount, luggageCount: input.luggageCount ?? 0,
       distanceMeters, durationSeconds,
-      priceType: est.priceType, ruleVersion: est.ruleVersion, currency: est.currency,
-      totalCents: est.totalCents, rangeLowCents: est.rangeLowCents, rangeHighCents: est.rangeHighCents,
-      breakdown: JSON.stringify(est.lines), requestHash, expiresAt,
+      priceType, ruleVersion: est.ruleVersion, currency: est.currency,
+      totalCents, rangeLowCents, rangeHighCents,
+      breakdown: JSON.stringify(lines), requestHash, expiresAt,
     },
   });
 
   return {
     ok: true,
     quote: {
-      quoteId: row.id, priceType: est.priceType, ruleVersion: est.ruleVersion, currency: est.currency,
+      quoteId: row.id, priceType, ruleVersion: est.ruleVersion, currency: est.currency,
       distanceMeters, durationSeconds, night: est.night, holiday: est.holiday,
-      lines: est.lines, totalCents: est.totalCents, rangeLowCents: est.rangeLowCents, rangeHighCents: est.rangeHighCents,
-      expiresAt: expiresAt.toISOString(), routeAvailable,
+      lines, totalCents, rangeLowCents, rangeHighCents,
+      expiresAt: expiresAt.toISOString(), routeAvailable, dynamic,
     },
   };
 }
