@@ -280,6 +280,20 @@ model BookingEvent {
   @@index([bookingId, createdAt])
 }
 
+// Web Push subscription. `audience` scopes who a message notifies:
+//   PASSENGER:<bookingId>  — the rider on that booking (tracking-token authorized)
+//   DRIVER:<userId>        — a specific driver account
+model PushSubscription {
+  id        String   @id @default(uuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  audience  String
+  createdAt DateTime @default(now())
+
+  @@index([audience])
+}
+
 model LatestDriverLocation {
   driver      Driver   @relation(fields: [driverId], references: [id])
   driverId    String   @id

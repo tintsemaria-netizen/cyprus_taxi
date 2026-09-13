@@ -1,6 +1,7 @@
 import { apiOk, apiError, Errors, clientIp } from '@/lib/http';
 import { getTrackingBookingId } from '@/lib/tracking';
 import { listMessages, postMessage } from '@/server/chat';
+import { notifyNewMessage } from '@/server/push';
 import { rateLimit } from '@/lib/rate-limit';
 import { config } from '@/lib/config';
 
@@ -23,5 +24,6 @@ export async function POST(req: Request) {
   try { body = await req.json(); } catch { return Errors.validation({ _: 'Invalid JSON body.' }); }
   const r = await postMessage(bookingId, 'PASSENGER', body.body ?? '');
   if (!r.ok) return apiError(r.status, r.code, r.message);
+  void notifyNewMessage(bookingId, 'PASSENGER', r.message.body).catch(() => {}); // best-effort
   return apiOk({ ok: true, message: r.message }, 201);
 }

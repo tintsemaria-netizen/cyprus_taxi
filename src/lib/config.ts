@@ -69,6 +69,13 @@ export const config = {
     provider: process.env.WEATHER_PROVIDER || 'none', // none | fixture | open-meteo
     maxAgeMinutes: num('WEATHER_MAX_AGE_MINUTES', 60),
   },
+  // Web Push (VAPID). Public key is safe for the browser; private key is server-only.
+  push: {
+    vapidPublic: process.env.VAPID_PUBLIC_KEY || '',
+    vapidPrivate: () => process.env.VAPID_PRIVATE_KEY || '',
+    vapidSubject: process.env.VAPID_SUBJECT || 'mailto:support@il-y.taxi',
+    enabled: !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
+  },
   trustedProxyHops: num('TRUSTED_PROXY_HOPS', 2),
   timezone: 'Europe/Nicosia',
   currency: 'EUR',

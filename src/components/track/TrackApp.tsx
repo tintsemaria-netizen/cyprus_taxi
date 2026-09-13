@@ -330,7 +330,7 @@ export default function TrackApp() {
                       <a href={`tel:${view.vehicle.phone}`} className="btn-primary w-full">📞 Call driver</a>
                     )}
                     {view.vehicle && (
-                      <ChatPanel listUrl="/tracking/messages" postUrl="/tracking/messages" me="PASSENGER" peerLabel="driver" />
+                      <ChatPanel listUrl="/tracking/messages" postUrl="/tracking/messages" pushUrl="/tracking/push" me="PASSENGER" peerLabel="driver" />
                     )}
                     <button className="w-full text-sm text-muted hover:text-ink" onClick={() => setShowDetails((s) => !s)}>
                       {showDetails ? 'Hide trip details' : 'Trip details ›'}

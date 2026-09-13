@@ -51,6 +51,10 @@ services:
       APP_RELEASE: ${APP_RELEASE:-unknown}
       # Server-only Google key for Geocoding + Routes (never exposed to the browser).
       GOOGLE_MAPS_SERVER_API_KEY: ${GOOGLE_MAPS_SERVER_API_KEY:-}
+      # Web Push (VAPID). Public key is safe for the browser; private key is server-only.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
     # Bind only to loopback; nginx on the host proxies this vhost.
     ports:
       - '127.0.0.1:${APP_HOST_PORT}:3000'

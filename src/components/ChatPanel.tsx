@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { api, ApiRequestError } from '@/lib/api-client';
+import { enablePush, pushPermission, pushSupported } from '@/lib/push-client';
 
 interface Msg { id: string; sender: 'PASSENGER' | 'DRIVER'; body: string; at: string }
 
 // Collapsible passenger↔driver chat. Polls the given list endpoint and posts to the
-// given endpoint; `me` decides bubble alignment. Works for both roles.
-export function ChatPanel({ listUrl, postUrl, me, peerLabel }: { listUrl: string; postUrl: string; me: 'PASSENGER' | 'DRIVER'; peerLabel: string }) {
+// given endpoint; `me` decides bubble alignment. Works for both roles. When `pushUrl`
+// is given, offers Web Push enrolment so new messages notify even in the background.
+export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUrl: string; postUrl: string; me: 'PASSENGER' | 'DRIVER'; peerLabel: string; pushUrl?: string }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [open, setOpen] = useState(true); // chat available (driver assigned, pre-terminal)
   const [expanded, setExpanded] = useState(false);
@@ -16,6 +18,18 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel }: { listUrl: string
   const [err, setErr] = useState<string | null>(null);
   const lastSeenRef = useRef<number>(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [notif, setNotif] = useState<'idle' | 'on' | 'denied' | 'busy'>('idle');
+
+  useEffect(() => {
+    if (pushUrl && pushSupported() && pushPermission() === 'granted') setNotif('on');
+  }, [pushUrl]);
+
+  async function turnOnNotifications() {
+    if (!pushUrl) return;
+    setNotif('busy');
+    const r = await enablePush(pushUrl);
+    setNotif(r.ok ? 'on' : r.reason === 'denied' ? 'denied' : 'idle');
+  }
 
   useEffect(() => {
     let alive = true;
@@ -81,6 +95,19 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel }: { listUrl: string
               </div>
             ))}
           </div>
+          {pushUrl && pushSupported() && open && (
+            <div className="border-t border-edge px-3 py-1.5 text-[11px]">
+              {notif === 'on' ? (
+                <span className="text-muted">🔔 Notifications on</span>
+              ) : notif === 'denied' ? (
+                <span className="text-muted">🔕 Notifications blocked in your browser settings</span>
+              ) : (
+                <button type="button" className="text-accent hover:underline disabled:opacity-50" disabled={notif === 'busy'} onClick={turnOnNotifications}>
+                  {notif === 'busy' ? 'Enabling…' : '🔔 Notify me of new messages'}
+                </button>
+              )}
+            </div>
+          )}
           {err && <p className="px-3 pb-1 text-[11px] text-danger">{err}</p>}
           {open ? (
             <div className="flex items-center gap-2 border-t border-edge p-2">

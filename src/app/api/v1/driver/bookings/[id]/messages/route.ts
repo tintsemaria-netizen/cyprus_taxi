@@ -1,6 +1,7 @@
 import { apiOk, apiError, Errors, clientIp } from '@/lib/http';
 import { requireDriver, isDriverCtx } from '@/lib/driver-ctx';
 import { listMessages, postMessage, driverOwnsBooking } from '@/server/chat';
+import { notifyNewMessage } from '@/server/push';
 import { rateLimit } from '@/lib/rate-limit';
 import { config } from '@/lib/config';
 
@@ -27,5 +28,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try { body = await req.json(); } catch { return Errors.validation({ _: 'Invalid JSON body.' }); }
   const r = await postMessage(id, 'DRIVER', body.body ?? '');
   if (!r.ok) return apiError(r.status, r.code, r.message);
+  void notifyNewMessage(id, 'DRIVER', r.message.body).catch(() => {}); // best-effort
   return apiOk({ ok: true, message: r.message }, 201);
 }
