@@ -43,6 +43,7 @@ beforeAll(async () => {
   }
   await prisma.$queryRaw`SELECT 1`;
   // Clean transactional tables for a deterministic run (keeps seeded staff/drivers/vehicles).
+  await prisma.chatMessage.deleteMany({});
   await prisma.fare.deleteMany({});
   await prisma.waitingSession.deleteMany({});
   await prisma.driverOffer.deleteMany({});

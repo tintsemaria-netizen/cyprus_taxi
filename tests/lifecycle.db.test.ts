@@ -52,6 +52,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  await prisma.chatMessage.deleteMany({});
   await prisma.fare.deleteMany({});
   await prisma.waitingSession.deleteMany({});
   await prisma.driverOffer.deleteMany({});

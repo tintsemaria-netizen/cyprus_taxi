@@ -137,10 +137,26 @@ model Booking {
   offers       DriverOffer[]
   waiting      WaitingSession?
   fare         Fare?
+  messages     ChatMessage[]
 
   @@index([status, createdAt])
   @@index([status, scheduledAt])
   @@index([phone])
+}
+
+// Passenger↔driver chat, scoped to one booking (Task: rider can message the driver).
+// Passenger is authorized by the tracking token; driver by the active assignment.
+model ChatMessage {
+  id                String    @id @default(uuid())
+  booking           Booking   @relation(fields: [bookingId], references: [id])
+  bookingId         String
+  sender            String    // PASSENGER | DRIVER
+  body              String
+  createdAt         DateTime  @default(now())
+  readByPassengerAt DateTime?
+  readByDriverAt    DateTime?
+
+  @@index([bookingId, createdAt])
 }
 
 // Pickup waiting after ARRIVED (Task 012 §6.4). Persisted timestamps so a refresh/restart

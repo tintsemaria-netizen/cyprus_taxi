@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StaffShell } from '@/components/staff/StaffShell';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
+import { ChatPanel } from '@/components/ChatPanel';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 
 export const dynamic = 'force-dynamic';
@@ -340,6 +341,9 @@ function Driver() {
             <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
               <div className="font-medium">{data.trip.passengerName} · {data.trip.passengerCount}p · {data.trip.vClass}</div>
               {data.trip.note && <div className="mt-1 text-xs text-muted">Note: {data.trip.note}</div>}
+              <div className="mt-3">
+                <ChatPanel listUrl={`/driver/bookings/${data.trip.bookingId}/messages`} postUrl={`/driver/bookings/${data.trip.bookingId}/messages`} me="DRIVER" peerLabel="passenger" />
+              </div>
               <div className="mt-3 flex gap-2">
                 <a href={`tel:${data.trip.passengerPhone}`} className="btn-ghost !min-h-0 flex-1 !py-2 text-sm">📞 Call passenger</a>
                 <a href={`https://www.google.com/maps/dir/?api=1&destination=${(data.trip.status === 'IN_PROGRESS' ? data.trip.dropoff : data.trip.pickup).lat},${(data.trip.status === 'IN_PROGRESS' ? data.trip.dropoff : data.trip.pickup).lng}&travelmode=driving`} target="_blank" rel="noreferrer" className="btn-ghost !min-h-0 flex-1 !py-2 text-sm">🧭 Navigate</a>

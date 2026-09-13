@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
+import { ChatPanel } from '@/components/ChatPanel';
 import { api, ApiRequestError } from '@/lib/api-client';
 
 interface TrackView {
@@ -327,6 +328,9 @@ export default function TrackApp() {
                   <div className="mt-4 space-y-2">
                     {view.vehicle?.phone && (
                       <a href={`tel:${view.vehicle.phone}`} className="btn-primary w-full">📞 Call driver</a>
+                    )}
+                    {view.vehicle && (
+                      <ChatPanel listUrl="/tracking/messages" postUrl="/tracking/messages" me="PASSENGER" peerLabel="driver" />
                     )}
                     <button className="w-full text-sm text-muted hover:text-ink" onClick={() => setShowDetails((s) => !s)}>
                       {showDetails ? 'Hide trip details' : 'Trip details ›'}
