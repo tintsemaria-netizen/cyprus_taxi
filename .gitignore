@@ -25,3 +25,6 @@ docs/GoogleMaps
 
 # Twilio credentials (SMS) — never commit
 Twilio
+
+# Source asset bundle (extracted into public/brand)
+IL-Y-web-assets.zip

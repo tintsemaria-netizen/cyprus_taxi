@@ -6,6 +6,15 @@ import { config } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
+// Build the tracking link from the domain the passenger is actually using (multi-domain
+// support), but only for a known host — never from a spoofed Host header.
+function requestBaseUrl(req: Request): string | undefined {
+  const host = (req.headers.get('x-forwarded-host') || req.headers.get('host') || '').split(',')[0].trim().toLowerCase();
+  if (!host || !config.appAllowedHosts().has(host)) return undefined;
+  const proto = (req.headers.get('x-forwarded-proto') || 'https').split(',')[0].trim();
+  return `${proto}://${host}`;
+}
+
 export async function POST(req: Request) {
   const ip = clientIp(req, config.trustedProxyHops);
   const rl = await rateLimit('booking-create', ip, 5, 60);
@@ -25,7 +34,7 @@ export async function POST(req: Request) {
   const parsed = createBookingSchema.safeParse(raw);
   if (!parsed.success) return Errors.validation(zodFieldErrors(parsed.error));
 
-  const result = await createBooking(parsed.data, idempotencyKey);
+  const result = await createBooking(parsed.data, idempotencyKey, requestBaseUrl(req));
   if (!result.ok) return apiError(result.status, result.code, result.message, result.fieldErrors, result.extra);
   return apiOk(result.body, 201);
 }

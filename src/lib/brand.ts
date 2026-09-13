@@ -1,9 +1,9 @@
-// Centralized brand configuration. The visible product name is EXACTLY "IL-Yas"
-// (uppercase I, uppercase L, hyphen, uppercase Y, lowercase a, s). Repository,
-// domain, API paths, DB names, cookies and secrets are intentionally unchanged —
-// this is a visible rebrand only.
+// Centralized brand configuration. The visible product name is EXACTLY "IL-Y"
+// (uppercase I, uppercase L, hyphen, uppercase Y) — matching the il-y.taxi domain
+// and the approved logo kit. Repository, API paths, DB names, cookies and secrets
+// are intentionally unchanged — this is a visible rebrand only.
 export const BRAND = {
-  name: 'IL-Yas',
+  name: 'IL-Y',
   tagline: 'Book and track a ride across Cyprus.',
   colors: {
     charcoal: '#10191C',

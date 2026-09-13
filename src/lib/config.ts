@@ -23,6 +23,17 @@ function num(name: string, def: number): number {
 
 export const config = {
   appBaseUrl: process.env.APP_BASE_URL || 'http://localhost:3000',
+  // Hosts we will serve/emit in absolute links. APP_BASE_URL's host plus any extra
+  // production domains (comma-separated APP_ALLOWED_HOSTS). Used to build the tracking
+  // link from the request host without trusting an arbitrary/spoofed Host header.
+  appAllowedHosts: (): Set<string> => {
+    const hosts = new Set<string>();
+    try { hosts.add(new URL(process.env.APP_BASE_URL || '').host.toLowerCase()); } catch { /* ignore */ }
+    (process.env.APP_ALLOWED_HOSTS || '')
+      .split(',').map((h) => h.trim().toLowerCase()).filter(Boolean)
+      .forEach((h) => hosts.add(h));
+    return hosts;
+  },
   demoMode: (process.env.DEMO_MODE || 'true').toLowerCase() === 'true',
   sessionSecret: () => req('SESSION_SECRET'),
   trackingReceiptSecret: () => req('TRACKING_RECEIPT_SECRET'),

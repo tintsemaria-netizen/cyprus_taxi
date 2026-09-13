@@ -1,39 +1,21 @@
 import { BRAND } from '@/lib/brand';
 
-// Lime Y-shaped branching-road / navigation symbol. Flat fills, crisp edges,
-// recognizable at small sizes.
+/* eslint-disable @next/next/no-img-element */
+// Approved IL-Y identity: lime map pin with a charcoal Y-shaped road (see
+// public/brand, README-CLAUDE). Assets are self-contained SVGs — used directly.
+
+// Standalone pin for small controls / app-icon contexts. Decorative by default.
 export function LogoMark({ className = 'h-7 w-7' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 100 100" className={className} aria-hidden role="img">
-      {/* branching road: single stem forking into two waypoints */}
-      <path
-        d="M50 86 L50 54 M50 54 L30 22 M50 54 L70 22"
-        fill="none"
-        stroke="#C8FF46"
-        strokeWidth="11"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* waypoint nodes */}
-      <circle cx="30" cy="20" r="7" fill="#C8FF46" />
-      <circle cx="70" cy="20" r="7" fill="#C8FF46" />
-      <circle cx="50" cy="88" r="6.5" fill="#C8FF46" />
-    </svg>
-  );
+  return <img src="/brand/mark.svg" alt="" aria-hidden className={className} />;
 }
 
-// Wordmark "IL-Yas". The uppercase L is drawn with a clearly visible foot; the
-// rest is a strong sans wordmark. `light` renders dark text for light backgrounds.
+// Horizontal IL-Y lockup for headers. `light` = dark lettering for light backgrounds.
+// Sizing comes from `className` (set a height; width stays auto to keep proportions).
 export function Logo({ className = 'h-7', light = false }: { className?: string; light?: boolean }) {
-  const text = light ? 'text-[#10191C]' : 'text-ink';
+  const src = light ? '/brand/logo-horizontal-dark.svg' : '/brand/logo-horizontal-light.svg';
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`} aria-label={BRAND.name}>
-      <LogoMark className="h-7 w-7" />
-      <span className={`text-lg font-extrabold tracking-tight ${text}`}>
-        <span aria-hidden>IL</span>
-        {/* explicit L-foot accent kept crisp via letter-spacing of the wordmark */}
-        <span aria-hidden>-Yas</span>
-      </span>
+    <span className={`inline-flex items-center ${className}`} aria-label={BRAND.name}>
+      <img src={src} alt="" className="h-full w-auto" />
     </span>
   );
 }

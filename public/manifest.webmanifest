@@ -1,7 +1,7 @@
 {
-  "name": "IL-Yas",
-  "short_name": "IL-Yas",
-  "description": "Book and track a ride across Cyprus with IL-Yas.",
+  "name": "IL-Y",
+  "short_name": "IL-Y",
+  "description": "Book and track a ride across Cyprus with IL-Y.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

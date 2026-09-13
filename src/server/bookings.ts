@@ -30,6 +30,7 @@ function sleep(ms: number) {
 export async function createBooking(
   input: CreateBookingInput,
   idempotencyKey: string,
+  baseUrl?: string, // origin the passenger is using (multi-domain); falls back to APP_BASE_URL
 ): Promise<CreateResult> {
   const settings = await getSettings();
 
@@ -152,7 +153,7 @@ export async function createBooking(
         reference: b.reference,
         status: b.status,
         scheduledAt: scheduledAt ? scheduledAt.toISOString() : null,
-        tracking: { token: grant.token, url: `${config.appBaseUrl}/track#token=${grant.token}`, expiresAt: grant.expiresAt.toISOString() },
+        tracking: { token: grant.token, url: `${baseUrl || config.appBaseUrl}/track#token=${grant.token}`, expiresAt: grant.expiresAt.toISOString() },
       };
       await tx.idempotencyReceipt.update({
         where: { scope_key: { scope: IDEMPOTENCY_SCOPE, key: idempotencyKey } },
