@@ -44,6 +44,16 @@ export default function BookingApp() {
   const [banner, setBanner] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [picker, setPicker] = useState<'pickup' | 'dropoff' | null>(null);
+  // Passenger's detected location (for centring the map + defaulting the pickup).
+  const [myLoc, setMyLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [autoPickup, setAutoPickup] = useState(false); // pickup was auto-set from geolocation
+
+  // Live mirrors so the async geolocation callback never overwrites a pickup the
+  // passenger has already started choosing (typed text or picked a point).
+  const pickupRef = useRef<Selected | null>(pickup);
+  pickupRef.current = pickup;
+  const pickupTextRef = useRef<string>(pickupText);
+  pickupTextRef.current = pickupText;
 
   // Idempotency key persists across retries of the SAME payload; it is only
   // regenerated when the meaningful payload changes (SPEC §3.7).
@@ -64,6 +74,35 @@ export default function BookingApp() {
   }, []);
 
   useEffect(() => { loadConfig(); }, [loadConfig]);
+
+  // On first load, detect the passenger's position: centre the map on it and default the
+  // pickup there (reverse-geocoded label). Never overwrite a pickup the passenger has
+  // already started choosing — they can still change it via the map or the address box.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    let cancelled = false;
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        if (cancelled) return;
+        const lat = pos.coords.latitude, lng = pos.coords.longitude;
+        setMyLoc({ lat, lng });
+        if (pickupRef.current || pickupTextRef.current.trim() !== '') return; // passenger already acting
+        let label = 'Current location';
+        try {
+          const r = await api<{ place: { label: string } | null }>(`/places/reverse?lat=${lat}&lng=${lng}`, { timeoutMs: 6000 });
+          if (r.place?.label) label = r.place.label;
+        } catch { /* keep the generic label */ }
+        if (cancelled || pickupRef.current || pickupTextRef.current.trim() !== '') return; // re-check after await
+        setPickup({ lat, lng, label });
+        setPickupText(label);
+        setAutoPickup(true);
+      },
+      () => { /* denied / unavailable → keep the island view + manual selection */ },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+    );
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Keep the schedule minimum fresh (in Cyprus wall time) while scheduling is open.
   useEffect(() => {
@@ -255,6 +294,7 @@ export default function BookingApp() {
     if (picker === 'pickup') {
       setPickup(sel);
       setPickupText(sel.label);
+      setAutoPickup(false); // passenger chose a pickup explicitly
     } else if (picker === 'dropoff') {
       setDropoff(sel);
       setDropoffText(sel.label);
@@ -285,15 +325,15 @@ export default function BookingApp() {
           </button>
         </div>
       )}
-      <header className="z-20 flex items-center justify-between border-b border-edge bg-page/90 px-4 py-3 backdrop-blur sm:px-6">
-        <Logo />
-        <nav className="hidden items-center gap-6 text-sm text-muted sm:flex">
+      <header className="z-20 flex items-center justify-between border-b border-edge bg-page/90 px-4 py-2 backdrop-blur sm:px-6">
+        <Logo className="h-10" />
+        <nav className="hidden items-center gap-6 text-lg text-muted sm:flex">
           <a href="/" className="text-accent">Book</a>
           <a href="/track" className="hover:text-ink">My ride</a>
           <a href="/privacy" className="hover:text-ink">Privacy</a>
           <a href="/staff/login" className="hover:text-ink">Staff</a>
         </nav>
-        <a href="/staff/login" className="btn-ghost !min-h-0 !py-1.5 text-sm sm:hidden">Staff</a>
+        <a href="/staff/login" className="btn-ghost !min-h-0 !py-1.5 text-base sm:hidden">Staff</a>
       </header>
 
       <div className="relative flex-1">
@@ -303,7 +343,7 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-[#0e1518]" />
           ) : (
-            <AutoMapView markers={markers} route={route?.line} fleet={fleet} center={{ lat: 34.92, lng: 33.2 }} zoom={9} interactive fitPadding={fitPadding} className="h-full w-full" />
+            <AutoMapView markers={markers} route={route?.line} fleet={fleet} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} className="h-full w-full" />
           )}
         </div>
 
@@ -320,7 +360,10 @@ export default function BookingApp() {
                     {banner && <p className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{banner}</p>}
 
                     <div className="space-y-3">
-                      <PlacesInput kind="From" value={pickup} text={pickupText} onText={setPickupText} onSelect={setPickup} error={errors.pickup} />
+                      <PlacesInput kind="From" value={pickup} text={pickupText} onText={(t) => { setPickupText(t); if (autoPickup) setAutoPickup(false); }} onSelect={(s) => { setPickup(s); setAutoPickup(false); }} error={errors.pickup} />
+                      {autoPickup && pickup && (
+                        <p className="mt-1 text-[11px] text-accent">📍 Using your current location — change it on the map or type an address.</p>
+                      )}
                       <div className="flex items-center justify-between">
                         <button type="button" className="chip hover:border-accent/50" onClick={() => setPicker('pickup')}>⌖ Set pickup on map</button>
                         <button
