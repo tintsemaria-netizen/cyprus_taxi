@@ -1,5 +1,14 @@
 # Session handoff
 
+## Task 012 M4 (2026-09-13) — mostly DONE (code + tests + deploy)
+Release **96abdd2**. Dynamic pricing, weather adapter, Places (New) autocomplete, isolated load test.
+- **UPFRONT_DYNAMIC** synthetic pricing (`src/lib/pricing-dynamic.ts`, `src/server/dispatch/market.ts`): bounded [1.0,1.5] deterministic demand/supply multiplier, min-sample threshold, hysteresis, weather-into-demand (capped, non-overlapping), zero-supply→1.0. Applied only to eligible base (initial+distance). **Config-gated** `PRICING_MODE` (default `REGULATED_METER_ESTIMATE` — real charges stay regulated; dynamic is synthetic/TEST). Wired into `createQuote`; upfront = committed price (no ±band).
+- **Weather** (`src/server/weather.ts`): timeout + freshness + NEUTRAL fallback; providers `none`(default)/`fixture`/`open-meteo`. Never fabricates weather; open-meteo OFF pending commercial authorization. Env: `WEATHER_PROVIDER`, `WEATHER_MAX_AGE_MINUTES`, `WEATHER_FIXTURE_SEVERITY` (tests).
+- **Places (New)**: `googleAutocomplete`/`googlePlaceDetails` (`src/server/google.ts`), `/api/v1/places/{search,details}` with a billing session token + **graceful fallback to forward geocoding** when Places isn't enabled. `PlacesInput` client: session lifecycle, keyboard nav, prediction→details resolution (kept debounce/cancel/stale-guard). **Verified live**: `/places/search?...&session=` returns geocoding (Places API (New) not enabled on the project).
+- **Load test** `scripts/load-test.ts` (isolated `_test` DB, Google stubbed): `LOAD_DRIVERS`/`LOAD_BOOKINGS`. Result at 1000 drivers / 100 bookings: 100/100 assigned, ZERO invariant violations, p50/p95 ~4.9s/6.6s (120 drivers: ~1.3s/1.8s). Candidate prefilter scans all drivers — known scaling limit (add a spatial index for production scale).
+- **vitest 52/52** (added `tests/pricing.test.ts`, `tests/pricing.db.test.ts`). Migrations unchanged since M3.
+- **Remaining M4 (external enablement, not code gaps)**: REGULATED_FIXED airport/zone fixed fares (not implemented); **enable Places API (New)** on the Google project to activate real autocomplete; **authorize a commercial weather provider** to activate real weather. To turn on dynamic pricing for real, set `PRICING_MODE=UPFRONT_DYNAMIC` only once the commercial rule is authorized.
+
 ## Production domain il-y.taxi + IL-Y rebrand (2026-09-13) — DONE (server + code + deploy)
 Release **8ab7079**. The product is now branded **IL-Y** (visible rebrand only; repo/DB/API/cookies unchanged) on the production domain **il-y.taxi**.
 - **nginx**: `/etc/nginx/sites-available/il-y-taxi.conf` (repo copy `deploy/nginx-il-y-taxi.conf`, symlinked in sites-enabled) serves `il-y.taxi` + `www.il-y.taxi` → app on 127.0.0.1:8097, reusing the self-signed origin cert `/etc/nginx/taxicy-ssl/` (works behind Cloudflare "Full"). `cyprustaxi.ackedberryes.store` stays served.
