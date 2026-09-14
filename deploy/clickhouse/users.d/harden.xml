@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!-- Task 016 §6: no anonymous/default unrestricted access. Restrict the built-in `default`
+     user to loopback only (used for bootstrap/init inside the container), and define a strict
+     read-only profile used by the analytics reader. The app's write/read users are created by
+     init/10-users.sh with passwords from the environment. -->
+<clickhouse>
+    <profiles>
+        <readonly_strict>
+            <readonly>1</readonly>
+            <allow_ddl>0</allow_ddl>
+            <max_execution_time>30</max_execution_time>
+            <max_result_rows>200000</max_result_rows>
+            <max_rows_to_read>50000000</max_rows_to_read>
+        </readonly_strict>
+    </profiles>
+    <users>
+        <default>
+            <!-- default is reachable only from inside the container (bootstrap). -->
+            <networks>
+                <ip>127.0.0.1</ip>
+                <ip>::1</ip>
+            </networks>
+        </default>
+    </users>
+</clickhouse>

@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!-- Task 016 §9: keep the beta ClickHouse resource-bounded so analytics can never starve
+     PostgreSQL. Private container, no public ports. Tune upward on a dedicated host. -->
+<clickhouse>
+    <!-- Cap server memory well under the container mem_limit. -->
+    <max_server_memory_usage>1500000000</max_server_memory_usage>
+    <mark_cache_size>536870912</mark_cache_size>
+    <!-- Quieter logs; bounded size. -->
+    <logger>
+        <level>warning</level>
+        <size>100M</size>
+        <count>3</count>
+    </logger>
+    <!-- Listen on the container network interface (private docker network only). -->
+    <listen_host>0.0.0.0</listen_host>
+</clickhouse>
