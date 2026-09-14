@@ -23,7 +23,8 @@ interface Resp {
   available: boolean; reason?: string; detail?: string;
   window: { from: string; to: string; includeTest: boolean; timezone?: string };
   overview?: Overview; daily?: DailyPoint[]; fares?: FareSummary;
-  unavailable?: { driverUtilization: { available: boolean; reason: string }; providerPerformance: { available: boolean; reason: string } };
+  utilization?: { available: true; onlineHours: number; activeDrivers: number; note: string };
+  unavailable?: { providerPerformance: { available: boolean; reason: string } };
   pipeline: Pipeline;
 }
 
@@ -128,12 +129,15 @@ function Analytics() {
             </section>
           )}
 
-          {data.unavailable && (
-            <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <UnavailableCard title="Driver utilization" reason={data.unavailable.driverUtilization.reason} />
-              <UnavailableCard title="Provider performance" reason={data.unavailable.providerPerformance.reason} />
-            </section>
-          )}
+          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {data.utilization && (
+              <Card title="Driver online time">
+                <Big>{data.utilization.onlineHours}h</Big>
+                <p className="text-xs text-muted">{data.utilization.activeDrivers} active driver{data.utilization.activeDrivers === 1 ? '' : 's'} · {data.utilization.note}</p>
+              </Card>
+            )}
+            {data.unavailable && <UnavailableCard title="Provider performance" reason={data.unavailable.providerPerformance.reason} />}
+          </section>
         </>
       )}
     </div>

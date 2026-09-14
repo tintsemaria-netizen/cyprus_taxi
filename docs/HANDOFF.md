@@ -1,5 +1,34 @@
 # Session handoff
 
+## Task 017 driver dashboard (2026-09-14) — release 53f42e4, deployed + browser-QA'd
+Four-section driver dashboard (Home/Trips/Earnings/Profile) that PRESERVES the working
+offer/GPS/nav/arrive/start-code/complete/chat/push flow. vitest **93 passed / 1 skipped**.
+- **Data** (migration `20260914190220_t017_duty_sessions_and_settlement`): `DutySession`
+  (server-timestamped on/off-duty, one open per driver, events `driver.online/offline`, online-time
+  from session∩window — never a browser timer) and `DriverSettlement` (driver-reported actual
+  metered amount + optional payment-received, SEPARATE from Fare, revision-appended corrections
+  with a reason, audited, completing-driver-only, upfront price protected; booking FK cascades).
+- **Server**: `src/server/driver/{duty,settlement,earnings,trips,dashboard,documents,window}.ts`.
+  Earnings are financially truthful (recorded = known finals; unknown = pending not zero; estimates
+  never income; per-currency, never mixed). Trips are driver-scoped + privacy-safe (a
+  reassigned-away driver sees only RELEASED, never later passenger data; no phone in history).
+- **APIs**: `/driver/dashboard`, `/driver/trips` (+filters/pagination), `/driver/trips/[id]`,
+  `/driver/earnings`, `/driver/earnings/export` (CSV, formula-injection safe, currency+UTC+
+  generated-at), `/driver/bookings/[id]/settlement`, `/driver/documents`. Availability route now
+  opens/closes the duty session atomically.
+- **UI** (`src/app/driver/page.tsx` rebuilt): bottom nav, ≥44px targets, safe-area; GPS/offer/ride
+  runtime lives ABOVE the tabs so switching sections never stops it; persistent offer alert +
+  return-to-trip bar. Home: status/duty, 3 today figures, active-trip/offer priority, last trips,
+  alerts (eligibility blocker replaces online action). Earnings: big recorded amount + daily chart
+  + CSV. Profile: vehicle (review-gated), documents (status only), help (configured or honest
+  unavailable), sign out. Honest Final/Estimate/Pending labels throughout.
+- **Analytics**: driver-utilization metric (deferred in Task 016) now computed from duty events —
+  admin `/admin/analytics` shows driver online-time.
+- **QA**: screenshots at 390×844 / 320×844 / 1440×900 via a synthetic QA driver that was then
+  REMOVED (login now 401; driver count back to 5). No real on-phone journey (no device here).
+- **Deploy note**: always `export APP_RELEASE=$(git rev-parse HEAD)` before `up -d` — a bare `up`
+  leaves the running release env stale.
+
 ## Task 016 data platform (2026-09-14) — release 4a07f34, deployed + live-verified
 Postgres operational foundation + ClickHouse analytics + durable pipelines. vitest **90 passed /
 1 skipped** (skipped = CH integration test; PASSED separately vs the live container).

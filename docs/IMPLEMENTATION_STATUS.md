@@ -1,5 +1,14 @@
 # Implementation status
 
+**Task 017 (driver dashboard) DONE + deployed — release 53f42e4.** Four-section driver dashboard
+(Home/Trips/Earnings/Profile) preserving the working offer/GPS/nav/arrive/start-code/complete/chat/
+push flow, with the runtime kept above the tabs so switching sections never stops GPS/offers/the
+ride. Server-timestamped duty sessions (online-time, feeds analytics), driver-reported settlement
+separate from the immutable Fare (revision-appended, audited, completing-driver-only), financially
+truthful earnings (known=recorded, unknown=pending, estimates never income, per-currency) + CSV.
+Scoped driver APIs; privacy-safe trip history. Browser-QA'd at 390/320/1440 with a synthetic driver
+since removed. vitest 93 passed / 1 skipped. See Tasks/017 completion matrix + HANDOFF.
+
 **Task 016 (data platform) DONE + deployed — release 4a07f34.** PostgreSQL durable domain-event
 capture (rollback-safe, in-transaction) + hardened notification outbox + GPS history; a dedicated
 supervised worker process (one owner, cross-process heartbeat health); a private ClickHouse

@@ -137,9 +137,26 @@ export async function fareSummary(f: AnalyticsFilter): Promise<FareSummary> {
   };
 }
 
+// Driver online time from duty sessions (Task 017 events). Only CLOSED sessions
+// (driver.offline) carry onlineSec, so sessions still open at query time are not yet counted —
+// flagged rather than invented. Busy-vs-idle split is not computed here.
+export interface DriverUtilization { available: true; onlineHours: number; activeDrivers: number; note: string }
+export async function driverUtilization(f: AnalyticsFilter): Promise<DriverUtilization> {
+  const rows = await chSelect<{ sec: string; drivers: string }>(
+    `SELECT sum(toFloat64OrZero(JSONExtractRaw(payload, 'onlineSec'))) AS sec,
+            count(DISTINCT JSONExtractString(payload, 'driverPseudo')) AS drivers
+     FROM ${DB()}.domain_events WHERE ${scope(f, "eventType = 'driver.offline'")}`,
+  );
+  return {
+    available: true,
+    onlineHours: Math.round((Number(rows[0]?.sec ?? 0) / 3600) * 10) / 10,
+    activeDrivers: Number(rows[0]?.drivers ?? 0),
+    note: 'Completed duty sessions only; sessions still open are not yet included.',
+  };
+}
+
 // Metrics we cannot yet compute honestly (no source events captured yet).
 export const unavailable = {
-  driverUtilization: { available: false, reason: 'No driver on/off-duty session history yet (added with driver duty sessions).' },
   providerPerformance: { available: false, reason: 'No provider-call events captured yet.' },
 };
 

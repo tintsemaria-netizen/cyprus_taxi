@@ -1,7 +1,7 @@
 import { apiOk, Errors } from '@/lib/http';
 import { requireStaff, isStaffCtx } from '@/lib/auth';
 import { config } from '@/lib/config';
-import { normalizeWindow, overview, daily, fareSummary, unavailable } from '@/server/analytics/queries';
+import { normalizeWindow, overview, daily, fareSummary, driverUtilization, unavailable } from '@/server/analytics/queries';
 import { pipelineStatus } from '@/server/analytics/reconcile';
 
 export const dynamic = 'force-dynamic';
@@ -23,8 +23,8 @@ export async function GET(req: Request) {
     return apiOk({ available: false, reason: !config.analytics.enabled ? 'Analytics store not configured.' : 'ClickHouse is currently unreachable.', pipeline, window: win });
   }
   try {
-    const [ov, series, fares] = await Promise.all([overview(f), daily(f), fareSummary(f)]);
-    return apiOk({ available: true, window: win, overview: ov, daily: series, fares, unavailable, pipeline });
+    const [ov, series, fares, utilization] = await Promise.all([overview(f), daily(f), fareSummary(f), driverUtilization(f)]);
+    return apiOk({ available: true, window: win, overview: ov, daily: series, fares, utilization, unavailable, pipeline });
   } catch (e) {
     return apiOk({ available: false, reason: 'Analytics query failed — try a narrower range.', detail: String((e as Error)?.message ?? e).slice(0, 200), pipeline, window: win });
   }

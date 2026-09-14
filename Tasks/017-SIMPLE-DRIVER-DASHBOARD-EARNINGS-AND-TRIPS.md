@@ -1,5 +1,33 @@
 # Task 017 — Simple, complete IL-Y driver dashboard
 
+> **STATUS (2026-09-14): IMPLEMENTED + deployed to the beta.** Deployed release **53f42e4**
+> (utilization/analytics follow-up in a later commit). vitest **93 passed / 1 skipped**. The full
+> driver flow (offer → GPS → nav → arrive → start-code → complete → chat → push) is preserved; the
+> runtime lives above the Home/Trips/Earnings/Profile tabs so switching sections never stops GPS,
+> offer listening, or the ride session. Browser QA screenshots captured at 390×844, 320×844,
+> 1440×900 (idle Home, Earnings, Profile, desktop) using a synthetic QA driver that was then
+> removed.
+>
+> ## Completion matrix
+> | Area | Status | Evidence |
+> |---|---|---|
+> | §2 Four-section mobile-first nav | DONE | bottom nav Home/Trips/Earnings/Profile, ≥44px targets, safe-area, IL-Y tokens; desktop = same sections, more space |
+> | §3 Home (working screen) | DONE | status+duty, one Go online/offline, 3 today figures, active trip/offer priority, last trips, alerts, eligibility blocker replaces online action |
+> | §3 runtime above tabs | DONE | GPS/offer/ride-session in the parent; persistent offer alert + return-to-trip bar across sections |
+> | §4 Trips | DONE | Today/Week/Month filters, cards + pagination, detail (route/timestamps/fare/settlement/release-reason), driver-scoped + privacy-safe (released drivers see no later data), no passenger phone in history |
+> | §5 Earnings (truthful) | DONE | recorded = known finals only; unknown = pending (never zero); estimates never income; per-currency; daily chart + list; CSV (formula-injection safe, currency+UTC+generated-at) |
+> | §5 driver settlement | DONE | `DriverSettlement` separate from Fare, revision-appended corrections + reason, audited, completing-driver-only, upfront price protected; idempotent + revision-checked |
+> | §6 Profile/Vehicle/Documents/Help | DONE | vehicle (review-gated), documents (status only, no internal notes; honest LEGACY state), help (configured contact or honest unavailable — no dead buttons), sign out |
+> | §7 Duty sessions / online-time | DONE | server-timestamped `DutySession` + duty events; online-time from session∩window, never a browser timer; force-off closes the session |
+> | §7 scoped APIs + identity | DONE | session identity only; KYC/ownership rules; bounded queries; ClickHouse-independent |
+> | §8 acceptance (new driver empty states) | DONE | verified via QA driver; clear zero/empty states, honest labels |
+> | Task 016 driver-utilization metric | DONE | now computed from duty events (was deferred) — admin analytics shows driver online-time |
+>
+> **Not done / honest scope:** a real on-phone journey (no device/browser hardware here — server +
+> emulated-viewport verified instead); document self-serve renewal (routed to operator, not a dead
+> button). Existing SMS/scanner + off-host-backup blockers remain separate and unchanged.
+
+
 Repository: https://github.com/tintsemaria-netizen/cyprus_taxi
 Scope: driver experience. Continue Tasks 013–016 and preserve passenger/admin flows.
 Owner request: drivers currently see an order and a few settings; they need a complete but simple dashboard with earnings, trips and useful work information. A Bootstrap template may be used, with the existing IL-Y colors.
