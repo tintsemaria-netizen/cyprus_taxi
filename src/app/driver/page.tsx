@@ -346,7 +346,7 @@ function Driver() {
               <div className="font-medium">{data.trip.passengerName} · {data.trip.passengerCount}p · {data.trip.vClass}</div>
               {data.trip.note && <div className="mt-1 text-xs text-muted">Note: {data.trip.note}</div>}
               <div className="mt-3">
-                <ChatPanel listUrl={`/driver/bookings/${data.trip.bookingId}/messages`} postUrl={`/driver/bookings/${data.trip.bookingId}/messages`} pushUrl="/driver/push" me="DRIVER" peerLabel="passenger" />
+                <ChatPanel key={data.trip.bookingId} listUrl={`/driver/bookings/${data.trip.bookingId}/messages`} postUrl={`/driver/bookings/${data.trip.bookingId}/messages`} pushUrl="/driver/push" me="DRIVER" peerLabel="passenger" />
               </div>
               <div className="mt-3 flex gap-2">
                 <a href={`tel:${data.trip.passengerPhone}`} className="btn-ghost !min-h-0 flex-1 !py-2 text-sm">📞 Call passenger</a>

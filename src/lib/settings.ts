@@ -69,6 +69,6 @@ export async function getPublicConfig() {
     classes: s.classes,
     schedule: { minMinutes: s.scheduleMinMinutes, maxDays: s.scheduleMaxDays },
     serviceAreaPolygon: s.serviceAreaPolygon,
-    fareWording: 'Fare confirmed by dispatcher',
+    fareWording: 'Metered fare estimate — settled with the driver',
   };
 }

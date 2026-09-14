@@ -69,11 +69,15 @@ export function isPlacesDisabled(e: unknown): boolean {
   return e instanceof Error && e.message === PLACES_DISABLED;
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+// Keeps the abort timer running until the body is parsed too (a slow/hung response body
+// must also time out, not just the initial fetch).
+async function fetchJsonWithStatus(url: string, init: RequestInit): Promise<{ status: number; json: unknown }> {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    const res = await fetch(url, { ...init, signal: controller.signal });
+    const json = await res.json().catch(() => ({}));
+    return { status: res.status, json };
   } finally {
     clearTimeout(t);
   }
@@ -88,13 +92,13 @@ export async function googleAutocomplete(input: string, sessionToken: string, li
     includedRegionCodes: ['cy'],
     locationBias: { rectangle: { low: { latitude: b.south, longitude: b.west }, high: { latitude: b.north, longitude: b.east } } },
   };
-  const res = await fetchWithTimeout('https://places.googleapis.com/v1/places:autocomplete', {
+  const { status, json } = await fetchJsonWithStatus('https://places.googleapis.com/v1/places:autocomplete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key },
     body: JSON.stringify(body),
   });
-  if (res.status === 401 || res.status === 403) throw new Error(PLACES_DISABLED);
-  const d = (await res.json()) as {
+  if (status === 401 || status === 403) throw new Error(PLACES_DISABLED);
+  const d = json as {
     suggestions?: { placePrediction?: { placeId: string; text?: { text?: string }; structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } } } }[];
     error?: { status?: string };
   };
@@ -112,9 +116,9 @@ export async function googleAutocomplete(input: string, sessionToken: string, li
 export async function googlePlaceDetails(placeId: string, sessionToken: string): Promise<{ label: string; lat: number; lng: number } | null> {
   const key = config.googleServerKey();
   const url = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?sessionToken=${encodeURIComponent(sessionToken)}`;
-  const res = await fetchWithTimeout(url, { headers: { 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'location,formattedAddress,displayName' } });
-  if (res.status === 401 || res.status === 403) throw new Error(PLACES_DISABLED);
-  const d = (await res.json()) as { location?: { latitude: number; longitude: number }; formattedAddress?: string; displayName?: { text?: string }; error?: { status?: string } };
+  const { status, json } = await fetchJsonWithStatus(url, { headers: { 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'location,formattedAddress,displayName' } });
+  if (status === 401 || status === 403) throw new Error(PLACES_DISABLED);
+  const d = json as { location?: { latitude: number; longitude: number }; formattedAddress?: string; displayName?: { text?: string }; error?: { status?: string } };
   if (d.error) throw new Error(d.error.status === 'PERMISSION_DENIED' ? PLACES_DISABLED : `places:${d.error.status}`);
   if (!d.location) return null;
   return { label: d.formattedAddress || d.displayName?.text || 'Selected location', lat: d.location.latitude, lng: d.location.longitude };

@@ -84,6 +84,15 @@ describe('passenger↔driver chat', () => {
     if (!res.ok) expect(res.code).toBe('CHAT_CLOSED');
   });
 
+  it('returns the LATEST 200 (newest messages never vanish after 200)', async () => {
+    const { bookingId } = await assigned();
+    for (let i = 0; i < 205; i++) await prisma.chatMessage.create({ data: { bookingId, sender: 'PASSENGER', body: `m${i}` } });
+    const list = await listMessages(bookingId);
+    expect(list.messages.length).toBe(200);
+    expect(list.messages[list.messages.length - 1].body).toBe('m204'); // newest present
+    expect(list.messages[0].body).toBe('m5'); // oldest dropped
+  }, 20000);
+
   it('rejects empty and over-long messages', async () => {
     const { bookingId } = await assigned();
     const empty = await postMessage(bookingId, 'PASSENGER', '   ');

@@ -474,7 +474,7 @@ export default function BookingApp() {
                       </div>
                     )}
                     <button className="btn-primary mt-5 w-full" onClick={toReview}>Request a ride</button>
-                    <p className="mt-3 text-center text-[11px] text-muted">Fare confirmed by dispatcher.</p>
+                    <p className="mt-3 text-center text-[11px] text-muted">Metered estimate — the driver settles the final metered fare.</p>
                   </div>
                 ) : (
                   /* ---- REVIEW ---- */

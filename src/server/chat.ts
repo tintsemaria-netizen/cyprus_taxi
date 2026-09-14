@@ -27,10 +27,13 @@ export async function listMessages(bookingId: string, sinceIso?: string): Promis
     if (!Number.isNaN(d.getTime())) where.createdAt = { gt: d };
   }
   const [rows, booking] = await Promise.all([
-    prisma.chatMessage.findMany({ where, orderBy: { createdAt: 'asc' }, take: 200 }),
+    // Newest 200 (then chronological for display), so messages never vanish after 200 —
+    // an incremental `after` cursor returns just the new tail.
+    prisma.chatMessage.findMany({ where, orderBy: { createdAt: sinceIso ? 'asc' : 'desc' }, take: 200 }),
     prisma.booking.findUnique({ where: { id: bookingId }, select: { status: true } }),
   ]);
-  return { open: booking ? CHAT_ACTIVE_STATUSES.includes(booking.status) : false, messages: rows.map(view) };
+  const ordered = sinceIso ? rows : rows.reverse();
+  return { open: booking ? CHAT_ACTIVE_STATUSES.includes(booking.status) : false, messages: ordered.map(view) };
 }
 
 export async function postMessage(bookingId: string, sender: 'PASSENGER' | 'DRIVER', body: string): Promise<PostResult> {

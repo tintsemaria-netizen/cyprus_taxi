@@ -1,5 +1,15 @@
 # Session handoff
 
+## Task 013 (2026-09-14) — P0 done, P1 mostly done, P2 partial (code + tests + deploy)
+Autonomous-ride correctness + notifications hardening. **vitest 66/66.** Each item's exact status is in Tasks/013's completion matrix (top of file).
+- **P0 lifecycle authority**: generic `changeStatus` rejects ARRIVED/IN_PROGRESS/COMPLETED (`USE_LIFECYCLE_ACTION`); shared finalizers in `dispatch/lifecycle.ts` are the only writers; audited staff overrides (`staffMarkArrived/StartTrip/CompleteTrip`, reason + AuditEvent) power the dispatch status route/UI; completion writes exactly one immutable `Fare`, finalizes waiting, releases capacity atomically (upfront→finalCents=accepted, regulated→null).
+- **P0 concurrency**: `acceptOffer/rejectOffer/expireOffer` lock the booking row FIRST and re-read the offer under it (single serialization point); GPS-loss rematch verifies exact assignment id+driver and re-checks GPS under lock; per-job try/catch isolates failures. `tests/lifecycle-guards.db.test.ts` (accept-vs-reject/expire/cancel, two-worker single-offer, bypass rejection).
+- **P1 ETA**: live pickup ETA passes `departureTime=now` (traffic-aware); ETA cache keyed by booking+driver with eviction (no stale ETA after rematch); approximate fallback labelled "(approx)"; `fetchJsonWithStatus` now times out body parsing too.
+- **P1 notifications**: SSRF-safe `saveSubscription` (`isSafePushEndpoint`: https-only, rejects IP-literals/loopback/private/metadata; key validation; per-audience cap 10); notifications for offer/assignment/arrival/no-driver/rematch/cancellation + chat; `NotifyToggle` opt-in on driver duty card + passenger tracking. `tests/push.test.ts`.
+- **P1 quote (partial)**: idempotency hash now binds luggageCount + quoteId; "confirmed by dispatcher" wording removed everywhere. REMAINING: scheduled-time pricing (pricingAt/departureAt + bind schedule to quote hash).
+- **P2 chat (partial)**: `listMessages` returns the LATEST 200; ChatPanel remounts on booking change. REMAINING: full cursor pagination.
+- **Not run**: authenticated live browser journey — needs current synthetic-driver credentials (Sep-11 `beta-access.txt` is stale; do not reset real driver passwords). All logic proven by DB/integration tests; live smoke pending those creds.
+
 ## Task 012 M4 (2026-09-13) — mostly DONE (code + tests + deploy)
 Release **96abdd2**. Dynamic pricing, weather adapter, Places (New) autocomplete, isolated load test.
 - **UPFRONT_DYNAMIC** synthetic pricing (`src/lib/pricing-dynamic.ts`, `src/server/dispatch/market.ts`): bounded [1.0,1.5] deterministic demand/supply multiplier, min-sample threshold, hysteresis, weather-into-demand (capped, non-overlapping), zero-supply→1.0. Applied only to eligible base (initial+distance). **Config-gated** `PRICING_MODE` (default `REGULATED_METER_ESTIMATE` — real charges stay regulated; dynamic is synthetic/TEST). Wired into `createQuote`; upfront = committed price (no ±band).

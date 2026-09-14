@@ -69,6 +69,8 @@ export async function createBooking(
       so: input.scheduleOffsetMin ?? null,
       c: input.vClass,
       n: input.passengerCount,
+      l: input.luggageCount ?? null, // price-bearing: a changed luggage count is a different request
+      q: input.quoteId ?? null, // a different accepted quote is a different request
       name: input.passengerName,
       phone: input.phone,
       note: input.note || '',

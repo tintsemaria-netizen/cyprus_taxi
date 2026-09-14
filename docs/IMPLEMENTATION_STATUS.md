@@ -1,6 +1,6 @@
 # Implementation status
 
-Updated 2026-09-11. Deployed publicly to https://cyprustaxi.ackedberryes.store.
+Updated 2026-09-14. Deployed publicly to https://cyprustaxi.ackedberryes.store (production domain il-y.taxi ready pending DNS). Autonomous ride-hailing beta: Task 012 (M0–M4) + Task 013 (P0 done, P1 mostly, P2 partial). Live driver↔passenger routes + marker animation, booking chat, and Web Push (chat, ride offers, assignment/arrival/no-driver/rematch/cancellation). vitest 66/66. Full per-item status is in Tasks/013 (completion matrix) and docs/HANDOFF.md. Remaining blockers: scheduled-time quote pricing, full ETA source UI, chat cursor pagination, and the authenticated live browser journey (needs current synthetic-driver creds). External: enable Places API (New); authorize a commercial weather provider; authorize any dynamic tariff.
 
 | Milestone | Status | Evidence / next action |
 |---|---|---|

@@ -130,7 +130,7 @@ function BookingDetail() {
               <Field label="Phone" value={d.phone} />
             </div>
             {d.note && <Field label="Note" value={d.note} />}
-            <p className="text-xs text-muted">Times in Europe/Nicosia. Fare confirmed by dispatcher.</p>
+            <p className="text-xs text-muted">Times in Europe/Nicosia. Metered estimate — the driver settles the final metered fare.</p>
           </div>
         </div>
 

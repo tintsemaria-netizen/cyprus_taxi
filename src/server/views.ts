@@ -6,18 +6,31 @@ import { googleConfigured, googleRoute } from '@/server/google';
 import { BookingStatus } from '@prisma/client';
 
 // Bounded pickup-ETA cache: recompute the real driver→pickup route at most every ~20s
-// per booking (Task 012 §5.2), so per-passenger polling doesn't spam the Routes API.
-const pickupEtaCache = new Map<string, { etaMin: number; at: number }>();
-async function driverToPickupEtaMin(bookingId: string, from: { lat: number; lng: number }, to: { lat: number; lng: number }): Promise<number | null> {
-  const cached = pickupEtaCache.get(bookingId);
-  if (cached && Date.now() - cached.at < 20000) return cached.etaMin;
+// (Task 012 §5.2), so per-passenger polling doesn't spam the Routes API. Keyed by
+// booking+driver so a rematch (new driver → new origin) never serves the old ETA, with
+// size eviction. Exposes source so an approximate fallback is never shown as traffic.
+const PICKUP_ETA_TTL_MS = 20000;
+const PICKUP_ETA_MAX = 1000;
+const pickupEtaCache = new Map<string, { etaMin: number; source: 'traffic' | 'approx'; at: number }>();
+async function driverToPickupEta(bookingId: string, driverId: string, from: { lat: number; lng: number }, to: { lat: number; lng: number }): Promise<{ etaMin: number; source: 'traffic' | 'approx' }> {
+  const key = `${bookingId}:${driverId}`;
+  const cached = pickupEtaCache.get(key);
+  if (cached && Date.now() - cached.at < PICKUP_ETA_TTL_MS) return { etaMin: cached.etaMin, source: cached.source };
+  let result: { etaMin: number; source: 'traffic' | 'approx' } | null = null;
   if (googleConfigured()) {
     try {
-      const r = await googleRoute(from, to);
-      if (r) { pickupEtaCache.set(bookingId, { etaMin: r.etaMinutes, at: Date.now() }); return r.etaMinutes; }
+      // Pass departureTime=now so the Routes request is genuinely traffic-aware.
+      const r = await googleRoute(from, to, new Date().toISOString());
+      if (r) result = { etaMin: r.etaMinutes, source: 'traffic' };
     } catch { /* fall through to approximate */ }
   }
-  return demoEstimate(from, to).etaMinutes; // labelled approximate fallback
+  if (!result) result = { etaMin: demoEstimate(from, to).etaMinutes, source: 'approx' };
+  if (pickupEtaCache.size >= PICKUP_ETA_MAX) {
+    const oldest = pickupEtaCache.keys().next().value;
+    if (oldest) pickupEtaCache.delete(oldest);
+  }
+  pickupEtaCache.set(key, { ...result, at: Date.now() });
+  return result;
 }
 
 // ---- Passenger tracking view (scoped, minimal fields) ----
@@ -71,8 +84,8 @@ export async function trackingView(bookingId: string) {
         };
         if (booking.status === 'EN_ROUTE' && freshness === 'fresh') {
           // Real driver→pickup road ETA (traffic-aware via Google), not the trip duration.
-          const etaMin = await driverToPickupEtaMin(booking.id, { lat: loc.lat, lng: loc.lng }, { lat: booking.pickupLat, lng: booking.pickupLng });
-          pickupEta = etaMin != null ? `≈ ${etaMin} min` : 'ETA unavailable';
+          const eta = await driverToPickupEta(booking.id, active.driverId, { lat: loc.lat, lng: loc.lng }, { lat: booking.pickupLat, lng: booking.pickupLng });
+          pickupEta = `≈ ${eta.etaMin} min${eta.source === 'approx' ? ' (approx)' : ''}`;
         }
       }
     }
@@ -99,7 +112,7 @@ export async function trackingView(bookingId: string) {
     passengerName: booking.passengerName,
     vClass: booking.vClass,
     passengerCount: booking.passengerCount,
-    fareWording: 'Fare confirmed by dispatcher',
+    fareWording: 'Metered fare estimate — settled with the driver',
     vehicle,
     location,
     pickupEta: pickupEta ?? (booking.status === 'EN_ROUTE' ? 'ETA unavailable' : null),
