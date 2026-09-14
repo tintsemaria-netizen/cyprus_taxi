@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { createAssignment } from '@/server/assignments';
-import { notifyDriverOffer } from '@/server/push';
+import { notifyDriverOffer, notifyPassenger } from '@/server/push';
 import type { Candidate } from './eligibility';
 
 export const OFFER_TTL_SEC = 20;
@@ -60,8 +60,9 @@ export type OfferResult =
 // booking to ASSIGNED. Revalidates ownership, expiry (server time), booking state and
 // capacity. Idempotent-safe: a late/duplicate accept on a resolved offer conflicts.
 export async function acceptOffer(offerId: string, driverId: string): Promise<OfferResult> {
+  let acceptedBookingId: string | null = null;
   try {
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx): Promise<OfferResult> => {
       // Lock the booking row FIRST (single serialization point), then re-read the offer
       // authoritatively under that lock — so a concurrent reject/expire/cancel can't have
       // resolved it between our read and write.
@@ -91,8 +92,13 @@ export async function acceptOffer(offerId: string, driverId: string): Promise<Of
       const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: 'ASSIGNED', revision: { increment: 1 } } });
       await tx.bookingEvent.create({ data: { bookingId: booking.id, type: 'OFFER_ACCEPTED', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'SEARCHING', afterStatus: 'ASSIGNED' } });
       await tx.dispatchJob.deleteMany({ where: { bookingId: booking.id } });
+      acceptedBookingId = booking.id;
       return { ok: true, status: updated.status, revision: updated.revision };
     });
+    if (result.ok && acceptedBookingId) {
+      void notifyPassenger(acceptedBookingId, 'Driver assigned', 'A driver is on the way — track them live.').catch(() => {});
+    }
+    return result;
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return err(409, 'DRIVER_BUSY', 'Capacity was just taken.');
     throw e;

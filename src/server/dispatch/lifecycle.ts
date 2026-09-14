@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { computeFreshness } from '@/lib/freshness';
 import { haversineMeters } from '@/lib/geo';
+import { notifyPassenger } from '@/server/push';
 
 // M3 trip lifecycle after assignment: arrival + pickup waiting, code-gated start,
 // immutable fare receipt on completion, and pre-pickup rematch. Booking-status
@@ -112,7 +113,7 @@ async function finalizeCompletion(
 // EN_ROUTE → ARRIVED. Requires the driver's own assignment and fresh GPS within the
 // arrival radius of pickup (airports exempt); opens a persisted waiting session.
 export async function arriveAtPickup(bookingId: string, driverId: string, expectedRevision: number): Promise<LifeResult> {
-  return prisma.$transaction(async (tx) => {
+  const r = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
     const b = await tx.booking.findUnique({ where: { id: bookingId } });
     if (!b) return err(404, 'NOT_FOUND', 'Booking not found.');
@@ -127,6 +128,8 @@ export async function arriveAtPickup(bookingId: string, driverId: string, expect
     }
     return finalizeArrival(tx, bookingId, { type: 'DRIVER', id: driverId });
   });
+  if (r.ok) void notifyPassenger(bookingId, 'Your driver has arrived', 'Your driver is waiting at the pickup point.').catch(() => {});
+  return r;
 }
 
 // ARRIVED → IN_PROGRESS, gated by the passenger's start code.
@@ -176,7 +179,7 @@ export async function staffMarkArrived(bookingId: string, expectedRevision: numb
     if (!(await tx.assignment.findFirst({ where: { activeBookingId: bookingId } }))) return err(409, 'NO_ASSIGNMENT', 'No active assignment.');
     await auditOverride(tx, staffId, role, 'OVERRIDE_ARRIVED', bookingId, reason);
     return finalizeArrival(tx, bookingId, { type: 'STAFF', id: staffId });
-  });
+  }).then((r) => { if (r.ok) void notifyPassenger(bookingId, 'Your driver has arrived', 'Your driver is waiting at the pickup point.').catch(() => {}); return r; });
 }
 
 export async function staffStartTrip(bookingId: string, expectedRevision: number, staffId: string, role: Role, reason: string): Promise<LifeResult> {
@@ -244,7 +247,7 @@ export async function driverCancelPrePickup(bookingId: string, driverId: string,
     await rematchBooking(tx, bookingId, driverId, reason || 'driver canceled before pickup', 'DRIVER');
     const updated = await tx.booking.findUnique({ where: { id: bookingId } });
     return ok(updated!.status, updated!.revision);
-  });
+  }).then((r) => { if (r.ok) void notifyPassenger(bookingId, 'Finding you another driver', 'Your previous driver became unavailable — we’re matching you again.').catch(() => {}); return r; });
 }
 
 function safeParse(s: string): unknown {

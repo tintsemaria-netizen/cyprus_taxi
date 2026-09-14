@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
 import { ChatPanel } from '@/components/ChatPanel';
+import { NotifyToggle } from '@/components/NotifyToggle';
 import { api, ApiRequestError } from '@/lib/api-client';
 
 interface TrackView {
@@ -326,6 +327,7 @@ export default function TrackApp() {
                 {/* actions */}
                 {!terminal && (
                   <div className="mt-4 space-y-2">
+                    <NotifyToggle pushUrl="/tracking/push" className="pb-1" />
                     {view.vehicle?.phone && (
                       <a href={`tel:${view.vehicle.phone}`} className="btn-primary w-full">📞 Call driver</a>
                     )}

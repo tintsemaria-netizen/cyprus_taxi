@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { StaffShell } from '@/components/staff/StaffShell';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { ChatPanel } from '@/components/ChatPanel';
+import { NotifyToggle } from '@/components/NotifyToggle';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 
 export const dynamic = 'force-dynamic';
@@ -266,9 +267,12 @@ function Driver() {
           <div className="font-semibold">{data.onDuty ? 'On duty' : 'Off duty'}</div>
           <div className="text-xs text-muted">{data.onDuty ? (data.trip ? 'On a trip' : 'Available for assignments') : 'Not receiving assignments'}</div>
         </div>
-        <button className={data.onDuty ? 'btn-ghost' : 'btn-primary'} onClick={() => setDuty(!data.onDuty)}>
-          {data.onDuty ? 'Go off duty' : 'Go on duty'}
-        </button>
+        <div className="flex flex-col items-end gap-1">
+          <button className={data.onDuty ? 'btn-ghost' : 'btn-primary'} onClick={() => setDuty(!data.onDuty)}>
+            {data.onDuty ? 'Go off duty' : 'Go on duty'}
+          </button>
+          <NotifyToggle pushUrl="/driver/push" />
+        </div>
       </div>
 
       {/* GPS */}

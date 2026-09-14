@@ -3,6 +3,7 @@ import { config } from '@/lib/config';
 import { findBestCandidate, RADIUS_STAGES_KM } from './eligibility';
 import { createOffer, expireOffer } from './offers';
 import { rematchBooking } from './lifecycle';
+import { notifyPassenger } from '@/server/push';
 
 // Durable-ish in-process dispatch worker (Task 012 §4). Postgres-backed jobs with a lease
 // so multiple instances/ticks are safe; recovers on restart because state lives in the DB
@@ -86,15 +87,19 @@ async function processJob(jobId: string): Promise<void> {
 
   // Deadline reached without acceptance → give up (NO_DRIVER).
   if (job.deadlineAt < new Date()) {
-    await prisma.$transaction(async (tx) => {
+    const gaveUp = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${job.bookingId} FOR UPDATE`;
       const b = await tx.booking.findUnique({ where: { id: job.bookingId } });
+      let flagged = false;
       if (b && b.status === 'SEARCHING') {
         await tx.booking.update({ where: { id: job.bookingId }, data: { status: 'NO_DRIVER', revision: { increment: 1 } } });
         await tx.bookingEvent.create({ data: { bookingId: job.bookingId, type: 'NO_DRIVER', actorType: 'SYSTEM', beforeStatus: 'SEARCHING', afterStatus: 'NO_DRIVER' } });
+        flagged = true;
       }
       await tx.dispatchJob.deleteMany({ where: { id: jobId } });
+      return flagged;
     });
+    if (gaveUp) void notifyPassenger(job.bookingId, 'No driver available', 'We couldn’t find a driver right now. Tap to try again.').catch(() => {});
     return;
   }
 
@@ -145,18 +150,20 @@ async function rematchOnGpsLoss(now: Date): Promise<void> {
     const loc = await prisma.latestDriverLocation.findUnique({ where: { driverId: a.driverId } });
     const lastAt = loc ? Math.max(loc.sampledAt.getTime(), loc.receivedAt.getTime()) : a.assignedAt.getTime();
     if (lastAt >= cutoff) continue; // still fresh enough (cheap pre-check)
-    await prisma.$transaction(async (tx) => {
+    const rematched = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${a.activeBookingId!} FOR UPDATE`;
       const b = await tx.booking.findUnique({ where: { id: a.activeBookingId! } });
-      if (!b || !['ASSIGNED', 'EN_ROUTE'].includes(b.status)) return; // never ARRIVED/IN_PROGRESS
+      if (!b || !['ASSIGNED', 'EN_ROUTE'].includes(b.status)) return false; // never ARRIVED/IN_PROGRESS
       // Guard against a stale observation: the active assignment must still be the exact
       // one we sampled (not a fresh replacement), and its driver's GPS still lost.
       const cur = await tx.assignment.findFirst({ where: { activeBookingId: b.id } });
-      if (!cur || cur.id !== a.id || cur.driverId !== a.driverId) return;
+      if (!cur || cur.id !== a.id || cur.driverId !== a.driverId) return false;
       const loc2 = await tx.latestDriverLocation.findUnique({ where: { driverId: cur.driverId } });
       const lastAt2 = loc2 ? Math.max(loc2.sampledAt.getTime(), loc2.receivedAt.getTime()) : cur.assignedAt.getTime();
-      if (lastAt2 >= now.getTime() - config.dispatch.gpsLossRematchSeconds * 1000) return; // GPS recovered under lock
+      if (lastAt2 >= now.getTime() - config.dispatch.gpsLossRematchSeconds * 1000) return false; // GPS recovered under lock
       await rematchBooking(tx, b.id, cur.driverId, 'prolonged pre-pickup GPS loss', 'SYSTEM');
+      return true;
     });
+    if (rematched) void notifyPassenger(a.activeBookingId!, 'Finding you another driver', 'Your driver lost connection — we’re matching you again.').catch(() => {});
   }
 }
