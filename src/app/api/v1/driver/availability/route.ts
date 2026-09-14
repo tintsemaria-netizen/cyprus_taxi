@@ -2,6 +2,7 @@ import { apiOk, apiError, Errors } from '@/lib/http';
 import { requireDriver, isDriverCtx } from '@/lib/driver-ctx';
 import { prisma } from '@/lib/db';
 import { canWork } from '@/lib/eligibility-policy';
+import { goOnline, goOffline } from '@/server/driver/duty';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -41,6 +42,14 @@ export async function PATCH(req: Request) {
   // If there's an active trip, availability stays false regardless.
   if (active) data.available = false;
 
-  const updated = await prisma.driver.update({ where: { id: ctx.driver.id }, data });
+  // Update duty flags AND open/close the duty session + emit duty events atomically, so
+  // online-time totals are server-authoritative (Task 017 §7). Going off duty never cancels an
+  // active trip (that guard is applied above; availability stays false while a trip is active).
+  const updated = await prisma.$transaction(async (tx) => {
+    const u = await tx.driver.update({ where: { id: ctx.driver.id }, data });
+    if (u.onDuty) await goOnline(tx, ctx.driver.id);
+    else await goOffline(tx, ctx.driver.id, 'driver');
+    return u;
+  });
   return apiOk({ onDuty: updated.onDuty, available: updated.available, hasActiveTrip: !!active });
 }

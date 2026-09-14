@@ -68,10 +68,53 @@ model Driver {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
-  bindings    DriverVehicleBinding[]
-  assignments Assignment[]
-  offers      DriverOffer[]
-  location    LatestDriverLocation?
+  bindings     DriverVehicleBinding[]
+  assignments  Assignment[]
+  offers       DriverOffer[]
+  location     LatestDriverLocation?
+  dutySessions DutySession[]
+}
+
+// Driver on/off-duty sessions (Task 017). Server-timestamped so online-time totals are
+// authoritative (never a browser timer). At most one OPEN session per driver via the
+// nullable-unique activeDriverId. Feeds Task 016 driver-utilization analytics.
+model DutySession {
+  id             String    @id @default(uuid())
+  driver         Driver    @relation(fields: [driverId], references: [id])
+  driverId       String
+  onlineAt       DateTime  @default(now())
+  offlineAt      DateTime?
+  source         String    @default("driver") // driver | system (e.g. forced off by expiry)
+  activeDriverId String?   @unique // = driverId while open; NULL when closed
+  createdAt      DateTime  @default(now())
+
+  @@index([driverId, onlineAt])
+}
+
+// Driver-reported settlement (Task 017 §5). SEPARATE from the immutable quote/Fare: it records
+// the ACTUAL metered amount and (optionally) that payment was received, as driver-reported
+// evidence with actor + timestamps + revision. Corrections append a new revision (never edit in
+// place) with a reason; the current row is the max revision per booking. Attribution is the
+// assignment that COMPLETED the trip, so a reassigned-away driver cannot settle it.
+model DriverSettlement {
+  id                 String    @id @default(uuid())
+  booking            Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId          String
+  driverId           String // the completing driver (attribution)
+  assignmentId       String? // the completing assignment
+  reportedFinalCents Int
+  currency           String    @default("EUR")
+  paymentReceived    Boolean   @default(false)
+  receivedAt         DateTime?
+  note               String?
+  revision           Int       @default(1)
+  correctionReason   String?
+  createdByType      String    @default("DRIVER") // DRIVER | STAFF
+  createdById        String?
+  createdAt          DateTime  @default(now())
+
+  @@unique([bookingId, revision])
+  @@index([driverId, createdAt])
 }
 
 enum DriverEligibility {
@@ -395,6 +438,7 @@ model Booking {
   waiting     WaitingSession?
   fare        Fare?
   messages    ChatMessage[]
+  settlements DriverSettlement[]
 
   @@index([status, createdAt])
   @@index([status, scheduledAt])

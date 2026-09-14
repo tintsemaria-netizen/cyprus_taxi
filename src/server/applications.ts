@@ -190,6 +190,9 @@ export async function enforceDocumentExpiries(now: Date = new Date()): Promise<v
     if (docs.some((x) => x.expiresAt! < now)) {
       await prisma.$transaction(async (tx) => {
         await tx.driver.update({ where: { id: d.id }, data: { eligibility: 'DOCUMENTS_EXPIRED', onDuty: false, available: false } });
+        // Close any open duty session so online-time doesn't keep accruing (Task 017).
+        const { goOffline } = await import('@/server/driver/duty');
+        await goOffline(tx, d.id, 'system');
         const offers = await tx.driverOffer.findMany({ where: { activeDriverId: d.id, status: 'OFFERED' } });
         for (const o of offers) await tx.driverOffer.update({ where: { id: o.id }, data: { status: 'EXPIRED', respondedAt: new Date(), activeBookingId: null, activeDriverId: null } });
       });
