@@ -1,5 +1,9 @@
 # Session handoff
 
+## Header nav restyle (2026-09-14) — release 8f5129b, deployed + live-verified
+- Desktop top-right menu (**Book · My rides · Privacy · Login**) restyled as a segmented control that reuses the **exact** Now/Schedule classes: container `rounded-[12px] border border-edge bg-elevated p-1`; items `rounded-[9px] px-3 py-2 text-sm font-medium transition`; active (Book) `bg-accent text-[#0d1608]`; inactive `text-muted hover:text-ink`. In `src/components/booking/BookingApp.tsx` (nav was `gap-6 text-lg`). **Now/Schedule control unchanged.** Mobile-only Login button unchanged.
+- **Verified live** on `cyprustaxi.ackedberryes.store` (release 8f5129b, `/api/v1/health/live` → `alive:true`): headless-Chromium (Playwright) screenshot confirms the nav and Now/Schedule share the same look (lime-on-dark active, muted inactive, same font/pill). Pushed `master:main`.
+
 ## Tasks 013/014/015 completion pass (2026-09-14) — release 31d5781, vitest 78/78, live-verified
 - **013 reliability**: chat send validates chat-open + active-assignment ownership ATOMICALLY under the booking row lock (`postMessage(..., {requireDriverId})`); notifications go through a durable **NotificationOutbox** (enqueue in domain writes; worker drains with retries/backoff + dedupe; drops stale/expired offers). DONE.
 - **014 passenger accounts**: `Passenger`/`PassengerSession` + SMS OTP; **booking now REQUIRES a signed-in passenger** (`401 LOGIN_REQUIRED`, verified live) with a login modal after route selection; account-linked bookings; **"My rides"** (`/rides`) history + resume-live-tracking; **destination history** chips. Nav Staff→Login, My ride→My rides. See Tasks/014.
