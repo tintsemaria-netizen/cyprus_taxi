@@ -3,6 +3,7 @@ import { createQuote } from '@/server/quote';
 import { rateLimit } from '@/lib/rate-limit';
 import { config } from '@/lib/config';
 import { validCoord } from '@/lib/geo';
+import { nicosiaWallTimeToUtc } from '@/lib/timezone';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,10 @@ const schema = z.object({
   vClass: z.enum(['COMFORT', 'XL']),
   passengerCount: z.number().int().min(1).max(6),
   luggageCount: z.number().int().min(0).max(10).optional(),
+  // Scheduled pickup as Europe/Nicosia wall time (+ optional DST-fold offset); priced for
+  // that journey time. Omitted → immediate quote priced for now.
+  scheduledAt: z.string().min(1).max(40).optional(),
+  scheduleOffsetMin: z.number().int().optional(),
 });
 
 export async function POST(req: Request) {
@@ -25,7 +30,15 @@ export async function POST(req: Request) {
   if (!parsed.success) return Errors.validation({ _: 'Invalid quote request.' });
   if (!validCoord(parsed.data.pickup) || !validCoord(parsed.data.dropoff)) return Errors.validation({ _: 'Invalid coordinates.' });
 
-  const r = await createQuote(parsed.data);
+  // Convert a scheduled wall time to UTC; if it's not a valid instant (DST gap/ambiguous)
+  // we price the quote for "now" — the booking endpoint does the strict schedule check.
+  let scheduledAtUtc: string | null = null;
+  if (parsed.data.scheduledAt) {
+    const conv = nicosiaWallTimeToUtc(parsed.data.scheduledAt, parsed.data.scheduleOffsetMin);
+    if (conv.ok) scheduledAtUtc = conv.utc.toISOString();
+  }
+
+  const r = await createQuote({ ...parsed.data, scheduledAtUtc });
   if (!r.ok) return apiError(r.status, r.code, r.message);
   return apiOk(r.quote);
 }

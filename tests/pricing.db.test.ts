@@ -4,7 +4,7 @@ const dbUrl = process.env.DATABASE_URL || '';
 const dbName = (() => { try { return new URL(dbUrl).pathname.replace(/^\//, '').split('?')[0]; } catch { return ''; } })();
 
 import { prisma } from '@/lib/db';
-import { createQuote } from '@/server/quote';
+import { createQuote, consumeQuote } from '@/server/quote';
 import { createBooking } from '@/server/bookings';
 import type { CreateBookingInput } from '@/lib/validation';
 
@@ -51,6 +51,47 @@ beforeEach(async () => {
     const d = await prisma.driver.findFirst({ where: { publicName: name } });
     if (d) await prisma.driver.update({ where: { id: d.id }, data: { onDuty: false, available: false } });
   }
+});
+
+describe('scheduled-time quote pricing', () => {
+  const dayIssue = new Date('2026-06-15T09:00:00Z'); // Nicosia ~12:00 (day)
+  const nightJourney = '2026-06-15T22:00:00Z'; // Nicosia ~01:00 (night)
+
+  it('prices a scheduled night trip at the NIGHT tariff even when issued during the day', async () => {
+    const immediate = await createQuote(qInput, dayIssue); // priced for "now" (day)
+    const scheduled = await createQuote({ ...qInput, scheduledAtUtc: nightJourney }, dayIssue);
+    expect(immediate.ok && scheduled.ok).toBe(true);
+    if (!immediate.ok || !scheduled.ok) return;
+    expect(immediate.quote.night).toBe(false);
+    expect(scheduled.quote.night).toBe(true); // tariff follows the journey time, not issuance
+    expect(scheduled.quote.totalCents).toBeGreaterThan(immediate.quote.totalCents);
+    expect(scheduled.quote.pricedForAt).toBe(new Date(nightJourney).toISOString());
+  });
+
+  it('expiry stays relative to issuance, not the journey time', async () => {
+    const r = await createQuote({ ...qInput, scheduledAtUtc: '2026-06-20T10:00:00Z' }, dayIssue);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const ttlMs = new Date(r.quote.expiresAt).getTime() - dayIssue.getTime();
+    expect(ttlMs).toBe(120000); // 2-min TTL from issuance, not days away
+  });
+
+  it('the accepted quote is bound to the schedule (changed pickup time → mismatch)', async () => {
+    // Issue at real "now" so the quote isn't already expired; a far-future journey time
+    // is what we bind. (Tariff-at-journey-time is covered by the night-tariff test above.)
+    const future = new Date(Date.now() + 3 * 3600 * 1000).toISOString();
+    const other = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
+    const base = { pickup: qInput.pickup, dropoff: qInput.dropoff, vClass: qInput.vClass, passengerCount: qInput.passengerCount };
+    const r = await createQuote({ ...qInput, scheduledAtUtc: future });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect((await consumeQuote(r.quote.quoteId, { ...base, scheduledAtUtc: future })).ok).toBe(true);
+    const r2 = await createQuote({ ...qInput, scheduledAtUtc: future });
+    if (!r2.ok) return;
+    const changed = await consumeQuote(r2.quote.quoteId, { ...base, scheduledAtUtc: other });
+    expect(changed.ok).toBe(false);
+    if (!changed.ok) expect(changed.code).toBe('QUOTE_MISMATCH');
+  });
 });
 
 describe('UPFRONT_DYNAMIC quote', () => {

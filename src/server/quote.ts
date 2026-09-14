@@ -18,16 +18,19 @@ export interface QuoteInput {
   vClass: 'COMFORT' | 'XL';
   passengerCount: number;
   luggageCount?: number;
+  scheduledAtUtc?: string | null; // intended journey time (UTC ISO); null/absent = immediate
 }
 
 // Normalized hash of the meaningful inputs so a booking can re-verify the quote wasn't
-// tampered with (coords rounded so sub-metre jitter doesn't invalidate it).
+// tampered with (coords rounded so sub-metre jitter doesn't invalidate it; scheduled
+// time to the minute, so a changed pickup time invalidates the quote).
 export function quoteRequestHash(i: QuoteInput): string {
   const r = (n: number) => n.toFixed(5);
   return sha256(JSON.stringify({
     p: [r(i.pickup.lat), r(i.pickup.lng)],
     d: [r(i.dropoff.lat), r(i.dropoff.lng)],
     c: i.vClass, n: i.passengerCount, l: i.luggageCount ?? 0,
+    t: i.scheduledAtUtc ? new Date(i.scheduledAtUtc).toISOString().slice(0, 16) : null,
   }));
 }
 
@@ -50,10 +53,18 @@ export interface QuoteBody {
   rangeHighCents: number;
   expiresAt: string;
   routeAvailable: boolean;
+  routeSource: string; // 'traffic' | 'approx'
+  pricedForAt: string | null; // journey time the price/tariff applies to (scheduled), else null
   dynamic?: { multiplier: number; applied: boolean; demandSupplyRatio: number | null; reasons: string[]; version: string };
 }
 
 export async function createQuote(input: QuoteInput, at = new Date(), mode: PricingMode = config.pricing.mode): Promise<QuoteResult> {
+  // The quote is ISSUED at `at` (drives expiry). It is PRICED for the intended journey
+  // time `pricingAt` (scheduled → future; else now) — day/night/holiday tariff and the
+  // traffic-aware routing use pricingAt, not the moment the quote was requested.
+  const pricingAt = input.scheduledAtUtc ? new Date(input.scheduledAtUtc) : at;
+  const departureTime = new Date(Math.max(pricingAt.getTime(), at.getTime() + 1000)).toISOString(); // Routes needs a non-past departure
+
   // Real road distance/duration when Google is configured; otherwise a straight-line
   // approximation clearly flagged (routeAvailable=false).
   let distanceMeters: number;
@@ -61,7 +72,7 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
   let routeAvailable = true;
   if (googleConfigured()) {
     try {
-      const r = await googleRoute(input.pickup, input.dropoff);
+      const r = await googleRoute(input.pickup, input.dropoff, departureTime);
       if (r) {
         distanceMeters = Math.round(r.distanceKm * 1000);
         durationSeconds = r.etaMinutes * 60;
@@ -79,8 +90,9 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
     durationSeconds = Math.round((distanceMeters / 1000 / 45) * 3600);
     routeAvailable = false;
   }
+  const routeSource = routeAvailable ? 'traffic' : 'approx';
 
-  const est = computeMeterEstimate({ distanceMeters, passengerCount: input.passengerCount, luggageCount: input.luggageCount, at });
+  const est = computeMeterEstimate({ distanceMeters, passengerCount: input.passengerCount, luggageCount: input.luggageCount, at: pricingAt });
   const requestHash = quoteRequestHash(input);
   const expiresAt = new Date(at.getTime() + QUOTE_TTL_MS);
 
@@ -128,6 +140,7 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
       priceType, ruleVersion: est.ruleVersion, currency: est.currency,
       totalCents, rangeLowCents, rangeHighCents,
       breakdown: JSON.stringify(lines), requestHash, expiresAt,
+      pricingAt, routeSource,
     },
   });
 
@@ -137,7 +150,9 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
       quoteId: row.id, priceType, ruleVersion: est.ruleVersion, currency: est.currency,
       distanceMeters, durationSeconds, night: est.night, holiday: est.holiday,
       lines, totalCents, rangeLowCents, rangeHighCents,
-      expiresAt: expiresAt.toISOString(), routeAvailable, dynamic,
+      expiresAt: expiresAt.toISOString(), routeAvailable, routeSource,
+      pricedForAt: input.scheduledAtUtc ? pricingAt.toISOString() : null,
+      dynamic,
     },
   };
 }

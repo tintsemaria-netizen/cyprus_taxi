@@ -115,6 +115,7 @@ export async function createBooking(
     const cq = await consumeQuote(input.quoteId, {
       pickup: input.pickup, dropoff: input.dropoff, vClass: input.vClass,
       passengerCount: input.passengerCount, luggageCount: input.luggageCount,
+      scheduledAtUtc: scheduledAt ? scheduledAt.toISOString() : null, // must match the quoted journey time
     });
     if (!cq.ok) {
       return fail(422, cq.code, cq.code === 'QUOTE_EXPIRED' ? 'The price estimate expired — refresh it.' : 'The price estimate no longer matches this trip — refresh it.');

@@ -373,6 +373,8 @@ model Quote {
   rangeHighCents  Int
   breakdown       String       // JSON fare lines
   requestHash     String       // hash of the normalized inputs; booking re-verifies
+  pricingAt       DateTime?    // the intended JOURNEY time priced (scheduled → future; else = createdAt)
+  routeSource     String?      // 'traffic' | 'approx' — provenance of distance/duration
   createdAt       DateTime     @default(now())
   expiresAt       DateTime
 

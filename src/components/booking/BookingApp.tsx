@@ -189,7 +189,11 @@ export default function BookingApp() {
       try {
         const q = await api<QuoteBody>('/quote', {
           method: 'POST',
-          body: { pickup: { lat: pickup.lat, lng: pickup.lng }, dropoff: { lat: dropoff.lat, lng: dropoff.lng }, vClass, passengerCount: pax, luggageCount: 0 },
+          body: {
+            pickup: { lat: pickup.lat, lng: pickup.lng }, dropoff: { lat: dropoff.lat, lng: dropoff.lng }, vClass, passengerCount: pax, luggageCount: 0,
+            // Price a scheduled ride for its journey time (day/night/holiday + traffic).
+            ...(when === 'SCHEDULE' && scheduledAt ? { scheduledAt, scheduleOffsetMin } : {}),
+          },
           signal: controller.signal, timeoutMs: 9000,
         });
         setQuote(q);
@@ -199,7 +203,7 @@ export default function BookingApp() {
       }
     }, 500);
     return () => { clearTimeout(t); controller.abort(); };
-  }, [pickup, dropoff, vClass, pax]);
+  }, [pickup, dropoff, vClass, pax, when, scheduledAt, scheduleOffsetMin]);
   const eur = (c: number) => `€${(c / 100).toFixed(2)}`;
 
   const maxPax = cfg?.classes.find((c) => c.key === vClass)?.maxPassengers ?? (vClass === 'XL' ? 6 : 4);
