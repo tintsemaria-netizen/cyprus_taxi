@@ -14,6 +14,22 @@ export async function verifiedPassenger(phone: string): Promise<Passenger> {
   return prisma.passenger.create({ data: { phone, phoneVerifiedAt: new Date() } });
 }
 
+// Attach email + password to a phone-verified passenger (Task 018 register). The phone is SMS-
+// verified before this runs, so upserting by phone (attaching to an existing account) is safe.
+// Throws 'email-taken' if the email already belongs to a DIFFERENT passenger.
+export async function upsertPassengerCredentials(phone: string, opts: { email: string; passwordHash: string; name?: string | null }): Promise<Passenger> {
+  const byEmail = await prisma.passenger.findUnique({ where: { email: opts.email } });
+  if (byEmail && byEmail.phone !== phone) throw new Error('email-taken');
+  const existing = await prisma.passenger.findUnique({ where: { phone } });
+  const data = { phoneVerifiedAt: new Date(), email: opts.email, passwordHash: opts.passwordHash, ...(opts.name ? { name: opts.name } : {}) };
+  if (existing) return prisma.passenger.update({ where: { id: existing.id }, data });
+  return prisma.passenger.create({ data: { phone, ...data } });
+}
+
+export async function passengerByEmail(email: string): Promise<Passenger | null> {
+  return prisma.passenger.findUnique({ where: { email } });
+}
+
 export async function createPassengerSession(passengerId: string): Promise<void> {
   const token = generateToken();
   await prisma.passengerSession.create({ data: { passengerId, sessionDigest: sessionDigest(token), expiresAt: new Date(Date.now() + TTL_MS) } });

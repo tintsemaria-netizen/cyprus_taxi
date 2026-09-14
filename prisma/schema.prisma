@@ -338,6 +338,11 @@ model Passenger {
   phone           String    @unique
   phoneVerifiedAt DateTime?
   name            String?
+  // Bolt-style consumer account (Task 018): email + password sign-in. Phone stays the verified
+  // identity (SMS OTP); email is a second unique identifier, password is optional (phone-OTP-only
+  // accounts have none). No KYC for passengers.
+  email           String?   @unique
+  passwordHash    String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

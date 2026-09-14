@@ -365,14 +365,14 @@ export default function BookingApp() {
             { href: '/', label: 'Book', active: true },
             { href: '/rides', label: 'My rides', active: false },
             { href: '/privacy', label: 'Privacy', active: false },
-            { href: '/staff/login', label: 'Login', active: false },
+            { href: '/login', label: 'Login', active: false },
           ].map((n) => (
             <a key={n.href} href={n.href} className={`rounded-[9px] px-3 py-2 text-sm font-medium transition ${n.active ? 'bg-accent text-[#0d1608]' : 'text-muted hover:text-ink'}`}>
               {n.label}
             </a>
           ))}
         </nav>
-        <a href="/staff/login" className="btn-ghost !min-h-0 !py-1.5 text-base sm:hidden">Login</a>
+        <a href="/login" className="btn-ghost !min-h-0 !py-1.5 text-base sm:hidden">Login</a>
       </header>
 
       <div className="relative flex-1">
