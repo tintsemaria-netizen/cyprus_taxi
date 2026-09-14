@@ -225,6 +225,11 @@ export async function changeStatus(params: {
 }): Promise<OpResult> {
   // ASSIGNED is reached only through the assignment endpoints, never a raw status change.
   if (params.to === 'ASSIGNED') return { ok: false, status: 422, code: 'USE_ASSIGN', message: 'Use the assignment endpoint to assign a driver.' };
+  // ARRIVED / IN_PROGRESS / COMPLETED are reached only through the validated lifecycle
+  // (arrival GPS, start code, receipt) — never a raw status change (Task 013 P0).
+  if (params.to === 'ARRIVED' || params.to === 'IN_PROGRESS' || params.to === 'COMPLETED') {
+    return { ok: false, status: 422, code: 'USE_LIFECYCLE_ACTION', message: 'Use the arrival, start or complete action (with its required inputs).' };
+  }
   return runOp(async (tx) => {
     const booking = await loadLockedBooking(tx, params.bookingId);
     if (!booking) throw notFound();

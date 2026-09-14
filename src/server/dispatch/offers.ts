@@ -38,10 +38,14 @@ export async function createOffer(bookingId: string, c: Candidate): Promise<{ id
 }
 
 // Resolve an offer that timed out: mark EXPIRED, release the reservation, and remember
-// the driver so we don't immediately re-offer the same request to them.
+// the driver so we don't immediately re-offer the same request to them. Locks the booking
+// row first so accept/reject/expire for one booking serialize on a single point (P0).
 export async function expireOffer(offerId: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
-    const o = await tx.driverOffer.findUnique({ where: { id: offerId } });
+    const pre = await tx.driverOffer.findUnique({ where: { id: offerId }, select: { bookingId: true } });
+    if (!pre) return;
+    await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${pre.bookingId} FOR UPDATE`;
+    const o = await tx.driverOffer.findUnique({ where: { id: offerId } }); // authoritative re-read under lock
     if (!o || o.status !== 'OFFERED') return;
     await tx.driverOffer.update({ where: { id: offerId }, data: { status: 'EXPIRED', respondedAt: new Date(), activeBookingId: null, activeDriverId: null } });
     await tx.dispatchJob.updateMany({ where: { bookingId: o.bookingId }, data: { triedDriverIds: { push: o.driverId } } });
@@ -58,14 +62,19 @@ export type OfferResult =
 export async function acceptOffer(offerId: string, driverId: string): Promise<OfferResult> {
   try {
     return await prisma.$transaction(async (tx) => {
+      // Lock the booking row FIRST (single serialization point), then re-read the offer
+      // authoritatively under that lock — so a concurrent reject/expire/cancel can't have
+      // resolved it between our read and write.
+      const pre = await tx.driverOffer.findUnique({ where: { id: offerId }, select: { bookingId: true } });
+      if (!pre) return err(404, 'OFFER_NOT_FOUND', 'Offer not found.');
+      await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${pre.bookingId} FOR UPDATE`;
+
       const offer = await tx.driverOffer.findUnique({ where: { id: offerId } });
       if (!offer) return err(404, 'OFFER_NOT_FOUND', 'Offer not found.');
       if (offer.driverId !== driverId) return err(403, 'FORBIDDEN', 'Not your offer.');
       if (offer.status !== 'OFFERED') return err(409, 'OFFER_GONE', 'This offer is no longer available.');
       if (offer.expiresAt < new Date()) return err(409, 'OFFER_EXPIRED', 'This offer expired.');
 
-      // Lock the booking row and re-validate.
-      await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${offer.bookingId} FOR UPDATE`;
       const booking = await tx.booking.findUnique({ where: { id: offer.bookingId } });
       if (!booking || booking.status !== 'SEARCHING') return err(409, 'BOOKING_GONE', 'This ride is no longer available.');
 
@@ -93,10 +102,12 @@ export async function acceptOffer(offerId: string, driverId: string): Promise<Of
 // Driver declines → release reservation, remember the driver, worker re-offers next.
 export async function rejectOffer(offerId: string, driverId: string): Promise<OfferResult> {
   return prisma.$transaction(async (tx) => {
-    const o = await tx.driverOffer.findUnique({ where: { id: offerId } });
-    if (!o) return err(404, 'OFFER_NOT_FOUND', 'Offer not found.');
-    if (o.driverId !== driverId) return err(403, 'FORBIDDEN', 'Not your offer.');
-    if (o.status !== 'OFFERED') return { ok: true, status: o.status, revision: 0 }; // idempotent
+    const pre = await tx.driverOffer.findUnique({ where: { id: offerId } });
+    if (!pre) return err(404, 'OFFER_NOT_FOUND', 'Offer not found.');
+    if (pre.driverId !== driverId) return err(403, 'FORBIDDEN', 'Not your offer.');
+    await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${pre.bookingId} FOR UPDATE`;
+    const o = await tx.driverOffer.findUnique({ where: { id: offerId } }); // authoritative under lock
+    if (!o || o.status !== 'OFFERED') return { ok: true, status: o?.status ?? 'GONE', revision: 0 }; // idempotent / lost the race
     await tx.driverOffer.update({ where: { id: offerId }, data: { status: 'REJECTED', respondedAt: new Date(), activeBookingId: null, activeDriverId: null } });
     await tx.dispatchJob.updateMany({ where: { bookingId: o.bookingId }, data: { triedDriverIds: { push: driverId } } });
     return { ok: true, status: 'REJECTED', revision: 0 };

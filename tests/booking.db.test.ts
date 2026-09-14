@@ -11,6 +11,8 @@ const dbName = (() => {
 import { prisma } from '@/lib/db';
 import { createBooking } from '@/server/bookings';
 import { assignBooking, reassignBooking, changeStatus } from '@/server/assignments';
+import { staffMarkArrived, staffStartTrip, staffCompleteTrip } from '@/server/dispatch/lifecycle';
+import { Role } from '@prisma/client';
 import { ingestLocation } from '@/server/location';
 import type { CreateBookingInput } from '@/lib/validation';
 
@@ -94,13 +96,17 @@ describe('assignment + status concurrency', () => {
     expect(a.ok).toBe(true);
     if (!a.ok) return;
     rev = a.revision;
-    for (const to of ['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'] as const) {
-      const r = await changeStatus({ bookingId: b.id, to, expectedRevision: rev, actor: 'STAFF', actorId: 't' });
-      expect(r.ok).toBe(true);
-      if (r.ok) rev = r.revision;
-    }
+    // EN_ROUTE via the generic machine; ARRIVED/IN_PROGRESS/COMPLETED only via the
+    // authoritative lifecycle (here the audited staff-override path).
+    const er = await changeStatus({ bookingId: b.id, to: 'EN_ROUTE', expectedRevision: rev, actor: 'STAFF', actorId: 't' });
+    expect(er.ok).toBe(true); if (er.ok) rev = er.revision;
+    const ar = await staffMarkArrived(b.id, rev, 't', Role.DISPATCHER, 'driver at pickup'); expect(ar.ok).toBe(true); if (ar.ok) rev = ar.revision;
+    const st = await staffStartTrip(b.id, rev, 't', Role.DISPATCHER, 'passenger boarded'); expect(st.ok).toBe(true); if (st.ok) rev = st.revision;
+    const co = await staffCompleteTrip(b.id, rev, 't', Role.DISPATCHER, 'trip finished'); expect(co.ok).toBe(true); if (co.ok) rev = co.revision;
     expect((await prisma.booking.findUnique({ where: { id: b.id } }))!.status).toBe('COMPLETED');
     expect(await prisma.assignment.findFirst({ where: { activeDriverId: driverId } })).toBeNull();
+    // Exactly one immutable receipt written.
+    expect(await prisma.fare.count({ where: { bookingId: b.id } })).toBe(1);
   });
 
   it('generic status change cannot fabricate ASSIGNED', async () => {

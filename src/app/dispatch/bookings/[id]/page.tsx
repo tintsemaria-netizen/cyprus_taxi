@@ -162,7 +162,15 @@ function BookingDetail() {
                 <button
                   key={s}
                   className={`btn-ghost !min-h-0 !py-2 text-sm ${s === 'CANCELED' ? '!border-danger/40 !text-danger' : ''}`}
-                  onClick={() => (s === 'CANCELED' ? confirm('Cancel this booking?') && doStatus(s, 'dispatcher canceled') : doStatus(s))}
+                  onClick={() => {
+                    if (s === 'CANCELED') { if (confirm('Cancel this booking?')) doStatus(s, 'dispatcher canceled'); return; }
+                    if (s === 'ARRIVED' || s === 'IN_PROGRESS' || s === 'COMPLETED') {
+                      const reason = prompt(`Override — ${actionLabel(s).toLowerCase()} on the driver's behalf. Enter a reason (audited):`);
+                      if (reason && reason.trim().length >= 3) doStatus(s, reason.trim());
+                      return;
+                    }
+                    doStatus(s);
+                  }}
                   disabled={busy}
                 >
                   {actionLabel(s)}

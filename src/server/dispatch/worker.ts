@@ -63,6 +63,11 @@ export async function runOnce(): Promise<void> {
       if (claimed.count === 0) continue;
       try {
         await processJob(j.id);
+      } catch (e) {
+        // Isolate per-job failure (e.g. a slow/erroring route lookup) so it never stops
+        // deadline handling for the rest of the queue this tick.
+        // eslint-disable-next-line no-console
+        console.error(`[dispatch] job ${j.id} error`, e);
       } finally {
         await prisma.dispatchJob.updateMany({ where: { id: j.id, leaseOwner: state.workerId }, data: { leaseUntil: null, leaseOwner: null } });
       }
@@ -134,17 +139,24 @@ async function rematchOnGpsLoss(now: Date): Promise<void> {
   const cutoff = now.getTime() - config.dispatch.gpsLossRematchSeconds * 1000;
   const active = await prisma.assignment.findMany({
     where: { activeBookingId: { not: null }, booking: { status: { in: ['ASSIGNED', 'EN_ROUTE'] } } },
-    select: { activeBookingId: true, driverId: true, assignedAt: true },
+    select: { id: true, activeBookingId: true, driverId: true, assignedAt: true },
   });
   for (const a of active) {
     const loc = await prisma.latestDriverLocation.findUnique({ where: { driverId: a.driverId } });
     const lastAt = loc ? Math.max(loc.sampledAt.getTime(), loc.receivedAt.getTime()) : a.assignedAt.getTime();
-    if (lastAt >= cutoff) continue; // still fresh enough
+    if (lastAt >= cutoff) continue; // still fresh enough (cheap pre-check)
     await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${a.activeBookingId!} FOR UPDATE`;
       const b = await tx.booking.findUnique({ where: { id: a.activeBookingId! } });
-      if (!b || !['ASSIGNED', 'EN_ROUTE'].includes(b.status)) return; // re-check under lock
-      await rematchBooking(tx, b.id, a.driverId, 'prolonged pre-pickup GPS loss', 'SYSTEM');
+      if (!b || !['ASSIGNED', 'EN_ROUTE'].includes(b.status)) return; // never ARRIVED/IN_PROGRESS
+      // Guard against a stale observation: the active assignment must still be the exact
+      // one we sampled (not a fresh replacement), and its driver's GPS still lost.
+      const cur = await tx.assignment.findFirst({ where: { activeBookingId: b.id } });
+      if (!cur || cur.id !== a.id || cur.driverId !== a.driverId) return;
+      const loc2 = await tx.latestDriverLocation.findUnique({ where: { driverId: cur.driverId } });
+      const lastAt2 = loc2 ? Math.max(loc2.sampledAt.getTime(), loc2.receivedAt.getTime()) : cur.assignedAt.getTime();
+      if (lastAt2 >= now.getTime() - config.dispatch.gpsLossRematchSeconds * 1000) return; // GPS recovered under lock
+      await rematchBooking(tx, b.id, cur.driverId, 'prolonged pre-pickup GPS loss', 'SYSTEM');
     });
   }
 }
