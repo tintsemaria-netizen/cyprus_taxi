@@ -17,7 +17,14 @@ function twilioAuth(): string {
   return 'Basic ' + Buffer.from(`${config.sms.twilioSid()}:${config.sms.twilioToken()}`).toString('base64');
 }
 
+export function smsConfigured(): boolean {
+  return config.sms.provider === 'twilio' || config.sms.allowDevOtp;
+}
+
 export async function sendOtp(phone: string): Promise<SendResult> {
+  if (config.sms.provider !== 'twilio' && !config.sms.allowDevOtp) {
+    throw new Error('sms-unconfigured'); // no real provider + dev OTP not deliberately enabled
+  }
   if (config.sms.provider === 'twilio') {
     const url = `https://verify.twilio.com/v2/Services/${config.sms.verifyService}/Verifications`;
     const body = new URLSearchParams({ To: phone, Channel: 'sms' });
@@ -33,6 +40,7 @@ export async function sendOtp(phone: string): Promise<SendResult> {
 
 export async function checkOtp(phone: string, code: string): Promise<boolean> {
   if (!/^\d{4,8}$/.test(code)) return false;
+  if (config.sms.provider !== 'twilio' && !config.sms.allowDevOtp) return false;
   if (config.sms.provider === 'twilio') {
     const url = `https://verify.twilio.com/v2/Services/${config.sms.verifyService}/VerificationCheck`;
     const body = new URLSearchParams({ To: phone, Code: code });

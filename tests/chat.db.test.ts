@@ -73,6 +73,23 @@ describe('passenger↔driver chat', () => {
     expect(await driverOwnsBooking(other!.id, bookingId)).toBe(false);
   });
 
+  it('in-transaction ownership: a non-active driver cannot post (Task 013)', async () => {
+    const { bookingId, driverId } = await assigned();
+    const other = await prisma.driver.findFirst({ where: { publicName: 'Maria' } });
+    // Wrong driver → 403 even though the booking has an active assignment.
+    const bad = await postMessage(bookingId, 'DRIVER', 'hi', { requireDriverId: other!.id });
+    expect(bad.ok).toBe(false);
+    if (!bad.ok) expect(bad.status).toBe(403);
+    // The actual assigned driver succeeds.
+    const good = await postMessage(bookingId, 'DRIVER', 'on my way', { requireDriverId: driverId });
+    expect(good.ok).toBe(true);
+    // If the assignment ends, they can no longer post (checked under the lock).
+    await prisma.assignment.updateMany({ where: { activeBookingId: bookingId }, data: { endedAt: new Date(), activeBookingId: null, activeDriverId: null, activeVehicleId: null } });
+    await prisma.booking.update({ where: { id: bookingId }, data: { status: 'SEARCHING' } });
+    const after = await postMessage(bookingId, 'DRIVER', 'still here?', { requireDriverId: driverId });
+    expect(after.ok).toBe(false); // CHAT_CLOSED (SEARCHING) or FORBIDDEN
+  });
+
   it('chat is closed before assignment (SEARCHING) and rejects sends', async () => {
     const r = await createBooking(input(), `chat-${RUN}-${++n}`);
     if (!r.ok) throw new Error('create failed');

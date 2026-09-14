@@ -31,10 +31,16 @@ function Detail() {
     try { await api(`/admin/applications/${id}/${path}`, { method: 'POST', body: body ?? {} }); await load(); }
     catch (e) { if (e instanceof ApiRequestError) setBanner(e.body.message); } finally { setBusy(false); }
   }
-  async function decide(docId: string, decision: 'ACCEPTED' | 'CHANGES') {
-    const note = decision === 'CHANGES' ? prompt('What needs changing? (shown to applicant)') || undefined : undefined;
-    if (decision === 'CHANGES' && !note) return;
-    await act(`documents/${docId}/decision`, { decision, note });
+  const EXPIRY_SLOTS = ['licence_front', 'licence_back', 'taxi_licence', 'insurance', 'roadworthiness', 'vehicle_reg', 'right_to_work', 'passport', 'id_front'];
+  async function decide(docId: string, decision: 'ACCEPTED' | 'CHANGES', slot: string) {
+    if (decision === 'CHANGES') { const note = prompt('What needs changing? (shown to applicant)') || undefined; if (!note) return; await act(`documents/${docId}/decision`, { decision, note }); return; }
+    // Capture an expiry date on accept where the document type has one (drives DOCUMENTS_EXPIRED).
+    let expiresAt: string | undefined;
+    if (EXPIRY_SLOTS.includes(slot)) {
+      const d = prompt('Document expiry date (YYYY-MM-DD), or leave blank if none:') || '';
+      if (d.trim()) { const dt = new Date(d.trim()); if (!Number.isNaN(dt.getTime())) expiresAt = dt.toISOString(); }
+    }
+    await act(`documents/${docId}/decision`, { decision, expiresAt });
   }
 
   if (!d) return <div className="p-8 text-muted">Loading…</div>;
@@ -71,8 +77,8 @@ function Detail() {
                   )}
                   <div className="mt-1 text-[10px] text-muted">scan: {doc.scanStatus}</div>
                   <div className="mt-1 flex gap-1">
-                    <button className={`flex-1 rounded px-1 py-1 text-[10px] ${doc.decision === 'ACCEPTED' ? 'bg-accent text-[#10191C]' : 'bg-elevated'}`} disabled={busy} onClick={() => decide(doc.id, 'ACCEPTED')}>Accept</button>
-                    <button className={`flex-1 rounded px-1 py-1 text-[10px] ${doc.decision === 'CHANGES' ? '!bg-danger/20 text-danger' : 'bg-elevated'}`} disabled={busy} onClick={() => decide(doc.id, 'CHANGES')}>Changes</button>
+                    <button className={`flex-1 rounded px-1 py-1 text-[10px] ${doc.decision === 'ACCEPTED' ? 'bg-accent text-[#10191C]' : 'bg-elevated'}`} disabled={busy} onClick={() => decide(doc.id, 'ACCEPTED', doc.slot)}>Accept</button>
+                    <button className={`flex-1 rounded px-1 py-1 text-[10px] ${doc.decision === 'CHANGES' ? '!bg-danger/20 text-danger' : 'bg-elevated'}`} disabled={busy} onClick={() => decide(doc.id, 'CHANGES', doc.slot)}>Changes</button>
                   </div>
                   {doc.decisionNote && <p className="mt-1 text-[10px] text-danger">{doc.decisionNote}</p>}
                 </div>
@@ -89,8 +95,8 @@ function Detail() {
               {['SUBMITTED', 'IN_REVIEW'].includes(d.status) && (
                 <>
                   <button className="btn-primary" disabled={busy} onClick={() => { if (confirm('Approve this driver and provision their account + vehicle?')) act('approve', { expectedRevision: d.revision }); }}>Approve driver</button>
-                  <button className="btn-ghost !text-warn" disabled={busy} onClick={() => { const r = prompt('Changes required (shown to applicant):'); if (r && r.trim().length >= 3) act('request-changes', { reason: r }); }}>Request changes</button>
-                  <button className="btn-ghost !text-danger" disabled={busy} onClick={() => { const r = prompt('Rejection reason (shown to applicant):'); if (r && r.trim().length >= 3) act('reject', { reason: r }); }}>Reject</button>
+                  <button className="btn-ghost !text-warn" disabled={busy} onClick={() => { const r = prompt('Changes required (shown to applicant):'); if (r && r.trim().length >= 3) act('request-changes', { reason: r, expectedRevision: d.revision }); }}>Request changes</button>
+                  <button className="btn-ghost !text-danger" disabled={busy} onClick={() => { const r = prompt('Rejection reason (shown to applicant):'); if (r && r.trim().length >= 3) act('reject', { reason: r, expectedRevision: d.revision }); }}>Reject</button>
                 </>
               )}
               {d.status === 'APPROVED' && <p className="text-sm text-accent">Approved — driver provisioned (off-duty).</p>}

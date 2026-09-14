@@ -4,7 +4,7 @@ const dbUrl = process.env.DATABASE_URL || '';
 const dbName = (() => { try { return new URL(dbUrl).pathname.replace(/^\//, '').split('?')[0]; } catch { return ''; } })();
 
 import { prisma } from '@/lib/db';
-import { getOrCreateApplication, saveDraft, submitApplication, startReview, approveApplication, requestChanges } from '@/server/applications';
+import { getOrCreateApplication, saveDraft, submitApplication, startReview, approveApplication, requestChanges, setDocumentDecision, enforceDocumentExpiries } from '@/server/applications';
 import { findBestCandidate } from '@/server/dispatch/eligibility';
 
 const marina = { pickupLat: 34.6706, pickupLng: 33.0413, vClass: 'COMFORT' as const, passengerCount: 2 };
@@ -68,7 +68,7 @@ describe('Task 015 — application lifecycle + provisioning', () => {
     expect((await submitApplication(applicantId)).ok).toBe(true);
     expect((await prisma.driverApplication.findUnique({ where: { id: appId } }))!.status).toBe('SUBMITTED');
     await startReview(appId, 'admin');
-    await prisma.applicationDocument.updateMany({ where: { applicationId: appId }, data: { decision: 'ACCEPTED' } });
+    await prisma.applicationDocument.updateMany({ where: { applicationId: appId }, data: { decision: 'ACCEPTED', scanStatus: 'CLEAN' } });
     const rev = (await prisma.driverApplication.findUnique({ where: { id: appId } }))!.revision;
     const appr = await approveApplication(appId, 'admin', rev);
     expect(appr.ok).toBe(true);
@@ -89,7 +89,7 @@ describe('Task 015 — application lifecycle + provisioning', () => {
     const { applicantId, appId } = await completeDraft();
     await submitApplication(applicantId);
     await startReview(appId, 'admin');
-    await prisma.applicationDocument.updateMany({ where: { applicationId: appId }, data: { decision: 'ACCEPTED' } });
+    await prisma.applicationDocument.updateMany({ where: { applicationId: appId }, data: { decision: 'ACCEPTED', scanStatus: 'CLEAN' } });
     const stale = 999;
     const r = await approveApplication(appId, 'admin', stale);
     expect(r.ok).toBe(false);
@@ -104,6 +104,40 @@ describe('Task 015 — application lifecycle + provisioning', () => {
     const r = await approveApplication(appId, 'admin', rev); // docs still PENDING
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.code).toBe('DOCS_NOT_ACCEPTED');
+  });
+
+  it('never accept/approve an unscanned document (malware gate)', async () => {
+    const { applicantId, appId } = await completeDraft();
+    await submitApplication(applicantId);
+    await startReview(appId, 'admin');
+    const first = (await prisma.applicationDocument.findMany({ where: { applicationId: appId } }))[0];
+    const dec = await setDocumentDecision(appId, first.id, 'ACCEPTED', undefined, 'admin'); // scanStatus UNScanned
+    expect(dec.ok).toBe(false);
+    if (!dec.ok) expect(dec.code).toBe('NOT_SCANNED_CLEAN');
+    // Even if decisions were forced ACCEPTED, approval still requires a clean scan.
+    await prisma.applicationDocument.updateMany({ where: { applicationId: appId }, data: { decision: 'ACCEPTED' } });
+    const rev = (await prisma.driverApplication.findUnique({ where: { id: appId } }))!.revision;
+    const r = await approveApplication(appId, 'admin', rev);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.code).toBe('DOCS_NOT_SCANNED');
+  });
+
+  it('expired document takes an APPROVED driver off duty as DOCUMENTS_EXPIRED', async () => {
+    const { applicantId, appId } = await completeDraft();
+    await submitApplication(applicantId);
+    await startReview(appId, 'admin');
+    await prisma.applicationDocument.updateMany({ where: { applicationId: appId }, data: { decision: 'ACCEPTED', scanStatus: 'CLEAN' } });
+    const rev = (await prisma.driverApplication.findUnique({ where: { id: appId } }))!.revision;
+    expect((await approveApplication(appId, 'admin', rev)).ok).toBe(true);
+    const d = (await prisma.driver.findFirst({ where: { applicationId: appId } }))!;
+    await prisma.driver.update({ where: { id: d.id }, data: { onDuty: true, available: true } });
+    // Expire the licence.
+    const lic = (await prisma.applicationDocument.findFirst({ where: { applicationId: appId, slot: 'licence_front' } }))!;
+    await prisma.applicationDocument.update({ where: { id: lic.id }, data: { expiresAt: new Date(Date.now() - 86400000) } });
+    await enforceDocumentExpiries();
+    const after = (await prisma.driver.findUnique({ where: { id: d.id } }))!;
+    expect(after.eligibility).toBe('DOCUMENTS_EXPIRED');
+    expect(after.onDuty).toBe(false);
   });
 
   it('request changes reopens editing with a new revision', async () => {

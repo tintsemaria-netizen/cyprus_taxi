@@ -70,15 +70,27 @@ export async function listMessages(bookingId: string, opts: ListOpts = {}): Prom
   return { open: booking ? CHAT_ACTIVE_STATUSES.includes(booking.status) : false, messages: rows.map(view), hasMoreOlder };
 }
 
-export async function postMessage(bookingId: string, sender: 'PASSENGER' | 'DRIVER', body: string): Promise<PostResult> {
+// Post a message. Chat availability, and (for a driver) ownership of the CURRENT active
+// assignment, are validated ATOMICALLY under the booking row lock — so a message can't be
+// written into a ride the driver was just un-/re-assigned from. Policy: chat is
+// booking-scoped, so a replacement driver on the same booking may send and see the prior
+// thread (ride continuity); a driver with no active assignment on the booking cannot.
+export async function postMessage(bookingId: string, sender: 'PASSENGER' | 'DRIVER', body: string, opts?: { requireDriverId?: string }): Promise<PostResult> {
   const text = (body ?? '').trim();
   if (!text) return { ok: false, status: 422, code: 'EMPTY_MESSAGE', message: 'Message is empty.' };
   if (text.length > MAX_LEN) return { ok: false, status: 422, code: 'MESSAGE_TOO_LONG', message: `Keep it under ${MAX_LEN} characters.` };
-  const booking = await prisma.booking.findUnique({ where: { id: bookingId }, select: { status: true } });
-  if (!booking) return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Booking not found.' };
-  if (!CHAT_ACTIVE_STATUSES.includes(booking.status)) return { ok: false, status: 409, code: 'CHAT_CLOSED', message: 'Chat is only available while a driver is assigned.' };
-  const m = await prisma.chatMessage.create({ data: { bookingId, sender, body: text } });
-  return { ok: true, message: view(m) };
+  return prisma.$transaction(async (tx): Promise<PostResult> => {
+    await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
+    const booking = await tx.booking.findUnique({ where: { id: bookingId }, select: { status: true } });
+    if (!booking) return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Booking not found.' };
+    if (!CHAT_ACTIVE_STATUSES.includes(booking.status)) return { ok: false, status: 409, code: 'CHAT_CLOSED', message: 'Chat is only available while a driver is assigned.' };
+    if (opts?.requireDriverId) {
+      const a = await tx.assignment.findFirst({ where: { activeBookingId: bookingId }, select: { driverId: true } });
+      if (!a || a.driverId !== opts.requireDriverId) return { ok: false, status: 403, code: 'FORBIDDEN', message: 'Not your active trip.' };
+    }
+    const m = await tx.chatMessage.create({ data: { bookingId, sender, body: text } });
+    return { ok: true, message: view(m) };
+  });
 }
 
 // A driver may chat only on the booking of their CURRENT active assignment.

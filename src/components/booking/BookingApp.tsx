@@ -7,6 +7,7 @@ import { Logo } from '@/components/Brand';
 import { PlacesInput, Selected } from './PlacesInput';
 import { DemoBanner } from '@/components/DemoBanner';
 import AutoMapPicker from './AutoMapPicker';
+import { PassengerLoginModal } from './PassengerLoginModal';
 import { nicosiaInputValue } from '@/lib/timezone';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 
@@ -47,6 +48,12 @@ export default function BookingApp() {
   // Passenger's detected location (for centring the map + defaulting the pickup).
   const [myLoc, setMyLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [autoPickup, setAutoPickup] = useState(false); // pickup was auto-set from geolocation
+  // Task 014: passenger account + mandatory login before booking + destination history.
+  const [passenger, setPassenger] = useState<{ phone: string; name?: string } | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
+  const [destinations, setDestinations] = useState<{ label: string; lat: number; lng: number }[]>([]);
+  const pendingSubmit = useRef<number | undefined>(undefined);
+  const pendingSubmitActive = useRef(false);
 
   // Live mirrors so the async geolocation callback never overwrites a pickup the
   // passenger has already started choosing (typed text or picked a point).
@@ -74,6 +81,19 @@ export default function BookingApp() {
   }, []);
 
   useEffect(() => { loadConfig(); }, [loadConfig]);
+
+  // Restore passenger session (if any) → prefill contact + load destination history.
+  const loadPassenger = useCallback(() => {
+    api<{ phone: string; name?: string }>('/passenger/me')
+      .then((p) => {
+        setPassenger(p);
+        setPhone((cur) => cur || p.phone);
+        if (p.name) setName((cur) => cur || p.name!);
+        api<{ destinations: { label: string; lat: number; lng: number }[] }>('/passenger/destinations').then((d) => setDestinations(d.destinations)).catch(() => {});
+      })
+      .catch(() => setPassenger(null));
+  }, []);
+  useEffect(() => { loadPassenger(); }, [loadPassenger]);
 
   // On first load, detect the passenger's position: centre the map on it and default the
   // pickup there (reverse-geocoded label). Never overwrite a pickup the passenger has
@@ -273,6 +293,14 @@ export default function BookingApp() {
       router.push('/track');
     } catch (err) {
       if (err instanceof ApiRequestError) {
+        if (err.body.code === 'LOGIN_REQUIRED') {
+          // Mandatory passenger login/registration (Task 014): open the modal, then resume.
+          pendingSubmit.current = effOffset;
+          pendingSubmitActive.current = true;
+          setShowLogin(true);
+          setSubmitting(false);
+          return;
+        }
         if (err.body.code === 'SCHEDULE_AMBIGUOUS') {
           // Keep the user on review and let them pick which occurrence they meant.
           const opts = (err.body as unknown as { scheduleOptions?: string[] }).scheduleOptions || [];
@@ -333,7 +361,7 @@ export default function BookingApp() {
         <Logo className="h-10" />
         <nav className="hidden items-center gap-6 text-lg text-muted sm:flex">
           <a href="/" className="text-accent">Book</a>
-          <a href="/track" className="hover:text-ink">My ride</a>
+          <a href="/rides" className="hover:text-ink">My rides</a>
           <a href="/privacy" className="hover:text-ink">Privacy</a>
           <a href="/staff/login" className="hover:text-ink">Login</a>
         </nav>
@@ -385,6 +413,14 @@ export default function BookingApp() {
                         </button>
                       </div>
                       <PlacesInput kind="To" value={dropoff} text={dropoffText} onText={setDropoffText} onSelect={setDropoff} error={errors.dropoff} />
+                      {!dropoff && destinations.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          <span className="text-[11px] text-muted">Recent:</span>
+                          {destinations.map((d) => (
+                            <button key={d.label} type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: d.lat, lng: d.lng, label: d.label }); setDropoffText(d.label); }}>{d.label.length > 22 ? d.label.slice(0, 21) + '…' : d.label}</button>
+                          ))}
+                        </div>
+                      )}
                       <button type="button" className="chip hover:border-accent/50" onClick={() => setPicker('dropoff')}>⌖ Set destination on map</button>
                     </div>
 
@@ -535,6 +571,20 @@ export default function BookingApp() {
           fallback={picker === 'pickup' ? (dropoff ?? null) : (pickup ?? null)}
           onConfirm={onPickerConfirm}
           onCancel={() => setPicker(null)}
+        />
+      )}
+
+      {showLogin && (
+        <PassengerLoginModal
+          onClose={() => { setShowLogin(false); pendingSubmitActive.current = false; }}
+          onDone={(p) => {
+            setShowLogin(false);
+            setPassenger(p);
+            setPhone((cur) => cur || p.phone);
+            if (p.name) setName((cur) => cur || p.name!);
+            loadPassenger();
+            if (pendingSubmitActive.current) { pendingSubmitActive.current = false; submit(pendingSubmit.current); }
+          }}
         />
       )}
     </div>

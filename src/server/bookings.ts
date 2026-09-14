@@ -31,6 +31,7 @@ export async function createBooking(
   input: CreateBookingInput,
   idempotencyKey: string,
   baseUrl?: string, // origin the passenger is using (multi-domain); falls back to APP_BASE_URL
+  passengerId?: string, // owning passenger account (Task 014)
 ): Promise<CreateResult> {
   const settings = await getSettings();
 
@@ -143,6 +144,7 @@ export async function createBooking(
           dropoffLat: input.dropoff.lat, dropoffLng: input.dropoff.lng, dropoffLabel: input.dropoff.label,
           passengerName: input.passengerName, phone: input.phone, note: input.note || null,
           vClass: input.vClass, passengerCount: input.passengerCount, scheduledAt, status: initialStatus,
+          ...(passengerId ? { passengerId } : {}),
           ...(fare ? { quoteId: input.quoteId, fareCents: fare.fareCents, priceType: fare.priceType, fareBreakdown: fare.fareBreakdown } : {}),
         },
       });

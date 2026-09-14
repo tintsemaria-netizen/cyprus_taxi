@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Logo } from '@/components/Brand';
 import { api, ApiRequestError } from '@/lib/api-client';
 
@@ -110,7 +110,7 @@ function PhoneGate({ onDone }: { onDone: () => void }) {
           </div>
         ) : (
           <div className="mt-4 space-y-3">
-            {dev && <p className="rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">Demo code: <b>{dev}</b></p>}
+            {dev && <p className="rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">Test verification (SMS not configured): code <b>{dev}</b></p>}
             <input className="field text-center font-mono text-lg tracking-widest" inputMode="numeric" maxLength={8} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
             <button className="btn-primary w-full" disabled={busy || code.length < 4} onClick={ver}>{busy ? 'Verifying…' : 'Verify & continue'}</button>
           </div>
@@ -123,8 +123,18 @@ function PhoneGate({ onDone }: { onDone: () => void }) {
 // ---- shared field + upload helpers ----
 function useDraft(section: 'identity' | 'driving' | 'vehicle', app: AppData) {
   const [v, setV] = useState<Record<string, string>>(app[section]);
-  const save = async () => { try { await api('/applicant/application', { method: 'PATCH', body: { [section]: v } }); } catch { /* ignore */ } };
-  return { v, setV, save };
+  const [saved, setSaved] = useState(true);
+  const save = async () => { try { await api('/applicant/application', { method: 'PATCH', body: { [section]: v } }); setSaved(true); } catch { /* retried by next change */ } };
+  // Debounced autosave so a refresh/close never loses progress.
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    setSaved(false);
+    const t = setTimeout(save, 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [v]);
+  return { v, setV, save, saved };
 }
 function Field({ label, value, onChange, type = 'text' }: { label: string; value: string; onChange: (s: string) => void; type?: string }) {
   return <div><label className="label">{label}</label><input type={type} className="field mt-1" value={value || ''} onChange={(e) => onChange(e.target.value)} onBlur={() => { /* saved by step */ }} /></div>;
@@ -171,6 +181,8 @@ function IdentityStep({ app, reload }: { app: AppData; reload: () => void }) {
       <Upload slot="id_front" app={app} reload={reload} label="ID card — front" />
       <Upload slot="id_back" app={app} reload={reload} label="ID card — back" />
       <Upload slot="selfie" app={app} reload={reload} label="Selfie (current portrait)" />
+      <p className="pt-1 text-[11px] text-muted">If you are not a Cyprus/EU national, add your residence / right-to-work document (conditional).</p>
+      <Upload slot="right_to_work" app={app} reload={reload} label="Right to work / residence (if applicable)" />
     </div>
   );
 }
@@ -205,13 +217,19 @@ function VehicleStep({ app, reload }: { app: AppData; reload: () => void }) {
             <option value="">—</option><option value="COMFORT">COMFORT (4)</option><option value="XL">XL (6)</option>
           </select></div>
       </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Registration country" value={v.registrationCountry} onChange={(x) => setV({ ...v, registrationCountry: x })} />
+        <Field label="Operating area" value={v.operatingArea} onChange={(x) => setV({ ...v, operatingArea: x })} />
+      </div>
       <Upload slot="vehicle_reg" app={app} reload={reload} label="Vehicle registration certificate" />
       <Upload slot="insurance" app={app} reload={reload} label="Insurance (commercial/taxi cover)" />
+      <Upload slot="roadworthiness" app={app} reload={reload} label="Roadworthiness / MOT + road tax (if applicable)" />
+      <Upload slot="fleet_authorization" app={app} reload={reload} label="Lease / fleet authorization (if not the owner)" />
     </div>
   );
 }
 function PhotosStep({ app, reload }: { app: AppData; reload: () => void }) {
-  const slots: [string, string][] = [['vehicle_front', 'Front + front plate'], ['vehicle_rear', 'Rear + rear plate'], ['vehicle_left', 'Left side'], ['vehicle_right', 'Right side'], ['cabin_front', 'Front cabin'], ['cabin_rear', 'Rear seats'], ['boot', 'Boot / luggage']];
+  const slots: [string, string][] = [['vehicle_front', 'Front + front plate'], ['vehicle_rear', 'Rear + rear plate'], ['vehicle_left', 'Left side'], ['vehicle_right', 'Right side'], ['cabin_front', 'Front cabin'], ['cabin_rear', 'Rear seats'], ['boot', 'Boot / luggage'], ['taxi_sign', 'Taxi sign / meter (if applicable)']];
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted">Clear, current daylight photos of the same vehicle. Avoid bystanders.</p>

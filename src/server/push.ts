@@ -58,62 +58,63 @@ export async function saveSubscription(audience: string, sub: BrowserSubscriptio
   return true;
 }
 
-interface PushPayload { title: string; body: string; url: string; tag?: string }
+export interface PushPayload { title: string; body: string; url: string; tag?: string }
 
-async function sendToAudience(audience: string, payload: PushPayload): Promise<void> {
-  if (!ensureVapid()) return;
+// Actually POST to every device subscription for an audience. Returns delivered/failed
+// counts so the outbox can decide whether to retry. Prunes gone (404/410) subscriptions.
+export async function deliverToAudience(audience: string, payload: PushPayload): Promise<{ sent: number; failed: number }> {
+  if (!ensureVapid()) return { sent: 0, failed: 0 };
   const subs = await prisma.pushSubscription.findMany({ where: { audience } });
+  let sent = 0, failed = 0;
   await Promise.all(
     subs.map(async (s) => {
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(payload));
+        sent++;
       } catch (e) {
         const code = (e as { statusCode?: number }).statusCode;
-        if (code === 404 || code === 410) await prisma.pushSubscription.deleteMany({ where: { endpoint: s.endpoint } }); // gone → prune
+        if (code === 404 || code === 410) await prisma.pushSubscription.deleteMany({ where: { endpoint: s.endpoint } }); // gone → prune, not a retryable failure
+        else failed++;
       }
     }),
   );
+  return { sent, failed };
 }
 
-// Generic best-effort helpers (delivery supplements authoritative state + polling).
+// The notify* helpers ENQUEUE to the durable outbox (Task 013) — a worker drains with
+// retries/backoff and drops stale offers, so a transition is never silently un-notified.
 export async function notifyPassenger(bookingId: string, title: string, body: string): Promise<void> {
-  if (!config.push.enabled) return;
-  await sendToAudience(`PASSENGER:${bookingId}`, { title, body, url: '/track', tag: `ride-${bookingId}` });
+  const { enqueue } = await import('@/server/outbox');
+  await enqueue(prisma, { audience: `PASSENGER:${bookingId}`, title, body, url: '/track', tag: `ride-${bookingId}` });
 }
 export async function notifyBookingDriver(bookingId: string, title: string, body: string): Promise<void> {
-  if (!config.push.enabled) return;
   const a = await prisma.assignment.findFirst({ where: { activeBookingId: bookingId }, select: { driverId: true } });
-  if (!a) return;
-  await notifyDriverByDriverId(a.driverId, title, body);
+  if (a) await notifyDriverByDriverId(a.driverId, title, body);
 }
 export async function notifyDriverByDriverId(driverId: string, title: string, body: string): Promise<void> {
-  if (!config.push.enabled) return;
   const d = await prisma.driver.findUnique({ where: { id: driverId }, select: { userId: true } });
-  if (d) await sendToAudience(`DRIVER:${d.userId}`, { title, body, url: '/driver', tag: 'ride' });
+  if (!d) return;
+  const { enqueue } = await import('@/server/outbox');
+  await enqueue(prisma, { audience: `DRIVER:${d.userId}`, title, body, url: '/driver', tag: 'ride' });
 }
-
-// Fire-and-forget: notify a driver of a new ride offer reserved for them.
 export async function notifyDriverOffer(driverId: string, bookingId: string, pickupEtaSec?: number | null): Promise<void> {
-  if (!config.push.enabled) return;
   const d = await prisma.driver.findUnique({ where: { id: driverId }, select: { userId: true } });
   if (!d) return;
   const b = await prisma.booking.findUnique({ where: { id: bookingId }, select: { pickupLabel: true } });
   const etaMin = pickupEtaSec != null ? Math.max(1, Math.round(pickupEtaSec / 60)) : null;
   const body = `${b?.pickupLabel ?? 'Pickup nearby'}${etaMin != null ? ` · ~${etaMin} min away` : ''} — tap to accept`;
-  await sendToAudience(`DRIVER:${d.userId}`, { title: 'New ride offer', body, url: '/driver', tag: 'offer' });
+  const { enqueue } = await import('@/server/outbox');
+  await enqueue(prisma, { audience: `DRIVER:${d.userId}`, title: 'New ride offer', body, url: '/driver', tag: 'offer' });
 }
-
-// Fire-and-forget: notify the OTHER party of a new chat message.
 export async function notifyNewMessage(bookingId: string, sender: 'PASSENGER' | 'DRIVER', snippet: string): Promise<void> {
-  if (!config.push.enabled) return;
   const body = snippet.length > 120 ? snippet.slice(0, 117) + '…' : snippet;
+  const { enqueue } = await import('@/server/outbox');
   if (sender === 'DRIVER') {
-    await sendToAudience(`PASSENGER:${bookingId}`, { title: 'Message from your driver', body, url: '/track', tag: `chat-${bookingId}` });
+    await enqueue(prisma, { audience: `PASSENGER:${bookingId}`, title: 'Message from your driver', body, url: '/track', tag: `chat-${bookingId}` });
   } else {
     const a = await prisma.assignment.findFirst({ where: { activeBookingId: bookingId }, select: { driverId: true } });
     if (!a) return;
     const d = await prisma.driver.findUnique({ where: { id: a.driverId }, select: { userId: true } });
-    if (!d) return;
-    await sendToAudience(`DRIVER:${d.userId}`, { title: 'Message from your passenger', body, url: '/driver', tag: `chat-${bookingId}` });
+    if (d) await enqueue(prisma, { audience: `DRIVER:${d.userId}`, title: 'Message from your passenger', body, url: '/driver', tag: `chat-${bookingId}` });
   }
 }

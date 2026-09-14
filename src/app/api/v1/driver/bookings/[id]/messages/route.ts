@@ -21,12 +21,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const ctx = await requireDriver();
   if (!isDriverCtx(ctx)) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();
   const { id } = await params;
+  // Cheap early check; the authoritative ownership check runs INSIDE postMessage's tx.
   if (!(await driverOwnsBooking(ctx.driver.id, id))) return Errors.forbidden();
   const rl = await rateLimit('chat-send', clientIp(req, config.trustedProxyHops), 20, 60);
   if (!rl.ok) return Errors.throttled(rl.retryAfter);
   let body: { body?: string };
   try { body = await req.json(); } catch { return Errors.validation({ _: 'Invalid JSON body.' }); }
-  const r = await postMessage(id, 'DRIVER', body.body ?? '');
+  const r = await postMessage(id, 'DRIVER', body.body ?? '', { requireDriverId: ctx.driver.id });
   if (!r.ok) return apiError(r.status, r.code, r.message);
   void notifyNewMessage(id, 'DRIVER', r.message.body).catch(() => {}); // best-effort
   return apiOk({ ok: true, message: r.message }, 201);

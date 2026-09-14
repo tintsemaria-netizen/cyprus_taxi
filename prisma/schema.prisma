@@ -168,10 +168,52 @@ model ApplicationDocument {
   scanStatus    String   @default("UNScanned") // UNScanned | CLEAN | INFECTED | UNAVAILABLE
   decision      String   @default("PENDING")   // PENDING | ACCEPTED | CHANGES
   decisionNote  String?
+  expiresAt     DateTime?  // document expiry (licence/insurance/permit) — drives DOCUMENTS_EXPIRED
   revision      Int
   createdAt     DateTime @default(now())
 
   @@index([applicationId, slot])
+}
+
+// Durable notification delivery (Task 013). Enqueued INSIDE domain transactions; a worker
+// drains with retries + dedupe, so a decision/transition is never silently un-notified and
+// a duplicate is never re-sent.
+model NotificationOutbox {
+  id            String    @id @default(uuid())
+  audience      String    // PASSENGER:<bookingId> | DRIVER:<userId>
+  title         String
+  body          String
+  url           String
+  tag           String?
+  dedupeKey     String?   @unique
+  attempts      Int       @default(0)
+  deliveredAt   DateTime?
+  nextAttemptAt DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+
+  @@index([deliveredAt, nextAttemptAt])
+}
+
+// Passenger account (Task 014). Verified phone; owns booking history / saved destinations.
+model Passenger {
+  id              String    @id @default(uuid())
+  phone           String    @unique
+  phoneVerifiedAt DateTime?
+  name            String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  sessions PassengerSession[]
+}
+
+model PassengerSession {
+  id            String    @id @default(uuid())
+  passenger     Passenger @relation(fields: [passengerId], references: [id])
+  passengerId   String
+  sessionDigest String    @unique
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  createdAt     DateTime  @default(now())
 }
 
 model ApplicationEvent {
@@ -246,6 +288,7 @@ model Booking {
   fareBreakdown  String?       // JSON snapshot of the quote breakdown
   startCode      String?       // 4-digit trip-start code (shown to passenger; driver enters it to start) — M3
   arrivedAt      DateTime?     // server time the driver marked ARRIVED at pickup — M3
+  passengerId    String?       // owning passenger account (Task 014); null for legacy/anonymous
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -261,6 +304,7 @@ model Booking {
   @@index([status, createdAt])
   @@index([status, scheduledAt])
   @@index([phone])
+  @@index([passengerId, createdAt])
 }
 
 // Passenger↔driver chat, scoped to one booking (Task: rider can message the driver).

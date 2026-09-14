@@ -42,6 +42,9 @@ export async function runOnce(): Promise<void> {
     //    pre-pickup trips whose driver's GPS has been lost too long.
     await promoteScheduled(now);
     await rematchOnGpsLoss(now);
+    // Durable notification delivery + document-expiry enforcement (best-effort, isolated).
+    try { const { drainOutbox } = await import('@/server/outbox'); await drainOutbox(now); } catch (e) { console.error('[outbox] drain error', e); }
+    if (now.getMinutes() % 5 === 0) { try { const { enforceDocumentExpiries } = await import('@/server/applications'); await enforceDocumentExpiries(now); } catch (e) { console.error('[expiry] error', e); } }
 
     // 1) Resolve timed-out offers (release reservation, remember the driver).
     const expired = await prisma.driverOffer.findMany({ where: { status: 'OFFERED', expiresAt: { lt: now } }, select: { id: true } });

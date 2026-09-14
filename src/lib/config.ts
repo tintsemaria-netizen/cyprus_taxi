@@ -76,6 +76,15 @@ export const config = {
     twilioSid: () => process.env.TWILIO_ACCOUNT_SID || '',
     twilioToken: () => process.env.TWILIO_AUTH_TOKEN || '',
     verifyService: process.env.TWILIO_VERIFY_SERVICE_SID || '',
+    // The dev OTP path is NOT real verification and is refused unless deliberately enabled.
+    // Never a silent substitute for real SMS (Task 015 constraint).
+    allowDevOtp: process.env.SMS_ALLOW_DEV_OTP === 'true',
+  },
+  // Malware scanning (Task 015). clamd via host:port when configured; otherwise scans are
+  // UNAVAILABLE and documents cannot be accepted/approved (never approve unscanned).
+  clamav: {
+    host: process.env.CLAMAV_HOST || '',
+    port: num('CLAMAV_PORT', 3310),
   },
   // Private document storage root (Task 015). Outside public/ and Git; a Docker volume in prod.
   uploads: {
