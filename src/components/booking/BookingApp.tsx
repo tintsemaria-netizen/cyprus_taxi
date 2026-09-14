@@ -8,6 +8,7 @@ import { PlacesInput, Selected } from './PlacesInput';
 import { DemoBanner } from '@/components/DemoBanner';
 import AutoMapPicker from './AutoMapPicker';
 import { PassengerLoginModal } from './PassengerLoginModal';
+import { AccountMenu } from './AccountMenu';
 import { nicosiaInputValue } from '@/lib/timezone';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 
@@ -49,7 +50,7 @@ export default function BookingApp() {
   const [myLoc, setMyLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [autoPickup, setAutoPickup] = useState(false); // pickup was auto-set from geolocation
   // Task 014: passenger account + mandatory login before booking + destination history.
-  const [passenger, setPassenger] = useState<{ phone: string; name?: string } | null>(null);
+  const [passenger, setPassenger] = useState<{ phone: string; name?: string; email?: string | null } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [destinations, setDestinations] = useState<{ label: string; lat: number; lng: number }[]>([]);
   const pendingSubmit = useRef<number | undefined>(undefined);
@@ -84,7 +85,7 @@ export default function BookingApp() {
 
   // Restore passenger session (if any) → prefill contact + load destination history.
   const loadPassenger = useCallback(() => {
-    api<{ phone: string; name?: string }>('/passenger/me')
+    api<{ phone: string; name?: string; email?: string | null }>('/passenger/me')
       .then((p) => {
         setPassenger(p);
         setPhone((cur) => cur || p.phone);
@@ -359,20 +360,27 @@ export default function BookingApp() {
       )}
       <header className="z-20 flex items-center justify-between border-b border-edge bg-page/90 px-4 py-2 backdrop-blur sm:px-6">
         <Logo className="h-10" />
-        {/* Segmented nav styled exactly like the Now / Schedule control. */}
-        <nav className="hidden gap-2 rounded-[12px] border border-edge bg-elevated p-1 sm:flex">
-          {[
-            { href: '/', label: 'Book', active: true },
-            { href: '/rides', label: 'My rides', active: false },
-            { href: '/privacy', label: 'Privacy', active: false },
-            { href: '/login', label: 'Login', active: false },
-          ].map((n) => (
-            <a key={n.href} href={n.href} className={`rounded-[9px] px-3 py-2 text-sm font-medium transition ${n.active ? 'bg-accent text-[#0d1608]' : 'text-muted hover:text-ink'}`}>
-              {n.label}
-            </a>
-          ))}
-        </nav>
-        <a href="/login" className="btn-ghost !min-h-0 !py-1.5 text-base sm:hidden">Login</a>
+        <div className="flex items-center gap-2">
+          {/* Segmented nav styled exactly like the Now / Schedule control. When signed in the
+              trailing "Login" tab is dropped in favour of the account avatar (below). */}
+          <nav className="hidden gap-2 rounded-[12px] border border-edge bg-elevated p-1 sm:flex">
+            {[
+              { href: '/', label: 'Book', active: true },
+              { href: '/rides', label: 'My rides', active: false },
+              { href: '/privacy', label: 'Privacy', active: false },
+              ...(passenger ? [] : [{ href: '/login', label: 'Login', active: false }]),
+            ].map((n) => (
+              <a key={n.href} href={n.href} className={`rounded-[9px] px-3 py-2 text-sm font-medium transition ${n.active ? 'bg-accent text-[#0d1608]' : 'text-muted hover:text-ink'}`}>
+                {n.label}
+              </a>
+            ))}
+          </nav>
+          {passenger ? (
+            <AccountMenu passenger={passenger} onLoggedOut={() => setPassenger(null)} />
+          ) : (
+            <a href="/login" className="btn-ghost !min-h-0 !py-1.5 text-base sm:hidden">Login</a>
+          )}
+        </div>
       </header>
 
       <div className="relative flex-1">
