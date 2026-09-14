@@ -1,6 +1,10 @@
 # Implementation status
 
-Updated 2026-09-14. Deployed publicly to https://cyprustaxi.ackedberryes.store (production domain il-y.taxi ready pending DNS). Autonomous ride-hailing beta: Task 012 (M0–M4) + Task 013 (P0 done, P1 mostly, P2 partial). Live driver↔passenger routes + marker animation, booking chat, and Web Push (chat, ride offers, assignment/arrival/no-driver/rematch/cancellation). vitest 66/66. Full per-item status is in Tasks/013 (completion matrix) and docs/HANDOFF.md. Remaining blockers: scheduled-time quote pricing, full ETA source UI, chat cursor pagination, and the authenticated live browser journey (needs current synthetic-driver creds). External: enable Places API (New); authorize a commercial weather provider; authorize any dynamic tariff.
+Updated 2026-09-14. Deployed publicly to https://cyprustaxi.ackedberryes.store, release **f76e9a6** (production domain il-y.taxi ready pending DNS). Autonomous ride-hailing beta: Task 012 (M0–M4) + Task 013 (P0 done, P1 mostly, P2 partial). Live driver↔passenger routes + marker animation, booking chat, and Web Push (chat, ride offers, assignment/arrival/no-driver/rematch/cancellation). **vitest 66/66.**
+
+**Live verification (2026-09-14):** an automated server-side smoke of the full no-dispatcher journey PASSED on prod (book → worker offer → accept → EN_ROUTE → arrive → coded start → complete → immutable receipt; capacity freed), run via the real API with a dedicated synthetic driver that was created for the test and then removed. Driver GPS was DB test-scaffolding, so this proves the dispatch/lifecycle/receipt server flow live — NOT on-device GPS or handset push delivery (still to be checked on a real phone). Details in docs/HANDOFF.md; per-item status in Tasks/013 (completion matrix).
+
+Remaining (documented next actions): scheduled-time quote pricing (pricingAt/departureAt + bind schedule to quote hash), full ETA source-exposure in the passenger UI, chat cursor pagination, notification outbox, and a real on-phone browser journey (device GPS + push). External enablement: Places API (New); a commercial weather provider; any dynamic-tariff authorization.
 
 | Milestone | Status | Evidence / next action |
 |---|---|---|
