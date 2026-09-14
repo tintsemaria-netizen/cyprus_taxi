@@ -84,13 +84,32 @@ describe('passenger↔driver chat', () => {
     if (!res.ok) expect(res.code).toBe('CHAT_CLOSED');
   });
 
-  it('returns the LATEST 200 (newest messages never vanish after 200)', async () => {
+  it('cursor pagination: latest page + load older, no loss or duplication', async () => {
     const { bookingId } = await assigned();
-    for (let i = 0; i < 205; i++) await prisma.chatMessage.create({ data: { bookingId, sender: 'PASSENGER', body: `m${i}` } });
-    const list = await listMessages(bookingId);
-    expect(list.messages.length).toBe(200);
-    expect(list.messages[list.messages.length - 1].body).toBe('m204'); // newest present
-    expect(list.messages[0].body).toBe('m5'); // oldest dropped
+    const base = Date.now() - 60_000;
+    for (let i = 0; i < 60; i++) await prisma.chatMessage.create({ data: { bookingId, sender: 'PASSENGER', body: `m${String(i).padStart(3, '0')}`, createdAt: new Date(base + i * 1000) } });
+
+    // Latest page = newest 50 (m010..m059), chronological, more older available.
+    const page1 = await listMessages(bookingId, { limit: 50 });
+    expect(page1.messages.length).toBe(50);
+    expect(page1.messages[0].body).toBe('m010');
+    expect(page1.messages[49].body).toBe('m059');
+    expect(page1.hasMoreOlder).toBe(true);
+
+    // Load older before the earliest → m000..m009, nothing left older.
+    const first = page1.messages[0];
+    const older = await listMessages(bookingId, { before: `${first.at}_${first.id}`, limit: 50 });
+    expect(older.messages.map((m) => m.body)).toEqual(Array.from({ length: 10 }, (_, i) => `m${String(i).padStart(3, '0')}`));
+    expect(older.hasMoreOlder).toBe(false);
+
+    // Merged set is exactly 60 unique, in order.
+    const merged = new Map([...older.messages, ...page1.messages].map((m) => [m.id, m]));
+    expect(merged.size).toBe(60);
+
+    // `after` the newest returns nothing (tail poll).
+    const last = page1.messages[49];
+    const tail = await listMessages(bookingId, { after: `${last.at}_${last.id}` });
+    expect(tail.messages.length).toBe(0);
   }, 20000);
 
   it('rejects empty and over-long messages', async () => {

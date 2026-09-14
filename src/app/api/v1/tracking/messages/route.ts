@@ -11,8 +11,8 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const bookingId = await getTrackingBookingId();
   if (!bookingId) return Errors.unauthorized();
-  const since = new URL(req.url).searchParams.get('after') || undefined;
-  return apiOk(await listMessages(bookingId, since));
+  const sp = new URL(req.url).searchParams;
+  return apiOk(await listMessages(bookingId, { after: sp.get('after') || undefined, before: sp.get('before') || undefined, limit: sp.get('limit') ? Number(sp.get('limit')) : undefined }));
 }
 
 export async function POST(req: Request) {

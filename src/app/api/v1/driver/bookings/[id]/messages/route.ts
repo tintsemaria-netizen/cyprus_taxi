@@ -13,8 +13,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!isDriverCtx(ctx)) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();
   const { id } = await params;
   if (!(await driverOwnsBooking(ctx.driver.id, id))) return Errors.forbidden();
-  const since = new URL(req.url).searchParams.get('after') || undefined;
-  return apiOk(await listMessages(id, since));
+  const sp = new URL(req.url).searchParams;
+  return apiOk(await listMessages(id, { after: sp.get('after') || undefined, before: sp.get('before') || undefined, limit: sp.get('limit') ? Number(sp.get('limit')) : undefined }));
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {

@@ -20,20 +20,54 @@ function view(m: { id: string; sender: string; body: string; createdAt: Date }):
   return { id: m.id, sender: m.sender as 'PASSENGER' | 'DRIVER', body: m.body, at: m.createdAt.toISOString() };
 }
 
-export async function listMessages(bookingId: string, sinceIso?: string): Promise<{ open: boolean; messages: ChatMessageView[] }> {
-  const where: Record<string, unknown> = { bookingId };
-  if (sinceIso) {
-    const d = new Date(sinceIso);
-    if (!Number.isNaN(d.getTime())) where.createdAt = { gt: d };
+// Stable cursor pagination on (createdAt, id) so messages sharing a timestamp are never
+// lost or duplicated. Cursor string = `${createdAt ISO}_${id}` (the client builds it from
+// a message's own `at` + `id`, which equal these values).
+export interface ListOpts { after?: string; before?: string; limit?: number }
+
+function parseCursor(c?: string): { t: Date; id: string } | null {
+  if (!c) return null;
+  const i = c.lastIndexOf('_');
+  if (i < 0) return null;
+  const t = new Date(c.slice(0, i));
+  const id = c.slice(i + 1);
+  return Number.isNaN(t.getTime()) || !id ? null : { t, id };
+}
+
+export async function listMessages(bookingId: string, opts: ListOpts = {}): Promise<{ open: boolean; messages: ChatMessageView[]; hasMoreOlder: boolean }> {
+  const limit = Math.min(100, Math.max(1, opts.limit ?? 50));
+  const after = parseCursor(opts.after);
+  const before = parseCursor(opts.before);
+
+  let rows;
+  if (after) {
+    // Incremental tail: messages strictly after the cursor, ascending.
+    rows = await prisma.chatMessage.findMany({
+      where: { bookingId, OR: [{ createdAt: { gt: after.t } }, { createdAt: after.t, id: { gt: after.id } }] },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], take: limit,
+    });
+  } else if (before) {
+    // Older page: messages strictly before the cursor, taken newest-first then flipped.
+    rows = await prisma.chatMessage.findMany({
+      where: { bookingId, OR: [{ createdAt: { lt: before.t } }, { createdAt: before.t, id: { lt: before.id } }] },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: limit,
+    });
+    rows.reverse();
+  } else {
+    // Latest page (newest `limit`, chronological for display).
+    rows = await prisma.chatMessage.findMany({ where: { bookingId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: limit });
+    rows.reverse();
   }
-  const [rows, booking] = await Promise.all([
-    // Newest 200 (then chronological for display), so messages never vanish after 200 —
-    // an incremental `after` cursor returns just the new tail.
-    prisma.chatMessage.findMany({ where, orderBy: { createdAt: sinceIso ? 'asc' : 'desc' }, take: 200 }),
-    prisma.booking.findUnique({ where: { id: bookingId }, select: { status: true } }),
-  ]);
-  const ordered = sinceIso ? rows : rows.reverse();
-  return { open: booking ? CHAT_ACTIVE_STATUSES.includes(booking.status) : false, messages: ordered.map(view) };
+
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId }, select: { status: true } });
+  // Whether older messages exist before the earliest we returned (skip for the `after`
+  // tail poll — the client already holds the history).
+  let hasMoreOlder = false;
+  if (!after && rows.length) {
+    const e = rows[0];
+    hasMoreOlder = (await prisma.chatMessage.count({ where: { bookingId, OR: [{ createdAt: { lt: e.createdAt } }, { createdAt: e.createdAt, id: { lt: e.id } }] } })) > 0;
+  }
+  return { open: booking ? CHAT_ACTIVE_STATUSES.includes(booking.status) : false, messages: rows.map(view), hasMoreOlder };
 }
 
 export async function postMessage(bookingId: string, sender: 'PASSENGER' | 'DRIVER', body: string): Promise<PostResult> {

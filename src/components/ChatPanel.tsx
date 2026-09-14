@@ -12,13 +12,28 @@ interface Msg { id: string; sender: 'PASSENGER' | 'DRIVER'; body: string; at: st
 export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUrl: string; postUrl: string; me: 'PASSENGER' | 'DRIVER'; peerLabel: string; pushUrl?: string }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [open, setOpen] = useState(true); // chat available (driver assigned, pre-terminal)
+  const [hasOlder, setHasOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const lastSeenRef = useRef<number>(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const msgsRef = useRef<Msg[]>([]);
+  msgsRef.current = msgs;
   const [notif, setNotif] = useState<'idle' | 'on' | 'denied' | 'busy'>('idle');
+
+  const cursor = (m: Msg) => `${m.at}_${m.id}`;
+  // Merge a batch by id and keep a stable (createdAt, id) chronological order.
+  function mergeIn(batch: Msg[]) {
+    if (!batch.length) return;
+    setMsgs((prev) => {
+      const map = new Map(prev.map((m) => [m.id, m]));
+      for (const m of batch) map.set(m.id, m);
+      return [...map.values()].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : a.id < b.id ? -1 : 1));
+    });
+  }
 
   useEffect(() => {
     if (pushUrl && pushSupported() && pushPermission() === 'granted') setNotif('on');
@@ -31,15 +46,20 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUr
     setNotif(r.ok ? 'on' : r.reason === 'denied' ? 'denied' : 'idle');
   }
 
+  // Initial latest page + incremental tail polling (only fetches messages after the last
+  // one we hold, then merges by id — nothing is lost or duplicated).
   useEffect(() => {
     let alive = true;
     const poll = async () => {
       if (document.visibilityState !== 'visible') return;
       try {
-        const r = await api<{ open: boolean; messages: Msg[] }>(listUrl, { timeoutMs: 8000 });
+        const last = msgsRef.current[msgsRef.current.length - 1];
+        const url = last ? `${listUrl}?after=${encodeURIComponent(cursor(last))}` : listUrl;
+        const r = await api<{ open: boolean; messages: Msg[]; hasMoreOlder: boolean }>(url, { timeoutMs: 8000 });
         if (!alive) return;
         setOpen(r.open);
-        setMsgs(r.messages);
+        if (!last) { setMsgs(r.messages); setHasOlder(r.hasMoreOlder); }
+        else mergeIn(r.messages);
       } catch { /* transient */ }
     };
     poll();
@@ -47,12 +67,25 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUr
     return () => { alive = false; clearInterval(t); };
   }, [listUrl]);
 
+  async function loadOlder() {
+    const first = msgsRef.current[0];
+    if (!first || loadingOlder) return;
+    setLoadingOlder(true);
+    try {
+      const r = await api<{ messages: Msg[]; hasMoreOlder: boolean }>(`${listUrl}?before=${encodeURIComponent(cursor(first))}&limit=50`, { timeoutMs: 8000 });
+      mergeIn(r.messages);
+      setHasOlder(r.hasMoreOlder);
+    } catch { /* transient */ } finally { setLoadingOlder(false); }
+  }
+
+  // Auto-scroll to the newest only when the tail changes (not when prepending history).
+  const lastId = msgs.length ? msgs[msgs.length - 1].id : '';
   useEffect(() => {
     if (expanded) {
       lastSeenRef.current = Date.now();
       requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }));
     }
-  }, [expanded, msgs.length]);
+  }, [expanded, lastId]);
 
   const unread = expanded ? 0 : msgs.filter((m) => m.sender !== me && new Date(m.at).getTime() > lastSeenRef.current).length;
 
@@ -63,7 +96,7 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUr
     setErr(null);
     try {
       const r = await api<{ message: Msg }>(postUrl, { method: 'POST', body: { body: b }, timeoutMs: 8000 });
-      setMsgs((m) => [...m.filter((x) => x.id !== r.message.id), r.message]);
+      mergeIn([r.message]);
       setText('');
     } catch (e) {
       if (e instanceof ApiRequestError) setErr(e.body.message);
@@ -85,6 +118,13 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUr
       {expanded && (
         <div className="border-t border-edge">
           <div ref={scrollRef} className="max-h-56 space-y-2 overflow-y-auto p-3">
+            {hasOlder && (
+              <div className="text-center">
+                <button type="button" className="text-[11px] text-accent hover:underline disabled:opacity-50" disabled={loadingOlder} onClick={loadOlder}>
+                  {loadingOlder ? 'Loading…' : 'Load earlier messages'}
+                </button>
+              </div>
+            )}
             {msgs.length === 0 && <p className="py-4 text-center text-xs text-muted">No messages yet. Say hello 👋</p>}
             {msgs.map((m) => (
               <div key={m.id} className={`flex ${m.sender === me ? 'justify-end' : 'justify-start'}`}>
