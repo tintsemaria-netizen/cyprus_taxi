@@ -4,6 +4,8 @@ import { canTransition, isTerminal, PASSENGER_CANCELABLE } from '@/lib/status-ma
 import { computeFreshness } from '@/lib/freshness';
 import { canWork } from '@/lib/eligibility-policy';
 import { generateStartCode } from '@/server/dispatch/lifecycle';
+import { recordEvent, driverPseudo } from '@/server/events';
+import { enqueueDriver } from '@/server/push';
 
 export type Actor = 'STAFF' | 'DRIVER' | 'PASSENGER';
 
@@ -162,6 +164,7 @@ export async function assignBooking(params: {
     await tx.bookingEvent.create({
       data: { bookingId: booking.id, type: 'ASSIGNED', actorType: 'STAFF', actorId: params.actorId, beforeStatus: booking.status, afterStatus: 'ASSIGNED' },
     });
+    await recordEvent(tx, { eventType: 'booking.assigned', aggregateType: 'booking', aggregateId: booking.id, aggregateVersion: updated.revision, correlationId: booking.id, payload: { bookingId: booking.id, status: 'ASSIGNED', actorType: 'STAFF', manual: true, driverPseudo: driverPseudo(params.driverId) } });
     return { revision: updated.revision, status: updated.status };
   });
 }
@@ -182,6 +185,7 @@ export async function unassignBooking(params: {
     await tx.bookingEvent.create({
       data: { bookingId: booking.id, type: 'UNASSIGNED', actorType: 'STAFF', actorId: params.actorId, beforeStatus: booking.status, afterStatus: 'REQUESTED', reason: params.reason },
     });
+    await recordEvent(tx, { eventType: 'booking.unassigned', aggregateType: 'booking', aggregateId: booking.id, aggregateVersion: updated.revision, correlationId: booking.id, payload: { bookingId: booking.id, status: 'REQUESTED', actorType: 'STAFF', reason: params.reason ?? null } });
     return { revision: updated.revision, status: updated.status };
   });
 }
@@ -212,6 +216,7 @@ export async function reassignBooking(params: {
     await tx.bookingEvent.create({
       data: { bookingId: booking.id, type: 'REASSIGNED', actorType: 'STAFF', actorId: params.actorId, beforeStatus: booking.status, afterStatus: 'ASSIGNED', reason: params.reason },
     });
+    await recordEvent(tx, { eventType: 'booking.reassigned', aggregateType: 'booking', aggregateId: booking.id, aggregateVersion: updated.revision, correlationId: booking.id, payload: { bookingId: booking.id, status: 'ASSIGNED', actorType: 'STAFF', reason: params.reason ?? null, driverPseudo: driverPseudo(params.driverId) } });
     return { revision: updated.revision, status: updated.status };
   });
 }
@@ -251,6 +256,11 @@ export async function changeStatus(params: {
       if (!active || active.driverId !== params.driverId) throw new OpError(403, 'FORBIDDEN', 'Not your assignment.');
     }
 
+    // Capture the assigned driver BEFORE the assignment is freed, so a cancel can notify them.
+    const priorDriverId = params.to === 'CANCELED'
+      ? (await tx.assignment.findFirst({ where: { activeBookingId: booking.id }, select: { driverId: true } }))?.driverId ?? null
+      : null;
+
     if (params.to === 'COMPLETED' || params.to === 'CANCELED') {
       await endActiveAssignment(tx, booking.id, params.to === 'COMPLETED' ? 'completed' : 'canceled');
     }
@@ -259,6 +269,15 @@ export async function changeStatus(params: {
     await tx.bookingEvent.create({
       data: { bookingId: booking.id, type: `STATUS_${params.to}`, actorType: params.actor, actorId: params.actorId, beforeStatus: booking.status, afterStatus: params.to, reason: params.reason },
     });
+    await recordEvent(tx, {
+      eventType: `booking.${String(params.to).toLowerCase()}`, aggregateType: 'booking', aggregateId: booking.id,
+      aggregateVersion: updated.revision, correlationId: booking.id,
+      payload: { bookingId: booking.id, status: params.to, actorType: params.actor, reason: params.reason ?? null },
+    });
+    // Atomic driver notification when a passenger cancels an in-flight ride.
+    if (params.to === 'CANCELED' && priorDriverId) {
+      await enqueueDriver(tx, priorDriverId, 'Ride canceled', 'The passenger canceled this ride.', { tag: 'ride' });
+    }
     return { revision: updated.revision, status: updated.status };
   });
 }
@@ -281,6 +300,10 @@ export async function terminateBooking(params: {
     const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: 'CANCELED', revision: { increment: 1 } } });
     await tx.bookingEvent.create({
       data: { bookingId: booking.id, type: 'TERMINATED', actorType: 'STAFF', actorId: params.actorId, beforeStatus: 'IN_PROGRESS', afterStatus: 'CANCELED', reason: params.reason },
+    });
+    await recordEvent(tx, {
+      eventType: 'booking.terminated', aggregateType: 'booking', aggregateId: booking.id, aggregateVersion: updated.revision,
+      correlationId: booking.id, payload: { bookingId: booking.id, status: 'CANCELED', actorType: 'STAFF', reason: 'terminated' },
     });
     await tx.auditEvent.create({ data: { actorId: params.actorId, actorRole: Role.DISPATCHER, action: 'TERMINATE_TRIP', target: booking.id, detail: 'reason recorded' } });
     return { revision: updated.revision, status: updated.status };

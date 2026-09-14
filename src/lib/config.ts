@@ -35,6 +35,8 @@ export const config = {
     return hosts;
   },
   demoMode: (process.env.DEMO_MODE || 'true').toLowerCase() === 'true',
+  // Logical environment stamped onto every domain event (analytics partitioning / filtering).
+  env: process.env.APP_ENV || 'beta',
   sessionSecret: () => req('SESSION_SECRET'),
   trackingReceiptSecret: () => req('TRACKING_RECEIPT_SECRET'),
   databaseUrl: () => req('DATABASE_URL'),
@@ -96,6 +98,26 @@ export const config = {
     vapidPrivate: () => process.env.VAPID_PRIVATE_KEY || '',
     vapidSubject: process.env.VAPID_SUBJECT || 'mailto:support@il-y.taxi',
     enabled: !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
+  },
+  // Task 016 data platform. Dedicated workers own dispatch/notifications/analytics/maintenance
+  // when enabled; the web process then does NOT run the embedded timer (one clear ownership).
+  workers: {
+    dedicated: process.env.DEDICATED_WORKERS === 'true',
+  },
+  // Accepted-GPS history retention (exact coordinates). Coarse aggregates live longer in
+  // ClickHouse. A product default pending privacy review — not a statutory figure.
+  gpsRetentionDays: num('GPS_RETENTION_DAYS', 7),
+  // ClickHouse analytics (Task 016). Private network only; separate write vs read-only users.
+  // Analytics is an eventually-consistent projection and NEVER required for operations.
+  analytics: {
+    enabled: !!(process.env.CLICKHOUSE_URL || '').trim(),
+    url: process.env.CLICKHOUSE_URL || '', // e.g. http://taxicy-clickhouse:8123
+    db: process.env.CLICKHOUSE_DB || 'taxi_analytics',
+    writeUser: process.env.CLICKHOUSE_WRITE_USER || 'taxi_writer',
+    writePassword: () => process.env.CLICKHOUSE_WRITE_PASSWORD || '',
+    readUser: process.env.CLICKHOUSE_READ_USER || 'taxi_reader',
+    readPassword: () => process.env.CLICKHOUSE_READ_PASSWORD || '',
+    exportBatch: num('ANALYTICS_EXPORT_BATCH', 500),
   },
   trustedProxyHops: num('TRUSTED_PROXY_HOPS', 2),
   timezone: 'Europe/Nicosia',

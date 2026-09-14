@@ -3,7 +3,8 @@ import { config } from '@/lib/config';
 import { findBestCandidate, RADIUS_STAGES_KM } from './eligibility';
 import { createOffer, expireOffer } from './offers';
 import { rematchBooking } from './lifecycle';
-import { notifyPassenger } from '@/server/push';
+import { enqueuePassenger } from '@/server/push';
+import { recordEvent } from '@/server/events';
 
 // Durable-ish in-process dispatch worker (Task 012 §4). Postgres-backed jobs with a lease
 // so multiple instances/ticks are safe; recovers on restart because state lives in the DB
@@ -95,14 +96,16 @@ async function processJob(jobId: string): Promise<void> {
       const b = await tx.booking.findUnique({ where: { id: job.bookingId } });
       let flagged = false;
       if (b && b.status === 'SEARCHING') {
-        await tx.booking.update({ where: { id: job.bookingId }, data: { status: 'NO_DRIVER', revision: { increment: 1 } } });
+        const ub = await tx.booking.update({ where: { id: job.bookingId }, data: { status: 'NO_DRIVER', revision: { increment: 1 } } });
         await tx.bookingEvent.create({ data: { bookingId: job.bookingId, type: 'NO_DRIVER', actorType: 'SYSTEM', beforeStatus: 'SEARCHING', afterStatus: 'NO_DRIVER' } });
+        await recordEvent(tx, { eventType: 'booking.no_driver', aggregateType: 'booking', aggregateId: job.bookingId, aggregateVersion: ub.revision, correlationId: job.bookingId, payload: { bookingId: job.bookingId, status: 'NO_DRIVER' } });
+        await enqueuePassenger(tx, job.bookingId, 'No driver available', 'We couldn’t find a driver right now. Tap to try again.');
         flagged = true;
       }
       await tx.dispatchJob.deleteMany({ where: { id: jobId } });
       return flagged;
     });
-    if (gaveUp) void notifyPassenger(job.bookingId, 'No driver available', 'We couldn’t find a driver right now. Tap to try again.').catch(() => {});
+    void gaveUp;
     return;
   }
 
@@ -135,8 +138,9 @@ async function promoteScheduled(now: Date): Promise<void> {
       const deadline = new Date(Math.max(now.getTime() + config.dispatch.searchDeadlineSeconds * 1000, b.scheduledAt.getTime()));
       await tx.dispatchJob.deleteMany({ where: { bookingId: b.id } });
       await tx.dispatchJob.create({ data: { bookingId: b.id, deadlineAt: deadline } });
-      await tx.booking.update({ where: { id: b.id }, data: { status: 'SEARCHING', revision: { increment: 1 } } });
+      const ub = await tx.booking.update({ where: { id: b.id }, data: { status: 'SEARCHING', revision: { increment: 1 } } });
       await tx.bookingEvent.create({ data: { bookingId: b.id, type: 'SCHEDULED_PROMOTED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'SEARCHING' } });
+      await recordEvent(tx, { eventType: 'booking.scheduled_promoted', aggregateType: 'booking', aggregateId: b.id, aggregateVersion: ub.revision, correlationId: b.id, payload: { bookingId: b.id, status: 'SEARCHING' } });
     });
   }
 }
@@ -167,6 +171,6 @@ async function rematchOnGpsLoss(now: Date): Promise<void> {
       await rematchBooking(tx, b.id, cur.driverId, 'prolonged pre-pickup GPS loss', 'SYSTEM');
       return true;
     });
-    if (rematched) void notifyPassenger(a.activeBookingId!, 'Finding you another driver', 'Your driver lost connection — we’re matching you again.').catch(() => {});
+    void rematched; // passenger rematch notification is enqueued inside rematchBooking (atomic)
   }
 }

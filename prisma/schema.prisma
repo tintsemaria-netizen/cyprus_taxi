@@ -38,35 +38,35 @@ enum BookingStatus {
 }
 
 model StaffUser {
-  id             String    @id @default(uuid())
-  login          String    @unique
+  id             String   @id @default(uuid())
+  login          String   @unique
   passwordHash   String
   role           Role
-  active         Boolean   @default(true)
-  sessionVersion Int       @default(1)
+  active         Boolean  @default(true)
+  sessionVersion Int      @default(1)
   displayName    String
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   driver   Driver?
   sessions AuthSession[]
 }
 
 model Driver {
-  id          String   @id @default(uuid())
-  user        StaffUser @relation(fields: [userId], references: [id])
-  userId      String    @unique
-  publicName  String
-  phone       String    // operational contact shown to matched passenger
-  onDuty      Boolean   @default(false)
-  available   Boolean   @default(false)
-  active      Boolean   @default(true)
+  id            String            @id @default(uuid())
+  user          StaffUser         @relation(fields: [userId], references: [id])
+  userId        String            @unique
+  publicName    String
+  phone         String // operational contact shown to matched passenger
+  onDuty        Boolean           @default(false)
+  available     Boolean           @default(false)
+  active        Boolean           @default(true)
   // Operational eligibility (Task 015). LEGACY = grandfathered existing driver;
   // APPROVED = passed admin KYC review; others block new work.
   eligibility   DriverEligibility @default(PENDING)
-  applicationId String?  // the approved DriverApplication that provisioned this driver
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  applicationId String? // the approved DriverApplication that provisioned this driver
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
   bindings    DriverVehicleBinding[]
   assignments Assignment[]
@@ -123,7 +123,7 @@ model PhoneVerification {
   id         String    @id @default(uuid())
   phone      String
   codeHash   String?
-  provider   String    // 'twilio-verify' | 'dev'
+  provider   String // 'twilio-verify' | 'dev'
   expiresAt  DateTime
   attempts   Int       @default(0)
   consumedAt DateTime?
@@ -138,13 +138,13 @@ model DriverApplication {
   applicantId    String            @unique
   status         ApplicationStatus @default(DRAFT)
   revision       Int               @default(1) // current editable revision
-  identity       String?           // JSON draft (step 2)
-  driving        String?           // JSON draft (step 3)
-  vehicle        String?           // JSON draft (step 4)
+  identity       String? // JSON draft (step 2)
+  driving        String? // JSON draft (step 3)
+  vehicle        String? // JSON draft (step 4)
   submittedAt    DateTime?
   reviewedAt     DateTime?
   reviewerId     String?
-  decisionReason String?           // applicant-facing summary (changes/rejection)
+  decisionReason String? // applicant-facing summary (changes/rejection)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
@@ -157,41 +157,136 @@ model DriverApplication {
 // Uploaded document/photo metadata. Bytes live in PRIVATE storage (never public/); the
 // storageKey is resolved by an authenticated stream, never a permanent public URL.
 model ApplicationDocument {
-  id            String   @id @default(uuid())
+  id            String            @id @default(uuid())
   application   DriverApplication @relation(fields: [applicationId], references: [id])
   applicationId String
-  slot          String   // id_front | id_back | passport | selfie | licence_front | ... | vehicle_front | ...
+  slot          String // id_front | id_back | passport | selfie | licence_front | ... | vehicle_front | ...
   storageKey    String
   mime          String
   sizeBytes     Int
   sha256        String
-  scanStatus    String   @default("UNScanned") // UNScanned | CLEAN | INFECTED | UNAVAILABLE
-  decision      String   @default("PENDING")   // PENDING | ACCEPTED | CHANGES
+  scanStatus    String            @default("UNScanned") // UNScanned | CLEAN | INFECTED | UNAVAILABLE
+  decision      String            @default("PENDING") // PENDING | ACCEPTED | CHANGES
   decisionNote  String?
-  expiresAt     DateTime?  // document expiry (licence/insurance/permit) — drives DOCUMENTS_EXPIRED
+  expiresAt     DateTime? // document expiry (licence/insurance/permit) — drives DOCUMENTS_EXPIRED
   revision      Int
-  createdAt     DateTime @default(now())
+  createdAt     DateTime          @default(now())
 
   @@index([applicationId, slot])
 }
 
-// Durable notification delivery (Task 013). Enqueued INSIDE domain transactions; a worker
-// drains with retries + dedupe, so a decision/transition is never silently un-notified and
-// a duplicate is never re-sent.
+// Durable notification delivery (Task 013, hardened in Task 016). Enqueued INSIDE domain
+// transactions; a dedicated worker CLAIMS rows with a lease (FOR UPDATE SKIP LOCKED), does
+// external I/O outside the claim, then records a precise outcome. `deliveredAt` is only the
+// terminal timestamp; `status` distinguishes the real outcomes so "accepted by provider" is
+// never confused with "nobody subscribed", "gave up", or "superseded".
 model NotificationOutbox {
   id            String    @id @default(uuid())
-  audience      String    // PASSENGER:<bookingId> | DRIVER:<userId>
+  audience      String // PASSENGER:<bookingId> | DRIVER:<userId>
   title         String
   body          String
   url           String
   tag           String?
+  offerId       String? // bind an 'offer' notification to the exact DriverOffer it announces
   dedupeKey     String?   @unique
+  // PENDING | PROCESSING | SENT_TO_PROVIDER | NO_SUBSCRIBERS | RETRY | FAILED | EXPIRED | SUPERSEDED
+  status        String    @default("PENDING")
   attempts      Int       @default(0)
-  deliveredAt   DateTime?
+  deliveredAt   DateTime? // terminal timestamp (any terminal state), kept for back-compat
   nextAttemptAt DateTime  @default(now())
+  leaseOwner    String?
+  leaseToken    String?
+  leaseUntil    DateTime?
+  lastError     String? // redacted last failure reason
   createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
 
+  @@index([status, nextAttemptAt])
   @@index([deliveredAt, nextAttemptAt])
+}
+
+// ---- Task 016: durable domain-event capture + analytics delivery + telemetry ----
+
+// Immutable domain-event fact, written IN THE SAME transaction as the business mutation
+// (so a rollback removes the event too). This is the authoritative source the analytics
+// exporter projects into ClickHouse. Payload is sanitized: no names/phones/street text.
+model DomainEvent {
+  id               String   @id @default(uuid()) // stable identity == ClickHouse dedup token
+  eventType        String // booking.requested | offer.accepted | gps.sample | ...
+  schemaVersion    Int      @default(1)
+  aggregateType    String // booking | offer | assignment | driver | gps | provider | notification
+  aggregateId      String
+  aggregateVersion Int      @default(0) // booking.revision, offer seq, gps sequence, ...
+  eventOrdinal     Int      @default(0) // >1 event per aggregate version → disambiguate
+  occurredAt       DateTime // when it happened (domain time, UTC)
+  recordedAt       DateTime @default(now()) // commit-ish time (NOT an ordering key)
+  environment      String   @default("beta")
+  isTest           Boolean  @default(false) // synthetic/QA data → excluded from analytics by default
+  correlationId    String?
+  causationId      String?
+  payload          Json
+
+  deliveries AnalyticsDelivery[]
+
+  @@unique([aggregateType, aggregateId, aggregateVersion, eventOrdinal]) // natural idempotency key
+  @@index([recordedAt])
+  @@index([eventType, recordedAt])
+}
+
+// Per-sink delivery state for a DomainEvent. The event is immutable; delivery progress is
+// separate so notification and analytics consumers never mark each other done. Claimed with
+// a lease token; at-least-once (retry uses the same event identity → ClickHouse dedups).
+model AnalyticsDelivery {
+  id            String      @id @default(uuid())
+  event         DomainEvent @relation(fields: [eventId], references: [id])
+  eventId       String
+  sink          String // 'clickhouse'
+  status        String      @default("PENDING") // PENDING | PROCESSING | RETRY | DELIVERED | DEAD
+  attempts      Int         @default(0)
+  nextAttemptAt DateTime    @default(now())
+  leaseOwner    String?
+  leaseToken    String?
+  leaseUntil    DateTime?
+  deliveredAt   DateTime?
+  lastError     String? // redacted
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @default(now()) @updatedAt
+
+  @@unique([eventId, sink])
+  @@index([sink, status, nextAttemptAt])
+}
+
+// Cross-process worker liveness. The health route reads these instead of a module-local
+// timer, so a dead dedicated worker is actually detectable from the web process.
+model WorkerHeartbeat {
+  role      String   @id // 'dispatch' | 'notifications' | 'analytics' | 'maintenance'
+  workerId  String
+  beatAt    DateTime
+  detail    String? // JSON: last queue depths / progress (redacted)
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+// Bounded durable history of ACCEPTED GPS samples (Task 016 §5). Written in the same
+// transaction that updates LatestDriverLocation; rejected/out-of-order samples never land
+// here. Retention is enforced by the maintenance worker. Coordinates are restricted data.
+model GpsSample {
+  id         String   @id @default(uuid())
+  driverId   String
+  gpsSession String
+  sequence   Int
+  lat        Float
+  lng        Float
+  accuracyM  Float
+  heading    Float?
+  speed      Float?
+  sampledAt  DateTime
+  receivedAt DateTime @default(now())
+  bookingId  String? // active-assignment context when known
+  createdAt  DateTime @default(now())
+
+  @@unique([driverId, gpsSession, sequence]) // stable sample identity
+  @@index([driverId, sampledAt])
+  @@index([receivedAt])
 }
 
 // Passenger account (Task 014). Verified phone; owns booking history / saved destinations.
@@ -217,16 +312,16 @@ model PassengerSession {
 }
 
 model ApplicationEvent {
-  id            String   @id @default(uuid())
+  id            String            @id @default(uuid())
   application   DriverApplication @relation(fields: [applicationId], references: [id])
   applicationId String
-  type          String   // SUBMITTED | IN_REVIEW | CHANGES_REQUESTED | REJECTED | APPROVED | DOC_DECISION | NOTE
-  actorType     String   // APPLICANT | ADMIN | SYSTEM
+  type          String // SUBMITTED | IN_REVIEW | CHANGES_REQUESTED | REJECTED | APPROVED | DOC_DECISION | NOTE
+  actorType     String // APPLICANT | ADMIN | SYSTEM
   actorId       String?
-  visibility    String   @default("APPLICANT") // APPLICANT | INTERNAL
+  visibility    String            @default("APPLICANT") // APPLICANT | INTERNAL
   detail        String?
   revision      Int?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime          @default(now())
 
   @@index([applicationId, createdAt])
 }
@@ -248,13 +343,13 @@ model Vehicle {
 }
 
 model DriverVehicleBinding {
-  id         String    @id @default(uuid())
-  driver     Driver    @relation(fields: [driverId], references: [id])
-  driverId   String
-  vehicle    Vehicle   @relation(fields: [vehicleId], references: [id])
-  vehicleId  String
-  startedAt  DateTime  @default(now())
-  endedAt    DateTime?
+  id        String    @id @default(uuid())
+  driver    Driver    @relation(fields: [driverId], references: [id])
+  driverId  String
+  vehicle   Vehicle   @relation(fields: [vehicleId], references: [id])
+  vehicleId String
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
 
   // one current binding per driver and per vehicle (NULL when ended)
   activeDriverId  String? @unique
@@ -282,24 +377,24 @@ model Booking {
   scheduledAt    DateTime?
   status         BookingStatus @default(REQUESTED)
   revision       Int           @default(0)
-  quoteId        String?       // fare quote applied at booking time (Task 012)
-  fareCents      Int?          // snapshotted estimate total (cents)
-  priceType      String?       // REGULATED_METER_ESTIMATE | REGULATED_FIXED | UPFRONT_DYNAMIC
-  fareBreakdown  String?       // JSON snapshot of the quote breakdown
-  startCode      String?       // 4-digit trip-start code (shown to passenger; driver enters it to start) — M3
-  arrivedAt      DateTime?     // server time the driver marked ARRIVED at pickup — M3
-  passengerId    String?       // owning passenger account (Task 014); null for legacy/anonymous
+  quoteId        String? // fare quote applied at booking time (Task 012)
+  fareCents      Int? // snapshotted estimate total (cents)
+  priceType      String? // REGULATED_METER_ESTIMATE | REGULATED_FIXED | UPFRONT_DYNAMIC
+  fareBreakdown  String? // JSON snapshot of the quote breakdown
+  startCode      String? // 4-digit trip-start code (shown to passenger; driver enters it to start) — M3
+  arrivedAt      DateTime? // server time the driver marked ARRIVED at pickup — M3
+  passengerId    String? // owning passenger account (Task 014); null for legacy/anonymous
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  assignments  Assignment[]
-  events       BookingEvent[]
-  grants       TrackingGrant[]
-  dispatchJob  DispatchJob?
-  offers       DriverOffer[]
-  waiting      WaitingSession?
-  fare         Fare?
-  messages     ChatMessage[]
+  assignments Assignment[]
+  events      BookingEvent[]
+  grants      TrackingGrant[]
+  dispatchJob DispatchJob?
+  offers      DriverOffer[]
+  waiting     WaitingSession?
+  fare        Fare?
+  messages    ChatMessage[]
 
   @@index([status, createdAt])
   @@index([status, scheduledAt])
@@ -313,7 +408,7 @@ model ChatMessage {
   id                String    @id @default(uuid())
   booking           Booking   @relation(fields: [bookingId], references: [id])
   bookingId         String
-  sender            String    // PASSENGER | DRIVER
+  sender            String // PASSENGER | DRIVER
   body              String
   createdAt         DateTime  @default(now())
   readByPassengerAt DateTime?
@@ -328,9 +423,9 @@ model WaitingSession {
   id                  String    @id @default(uuid())
   booking             Booking   @relation(fields: [bookingId], references: [id])
   bookingId           String    @unique
-  arrivedAt           DateTime  // when the driver arrived / free wait started
-  graceSeconds        Int       // free waiting window
-  paidRateCentsPerMin Int       // pre-pickup paid rate (0 in regulated meter mode by default)
+  arrivedAt           DateTime // when the driver arrived / free wait started
+  graceSeconds        Int // free waiting window
+  paidRateCentsPerMin Int // pre-pickup paid rate (0 in regulated meter mode by default)
   endedAt             DateTime? // set on trip start or cancellation
   accruedCents        Int       @default(0) // finalized paid-wait amount once ended
   createdAt           DateTime  @default(now())
@@ -340,19 +435,19 @@ model WaitingSession {
 // Immutable fare record written once at COMPLETED (Task 012 §6.4). Payment collection
 // status is tracked separately from trip completion (payment to driver, cash by default).
 model Fare {
-  id            String   @id @default(uuid())
-  booking       Booking  @relation(fields: [bookingId], references: [id])
-  bookingId     String   @unique
-  priceType     String   // REGULATED_METER_ESTIMATE | REGULATED_FIXED | UPFRONT_DYNAMIC
-  currency      String   @default("EUR")
-  estimateCents Int?     // quoted estimate at booking time
-  waitingCents  Int      @default(0)
-  adjustmentsCents Int   @default(0)
-  finalCents    Int?     // authoritative final amount where captured; null = follow meter/estimate
-  basis         String   // JSON: estimate vs final basis + breakdown snapshot
-  paymentMethod String   @default("CASH_TO_DRIVER")
-  paymentStatus String   @default("PENDING") // PENDING | COLLECTED (never auto-COLLECTED on COMPLETED)
-  createdAt     DateTime @default(now())
+  id               String   @id @default(uuid())
+  booking          Booking  @relation(fields: [bookingId], references: [id])
+  bookingId        String   @unique
+  priceType        String // REGULATED_METER_ESTIMATE | REGULATED_FIXED | UPFRONT_DYNAMIC
+  currency         String   @default("EUR")
+  estimateCents    Int? // quoted estimate at booking time
+  waitingCents     Int      @default(0)
+  adjustmentsCents Int      @default(0)
+  finalCents       Int? // authoritative final amount where captured; null = follow meter/estimate
+  basis            String // JSON: estimate vs final basis + breakdown snapshot
+  paymentMethod    String   @default("CASH_TO_DRIVER")
+  paymentStatus    String   @default("PENDING") // PENDING | COLLECTED (never auto-COLLECTED on COMPLETED)
+  createdAt        DateTime @default(now())
 }
 
 // Durable per-booking dispatch attempt (Task 012 §4). The background worker leases a
@@ -376,18 +471,18 @@ model DispatchJob {
 // DB-enforced "one active offer per booking and per driver", reserving capacity so a
 // driver can't be double-offered or assigned elsewhere while an offer is outstanding.
 model DriverOffer {
-  id            String    @id @default(uuid())
-  booking       Booking   @relation(fields: [bookingId], references: [id])
-  bookingId     String
-  driver        Driver    @relation(fields: [driverId], references: [id])
-  driverId      String
-  vehicleId     String
-  pickupEtaSec  Int?
+  id              String    @id @default(uuid())
+  booking         Booking   @relation(fields: [bookingId], references: [id])
+  bookingId       String
+  driver          Driver    @relation(fields: [driverId], references: [id])
+  driverId        String
+  vehicleId       String
+  pickupEtaSec    Int?
   pickupDistanceM Int?
-  status        String    @default("OFFERED") // OFFERED | ACCEPTED | REJECTED | EXPIRED | CANCELED
-  expiresAt     DateTime
-  createdAt     DateTime  @default(now())
-  respondedAt   DateTime?
+  status          String    @default("OFFERED") // OFFERED | ACCEPTED | REJECTED | EXPIRED | CANCELED
+  expiresAt       DateTime
+  createdAt       DateTime  @default(now())
+  respondedAt     DateTime?
 
   activeBookingId String? @unique
   activeDriverId  String? @unique
@@ -397,13 +492,13 @@ model DriverOffer {
 }
 
 model Assignment {
-  id           String    @id @default(uuid())
-  booking      Booking   @relation(fields: [bookingId], references: [id])
-  bookingId    String
-  driver       Driver    @relation(fields: [driverId], references: [id])
-  driverId     String
-  vehicle      Vehicle   @relation(fields: [vehicleId], references: [id])
-  vehicleId    String
+  id        String  @id @default(uuid())
+  booking   Booking @relation(fields: [bookingId], references: [id])
+  bookingId String
+  driver    Driver  @relation(fields: [driverId], references: [id])
+  driverId  String
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
+  vehicleId String
 
   // Historical snapshots captured at assignment time (SPEC §4)
   driverPublicName String
@@ -433,7 +528,7 @@ model BookingEvent {
   booking      Booking  @relation(fields: [bookingId], references: [id])
   bookingId    String
   type         String
-  actorType    String   // STAFF | DRIVER | PASSENGER | SYSTEM
+  actorType    String // STAFF | DRIVER | PASSENGER | SYSTEM
   actorId      String?
   beforeStatus String?
   afterStatus  String?
@@ -458,17 +553,17 @@ model PushSubscription {
 }
 
 model LatestDriverLocation {
-  driver      Driver   @relation(fields: [driverId], references: [id])
-  driverId    String   @id
-  lat         Float
-  lng         Float
-  accuracyM   Float
-  heading     Float?
-  speed       Float?
-  sampledAt   DateTime
-  receivedAt  DateTime @default(now())
-  gpsSession  String
-  sequence    Int
+  driver     Driver   @relation(fields: [driverId], references: [id])
+  driverId   String   @id
+  lat        Float
+  lng        Float
+  accuracyM  Float
+  heading    Float?
+  speed      Float?
+  sampledAt  DateTime
+  receivedAt DateTime @default(now())
+  gpsSession String
+  sequence   Int
 }
 
 model TrackingGrant {
@@ -484,26 +579,26 @@ model TrackingGrant {
 }
 
 model AuthSession {
-  id            String    @id @default(uuid())
-  sessionDigest String    @unique
-  user          StaffUser @relation(fields: [userId], references: [id])
-  userId        String
+  id             String    @id @default(uuid())
+  sessionDigest  String    @unique
+  user           StaffUser @relation(fields: [userId], references: [id])
+  userId         String
   sessionVersion Int
-  expiresAt     DateTime
-  revokedAt     DateTime?
-  createdAt     DateTime  @default(now())
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
 
   @@index([userId])
 }
 
 model IdempotencyReceipt {
-  id          String   @id @default(uuid())
-  scope       String
-  key         String
-  requestHash String
+  id           String   @id @default(uuid())
+  scope        String
+  key          String
+  requestHash  String
   responseJson String
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
 
   @@unique([scope, key])
 }
@@ -511,7 +606,7 @@ model IdempotencyReceipt {
 model Setting {
   id        String   @id @default(uuid())
   key       String   @unique
-  value     String   // JSON-encoded value
+  value     String // JSON-encoded value
   updatedAt DateTime @updatedAt
 }
 
@@ -534,10 +629,10 @@ model Quote {
   totalCents      Int
   rangeLowCents   Int
   rangeHighCents  Int
-  breakdown       String       // JSON fare lines
-  requestHash     String       // hash of the normalized inputs; booking re-verifies
-  pricingAt       DateTime?    // the intended JOURNEY time priced (scheduled → future; else = createdAt)
-  routeSource     String?      // 'traffic' | 'approx' — provenance of distance/duration
+  breakdown       String // JSON fare lines
+  requestHash     String // hash of the normalized inputs; booking re-verifies
+  pricingAt       DateTime? // the intended JOURNEY time priced (scheduled → future; else = createdAt)
+  routeSource     String? // 'traffic' | 'approx' — provenance of distance/duration
   createdAt       DateTime     @default(now())
   expiresAt       DateTime
 
@@ -550,7 +645,7 @@ model AuditEvent {
   actorRole String?
   action    String
   target    String?
-  detail    String?  // redacted, no secrets
+  detail    String? // redacted, no secrets
   createdAt DateTime @default(now())
 
   @@index([createdAt])

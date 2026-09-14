@@ -1,4 +1,5 @@
 import webpush from 'web-push';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 
@@ -81,31 +82,28 @@ export async function deliverToAudience(audience: string, payload: PushPayload):
   return { sent, failed };
 }
 
-// The notify* helpers ENQUEUE to the durable outbox (Task 013) — a worker drains with
-// retries/backoff and drops stale offers, so a transition is never silently un-notified.
-export async function notifyPassenger(bookingId: string, title: string, body: string): Promise<void> {
+// The enqueue* helpers write to the durable outbox INSIDE the caller's transaction (Task 016
+// §4): a committed transition therefore always has its notification job (no fire-and-forget
+// gap), and a rollback removes it. A dedicated worker drains with retries/backoff and drops
+// stale offers, so a transition is never silently un-notified and a duplicate is never re-sent.
+type Db = Prisma.TransactionClient | typeof prisma;
+
+export async function enqueuePassenger(db: Db, bookingId: string, title: string, body: string, opts?: { url?: string; tag?: string; dedupeKey?: string }): Promise<void> {
   const { enqueue } = await import('@/server/outbox');
-  await enqueue(prisma, { audience: `PASSENGER:${bookingId}`, title, body, url: '/track', tag: `ride-${bookingId}` });
+  await enqueue(db, { audience: `PASSENGER:${bookingId}`, title, body, url: opts?.url ?? '/track', tag: opts?.tag ?? `ride-${bookingId}`, dedupeKey: opts?.dedupeKey });
 }
-export async function notifyBookingDriver(bookingId: string, title: string, body: string): Promise<void> {
-  const a = await prisma.assignment.findFirst({ where: { activeBookingId: bookingId }, select: { driverId: true } });
-  if (a) await notifyDriverByDriverId(a.driverId, title, body);
-}
-export async function notifyDriverByDriverId(driverId: string, title: string, body: string): Promise<void> {
-  const d = await prisma.driver.findUnique({ where: { id: driverId }, select: { userId: true } });
+export async function enqueueDriver(db: Db, driverId: string, title: string, body: string, opts?: { tag?: string; url?: string; offerId?: string | null; dedupeKey?: string }): Promise<void> {
+  const d = await db.driver.findUnique({ where: { id: driverId }, select: { userId: true } });
   if (!d) return;
   const { enqueue } = await import('@/server/outbox');
-  await enqueue(prisma, { audience: `DRIVER:${d.userId}`, title, body, url: '/driver', tag: 'ride' });
+  await enqueue(db, { audience: `DRIVER:${d.userId}`, title, body, url: opts?.url ?? '/driver', tag: opts?.tag ?? 'ride', offerId: opts?.offerId ?? null, dedupeKey: opts?.dedupeKey });
 }
-export async function notifyDriverOffer(driverId: string, bookingId: string, pickupEtaSec?: number | null): Promise<void> {
-  const d = await prisma.driver.findUnique({ where: { id: driverId }, select: { userId: true } });
-  if (!d) return;
-  const b = await prisma.booking.findUnique({ where: { id: bookingId }, select: { pickupLabel: true } });
+// Build the offer-notification body from a pickup label + ETA (no passenger PII).
+export function offerBody(pickupLabel: string | null | undefined, pickupEtaSec?: number | null): string {
   const etaMin = pickupEtaSec != null ? Math.max(1, Math.round(pickupEtaSec / 60)) : null;
-  const body = `${b?.pickupLabel ?? 'Pickup nearby'}${etaMin != null ? ` · ~${etaMin} min away` : ''} — tap to accept`;
-  const { enqueue } = await import('@/server/outbox');
-  await enqueue(prisma, { audience: `DRIVER:${d.userId}`, title: 'New ride offer', body, url: '/driver', tag: 'offer' });
+  return `${pickupLabel ?? 'Pickup nearby'}${etaMin != null ? ` · ~${etaMin} min away` : ''} — tap to accept`;
 }
+
 export async function notifyNewMessage(bookingId: string, sender: 'PASSENGER' | 'DRIVER', snippet: string): Promise<void> {
   const body = snippet.length > 120 ? snippet.slice(0, 117) + '…' : snippet;
   const { enqueue } = await import('@/server/outbox');

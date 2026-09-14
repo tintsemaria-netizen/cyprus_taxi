@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { createAssignment } from '@/server/assignments';
-import { notifyDriverOffer, notifyPassenger } from '@/server/push';
+import { enqueueDriver, enqueuePassenger, offerBody } from '@/server/push';
+import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events';
 import type { Candidate } from './eligibility';
 import { canWork } from '@/lib/eligibility-policy';
 
@@ -27,10 +28,16 @@ export async function createOffer(bookingId: string, c: Candidate): Promise<{ id
         },
       });
       await tx.bookingEvent.create({ data: { bookingId, type: 'OFFERED', actorType: 'SYSTEM' } });
+      await recordEvent(tx, {
+        eventType: 'offer.created', aggregateType: 'offer', aggregateId: offer.id, aggregateVersion: 1,
+        correlationId: bookingId, occurredAt: offer.createdAt,
+        payload: { bookingId, driverPseudo: driverPseudo(c.driverId), etaSec: c.etaSec ?? null, distanceM: Math.round(c.distanceMeters), expiresAt: offer.expiresAt.toISOString() },
+      });
+      // Notification job in the SAME transaction, bound to this exact offer (so a delayed
+      // drain that finds the offer already resolved marks it SUPERSEDED, never delivers it).
+      await enqueueDriver(tx, c.driverId, 'New ride offer', offerBody(booking.pickupLabel, c.etaSec), { tag: 'offer', offerId: offer.id });
       return { id: offer.id };
     });
-    // Notify the reserved driver (best-effort; they may not be looking at the app).
-    if (res) void notifyDriverOffer(c.driverId, bookingId, c.etaSec).catch(() => {});
     return res;
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return null; // lost the reservation race
@@ -50,6 +57,11 @@ export async function expireOffer(offerId: string): Promise<void> {
     if (!o || o.status !== 'OFFERED') return;
     await tx.driverOffer.update({ where: { id: offerId }, data: { status: 'EXPIRED', respondedAt: new Date(), activeBookingId: null, activeDriverId: null } });
     await tx.dispatchJob.updateMany({ where: { bookingId: o.bookingId }, data: { triedDriverIds: { push: o.driverId } } });
+    await recordEvent(tx, {
+      eventType: 'offer.expired', aggregateType: 'offer', aggregateId: offerId, aggregateVersion: 2,
+      correlationId: o.bookingId,
+      payload: { bookingId: o.bookingId, driverPseudo: driverPseudo(o.driverId), decision: 'expired', etaSec: o.pickupEtaSec ?? null, distanceM: o.pickupDistanceM ?? null },
+    });
   });
 }
 
@@ -92,13 +104,22 @@ export async function acceptOffer(offerId: string, driverId: string): Promise<Of
       await tx.driverOffer.update({ where: { id: offerId }, data: { status: 'ACCEPTED', respondedAt: new Date(), activeBookingId: null, activeDriverId: null } });
       const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: 'ASSIGNED', revision: { increment: 1 } } });
       await tx.bookingEvent.create({ data: { bookingId: booking.id, type: 'OFFER_ACCEPTED', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'SEARCHING', afterStatus: 'ASSIGNED' } });
+      await recordEvent(tx, {
+        eventType: 'offer.accepted', aggregateType: 'offer', aggregateId: offerId, aggregateVersion: 2,
+        correlationId: booking.id,
+        payload: { bookingId: booking.id, driverPseudo: driverPseudo(driverId), decision: 'accepted', etaSec: offer.pickupEtaSec ?? null, distanceM: offer.pickupDistanceM ?? null },
+      });
+      await recordEvent(tx, {
+        eventType: 'booking.assigned', aggregateType: 'booking', aggregateId: booking.id, aggregateVersion: updated.revision,
+        correlationId: booking.id,
+        payload: { ...bookingEventPayload({ ...booking, status: 'ASSIGNED' }), driverPseudo: driverPseudo(driverId) },
+      });
       await tx.dispatchJob.deleteMany({ where: { bookingId: booking.id } });
+      await enqueuePassenger(tx, booking.id, 'Driver assigned', 'A driver is on the way — track them live.');
       acceptedBookingId = booking.id;
       return { ok: true, status: updated.status, revision: updated.revision };
     });
-    if (result.ok && acceptedBookingId) {
-      void notifyPassenger(acceptedBookingId, 'Driver assigned', 'A driver is on the way — track them live.').catch(() => {});
-    }
+    void acceptedBookingId; // retained for potential callers/telemetry
     return result;
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return err(409, 'DRIVER_BUSY', 'Capacity was just taken.');
@@ -117,6 +138,11 @@ export async function rejectOffer(offerId: string, driverId: string): Promise<Of
     if (!o || o.status !== 'OFFERED') return { ok: true, status: o?.status ?? 'GONE', revision: 0 }; // idempotent / lost the race
     await tx.driverOffer.update({ where: { id: offerId }, data: { status: 'REJECTED', respondedAt: new Date(), activeBookingId: null, activeDriverId: null } });
     await tx.dispatchJob.updateMany({ where: { bookingId: o.bookingId }, data: { triedDriverIds: { push: driverId } } });
+    await recordEvent(tx, {
+      eventType: 'offer.rejected', aggregateType: 'offer', aggregateId: offerId, aggregateVersion: 2,
+      correlationId: o.bookingId,
+      payload: { bookingId: o.bookingId, driverPseudo: driverPseudo(driverId), decision: 'rejected', etaSec: o.pickupEtaSec ?? null, distanceM: o.pickupDistanceM ?? null },
+    });
     return { ok: true, status: 'REJECTED', revision: 0 };
   });
 }

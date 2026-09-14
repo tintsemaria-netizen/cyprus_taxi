@@ -4,7 +4,8 @@ import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { computeFreshness } from '@/lib/freshness';
 import { haversineMeters } from '@/lib/geo';
-import { notifyPassenger } from '@/server/push';
+import { enqueuePassenger } from '@/server/push';
+import { recordEvent, driverPseudo } from '@/server/events';
 
 // M3 trip lifecycle after assignment: arrival + pickup waiting, code-gated start,
 // immutable fare receipt on completion, and pre-pickup rematch. Booking-status
@@ -56,6 +57,8 @@ async function finalizeArrival(tx: Prisma.TransactionClient, bookingId: string, 
   });
   const u = await tx.booking.update({ where: { id: bookingId }, data: { status: 'ARRIVED', arrivedAt: now, revision: { increment: 1 } } });
   await tx.bookingEvent.create({ data: { bookingId, type: 'ARRIVED', actorType: actor.type, actorId: actor.id, beforeStatus: 'EN_ROUTE', afterStatus: 'ARRIVED' } });
+  await recordEvent(tx, { eventType: 'booking.arrived', aggregateType: 'booking', aggregateId: bookingId, aggregateVersion: u.revision, correlationId: bookingId, occurredAt: now, payload: { bookingId, status: 'ARRIVED', actorType: actor.type } });
+  await enqueuePassenger(tx, bookingId, 'Your driver has arrived', 'Your driver is waiting at the pickup point.');
   return ok(u.status, u.revision);
 }
 
@@ -68,6 +71,7 @@ async function finalizeStart(tx: Prisma.TransactionClient, bookingId: string, ac
   }
   const u = await tx.booking.update({ where: { id: bookingId }, data: { status: 'IN_PROGRESS', revision: { increment: 1 } } });
   await tx.bookingEvent.create({ data: { bookingId, type: 'TRIP_STARTED', actorType: actor.type, actorId: actor.id, beforeStatus: 'ARRIVED', afterStatus: 'IN_PROGRESS' } });
+  await recordEvent(tx, { eventType: 'booking.started', aggregateType: 'booking', aggregateId: bookingId, aggregateVersion: u.revision, correlationId: bookingId, occurredAt: now, payload: { bookingId, status: 'IN_PROGRESS', actorType: actor.type, waitingCents: w?.accruedCents ?? 0 } });
   return ok(u.status, u.revision);
 }
 
@@ -105,6 +109,16 @@ async function finalizeCompletion(
   await tx.driver.update({ where: { id: a.driverId }, data: { available: true } });
   const u = await tx.booking.update({ where: { id: b.id }, data: { status: 'COMPLETED', revision: { increment: 1 } } });
   await tx.bookingEvent.create({ data: { bookingId: b.id, type: 'COMPLETED', actorType: actor.type, actorId: actor.id, beforeStatus: 'IN_PROGRESS', afterStatus: 'COMPLETED' } });
+  // Completed-booking projection + a separate fare fact (money is analyzed from the fare
+  // event; finalCents may be null under regulated metering — never coerced to 0).
+  await recordEvent(tx, {
+    eventType: 'booking.completed', aggregateType: 'booking', aggregateId: b.id, aggregateVersion: u.revision, correlationId: b.id,
+    payload: { bookingId: b.id, status: 'COMPLETED', actorType: actor.type, driverPseudo: driverPseudo(a.driverId), priceType, estimateCents: b.fareCents ?? null, waitingCents, finalCents, currency: config.currency },
+  });
+  await recordEvent(tx, {
+    eventType: 'fare.recorded', aggregateType: 'fare', aggregateId: b.id, aggregateVersion: 1, correlationId: b.id,
+    payload: { bookingId: b.id, priceType, currency: config.currency, estimateCents: b.fareCents ?? null, waitingCents, finalCents, paymentMethod: 'CASH_TO_DRIVER', paymentStatus: 'PENDING' },
+  });
   return ok(u.status, u.revision);
 }
 
@@ -128,8 +142,7 @@ export async function arriveAtPickup(bookingId: string, driverId: string, expect
     }
     return finalizeArrival(tx, bookingId, { type: 'DRIVER', id: driverId });
   });
-  if (r.ok) void notifyPassenger(bookingId, 'Your driver has arrived', 'Your driver is waiting at the pickup point.').catch(() => {});
-  return r;
+  return r; // passenger arrival notification is enqueued inside finalizeArrival (atomic)
 }
 
 // ARRIVED → IN_PROGRESS, gated by the passenger's start code.
@@ -179,7 +192,7 @@ export async function staffMarkArrived(bookingId: string, expectedRevision: numb
     if (!(await tx.assignment.findFirst({ where: { activeBookingId: bookingId } }))) return err(409, 'NO_ASSIGNMENT', 'No active assignment.');
     await auditOverride(tx, staffId, role, 'OVERRIDE_ARRIVED', bookingId, reason);
     return finalizeArrival(tx, bookingId, { type: 'STAFF', id: staffId });
-  }).then((r) => { if (r.ok) void notifyPassenger(bookingId, 'Your driver has arrived', 'Your driver is waiting at the pickup point.').catch(() => {}); return r; });
+  });
 }
 
 export async function staffStartTrip(bookingId: string, expectedRevision: number, staffId: string, role: Role, reason: string): Promise<LifeResult> {
@@ -231,8 +244,10 @@ export async function rematchBooking(
   await tx.dispatchJob.create({
     data: { bookingId, deadlineAt: new Date(Date.now() + config.dispatch.searchDeadlineSeconds * 1000), triedDriverIds: [excludeDriverId] },
   });
-  await tx.booking.update({ where: { id: bookingId }, data: { status: 'SEARCHING', arrivedAt: null, revision: { increment: 1 } } });
+  const ub = await tx.booking.update({ where: { id: bookingId }, data: { status: 'SEARCHING', arrivedAt: null, revision: { increment: 1 } } });
   await tx.bookingEvent.create({ data: { bookingId, type: 'REMATCH', actorType, actorId: actorType === 'DRIVER' ? excludeDriverId : undefined, afterStatus: 'SEARCHING', reason } });
+  await recordEvent(tx, { eventType: 'booking.rematch', aggregateType: 'booking', aggregateId: bookingId, aggregateVersion: ub.revision, correlationId: bookingId, payload: { bookingId, status: 'SEARCHING', actorType, excludeDriverPseudo: driverPseudo(excludeDriverId), reason } });
+  await enqueuePassenger(tx, bookingId, 'Finding you another driver', 'Your previous driver became unavailable — we’re matching you again.');
 }
 
 // Driver cancels before pickup → automatic rematch (not a terminal cancel).
@@ -247,7 +262,7 @@ export async function driverCancelPrePickup(bookingId: string, driverId: string,
     await rematchBooking(tx, bookingId, driverId, reason || 'driver canceled before pickup', 'DRIVER');
     const updated = await tx.booking.findUnique({ where: { id: bookingId } });
     return ok(updated!.status, updated!.revision);
-  }).then((r) => { if (r.ok) void notifyPassenger(bookingId, 'Finding you another driver', 'Your previous driver became unavailable — we’re matching you again.').catch(() => {}); return r; });
+  }); // passenger rematch notification is enqueued inside rematchBooking (atomic)
 }
 
 function safeParse(s: string): unknown {

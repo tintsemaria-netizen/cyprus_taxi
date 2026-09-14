@@ -1,8 +1,6 @@
 import { apiOk, apiError, Errors } from '@/lib/http';
 import { getTrackingBookingId } from '@/lib/tracking';
 import { changeStatus } from '@/server/assignments';
-import { prisma } from '@/lib/db';
-import { notifyDriverByDriverId } from '@/server/push';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,10 +18,8 @@ export async function POST(req: Request) {
     return Errors.validation({ expectedRevision: 'Required.' });
   }
 
-  // Capture the assigned driver BEFORE cancellation frees the assignment, so we can
-  // notify them if the cancel succeeds.
-  const active = await prisma.assignment.findFirst({ where: { activeBookingId: bookingId }, select: { driverId: true } });
-
+  // changeStatus records the cancellation event and enqueues the driver notification
+  // atomically (Task 016 §4), so there is no fire-and-forget gap after the commit.
   const result = await changeStatus({
     bookingId,
     to: 'CANCELED',
@@ -32,6 +28,5 @@ export async function POST(req: Request) {
     reason: 'passenger canceled',
   });
   if (!result.ok) return apiError(result.status, result.code, result.message);
-  if (active) void notifyDriverByDriverId(active.driverId, 'Ride canceled', 'The passenger canceled this ride.').catch(() => {});
   return apiOk({ ok: true, status: result.status, revision: result.revision });
 }

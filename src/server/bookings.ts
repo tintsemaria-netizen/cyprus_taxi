@@ -7,6 +7,7 @@ import { createGrantTx } from '@/lib/tracking';
 import { CreateBookingInput } from '@/lib/validation';
 import { nicosiaWallTimeToUtc } from '@/lib/timezone';
 import { consumeQuote } from '@/server/quote';
+import { recordEvent, bookingEventPayload } from '@/server/events';
 import { Prisma } from '@prisma/client';
 
 export type CreateResult =
@@ -149,6 +150,13 @@ export async function createBooking(
         },
       });
       await tx.bookingEvent.create({ data: { bookingId: b.id, type: 'CREATED', actorType: 'PASSENGER', afterStatus: initialStatus } });
+      // Durable domain event in the SAME transaction (rollback removes it too).
+      await recordEvent(tx, {
+        eventType: scheduledAt ? 'booking.scheduled' : 'booking.requested',
+        aggregateType: 'booking', aggregateId: b.id, aggregateVersion: b.revision,
+        occurredAt: b.createdAt,
+        payload: bookingEventPayload(b),
+      });
       if (initialStatus === 'SEARCHING') {
         await tx.dispatchJob.create({ data: { bookingId: b.id, deadlineAt: new Date(Date.now() + 180 * 1000) } });
       }

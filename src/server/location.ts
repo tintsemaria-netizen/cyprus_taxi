@@ -1,5 +1,7 @@
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { recordEvent, driverPseudo } from '@/server/events';
 
 export type IngestResult =
   | { ok: true }
@@ -41,43 +43,52 @@ export async function ingestLocation(
 
   // Up to two attempts: if no row exists we insert; if a concurrent insert wins the
   // race we retry as a conditional update (so the newer sample is not silently lost).
+  // Each accepted write ALSO persists durable GPS history + a domain event in the SAME
+  // transaction (Task 016 §5), so live state and history can never diverge; rejected /
+  // out-of-order samples never reach the history table.
   for (let attempt = 0; attempt < 2; attempt++) {
-    const existing = await prisma.latestDriverLocation.findUnique({ where: { driverId } });
-
-    if (!existing) {
-      try {
-        await prisma.latestDriverLocation.create({ data: { driverId, ...data } });
-        return { ok: true };
-      } catch (e) {
-        // ONLY a uniqueness race is a retry; anything else is a real error (never
-        // mislabelled OUT_OF_ORDER).
-        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') continue;
-        throw e;
+    const outcome = await prisma.$transaction(async (tx): Promise<'ok' | 'race' | 'out_of_order'> => {
+      const existing = await tx.latestDriverLocation.findUnique({ where: { driverId } });
+      if (!existing) {
+        try {
+          await tx.latestDriverLocation.create({ data: { driverId, ...data } });
+        } catch (e) {
+          if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return 'race';
+          throw e;
+        }
+      } else {
+        // Fast-path rejects with clear codes (the conditional write below is authoritative).
+        if (sampledAt.getTime() <= existing.sampledAt.getTime()) return 'out_of_order';
+        if (existing.gpsSession === sample.gpsSession && sample.sequence <= existing.sequence) return 'out_of_order';
+        // Atomic guarded write: replace only if the stored row is BOTH older by time AND
+        // (a new session OR a strictly higher in-session sequence).
+        const res = await tx.latestDriverLocation.updateMany({
+          where: {
+            driverId,
+            sampledAt: { lt: sampledAt },
+            OR: [{ gpsSession: { not: sample.gpsSession } }, { sequence: { lt: sample.sequence } }],
+          },
+          data,
+        });
+        if (res.count !== 1) return 'out_of_order'; // a concurrent newer sample won, or in-session reversal
       }
-    }
-
-    // Fast-path rejects with clear codes (the conditional write below is authoritative).
-    if (sampledAt.getTime() <= existing.sampledAt.getTime()) {
-      return reject(409, 'OUT_OF_ORDER', 'Older or duplicate sample ignored.');
-    }
-    if (existing.gpsSession === sample.gpsSession && sample.sequence <= existing.sequence) {
-      return reject(409, 'OUT_OF_ORDER', 'Older or duplicate sample ignored.');
-    }
-
-    // Atomic guarded write: replace only if the stored row is BOTH older by time AND
-    // (a new session OR a strictly higher in-session sequence). This preserves both
-    // monotonic requirements even under concurrent samples.
-    const res = await prisma.latestDriverLocation.updateMany({
-      where: {
-        driverId,
-        sampledAt: { lt: sampledAt },
-        OR: [{ gpsSession: { not: sample.gpsSession } }, { sequence: { lt: sample.sequence } }],
-      },
-      data,
+      // Accepted → durable history (idempotent on the sample identity) + domain event.
+      const asg = await tx.assignment.findFirst({ where: { activeDriverId: driverId }, select: { activeBookingId: true } });
+      const bookingId = asg?.activeBookingId ?? null;
+      await tx.$executeRaw`
+        INSERT INTO "GpsSample" (id, "driverId", "gpsSession", sequence, lat, lng, "accuracyM", heading, speed, "sampledAt", "receivedAt", "bookingId", "createdAt")
+        VALUES (${randomUUID()}, ${driverId}, ${sample.gpsSession}, ${sample.sequence}, ${sample.lat}, ${sample.lng}, ${sample.accuracyM}, ${sample.heading ?? null}, ${sample.speed ?? null}, ${sampledAt}, now(), ${bookingId}, now())
+        ON CONFLICT ("driverId", "gpsSession", sequence) DO NOTHING`;
+      await recordEvent(tx, {
+        eventType: 'gps.sample', aggregateType: 'gps', aggregateId: `${driverId}:${sample.gpsSession}`, aggregateVersion: sample.sequence,
+        occurredAt: sampledAt, correlationId: bookingId,
+        payload: { driverPseudo: driverPseudo(driverId), gpsSession: sample.gpsSession, sequence: sample.sequence, lat: sample.lat, lng: sample.lng, accuracyM: sample.accuracyM, heading: sample.heading ?? null, speed: sample.speed ?? null, bookingId },
+      });
+      return 'ok';
     });
-    if (res.count === 1) return { ok: true };
-    // count 0 → a concurrent newer sample won, or an in-session sequence reversal.
-    return reject(409, 'OUT_OF_ORDER', 'A newer position was recorded concurrently.');
+    if (outcome === 'ok') return { ok: true };
+    if (outcome === 'out_of_order') return reject(409, 'OUT_OF_ORDER', 'Older or duplicate sample ignored.');
+    // race → retry once as a conditional update (existing row now present)
   }
   return reject(409, 'OUT_OF_ORDER', 'Could not store sample after a concurrent update.');
 }
