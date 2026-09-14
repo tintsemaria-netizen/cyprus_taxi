@@ -5,83 +5,120 @@ import { createOffer, expireOffer } from './offers';
 import { rematchBooking } from './lifecycle';
 import { enqueuePassenger } from '@/server/push';
 import { recordEvent } from '@/server/events';
+import { heartbeat } from '@/server/workers/heartbeat';
 
-// Durable-ish in-process dispatch worker (Task 012 §4). Postgres-backed jobs with a lease
-// so multiple instances/ticks are safe; recovers on restart because state lives in the DB
-// (not in memory). External Google calls happen outside DB transactions.
+// Supervised worker loop (Task 012 §4, restructured for Task 016 §4). Postgres-backed jobs with
+// a lease so multiple instances/ticks are safe; recovers on restart because state lives in the DB.
+// One tick runs FOUR isolated sections in priority order — dispatch first (never blocked by the
+// others), then notifications, analytics export, and (on a slow cadence) maintenance. Each writes
+// a WorkerHeartbeat so cross-process health is real, not a module-local timer. External calls
+// (Google, push, ClickHouse) happen outside DB transactions.
 
 const TICK_MS = 2000;
 const LEASE_MS = 10_000;
+const MAINTENANCE_EVERY_TICKS = Math.max(1, Math.round(300_000 / TICK_MS)); // ~5 min
 
 // Next.js compiles instrumentation.ts and route handlers into SEPARATE bundles, so a
 // plain module-level singleton would be duplicated. Anchor the worker state on globalThis
 // so the health route and the worker (started from instrumentation) share one instance,
 // and the timer is never started twice.
-interface DispatchState { running: boolean; timer: ReturnType<typeof setInterval> | null; lastTickAt: number; workerId: string; }
+interface DispatchState { running: boolean; timer: ReturnType<typeof setInterval> | null; lastTickAt: number; workerId: string; tickCount: number; }
 const g = globalThis as unknown as { __ilyasDispatch?: DispatchState };
-const state: DispatchState = (g.__ilyasDispatch ??= { running: false, timer: null, lastTickAt: 0, workerId: `w-${Math.floor(Date.now() % 1e9)}-${process.pid}` });
+const state: DispatchState = (g.__ilyasDispatch ??= { running: false, timer: null, lastTickAt: 0, workerId: `w-${Math.floor(Date.now() % 1e9)}-${process.pid}`, tickCount: 0 });
 
+// In-process view (used only in the legacy single-process mode). In dedicated-worker mode the
+// health route reads WorkerHeartbeat instead, because the worker ticks in a different process.
 export function getDispatchHealth() {
   return { workerId: state.workerId, lastTickAt: state.lastTickAt, alive: state.lastTickAt > 0 && Date.now() - state.lastTickAt < TICK_MS * 5 };
 }
 
-export function startDispatchWorker() {
+export function startWorkers() {
   if (state.timer) return; // already started
   state.timer = setInterval(() => { void runOnce(); }, TICK_MS);
   // eslint-disable-next-line no-console
-  console.log(`[dispatch] worker ${state.workerId} started (tick ${TICK_MS}ms)`);
+  console.log(`[worker] ${state.workerId} started (tick ${TICK_MS}ms)`);
 }
+// Back-compat alias (older callers / tests).
+export const startDispatchWorker = startWorkers;
 
 export async function runOnce(): Promise<void> {
   if (state.running) return; // never overlap ticks in this process
   state.running = true;
   try {
     state.lastTickAt = Date.now();
+    state.tickCount++;
     const now = new Date();
 
-    // 0) Promote scheduled rides whose dispatch lead window has arrived, and rematch
-    //    pre-pickup trips whose driver's GPS has been lost too long.
-    await promoteScheduled(now);
-    await rematchOnGpsLoss(now);
-    // Durable notification delivery + document-expiry enforcement (best-effort, isolated).
-    try { const { drainOutbox } = await import('@/server/outbox'); await drainOutbox(now); } catch (e) { console.error('[outbox] drain error', e); }
-    if (now.getMinutes() % 5 === 0) { try { const { enforceDocumentExpiries } = await import('@/server/applications'); await enforceDocumentExpiries(now); } catch (e) { console.error('[expiry] error', e); } }
+    // --- Section 1: DISPATCH (highest priority; isolated so a slow section never delays it) ---
+    try {
+      await runDispatchSection(now);
+      await heartbeat('dispatch', state.workerId, { tick: state.tickCount });
+    } catch (e) { console.error('[dispatch] section error', e); }
 
-    // 1) Resolve timed-out offers (release reservation, remember the driver).
-    const expired = await prisma.driverOffer.findMany({ where: { status: 'OFFERED', expiresAt: { lt: now } }, select: { id: true } });
-    for (const o of expired) await expireOffer(o.id);
+    // --- Section 2: NOTIFICATIONS (durable outbox drain) ---
+    try {
+      const { drainOutbox } = await import('@/server/outbox');
+      const r = await drainOutbox(now);
+      await heartbeat('notifications', state.workerId, { claimed: r.claimed });
+    } catch (e) { console.error('[outbox] drain error', e); }
 
-    // 2) Advance SEARCHING bookings that currently have no live offer.
-    const jobs = await prisma.dispatchJob.findMany({
-      where: { booking: { status: 'SEARCHING' }, OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }] },
-      select: { id: true, bookingId: true },
-      take: 25,
-    });
-    for (const j of jobs) {
-      const active = await prisma.driverOffer.findFirst({ where: { activeBookingId: j.bookingId } });
-      if (active) continue; // waiting on an outstanding offer
-      // Claim a short lease so only one worker/tick processes this job.
-      const claimed = await prisma.dispatchJob.updateMany({
-        where: { id: j.id, OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }] },
-        data: { leaseOwner: state.workerId, leaseUntil: new Date(Date.now() + LEASE_MS) },
-      });
-      if (claimed.count === 0) continue;
+    // --- Section 3: ANALYTICS EXPORT (no-op unless ClickHouse configured; never blocks ops) ---
+    try {
+      const { drainAnalytics } = await import('@/server/analytics/exporter');
+      const r = await drainAnalytics(now);
+      await heartbeat('analytics', state.workerId, r);
+    } catch (e) { console.error('[analytics] export error', e); }
+
+    // --- Section 4: MAINTENANCE (slow cadence: retention, doc-expiry enforcement) ---
+    if (state.tickCount % MAINTENANCE_EVERY_TICKS === 0) {
       try {
-        await processJob(j.id);
-      } catch (e) {
-        // Isolate per-job failure (e.g. a slow/erroring route lookup) so it never stops
-        // deadline handling for the rest of the queue this tick.
-        // eslint-disable-next-line no-console
-        console.error(`[dispatch] job ${j.id} error`, e);
-      } finally {
-        await prisma.dispatchJob.updateMany({ where: { id: j.id, leaseOwner: state.workerId }, data: { leaseUntil: null, leaseOwner: null } });
-      }
+        const { runMaintenance } = await import('@/server/workers/maintenance');
+        const r = await runMaintenance(now);
+        try { const { enforceDocumentExpiries } = await import('@/server/applications'); await enforceDocumentExpiries(now); } catch (e) { console.error('[expiry] error', e); }
+        await heartbeat('maintenance', state.workerId, r);
+      } catch (e) { console.error('[maintenance] error', e); }
     }
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.error('[dispatch] tick error', e);
+    console.error('[worker] tick error', e);
   } finally {
     state.running = false;
+  }
+}
+
+// The dispatch work of a single tick: promote scheduled, rematch on GPS loss, resolve expired
+// offers, and advance SEARCHING bookings that have no live offer.
+async function runDispatchSection(now: Date): Promise<void> {
+  await promoteScheduled(now);
+  await rematchOnGpsLoss(now);
+
+  const expired = await prisma.driverOffer.findMany({ where: { status: 'OFFERED', expiresAt: { lt: now } }, select: { id: true } });
+  for (const o of expired) await expireOffer(o.id);
+
+  const jobs = await prisma.dispatchJob.findMany({
+    where: { booking: { status: 'SEARCHING' }, OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }] },
+    select: { id: true, bookingId: true },
+    take: 25,
+  });
+  for (const j of jobs) {
+    const active = await prisma.driverOffer.findFirst({ where: { activeBookingId: j.bookingId } });
+    if (active) continue; // waiting on an outstanding offer
+    // Claim a short lease so only one worker/tick processes this job.
+    const claimed = await prisma.dispatchJob.updateMany({
+      where: { id: j.id, OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }] },
+      data: { leaseOwner: state.workerId, leaseUntil: new Date(Date.now() + LEASE_MS) },
+    });
+    if (claimed.count === 0) continue;
+    try {
+      await processJob(j.id);
+    } catch (e) {
+      // Isolate per-job failure (e.g. a slow/erroring route lookup) so it never stops
+      // deadline handling for the rest of the queue this tick.
+      // eslint-disable-next-line no-console
+      console.error(`[dispatch] job ${j.id} error`, e);
+    } finally {
+      await prisma.dispatchJob.updateMany({ where: { id: j.id, leaseOwner: state.workerId }, data: { leaseUntil: null, leaseOwner: null } });
+    }
   }
 }
 

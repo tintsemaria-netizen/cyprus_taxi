@@ -2,6 +2,46 @@
 # collides with other apps on this host. The database has NO published host port.
 name: taxicy
 
+# Shared runtime environment for the web app AND the dedicated worker (same image, one source
+# of truth). Per-service overrides (WORKER_ROLE, RUN_MIGRATIONS, ports) are set below.
+x-app-env: &app-env
+  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@taxi-db:5432/${POSTGRES_DB}?schema=public
+  APP_BASE_URL: ${APP_BASE_URL}
+  APP_ALLOWED_HOSTS: ${APP_ALLOWED_HOSTS:-}
+  APP_ENV: ${APP_ENV:-beta}
+  SESSION_SECRET: ${SESSION_SECRET}
+  TRACKING_RECEIPT_SECRET: ${TRACKING_RECEIPT_SECRET}
+  DEMO_MODE: ${DEMO_MODE}
+  NEXT_PUBLIC_MAP_STYLE: ${NEXT_PUBLIC_MAP_STYLE}
+  NEXT_PUBLIC_MAP_TILES: ${NEXT_PUBLIC_MAP_TILES}
+  NEXT_PUBLIC_MAP_ATTRIBUTION: ${NEXT_PUBLIC_MAP_ATTRIBUTION}
+  TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS}
+  APP_RELEASE: ${APP_RELEASE:-unknown}
+  # Server-only Google key for Geocoding + Routes (never exposed to the browser).
+  GOOGLE_MAPS_SERVER_API_KEY: ${GOOGLE_MAPS_SERVER_API_KEY:-}
+  # Web Push (VAPID). Public key is safe for the browser; private key is server-only.
+  VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+  VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+  VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+  # Driver KYC (Task 015): private document storage + SMS OTP (Twilio Verify).
+  PRIVATE_UPLOAD_DIR: /app/private-uploads
+  TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+  TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+  TWILIO_VERIFY_SERVICE_SID: ${TWILIO_VERIFY_SERVICE_SID:-}
+  SMS_ALLOW_DEV_OTP: ${SMS_ALLOW_DEV_OTP:-}
+  CLAMAV_HOST: ${CLAMAV_HOST:-}
+  CLAMAV_PORT: ${CLAMAV_PORT:-}
+  # Task 016 data platform. Dedicated workers own the loop; the web app skips it.
+  DEDICATED_WORKERS: ${DEDICATED_WORKERS:-true}
+  GPS_RETENTION_DAYS: ${GPS_RETENTION_DAYS:-7}
+  # ClickHouse analytics (private network only). Empty until the analytics store is enabled.
+  CLICKHOUSE_URL: ${CLICKHOUSE_URL:-}
+  CLICKHOUSE_DB: ${CLICKHOUSE_DB:-taxi_analytics}
+  CLICKHOUSE_WRITE_USER: ${CLICKHOUSE_WRITE_USER:-taxi_writer}
+  CLICKHOUSE_WRITE_PASSWORD: ${CLICKHOUSE_WRITE_PASSWORD:-}
+  CLICKHOUSE_READ_USER: ${CLICKHOUSE_READ_USER:-taxi_reader}
+  CLICKHOUSE_READ_PASSWORD: ${CLICKHOUSE_READ_PASSWORD:-}
+
 services:
   taxi-db:
     image: postgres:16-alpine
@@ -32,42 +72,40 @@ services:
         NEXT_PUBLIC_MAP_ATTRIBUTION: ${NEXT_PUBLIC_MAP_ATTRIBUTION}
         NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
         NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: ${NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}
+    image: taxicy-taxi-app
     container_name: taxicy-app
     restart: unless-stopped
     depends_on:
       taxi-db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@taxi-db:5432/${POSTGRES_DB}?schema=public
-      APP_BASE_URL: ${APP_BASE_URL}
-      APP_ALLOWED_HOSTS: ${APP_ALLOWED_HOSTS:-}
-      SESSION_SECRET: ${SESSION_SECRET}
-      TRACKING_RECEIPT_SECRET: ${TRACKING_RECEIPT_SECRET}
-      DEMO_MODE: ${DEMO_MODE}
-      NEXT_PUBLIC_MAP_STYLE: ${NEXT_PUBLIC_MAP_STYLE}
-      NEXT_PUBLIC_MAP_TILES: ${NEXT_PUBLIC_MAP_TILES}
-      NEXT_PUBLIC_MAP_ATTRIBUTION: ${NEXT_PUBLIC_MAP_ATTRIBUTION}
-      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS}
-      APP_RELEASE: ${APP_RELEASE:-unknown}
-      # Server-only Google key for Geocoding + Routes (never exposed to the browser).
-      GOOGLE_MAPS_SERVER_API_KEY: ${GOOGLE_MAPS_SERVER_API_KEY:-}
-      # Web Push (VAPID). Public key is safe for the browser; private key is server-only.
-      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
-      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
-      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
-      # Driver KYC (Task 015): private document storage + SMS OTP (Twilio Verify).
-      PRIVATE_UPLOAD_DIR: /app/private-uploads
-      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
-      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
-      TWILIO_VERIFY_SERVICE_SID: ${TWILIO_VERIFY_SERVICE_SID:-}
-      SMS_ALLOW_DEV_OTP: ${SMS_ALLOW_DEV_OTP:-}
-      CLAMAV_HOST: ${CLAMAV_HOST:-}
-      CLAMAV_PORT: ${CLAMAV_PORT:-}
+      <<: *app-env
+      # The web app OWNS migrations and does NOT run the worker loop (dedicated mode).
+      WORKER_ROLE: web
     volumes:
       - taxicy_uploads:/app/private-uploads
     # Bind only to loopback; nginx on the host proxies this vhost.
     ports:
       - '127.0.0.1:${APP_HOST_PORT}:3000'
+    networks:
+      - taxicy_net
+
+  # Dedicated worker: same image, runs ONLY the background loop (dispatch, notifications,
+  # analytics export, maintenance). Not proxied by nginx; no published port. Skips migrations
+  # (the web app owns them) and waits for the schema before starting.
+  taxi-worker:
+    image: taxicy-taxi-app
+    container_name: taxicy-worker
+    restart: unless-stopped
+    depends_on:
+      taxi-db:
+        condition: service_healthy
+    environment:
+      <<: *app-env
+      WORKER_ROLE: worker
+      RUN_MIGRATIONS: 'off'
+    volumes:
+      - taxicy_uploads:/app/private-uploads
     networks:
       - taxicy_net
 
