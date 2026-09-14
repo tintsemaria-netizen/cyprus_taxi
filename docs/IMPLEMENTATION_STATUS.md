@@ -4,7 +4,7 @@ Updated 2026-09-14. Deployed publicly to https://cyprustaxi.ackedberryes.store, 
 
 **Live verification (2026-09-14):** an automated server-side smoke of the full no-dispatcher journey PASSED on prod (book → worker offer → accept → EN_ROUTE → arrive → coded start → complete → immutable receipt; capacity freed), run via the real API with a dedicated synthetic driver that was created for the test and then removed. Driver GPS was DB test-scaffolding, so this proves the dispatch/lifecycle/receipt server flow live — NOT on-device GPS or handset push delivery (still to be checked on a real phone). Details in docs/HANDOFF.md; per-item status in Tasks/013 (completion matrix).
 
-Remaining (documented next actions): scheduled-time quote pricing (pricingAt/departureAt + bind schedule to quote hash), full ETA source-exposure in the passenger UI, chat cursor pagination, notification outbox, and a real on-phone browser journey (device GPS + push). External enablement: Places API (New); a commercial weather provider; any dynamic-tariff authorization.
+Remaining (documented next actions): ETA source-exposure in the passenger UI (server distinguishes traffic vs approx); notification outbox (delivery best-effort); Task 015 follow-ups (real SMS Account SID/Auth Token, AV scanner, expiry reminders/auto DOCUMENTS_EXPIRED, legacy-driver review queue, email verification); and real on-phone browser journeys (device GPS + push). External enablement: Places API (New); a commercial weather provider; any dynamic-tariff authorization. (Task 013 scheduled-time pricing + chat cursor pagination: DONE.)
 
 | Milestone | Status | Evidence / next action |
 |---|---|---|
