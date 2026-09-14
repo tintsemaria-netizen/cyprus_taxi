@@ -17,8 +17,10 @@ interface Trip {
 }
 interface CurrentTrip { onDuty: boolean; available: boolean; trip: Trip | null }
 interface Offer {
-  offerId: string; expiresAt: string; pickupEtaSec: number | null; pickup: { lat: number; lng: number; label: string };
-  dropoff: { label: string }; vClass: string; passengerCount: number; fareCents: number | null;
+  offerId: string; expiresAt: string; pickupEtaSec: number | null; pickupDistanceM: number | null;
+  pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string };
+  vClass: string; passengerCount: number; passengerName: string; note: string | null; scheduledAt: string | null;
+  fareCents: number | null; priceType: string | null; currency: string; fareBreakdown: { label: string; cents: number }[] | null;
 }
 interface TripCard {
   bookingId: string; reference: string; at: string; pickupLabel: string; dropoffLabel: string; vClass: string; passengerCount: number;
@@ -41,6 +43,7 @@ const money = (cents: number | null, currency = 'EUR') => {
   try { return new Intl.NumberFormat('en-IE', { style: 'currency', currency }).format(cents / 100); } catch { return `${(cents / 100).toFixed(2)} ${currency}`; }
 };
 const dur = (s: number) => (s < 60 ? `${s}s` : s < 3600 ? `${Math.round(s / 60)}m` : `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m`);
+const km = (m: number) => (m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`);
 
 export default function Page() {
   return <StaffShell roles={['DRIVER']}>{() => <Driver />}</StaffShell>;
@@ -267,8 +270,27 @@ function HomeSection(props: {
           </div>
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
             {offer.pickupEtaSec != null && <span className="rounded-full bg-elevated px-2 py-1">≈ {Math.max(1, Math.round(offer.pickupEtaSec / 60))} min to pickup</span>}
+            {offer.pickupDistanceM != null && <span className="rounded-full bg-elevated px-2 py-1">{km(offer.pickupDistanceM)} away</span>}
             <span className="rounded-full bg-elevated px-2 py-1">{offer.passengerCount}p · {offer.vClass}</span>
-            {offer.fareCents != null && <span className="rounded-full bg-elevated px-2 py-1">≈ {money(offer.fareCents)}</span>}
+            {offer.scheduledAt && <span className="rounded-full bg-elevated px-2 py-1">🕒 {new Date(offer.scheduledAt).toLocaleString('en-GB')}</span>}
+          </div>
+          {/* Complete passenger info (phone revealed on accept). */}
+          <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
+            <div className="font-medium">{offer.passengerName} · {offer.passengerCount} passenger{offer.passengerCount === 1 ? '' : 's'} · {offer.vClass}</div>
+            {offer.note && <div className="mt-1 text-xs text-warn">Note: {offer.note}</div>}
+            <div className="mt-1 text-[11px] text-muted">Passenger phone becomes available once you accept.</div>
+          </div>
+          {/* Full fare breakdown so the driver sees all prices before accepting. */}
+          <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
+            <div className="mb-1 flex items-center justify-between">
+              <span className="font-medium">Fare</span>
+              <span className="text-[11px] text-muted">{offer.priceType === 'UPFRONT_DYNAMIC' ? 'Upfront (fixed price)' : 'Regulated meter — estimate'}</span>
+            </div>
+            {offer.fareBreakdown?.length ? offer.fareBreakdown.map((l, i) => (
+              <div key={i} className="flex justify-between gap-3 text-xs text-muted"><span className="min-w-0 truncate">{l.label}</span><span className="shrink-0">{money(l.cents, offer.currency)}</span></div>
+            )) : <div className="text-xs text-muted">No fare estimate on this order.</div>}
+            <div className="mt-1 flex justify-between border-t border-edge pt-1 font-semibold"><span>{offer.priceType === 'UPFRONT_DYNAMIC' ? 'Total' : 'Estimated total'}</span><span>{offer.fareCents != null ? money(offer.fareCents, offer.currency) : '—'}</span></div>
+            {offer.priceType !== 'UPFRONT_DYNAMIC' && <div className="mt-1 text-[11px] text-muted">The final metered amount is settled with the passenger.</div>}
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2">
             <button className="btn-ghost min-h-[44px] !text-danger border border-danger/40" disabled={offerBusy} onClick={() => props.onDecline(offer.offerId)}>Decline</button>

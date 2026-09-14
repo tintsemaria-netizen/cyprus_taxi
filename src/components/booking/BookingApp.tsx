@@ -53,6 +53,7 @@ export default function BookingApp() {
   const [passenger, setPassenger] = useState<{ phone: string; name?: string; email?: string | null } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [destinations, setDestinations] = useState<{ label: string; lat: number; lng: number }[]>([]);
+  const [places, setPlaces] = useState<{ home: { label: string; lat: number; lng: number } | null; work: { label: string; lat: number; lng: number } | null }>({ home: null, work: null });
   const pendingSubmit = useRef<number | undefined>(undefined);
   const pendingSubmitActive = useRef(false);
 
@@ -91,8 +92,9 @@ export default function BookingApp() {
         setPhone((cur) => cur || p.phone);
         if (p.name) setName((cur) => cur || p.name!);
         api<{ destinations: { label: string; lat: number; lng: number }[] }>('/passenger/destinations').then((d) => setDestinations(d.destinations)).catch(() => {});
+        api<{ home: { label: string; lat: number; lng: number } | null; work: { label: string; lat: number; lng: number } | null }>('/passenger/places').then(setPlaces).catch(() => {});
       })
-      .catch(() => setPassenger(null));
+      .catch(() => { setPassenger(null); setPlaces({ home: null, work: null }); });
   }, []);
   useEffect(() => { loadPassenger(); }, [loadPassenger]);
 
@@ -428,6 +430,12 @@ export default function BookingApp() {
                         </button>
                       </div>
                       <PlacesInput kind="To" value={dropoff} text={dropoffText} onText={setDropoffText} onSelect={setDropoff} error={errors.dropoff} />
+                      {!dropoff && (places.home || places.work) && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {places.home && <button type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: places.home!.lat, lng: places.home!.lng, label: places.home!.label }); setDropoffText(places.home!.label); }}>🏠 Home</button>}
+                          {places.work && <button type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: places.work!.lat, lng: places.work!.lng, label: places.work!.label }); setDropoffText(places.work!.label); }}>💼 Work</button>}
+                        </div>
+                      )}
                       {!dropoff && destinations.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1">
                           <span className="text-[11px] text-muted">Recent:</span>

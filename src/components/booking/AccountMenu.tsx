@@ -75,6 +75,7 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
             </a>
             <div className="my-1 border-t border-edge" />
             <MenuLink href="/rides" onSelect={() => setOpen(false)}>My rides</MenuLink>
+            <MenuLink href="/account#places" onSelect={() => setOpen(false)}>Saved places</MenuLink>
             <MenuLink href="/account" onSelect={() => setOpen(false)}>Profile settings</MenuLink>
             <MenuLink href="/privacy" onSelect={() => setOpen(false)}>Help &amp; privacy</MenuLink>
             <div className="my-1 border-t border-edge" />

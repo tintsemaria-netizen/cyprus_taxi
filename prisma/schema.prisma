@@ -346,7 +346,23 @@ model Passenger {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  sessions PassengerSession[]
+  sessions    PassengerSession[]
+  savedPlaces SavedPlace[]
+}
+
+// Passenger saved places (Task 019): Home / Work quick destinations. One per kind per passenger.
+model SavedPlace {
+  id          String    @id @default(uuid())
+  passenger   Passenger @relation(fields: [passengerId], references: [id], onDelete: Cascade)
+  passengerId String
+  kind        String // HOME | WORK
+  label       String
+  lat         Float
+  lng         Float
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([passengerId, kind])
 }
 
 model PassengerSession {

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { config } from '@/lib/config';
 import { createAssignment } from '@/server/assignments';
 import { enqueueDriver, enqueuePassenger, offerBody } from '@/server/push';
 import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events';
@@ -153,16 +154,34 @@ export async function getDriverActiveOffer(driverId: string) {
   if (!o || o.expiresAt < new Date()) return null;
   const b = await prisma.booking.findUnique({ where: { id: o.bookingId } });
   if (!b || b.status !== 'SEARCHING') return null;
+  // The offered driver gets the COMPLETE order data to decide: full fare breakdown + price type,
+  // both endpoints, passenger name + count + note, schedule and pickup distance/ETA. Passenger
+  // phone is revealed on acceptance (current-trip), not to every offered driver.
   return {
     offerId: o.id,
     expiresAt: o.expiresAt.toISOString(),
     pickupEtaSec: o.pickupEtaSec,
+    pickupDistanceM: o.pickupDistanceM,
     pickup: { lat: b.pickupLat, lng: b.pickupLng, label: b.pickupLabel },
-    dropoff: { label: b.dropoffLabel },
+    dropoff: { lat: b.dropoffLat, lng: b.dropoffLng, label: b.dropoffLabel },
     vClass: b.vClass,
     passengerCount: b.passengerCount,
+    passengerName: b.passengerName,
+    note: b.note,
+    scheduledAt: b.scheduledAt ? b.scheduledAt.toISOString() : null,
     fareCents: b.fareCents,
+    priceType: b.priceType,
+    currency: config.currency,
+    fareBreakdown: b.fareBreakdown ? safeParseLines(b.fareBreakdown) : null,
   };
+}
+
+function safeParseLines(s: string): { label: string; cents: number }[] | null {
+  try {
+    const v = JSON.parse(s);
+    if (Array.isArray(v)) return v.filter((x) => x && typeof x.label === 'string' && typeof x.cents === 'number').map((x) => ({ label: x.label, cents: x.cents }));
+    return null;
+  } catch { return null; }
 }
 
 function err(status: number, code: string, message: string): OfferResult {
