@@ -69,6 +69,18 @@ export const config = {
     provider: process.env.WEATHER_PROVIDER || 'none', // none | fixture | open-meteo
     maxAgeMinutes: num('WEATHER_MAX_AGE_MINUTES', 60),
   },
+  // SMS OTP for driver-applicant phone verification (Task 015). Twilio Verify when fully
+  // configured (Account SID + Auth Token + Verify Service SID), else a dev code path.
+  sms: {
+    provider: (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_VERIFY_SERVICE_SID ? 'twilio' : 'dev') as 'twilio' | 'dev',
+    twilioSid: () => process.env.TWILIO_ACCOUNT_SID || '',
+    twilioToken: () => process.env.TWILIO_AUTH_TOKEN || '',
+    verifyService: process.env.TWILIO_VERIFY_SERVICE_SID || '',
+  },
+  // Private document storage root (Task 015). Outside public/ and Git; a Docker volume in prod.
+  uploads: {
+    dir: process.env.PRIVATE_UPLOAD_DIR || `${process.cwd()}/private-uploads`,
+  },
   // Web Push (VAPID). Public key is safe for the browser; private key is server-only.
   push: {
     vapidPublic: process.env.VAPID_PUBLIC_KEY || '',

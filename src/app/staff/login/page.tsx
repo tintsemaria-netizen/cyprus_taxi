@@ -34,8 +34,17 @@ export default function StaffLogin() {
     <div className="flex min-h-[100dvh] items-center justify-center px-4">
       <form onSubmit={submit} className="card w-full max-w-sm p-6">
         <a href="/" className="inline-block"><Logo /></a>
-        <h1 className="mt-6 text-xl font-bold">Staff sign in</h1>
-        <p className="mt-1 text-sm text-muted">Dispatchers, drivers and administrators.</p>
+        <h1 className="mt-6 text-xl font-bold">Login</h1>
+        {/* Driver entry points */}
+        <div className="mt-4 rounded-[12px] border border-edge bg-elevated p-3">
+          <div className="text-sm font-medium">Drivers</div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <a href="/driver/login" className="btn-ghost !min-h-0 !py-2 text-sm">Driver sign in</a>
+            <a href="/driver/register" className="btn-primary !min-h-0 !py-2 text-sm">Register as a driver</a>
+          </div>
+        </div>
+        <h2 className="mt-5 text-sm font-semibold text-muted">Staff / admin</h2>
+        <p className="mt-1 text-xs text-muted">Dispatchers and administrators.</p>
         {error && <p className="mt-4 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
         <div className="mt-4 space-y-3">
           <div>

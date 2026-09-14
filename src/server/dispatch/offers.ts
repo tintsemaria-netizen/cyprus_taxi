@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { createAssignment } from '@/server/assignments';
 import { notifyDriverOffer, notifyPassenger } from '@/server/push';
 import type { Candidate } from './eligibility';
+import { canWork } from '@/lib/eligibility-policy';
 
 export const OFFER_TTL_SEC = 20;
 
@@ -80,7 +81,7 @@ export async function acceptOffer(offerId: string, driverId: string): Promise<Of
       if (!booking || booking.status !== 'SEARCHING') return err(409, 'BOOKING_GONE', 'This ride is no longer available.');
 
       const driver = await tx.driver.findUnique({ where: { id: driverId }, include: { user: true } });
-      if (!driver || !driver.active || !driver.user.active || !driver.onDuty) return err(409, 'DRIVER_INELIGIBLE', 'Driver no longer eligible.');
+      if (!driver || !driver.active || !driver.user.active || !driver.onDuty || !canWork(driver)) return err(409, 'DRIVER_INELIGIBLE', 'Driver no longer eligible.');
       if (await tx.assignment.findFirst({ where: { activeDriverId: driverId } })) return err(409, 'DRIVER_BUSY', 'You already have an active trip.');
       const vehicle = await tx.vehicle.findUnique({ where: { id: offer.vehicleId } });
       if (!vehicle || !vehicle.active || vehicle.vClass !== booking.vClass || vehicle.seats < booking.passengerCount) return err(409, 'VEHICLE_INELIGIBLE', 'Vehicle no longer eligible.');

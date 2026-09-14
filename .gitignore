@@ -28,3 +28,6 @@ Twilio
 
 # Source asset bundle (extracted into public/brand)
 IL-Y-web-assets.zip
+
+# Private KYC document storage (Task 015) — never in Git
+private-uploads/

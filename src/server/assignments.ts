@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { Prisma, BookingStatus, Role } from '@prisma/client';
 import { canTransition, isTerminal, PASSENGER_CANCELABLE } from '@/lib/status-machine';
 import { computeFreshness } from '@/lib/freshness';
+import { canWork } from '@/lib/eligibility-policy';
 import { generateStartCode } from '@/server/dispatch/lifecycle';
 
 export type Actor = 'STAFF' | 'DRIVER' | 'PASSENGER';
@@ -73,6 +74,7 @@ async function validateCandidate(
   await tx.$executeRaw`SELECT 1 FROM "Vehicle" WHERE id = ${vehicleId} FOR UPDATE`;
   const driver = await tx.driver.findUnique({ where: { id: driverId }, include: { location: true, user: true } });
   if (!driver || !driver.active || !driver.user.active) throw unprocessable('DRIVER_UNAVAILABLE', 'Driver is not active.');
+  if (!canWork(driver)) throw unprocessable('DRIVER_NOT_ELIGIBLE', 'Driver is not approved for work (Task 015).');
   if (!driver.onDuty || !driver.available) throw unprocessable('DRIVER_UNAVAILABLE', 'Driver is not on duty and available.');
   const driverBusy = await tx.assignment.findFirst({
     where: { activeDriverId: driverId, ...(excludeBookingId ? { NOT: { activeBookingId: excludeBookingId } } : {}) },

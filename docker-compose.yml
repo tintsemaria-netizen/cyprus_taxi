@@ -55,6 +55,13 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+      # Driver KYC (Task 015): private document storage + SMS OTP (Twilio Verify).
+      PRIVATE_UPLOAD_DIR: /app/private-uploads
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_VERIFY_SERVICE_SID: ${TWILIO_VERIFY_SERVICE_SID:-}
+    volumes:
+      - taxicy_uploads:/app/private-uploads
     # Bind only to loopback; nginx on the host proxies this vhost.
     ports:
       - '127.0.0.1:${APP_HOST_PORT}:3000'
@@ -64,6 +71,8 @@ services:
 volumes:
   taxicy_pgdata:
     name: taxicy_pgdata
+  taxicy_uploads:
+    name: taxicy_uploads
 
 networks:
   taxicy_net:

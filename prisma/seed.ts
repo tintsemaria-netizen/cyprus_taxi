@@ -46,8 +46,8 @@ async function main() {
     const user = await staff(d.login, 'DRIVER', d.name);
     const driver = await prisma.driver.upsert({
       where: { userId: user.id },
-      update: { publicName: d.name, phone: d.phone, active: true },
-      create: { userId: user.id, publicName: d.name, phone: d.phone, active: true, onDuty: false, available: false },
+      update: { publicName: d.name, phone: d.phone, active: true, eligibility: 'LEGACY' },
+      create: { userId: user.id, publicName: d.name, phone: d.phone, active: true, onDuty: false, available: false, eligibility: 'LEGACY' },
     });
     const vehicle = await prisma.vehicle.upsert({
       where: { plate: d.plate },

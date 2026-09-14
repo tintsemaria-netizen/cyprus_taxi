@@ -1,6 +1,7 @@
 import { apiOk, apiError, Errors } from '@/lib/http';
 import { requireDriver, isDriverCtx } from '@/lib/driver-ctx';
 import { prisma } from '@/lib/db';
+import { canWork } from '@/lib/eligibility-policy';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,13 @@ export async function PATCH(req: Request) {
   }
   const parsed = schema.safeParse(raw);
   if (!parsed.success) return Errors.validation({ _: 'onDuty/available must be booleans.' });
+
+  // Only work-eligible drivers may go on duty / available (Task 015). Going OFF duty is
+  // always allowed regardless of eligibility.
+  const goingOnline = parsed.data.onDuty === true || parsed.data.available === true;
+  if (goingOnline && !canWork(ctx.driver)) {
+    return apiError(403, 'NOT_ELIGIBLE', 'Your driver account is not approved for work. Complete onboarding / resolve document issues.');
+  }
 
   // Going off duty / unavailable must not cancel an active trip (SPEC §4).
   const active = await prisma.assignment.findFirst({ where: { activeDriverId: ctx.driver.id } });

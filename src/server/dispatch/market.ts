@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { computeFreshness } from '@/lib/freshness';
 import { haversineMeters } from '@/lib/geo';
+import { eligibleDriverWhere } from '@/lib/eligibility-policy';
 
 // Supply/demand snapshot for a zone/class (Task 012 §6.2/§6.3). Supply = fresh, eligible,
 // AVAILABLE drivers of the class within the radius (not "every visible vehicle"). Demand =
@@ -23,7 +24,7 @@ export async function marketSnapshot(
 
   const [drivers, busyAssign, busyOffer, requests] = await Promise.all([
     prisma.driver.findMany({
-      where: { onDuty: true, available: true, active: true },
+      where: { onDuty: true, available: true, active: true, ...eligibleDriverWhere },
       include: { user: true, location: true, bindings: { where: { endedAt: null }, include: { vehicle: true } } },
     }),
     prisma.assignment.findMany({ where: { activeDriverId: { not: null } }, select: { activeDriverId: true } }),

@@ -61,6 +61,10 @@ model Driver {
   onDuty      Boolean   @default(false)
   available   Boolean   @default(false)
   active      Boolean   @default(true)
+  // Operational eligibility (Task 015). LEGACY = grandfathered existing driver;
+  // APPROVED = passed admin KYC review; others block new work.
+  eligibility   DriverEligibility @default(PENDING)
+  applicationId String?  // the approved DriverApplication that provisioned this driver
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -68,6 +72,121 @@ model Driver {
   assignments Assignment[]
   offers      DriverOffer[]
   location    LatestDriverLocation?
+}
+
+enum DriverEligibility {
+  LEGACY
+  APPROVED
+  PENDING
+  SUSPENDED
+  DOCUMENTS_EXPIRED
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  CHANGES_REQUESTED
+  REJECTED
+}
+
+// A self-registering driver applicant (verified phone). NOT an operational driver until
+// an admin approves their application (Task 015). Kept separate from StaffUser so an
+// application can never grant privileges by itself.
+model DriverApplicant {
+  id              String    @id @default(uuid())
+  phone           String    @unique
+  phoneVerifiedAt DateTime?
+  legalName       String?
+  email           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  application DriverApplication?
+  sessions    ApplicantSession[]
+}
+
+model ApplicantSession {
+  id            String          @id @default(uuid())
+  applicant     DriverApplicant @relation(fields: [applicantId], references: [id])
+  applicantId   String
+  sessionDigest String          @unique
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  createdAt     DateTime        @default(now())
+}
+
+// Phone OTP challenge. When Twilio Verify is configured, Twilio holds the code and
+// `codeHash` is null; otherwise a dev code is hashed here (never logged in prod).
+model PhoneVerification {
+  id         String    @id @default(uuid())
+  phone      String
+  codeHash   String?
+  provider   String    // 'twilio-verify' | 'dev'
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, createdAt])
+}
+
+model DriverApplication {
+  id             String            @id @default(uuid())
+  applicant      DriverApplicant   @relation(fields: [applicantId], references: [id])
+  applicantId    String            @unique
+  status         ApplicationStatus @default(DRAFT)
+  revision       Int               @default(1) // current editable revision
+  identity       String?           // JSON draft (step 2)
+  driving        String?           // JSON draft (step 3)
+  vehicle        String?           // JSON draft (step 4)
+  submittedAt    DateTime?
+  reviewedAt     DateTime?
+  reviewerId     String?
+  decisionReason String?           // applicant-facing summary (changes/rejection)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  documents ApplicationDocument[]
+  events    ApplicationEvent[]
+
+  @@index([status, submittedAt])
+}
+
+// Uploaded document/photo metadata. Bytes live in PRIVATE storage (never public/); the
+// storageKey is resolved by an authenticated stream, never a permanent public URL.
+model ApplicationDocument {
+  id            String   @id @default(uuid())
+  application   DriverApplication @relation(fields: [applicationId], references: [id])
+  applicationId String
+  slot          String   // id_front | id_back | passport | selfie | licence_front | ... | vehicle_front | ...
+  storageKey    String
+  mime          String
+  sizeBytes     Int
+  sha256        String
+  scanStatus    String   @default("UNScanned") // UNScanned | CLEAN | INFECTED | UNAVAILABLE
+  decision      String   @default("PENDING")   // PENDING | ACCEPTED | CHANGES
+  decisionNote  String?
+  revision      Int
+  createdAt     DateTime @default(now())
+
+  @@index([applicationId, slot])
+}
+
+model ApplicationEvent {
+  id            String   @id @default(uuid())
+  application   DriverApplication @relation(fields: [applicationId], references: [id])
+  applicationId String
+  type          String   // SUBMITTED | IN_REVIEW | CHANGES_REQUESTED | REJECTED | APPROVED | DOC_DECISION | NOTE
+  actorType     String   // APPLICANT | ADMIN | SYSTEM
+  actorId       String?
+  visibility    String   @default("APPLICANT") // APPLICANT | INTERNAL
+  detail        String?
+  revision      Int?
+  createdAt     DateTime @default(now())
+
+  @@index([applicationId, createdAt])
 }
 
 model Vehicle {

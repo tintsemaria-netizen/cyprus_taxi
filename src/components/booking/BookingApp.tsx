@@ -335,9 +335,9 @@ export default function BookingApp() {
           <a href="/" className="text-accent">Book</a>
           <a href="/track" className="hover:text-ink">My ride</a>
           <a href="/privacy" className="hover:text-ink">Privacy</a>
-          <a href="/staff/login" className="hover:text-ink">Staff</a>
+          <a href="/staff/login" className="hover:text-ink">Login</a>
         </nav>
-        <a href="/staff/login" className="btn-ghost !min-h-0 !py-1.5 text-base sm:hidden">Staff</a>
+        <a href="/staff/login" className="btn-ghost !min-h-0 !py-1.5 text-base sm:hidden">Login</a>
       </header>
 
       <div className="relative flex-1">

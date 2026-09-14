@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { computeFreshness } from '@/lib/freshness';
 import { haversineMeters } from '@/lib/geo';
 import { googleConfigured, googleRoute } from '@/server/google';
+import { eligibleDriverWhere } from '@/lib/eligibility-policy';
 
 export const RADIUS_STAGES_KM = [3, 7, 15]; // expand search in stages (Task 012 §4.2)
 export const MAX_PICKUP_ETA_SEC = 20 * 60; // exclude candidates worse than 20 min
@@ -31,7 +32,7 @@ export async function findBestCandidate(
     prisma.assignment.findMany({ where: { activeDriverId: { not: null } }, select: { activeDriverId: true } }),
     prisma.driverOffer.findMany({ where: { activeDriverId: { not: null } }, select: { activeDriverId: true } }),
     prisma.driver.findMany({
-      where: { onDuty: true, available: true, active: true },
+      where: { onDuty: true, available: true, active: true, ...eligibleDriverWhere },
       include: { user: true, location: true, bindings: { where: { endedAt: null }, include: { vehicle: true } } },
     }),
   ]);

@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { computeFreshness, poorAccuracy } from '@/lib/freshness';
 import { demoEstimate } from '@/lib/places';
 import { allowedNext, PASSENGER_CANCELABLE } from '@/lib/status-machine';
+import { eligibleDriverWhere } from '@/lib/eligibility-policy';
 import { googleConfigured, googleRoute } from '@/server/google';
 import { BookingStatus } from '@prisma/client';
 
@@ -258,7 +259,7 @@ export async function availableDrivers() {
   });
   const busyIds = new Set(busy.map((b) => b.activeDriverId));
   const drivers = await prisma.driver.findMany({
-    where: { active: true, onDuty: true, available: true },
+    where: { active: true, onDuty: true, available: true, ...eligibleDriverWhere },
     include: { user: true, location: true, bindings: { where: { endedAt: null }, include: { vehicle: true } } },
   });
   return drivers
@@ -284,7 +285,7 @@ export async function availableDrivers() {
 // trip a car is on. On-duty active drivers with a non-disconnected fix only.
 export async function publicFleet() {
   const [drivers, busy] = await Promise.all([
-    prisma.driver.findMany({ where: { onDuty: true, active: true }, include: { location: true, user: true } }),
+    prisma.driver.findMany({ where: { onDuty: true, active: true, ...eligibleDriverWhere }, include: { location: true, user: true } }),
     prisma.assignment.findMany({ where: { activeDriverId: { not: null } }, select: { activeDriverId: true } }),
   ]);
   const busyIds = new Set(busy.map((b) => b.activeDriverId));
