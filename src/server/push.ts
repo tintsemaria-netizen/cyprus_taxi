@@ -47,6 +47,17 @@ async function sendToAudience(audience: string, payload: PushPayload): Promise<v
   );
 }
 
+// Fire-and-forget: notify a driver of a new ride offer reserved for them.
+export async function notifyDriverOffer(driverId: string, bookingId: string, pickupEtaSec?: number | null): Promise<void> {
+  if (!config.push.enabled) return;
+  const d = await prisma.driver.findUnique({ where: { id: driverId }, select: { userId: true } });
+  if (!d) return;
+  const b = await prisma.booking.findUnique({ where: { id: bookingId }, select: { pickupLabel: true } });
+  const etaMin = pickupEtaSec != null ? Math.max(1, Math.round(pickupEtaSec / 60)) : null;
+  const body = `${b?.pickupLabel ?? 'Pickup nearby'}${etaMin != null ? ` · ~${etaMin} min away` : ''} — tap to accept`;
+  await sendToAudience(`DRIVER:${d.userId}`, { title: 'New ride offer', body, url: '/driver', tag: 'offer' });
+}
+
 // Fire-and-forget: notify the OTHER party of a new chat message.
 export async function notifyNewMessage(bookingId: string, sender: 'PASSENGER' | 'DRIVER', snippet: string): Promise<void> {
   if (!config.push.enabled) return;

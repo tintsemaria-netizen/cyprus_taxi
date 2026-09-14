@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { createAssignment } from '@/server/assignments';
+import { notifyDriverOffer } from '@/server/push';
 import type { Candidate } from './eligibility';
 
 export const OFFER_TTL_SEC = 20;
@@ -9,7 +10,7 @@ export const OFFER_TTL_SEC = 20;
 // one active offer per booking and per driver; a collision (race) returns null.
 export async function createOffer(bookingId: string, c: Candidate): Promise<{ id: string } | null> {
   try {
-    return await prisma.$transaction(async (tx) => {
+    const res = await prisma.$transaction(async (tx) => {
       const booking = await tx.booking.findUnique({ where: { id: bookingId } });
       if (!booking || booking.status !== 'SEARCHING') return null;
       // Belt-and-braces: skip if the driver is already reserved elsewhere.
@@ -27,6 +28,9 @@ export async function createOffer(bookingId: string, c: Candidate): Promise<{ id
       await tx.bookingEvent.create({ data: { bookingId, type: 'OFFERED', actorType: 'SYSTEM' } });
       return { id: offer.id };
     });
+    // Notify the reserved driver (best-effort; they may not be looking at the app).
+    if (res) void notifyDriverOffer(c.driverId, bookingId, c.etaSec).catch(() => {});
+    return res;
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return null; // lost the reservation race
     throw e;
