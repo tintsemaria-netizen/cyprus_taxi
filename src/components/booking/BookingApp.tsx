@@ -359,11 +359,18 @@ export default function BookingApp() {
       )}
       <header className="z-20 flex items-center justify-between border-b border-edge bg-page/90 px-4 py-2 backdrop-blur sm:px-6">
         <Logo className="h-10" />
-        <nav className="hidden items-center gap-6 text-lg text-muted sm:flex">
-          <a href="/" className="text-accent">Book</a>
-          <a href="/rides" className="hover:text-ink">My rides</a>
-          <a href="/privacy" className="hover:text-ink">Privacy</a>
-          <a href="/staff/login" className="hover:text-ink">Login</a>
+        {/* Segmented nav styled exactly like the Now / Schedule control. */}
+        <nav className="hidden gap-2 rounded-[12px] border border-edge bg-elevated p-1 sm:flex">
+          {[
+            { href: '/', label: 'Book', active: true },
+            { href: '/rides', label: 'My rides', active: false },
+            { href: '/privacy', label: 'Privacy', active: false },
+            { href: '/staff/login', label: 'Login', active: false },
+          ].map((n) => (
+            <a key={n.href} href={n.href} className={`rounded-[9px] px-3 py-2 text-sm font-medium transition ${n.active ? 'bg-accent text-[#0d1608]' : 'text-muted hover:text-ink'}`}>
+              {n.label}
+            </a>
+          ))}
         </nav>
         <a href="/staff/login" className="btn-ghost !min-h-0 !py-1.5 text-base sm:hidden">Login</a>
       </header>
