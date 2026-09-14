@@ -1,5 +1,29 @@
 # Task 016 — PostgreSQL operational foundation, ClickHouse analytics and durable data pipelines
 
+> **STATUS (2026-09-14): IMPLEMENTED + deployed to the beta.** Deployed release **4a07f34**
+> (docs at a later commit). vitest **90 passed / 1 skipped** (the skipped test is the ClickHouse
+> integration test — it PASSED separately against the live container). The full pipeline was
+> live-verified end to end (booking → domain event in Postgres → worker export → ClickHouse →
+> reconciled), and a backup **restore was measured** (see below). Architecture + runbooks:
+> `docs/architecture/DATA-PLATFORM.md`, `docs/BACKUP-RESTORE.md`, `docs/PIPELINE-OPERATIONS.md`.
+>
+> ## Completion matrix
+> | Area | Status | Evidence |
+> |---|---|---|
+> | §3 Postgres event/job foundation | DONE | `DomainEvent`/`AnalyticsDelivery`/`WorkerHeartbeat`/`GpsSample` + outbox hardening; migration `20260914202449`; `recordEvent` in every domain tx (rollback-safe, ON CONFLICT). tests/events.db + outbox.db |
+> | §4 Durable workers | DONE | dedicated `taxi-worker` service; one owner; heartbeats; claim-with-lease outbox + analytics; readiness separates operational vs analytics. Live: app doesn't run loop, worker does. |
+> | §5 GPS history | DONE | `GpsSample` written atomically with latest-position; accepted-only; retention prune (tests/workers.db) |
+> | §6 ClickHouse projection | DONE | private 24.8 LTS, least-priv users, `domain_events` ReplacingMergeTree, canonical dedup queries; integration test PASSED vs live CH |
+> | §7 Backfill + reconciliation | DONE | idempotent keyset backfill (reconstructed snapshots flagged); lag-aware one-directional reconciliation |
+> | §8 Admin analytics UI | DONE | `/admin/analytics` (ADMIN), honest metric defs, unavailable states not fake zeros, pipeline health panel; screenshot captured |
+> | §9 Backups + restore | DONE (local) | encrypted PG + uploads backups, daily cron, **measured restore verified**; ClickHouse rebuildable from PG |
+> | §9 Off-host DR | **BLOCKER** | no off-host destination configured — same-disk snapshots are not DR; set `BACKUP_REMOTE` |
+> | §9 RPO≤15m/RTO≤2h | PARTIAL | daily cadence ≈ 24h RPO; needs WAL/PITR + off-host to hit target (not claimed as achieved) |
+> | §8 driver utilization / provider perf metrics | DEFERRED | reported as *unavailable* — need duty-session + provider-call events (duty sessions come with Task 017) |
+>
+> **External blockers (implemented + ready, not faked):** off-host backup destination
+> (`BACKUP_REMOTE`); WAL/PITR for the RPO/RTO target. Both are enablement, not code gaps.
+
 Project: IL-Y / Cyprus Taxi
 Repository: https://github.com/tintsemaria-netizen/cyprus_taxi
 Reviewed baseline: 6d18d162177951e08c4695ebae15b2bc8680fab2, 2026-09-14.

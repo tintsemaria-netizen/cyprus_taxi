@@ -1,5 +1,14 @@
 # Implementation status
 
+**Task 016 (data platform) DONE + deployed — release 4a07f34.** PostgreSQL durable domain-event
+capture (rollback-safe, in-transaction) + hardened notification outbox + GPS history; a dedicated
+supervised worker process (one owner, cross-process heartbeat health); a private ClickHouse
+analytics store (least-priv, `domain_events` ReplacingMergeTree, at-least-once exporter, backfill,
+lag-aware reconciliation); an ADMIN `/admin/analytics` screen with honest metric definitions and a
+pipeline-health panel; and encrypted daily backups with a **measured** restore. vitest 90 passed /
+1 skipped (CH integration test passed vs the live container). Blockers (not faked): off-host backup
+destination + WAL/PITR for RPO/RTO. See Tasks/016 completion matrix + docs/architecture/DATA-PLATFORM.md.
+
 Updated 2026-09-14. Deployed publicly to https://cyprustaxi.ackedberryes.store, release **31d5781** (production domain il-y.taxi ready pending DNS). Autonomous ride-hailing beta: Task 012 (M0–M4) + Task 013 (P0 done, P1 mostly, P2 partial). Live driver↔passenger routes + marker animation, booking chat, and Web Push (chat, ride offers, assignment/arrival/no-driver/rematch/cancellation). **vitest 78/78. Tasks 013 (notification outbox + atomic chat auth) + 014 (passenger accounts, mandatory login, My rides, destination history) + 015 completion (malware-scan gate, expiry enforcement, concurrency-safe review, autosave) done except two HARD external blockers — real SMS (needs Twilio Account SID/Auth Token) and real malware scanning (needs a clamd host); both implemented+gated, never faked. Task 015 (driver self-registration + KYC + admin approval + eligibility gate) IMPLEMENTED + deployed — see Tasks/015 + HANDOFF.**
 
 **Live verification (2026-09-14):** an automated server-side smoke of the full no-dispatcher journey PASSED on prod (book → worker offer → accept → EN_ROUTE → arrive → coded start → complete → immutable receipt; capacity freed), run via the real API with a dedicated synthetic driver that was created for the test and then removed. Driver GPS was DB test-scaffolding, so this proves the dispatch/lifecycle/receipt server flow live — NOT on-device GPS or handset push delivery (still to be checked on a real phone). Details in docs/HANDOFF.md; per-item status in Tasks/013 (completion matrix).

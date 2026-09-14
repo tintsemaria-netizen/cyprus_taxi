@@ -1,5 +1,37 @@
 # Session handoff
 
+## Task 016 data platform (2026-09-14) — release 4a07f34, deployed + live-verified
+Postgres operational foundation + ClickHouse analytics + durable pipelines. vitest **90 passed /
+1 skipped** (skipped = CH integration test; PASSED separately vs the live container).
+- **M1 events:** `DomainEvent` (immutable, sanitized, natural-key unique) + `AnalyticsDelivery`
+  (per-sink lease) + `GpsSample` + `WorkerHeartbeat`; outbox hardened (claim-with-lease, precise
+  outcomes SENT_TO_PROVIDER/NO_SUBSCRIBERS/RETRY/FAILED/SUPERSEDED). `recordEvent`/notification
+  enqueue run INSIDE each domain tx (rollback-safe, ON CONFLICT — no fire-and-forget). Migration
+  `20260914202449_t016_data_platform_foundation` applied on prod.
+- **M2 workers:** dedicated `taxi-worker` Compose service (same image, `WORKER_ROLE=worker`,
+  `RUN_MIGRATIONS=off`); web app owns migrations + does NOT run the loop; four isolated sections
+  (dispatch→notifications→analytics→maintenance) each heartbeat; health reads heartbeats
+  cross-process and separates operational vs analytics. Verified: app log has no worker start,
+  worker log does.
+- **M3 ClickHouse:** private `clickhouse-server:24.8-alpine`, no public ports, mem/cpu-bounded,
+  least-priv users (`taxi_writer`/`taxi_reader`, default→loopback). Single `domain_events`
+  ReplacingMergeTree; canonical dedup queries; exporter claims deliveries with a lease, inserts,
+  acks; backfill + lag-aware reconciliation. Live: booking→event→CH export DELIVERED, reconciled.
+  **NOTE:** the CH integration test drains the whole local delivery backlog into the configured CH
+  DB — it now refuses any `CLICKHOUSE_DB` not ending in `_test` (a run earlier leaked local test
+  events into prod CH; prod CH was TRUNCATEd + re-exported clean, verified).
+- **M4 analytics UI:** `/admin/analytics` (ADMIN) — ride outcomes, offer acceptance, dispatch
+  latency + pickup wait p50/p90, fares-by-currency (recorded-final only; unknown=pending not zero;
+  estimates never income), honest *unavailable* cards (driver utilization / provider perf), pipeline
+  health panel. Admin-guarded (401 unauth); screenshot captured.
+- **M5 backups/docs:** `deploy/backup.sh` (encrypted PG + uploads, daily root cron 03:30 UTC) +
+  `deploy/restore-verify.sh` — **restore measured/verified** (10 migrations, 18 bookings, 0 orphan
+  FKs). Docs: `docs/architecture/DATA-PLATFORM.md`, `BACKUP-RESTORE.md`, `PIPELINE-OPERATIONS.md`.
+- **BLOCKERS (honest, not faked):** no off-host backup destination (`BACKUP_REMOTE` unset → same-disk
+  snapshots are not DR); RPO≤15m/RTO≤2h needs WAL/PITR + off-host (daily cadence ≈24h now).
+- **DEFERRED to Task 017:** driver on/off-duty session events (needed for driver-utilization
+  analytics + online-time) — Task 017 adds duty sessions and coordinates settlement with this model.
+
 ## Header nav restyle (2026-09-14) — release 8f5129b, deployed + live-verified
 - Desktop top-right menu (**Book · My rides · Privacy · Login**) restyled as a segmented control that reuses the **exact** Now/Schedule classes: container `rounded-[12px] border border-edge bg-elevated p-1`; items `rounded-[9px] px-3 py-2 text-sm font-medium transition`; active (Book) `bg-accent text-[#0d1608]`; inactive `text-muted hover:text-ink`. In `src/components/booking/BookingApp.tsx` (nav was `gap-6 text-lg`). **Now/Schedule control unchanged.** Mobile-only Login button unchanged.
 - **Verified live** on `cyprustaxi.ackedberryes.store` (release 8f5129b, `/api/v1/health/live` → `alive:true`): headless-Chromium (Playwright) screenshot confirms the nav and Now/Schedule share the same look (lime-on-dark active, muted inactive, same font/pill). Pushed `master:main`.
