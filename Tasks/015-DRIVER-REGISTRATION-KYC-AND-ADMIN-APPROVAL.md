@@ -1,3 +1,7 @@
+> STATUS (2026-09-14): IMPLEMENTED + deployed (release 21868e1). vitest 75/75. Live-verified: nav "Login" + "Register as a driver"; applicant OTP → DRAFT application; admin API ADMIN-gated (401); all 5 existing drivers grandfathered LEGACY (no lockout). Eligibility gate enforced across duty/fleet/candidate/market/accept/assign. Full flow available: register wizard (identity/driving/vehicle/photos), private uploads (Docker volume, magic-byte validated, authenticated streaming), admin review workspace (queue/detail/doc-viewer/decisions), atomic idempotent approval → provisions driver+vehicle+binding off-duty; approved drivers sign in via phone OTP.
+> Owner decisions applied: existing drivers grandfathered LEGACY; full accounts+SMS+wizard built.
+> REMAINING / blockers (documented): real SMS needs TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN (only the Verify Service SID is set → dev-OTP path active, code shown only in demo mode; NOT real SMS yet); no AV scanner (scanStatus recorded UNAVAILABLE, never falsely CLEAN); expiry reminders + auto DOCUMENTS_EXPIRED transitions not yet implemented (schema supports them); legacy-driver review queue (to retire LEGACY) not built; optional email verification not built; browser QA screenshots not captured (no browser in this env — server flow live-smoked instead). Cyprus document matrix has VERIFY items pending live RTD confirmation (docs/research/DRIVER-ONBOARDING-REQUIREMENTS.md).
+
 # Task 015 — Driver registration, document review and admin-controlled activation
 
 Project: IL-Y / Cyprus Taxi
