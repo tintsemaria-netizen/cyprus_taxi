@@ -3,7 +3,14 @@ import { randomUUID } from 'crypto';
 
 // ClickHouse integration test (Task 016 §10). Skipped unless CLICKHOUSE_URL is set, so the normal
 // local suite is unaffected; run against a real ClickHouse to exercise the export path + dedup.
+//
+// SAFETY: the exporter drains the WHOLE local AnalyticsDelivery backlog into the configured
+// ClickHouse DB, so this test MUST target a disposable analytics DB (name ending in _test) — never
+// the production `taxi_analytics`. We hard-refuse otherwise (mirrors the Postgres _test guard).
 const HAS_CH = !!process.env.CLICKHOUSE_URL;
+if (HAS_CH && !(process.env.CLICKHOUSE_DB || '').endsWith('_test')) {
+  throw new Error(`Refusing CH integration test: CLICKHOUSE_DB must end in _test (got "${process.env.CLICKHOUSE_DB}"). Use a disposable analytics DB, never production.`);
+}
 
 describe.skipIf(!HAS_CH)('ClickHouse export pipeline (integration)', () => {
   it('ensures schema, exports a claimed event, and a replay does NOT change the count', async () => {
