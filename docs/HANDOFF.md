@@ -1,5 +1,27 @@
 # Session handoff
 
+## Batch 1 — dispatch correctness + security (2026-10-01) — release f96425f, DEPLOYED + live-verified
+- **Dispatch (d149583):** `src/server/dispatch/search.ts` (`startSearchTx`/`stopSearchTx`) is the only
+  way into/out of SEARCHING — staff →SEARCHING and immediate-ride unassign no longer strand rides
+  without a DispatchJob; cancel/NO_DRIVER/manual-assign withdraw the open offer at once; worker
+  repairs orphan SEARCHING bookings (`SEARCH_REPAIRED`); createOffer locks the booking; outbox skips
+  offers whose booking left SEARCHING; search deadline from config everywhere; matching routes the
+  shortlist in parallel (2.5s timeout, ETA cache across radii) + 6s per-tick job budget.
+- **Security (4a0017c, f96425f):** atomic `RateLimitBucket` limiter (+ maintenance prune; legacy
+  Setting rows dropped); atomic dev-OTP attempts; staff TOTP 2FA for ADMIN/DISPATCHER
+  (`/staff/security`, QR, encrypted seeds, replay-proof, `STAFF_MFA_ENFORCE` default off,
+  recovery `scripts/reset-staff-mfa.ts`); push endpoints limited to known push services;
+  public `/health/live` returns only `{status}` (detail on-host via 127.0.0.1:8097, keyed on nginx
+  `X-Real-IP` because Next adds `X-Forwarded-For` itself).
+- **Live-verified:** migrations `20261001150000_rate_limit_buckets` + `20261001160000_staff_totp`
+  applied; 50 concurrent public requests with forged XFF → exactly 30 passed / 20×429, all keyed to
+  the real IP; MFA setup 401 unauth; /staff/security 200; dispatch+notifications alive.
+  Suite 133 passed / 1 skipped.
+- **Incident (caught, fixed):** a build whose log redirect failed (root-owned dir) left `up -d`
+  restarting the OLD image under the NEW `APP_RELEASE` label for a few minutes. Rebuilt; migrations
+  then applied. Lesson → batch 5 deploy script must verify the image digest/migrations, not the label.
+- **Owner TODO:** enable 2FA on admin accounts at `/staff/security`, then set `STAFF_MFA_ENFORCE=true`.
+
 ## Stage 0 ops/UX pass (2026-10-01) — release 991bda3, DEPLOYED + live-verified
 - **Monitoring:** `/health/live` → 503 "degraded" if dispatch/notifications heartbeat stale.
   `deploy/watchdog.sh` (root cron every minute, `# taxi-watchdog`) → Telegram alerts; checks origin
