@@ -81,6 +81,12 @@ export const config = {
     // The dev OTP path is NOT real verification and is refused unless deliberately enabled.
     // Never a silent substitute for real SMS (Task 015 constraint).
     allowDevOtp: process.env.SMS_ALLOW_DEV_OTP === 'true',
+    // Phones (E.164, comma-separated) that may use the dev OTP path. The dev code is only ever
+    // generated — and only ever returned to the client — for these numbers. Empty (the default)
+    // = nobody: without a real SMS provider, OTP sign-in is honestly unavailable.
+    devOtpAllowlist: new Set(
+      (process.env.SMS_DEV_OTP_ALLOWLIST || '').split(',').map((s) => s.trim()).filter(Boolean),
+    ),
   },
   // Malware scanning (Task 015). clamd via host:port when configured; otherwise scans are
   // UNAVAILABLE and documents cannot be accepted/approved (never approve unscanned).
@@ -119,7 +125,9 @@ export const config = {
     readPassword: () => process.env.CLICKHOUSE_READ_PASSWORD || '',
     exportBatch: num('ANALYTICS_EXPORT_BATCH', 500),
   },
-  trustedProxyHops: num('TRUSTED_PROXY_HOPS', 2),
+  // Max trusted proxy entries skipped from the right of X-Forwarded-For (see clientIp). Behind
+  // Cloudflare → nginx exactly ONE trusted entry is appended (the CF edge nginx saw).
+  trustedProxyHops: num('TRUSTED_PROXY_HOPS', 1),
   timezone: 'Europe/Nicosia',
   currency: 'EUR',
   // Server-only Google Maps key (Geocoding + Routes). Never exposed to the client.

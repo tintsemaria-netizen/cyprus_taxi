@@ -32,15 +32,19 @@ export async function sendOtp(phone: string): Promise<SendResult> {
     if (!res.ok) throw new Error(`twilio-send:${res.status}`);
     return { provider: 'twilio' };
   }
-  // dev: generate + persist a hashed code.
+  // dev: only for explicitly allowlisted test phones. Anyone else gets "unavailable" — the code
+  // must never be handed to an arbitrary caller (that would let anyone who knows a phone number
+  // sign in as that driver/passenger).
+  if (!config.sms.devOtpAllowlist.has(phone)) throw new Error('sms-unconfigured');
   const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
   await prisma.phoneVerification.create({ data: { phone, codeHash: sha256(code), provider: 'dev', expiresAt: new Date(Date.now() + OTP_TTL_MS) } });
-  return { provider: 'dev', devCode: config.demoMode ? code : undefined };
+  return { provider: 'dev', devCode: code };
 }
 
 export async function checkOtp(phone: string, code: string): Promise<boolean> {
   if (!/^\d{4,8}$/.test(code)) return false;
   if (config.sms.provider !== 'twilio' && !config.sms.allowDevOtp) return false;
+  if (config.sms.provider !== 'twilio' && !config.sms.devOtpAllowlist.has(phone)) return false;
   if (config.sms.provider === 'twilio') {
     const url = `https://verify.twilio.com/v2/Services/${config.sms.verifyService}/VerificationCheck`;
     const body = new URLSearchParams({ To: phone, Code: code });
