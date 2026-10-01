@@ -1,5 +1,15 @@
 -- AlterTable
-ALTER TABLE "ApplicationDocument" ADD COLUMN     "expiresAt" TIMESTAMP(3);
+-- Guarded: on a FRESH database this migration (stamped 085416) sorts BEFORE the KYC
+-- migration 20260914110013 that CREATEs "ApplicationDocument", so the table may not exist
+-- yet. Skip the alter when absent; migration 20260914230500_ensure_application_document_expires_at
+-- adds the column after the table is created. On existing/prod DBs the table is already
+-- present, so the column is added here (idempotently) exactly as before.
+DO $$
+BEGIN
+  IF to_regclass('"ApplicationDocument"') IS NOT NULL THEN
+    ALTER TABLE "ApplicationDocument" ADD COLUMN IF NOT EXISTS "expiresAt" TIMESTAMP(3);
+  END IF;
+END $$;
 
 -- AlterTable
 ALTER TABLE "Booking" ADD COLUMN     "passengerId" TEXT;

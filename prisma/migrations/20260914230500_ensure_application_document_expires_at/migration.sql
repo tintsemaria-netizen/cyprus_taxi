@@ -1,0 +1,11 @@
+-- Ensures "ApplicationDocument"."expiresAt" exists on a FRESH database.
+--
+-- Background: the Task 013/014/015 completion migration (20260914085416) originally added
+-- this column, but it sorts BEFORE the KYC migration (20260914110013) that creates the
+-- "ApplicationDocument" table. On existing databases (e.g. production) the column was added
+-- there because migrations were applied incrementally while the table already existed. On a
+-- brand-new database, applying migrations in sorted order meant the completion migration ran
+-- before the table existed and failed. The completion migration is now guarded to skip when
+-- the table is absent; this migration adds the column afterwards so fresh and existing
+-- databases converge on the same schema. Idempotent: a no-op where the column already exists.
+ALTER TABLE "ApplicationDocument" ADD COLUMN IF NOT EXISTS "expiresAt" TIMESTAMP(3);
