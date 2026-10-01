@@ -1,5 +1,25 @@
 # Session handoff
 
+## Security hotfix + team audit (2026-10-01) — release f1294f5, DEPLOYED + live-verified
+- **Team audit:** 7 specialist agents (security, backend, QA, UX, product, Cyprus regulatory, ops) +
+  synthesis → `docs/AUDIT-2026-10-01.md` (66 findings; staged roadmap Stage 0-3; owner-decision list).
+  Verdict: beta OK after the hotfix below; public launch NOT ready (privacy/terms, LEGACY drivers,
+  airport fixed fares, monitoring/alerts, booking-review copy are the remaining Stage 0 items).
+- **Fixed (P0, commit f1294f5):** (1) OTP codes were returned in API responses on live (DEMO_MODE +
+  SMS_ALLOW_DEV_OTP, no Twilio) → account takeover by phone number. Dev OTP now only for
+  `SMS_DEV_OTP_ALLOWLIST` (owner chose EMPTY) — sendOtp "unavailable", checkOtp rejects others.
+  (2) `clientIp()` picked a client-forged XFF entry → every IP rate limit bypassable. Now walks XFF
+  from the right skipping ≤`TRUSTED_PROXY_HOPS` trusted proxies (Cloudflare ranges/private); prod
+  `TRUSTED_PROXY_HOPS` changed 2→1 in deploy/.env.production. Tests `tests/client-ip-otp.test.ts`
+  (9); suite 116 passed / 1 skipped.
+- **Live-verified:** all 4 OTP entry points via the public URL return unavailable / SMS_UNAVAILABLE
+  with no code; probe left no Passenger row; dispatch alive.
+- **Consequence (owner-accepted):** until Twilio creds are set, NEW passenger sign-up and phone-OTP
+  login are unavailable on live; existing passengers use email+password `/login`, drivers use staff
+  password login. Add test phones to `SMS_DEV_OTP_ALLOWLIST` if testers need OTP.
+- **Next:** remaining Stage 0 items in docs/AUDIT-2026-10-01.md (monitoring/alerts, booking-review
+  "dispatcher" copy, LEGACY driver gate, privacy/terms, airport fixed-fare disclaimer).
+
 ## Session 2026-10-01 — migration DR fix + Task 020 (rating + receipt) — release f998681, DEPLOYED + live-verified
 Goal this session: drive the project to completion. Current beta release **f998681** is live at
 `cyprustaxi.ackedberryes.store` origin (`/api/v1/health/live` → release f998681, dispatch+analytics
