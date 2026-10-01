@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { I18nProvider } from '@/i18n/I18nProvider';
+import { getRequestLocale } from '@/i18n/server';
 
 export const metadata: Metadata = {
   title: 'IL-Y — book a ride',
@@ -31,10 +33,13 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getRequestLocale();
   return (
-    <html lang="en">
-      <body className="min-h-full bg-page text-ink antialiased">{children}</body>
+    <html lang={locale}>
+      <body className="min-h-full bg-page text-ink antialiased">
+        <I18nProvider locale={locale}>{children}</I18nProvider>
+      </body>
     </html>
   );
 }

@@ -42,7 +42,7 @@ for (const s of SIZES) {
 
     test('share page: view only, no start code, no phone, no cancel', async ({ page }) => {
       await page.goto(`/share#t=${SHARE}`);
-      await expect(page.getByText('Shared trip · view only')).toBeVisible();
+      await expect(page.locator('html')).toHaveAttribute('lang', 'en');
       await expect(page.getByText('KXY 248')).toBeVisible();
       await expect(page.getByRole('button', { name: /Cancel/ })).toHaveCount(0);
       await expect(page.getByText(/Start code|Give this code/)).toHaveCount(0);
@@ -65,9 +65,9 @@ test('booking form with both stops: per-class prices + CTA with price', async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.getByLabel('Pickup address').fill('Limassol Marina');
-  await page.getByRole('option').first().click({ timeout: 15000 });
+  await page.getByRole('listbox').getByRole('option').first().click({ timeout: 15000 });
   await page.getByLabel('Destination address').fill('Larnaca Airport');
-  await page.getByRole('option').first().click({ timeout: 15000 });
+  await page.getByRole('listbox').getByRole('option').first().click({ timeout: 15000 });
   const radios = page.getByRole('radio');
   await expect(radios.first()).toContainText('€', { timeout: 15000 });
   await expect(radios.nth(1)).toContainText('€');

@@ -6,6 +6,7 @@ import { Logo } from '@/components/Brand';
 import { PassengerLoginModal } from '@/components/booking/PassengerLoginModal';
 import { RateTripModal } from '@/components/booking/RateTripModal';
 import { api, ApiRequestError } from '@/lib/api-client';
+import { useT } from '@/i18n/I18nProvider';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,7 @@ interface Ride { id: string; reference: string; status: string; active: boolean;
 
 export default function Page() {
   const router = useRouter();
+  const { t, fmt } = useT();
   const [rides, setRides] = useState<Ride[] | null>(null);
   const [needLogin, setNeedLogin] = useState(false);
   const [show, setShow] = useState(false);
@@ -36,7 +38,7 @@ export default function Page() {
       await api('/tracking/exchange', { method: 'POST', body: { token: r.token } });
       router.push('/track');
     } catch {
-      setToast('Could not open live tracking. Check your connection and try again.');
+      setToast(t('rides.trackingFailed'));
       setTimeout(() => setToast(null), 5000);
     }
   }
@@ -45,40 +47,40 @@ export default function Page() {
     <div className="mx-auto max-w-lg p-4 sm:p-6">
       <header className="mb-4 flex items-center justify-between">
         <a href="/"><Logo className="h-8" /></a>
-        <a href="/" className="text-sm text-muted hover:text-ink">Book</a>
+        <a href="/" className="text-sm text-muted hover:text-ink">{t('common.book')}</a>
       </header>
-      <h1 className="mb-3 text-xl font-bold">My rides</h1>
+      <h1 className="mb-3 text-xl font-bold">{t('rides.title')}</h1>
       {needLogin ? (
         <div className="card p-6 text-center">
-          <p className="text-sm text-muted">Sign in to see your ride history.</p>
-          <button className="btn-primary mt-3" onClick={() => setShow(true)}>Sign in</button>
+          <p className="text-sm text-muted">{t('rides.signInPrompt')}</p>
+          <button className="btn-primary mt-3" onClick={() => setShow(true)}>{t('rides.signIn')}</button>
         </div>
       ) : loadError && rides === null ? (
         <div className="card p-6 text-center">
-          <p className="text-sm text-muted">We couldn&apos;t load your rides. Check your connection.</p>
-          <button className="btn-primary mt-3" onClick={load}>Try again</button>
+          <p className="text-sm text-muted">{t('rides.loadError')}</p>
+          <button className="btn-primary mt-3" onClick={load}>{t('common.retry')}</button>
         </div>
       ) : rides === null ? (
-        <p className="text-muted">Loading…</p>
+        <p className="text-muted">{t('common.loading')}</p>
       ) : rides.length === 0 ? (
-        <p className="text-sm text-muted">No rides yet. <a href="/" className="text-accent hover:underline">Book your first ride →</a></p>
+        <p className="text-sm text-muted">{t('rides.empty')} <a href="/" className="text-accent hover:underline">{t('rides.bookFirst')}</a></p>
       ) : (
         <div className="card divide-y divide-edge">
           {rides.map((r) => (
             <div key={r.id} className="flex items-center justify-between gap-3 p-3">
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium">{r.pickup} → {r.dropoff}</div>
-                <div className="text-xs text-muted">{new Date(r.at).toLocaleString('en-GB')} · {r.fareCents != null ? `≈ €${(r.fareCents / 100).toFixed(2)}` : '—'}</div>
+                <div className="text-xs text-muted">{fmt.dateTime(r.at)} · {r.fareCents != null ? `≈ ${fmt.money(r.fareCents)}` : '—'}</div>
               </div>
               <div className="shrink-0 text-right">
-                <div className="chip">{r.status.replace(/_/g, ' ')}</div>
-                {r.active && <button className="mt-1 block text-xs text-accent hover:underline" onClick={() => openTracking(r.id)}>Track live ›</button>}
+                <div className="chip">{t(`common.status.${r.status}` as 'common.status.COMPLETED')}</div>
+                {r.active && <button className="mt-1 block text-xs text-accent hover:underline" onClick={() => openTracking(r.id)}>{t('rides.trackLive')}</button>}
                 {!r.active && r.status === 'COMPLETED' && (
                   <>
                     {r.ratedStars != null
-                      ? <div className="mt-1 text-xs text-accent" aria-label={`You rated ${r.ratedStars} out of 5`}>{'★'.repeat(r.ratedStars)}<span className="text-muted/40">{'★'.repeat(5 - r.ratedStars)}</span></div>
-                      : <button className="mt-1 block text-xs text-accent hover:underline" onClick={() => setRating(r.id)}>Rate trip ›</button>}
-                    <a className="mt-1 block text-xs text-muted hover:text-ink" href={`/rides/${r.id}`}>Receipt ›</a>
+                      ? <div className="mt-1 text-xs text-accent" aria-label={t('rides.youRated', { stars: r.ratedStars })}>{'★'.repeat(r.ratedStars)}<span className="text-muted/40">{'★'.repeat(5 - r.ratedStars)}</span></div>
+                      : <button className="mt-1 block text-xs text-accent hover:underline" onClick={() => setRating(r.id)}>{t('rides.rateTrip')}</button>}
+                    <a className="mt-1 block text-xs text-muted hover:text-ink" href={`/rides/${r.id}`}>{t('rides.receiptLink')}</a>
                   </>
                 )}
               </div>

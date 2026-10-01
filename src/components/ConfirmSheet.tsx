@@ -1,15 +1,17 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useT } from '@/i18n/I18nProvider';
 
 // In-app confirmation (replaces native confirm()/alert(), which look off-brand, can be blocked in
 // installed PWAs/webviews and can't explain consequences — 2026-10-01 audit).
 export function ConfirmSheet({
-  title, body, confirmLabel, cancelLabel = 'Keep it', danger = false, busy = false, onConfirm, onCancel,
+  title, body, confirmLabel, cancelLabel, danger = false, busy = false, onConfirm, onCancel,
 }: {
   title: string; body?: React.ReactNode; confirmLabel: string; cancelLabel?: string; danger?: boolean; busy?: boolean;
   onConfirm: () => void; onCancel: () => void;
 }) {
+  const { t } = useT();
   const cancelRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     cancelRef.current?.focus();
@@ -23,8 +25,8 @@ export function ConfirmSheet({
         <h2 id="cs-title" className="text-lg font-bold">{title}</h2>
         {body && <div id="cs-body" className="mt-2 text-sm text-muted">{body}</div>}
         <div className="mt-5 grid gap-2">
-          <button className={danger ? 'w-full rounded-[12px] border border-danger bg-danger/15 px-4 py-3 font-semibold text-danger disabled:opacity-50' : 'btn-primary w-full'} disabled={busy} onClick={onConfirm}>{busy ? 'Please wait…' : confirmLabel}</button>
-          <button ref={cancelRef} className="btn-ghost w-full" disabled={busy} onClick={onCancel}>{cancelLabel}</button>
+          <button className={danger ? 'w-full rounded-[12px] border border-danger bg-danger/15 px-4 py-3 font-semibold text-danger disabled:opacity-50' : 'btn-primary w-full'} disabled={busy} onClick={onConfirm}>{busy ? t('common.pleaseWait') : confirmLabel}</button>
+          <button ref={cancelRef} className="btn-ghost w-full" disabled={busy} onClick={onCancel}>{cancelLabel ?? t('track.keepIt')}</button>
         </div>
       </div>
     </div>

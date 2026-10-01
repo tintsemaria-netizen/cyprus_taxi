@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { api } from '@/lib/api-client';
 import type { Selected } from './PlacesInput';
+import { useT, translate } from '@/i18n/I18nProvider';
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
 const MOVE_TOLERANCE = 1e-6;      // ~0.11m — ignore resize/no-op idle events
@@ -19,7 +20,6 @@ interface Props {
 }
 type GeoState = 'idle' | 'locating' | 'ok' | 'denied' | 'unavailable' | 'timeout';
 
-const coordLabel = (lat: number, lng: number) => `Pin ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 const coordKey = (lat: number, lng: number) => `${lat.toFixed(6)},${lng.toFixed(6)}`;
 const near = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) =>
   Math.abs(a.lat - b.lat) < MOVE_TOLERANCE && Math.abs(a.lng - b.lng) < MOVE_TOLERANCE;
@@ -52,7 +52,9 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
   const [failed, setFailed] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
-  const label = kind === 'pickup' ? 'Set pickup location' : 'Set destination';
+  const { t } = useT();
+  const coordLabel = (lat: number, lng: number) => t('booking.picker.pin', { coords: `${lat.toFixed(5)}, ${lng.toFixed(5)}` });
+  const label = kind === 'pickup' ? t('booking.picker.titlePickup') : t('booking.picker.titleDestination');
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -168,7 +170,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
     if (!userMarker.current) {
       const el = document.createElement('div');
       el.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#4C9AFF;border:2px solid #fff;box-shadow:0 0 0 2px rgba(76,154,255,0.4)';
-      userMarker.current = new g.marker.AdvancedMarkerElement({ map, position: { lat, lng }, content: el, title: 'Your device location' });
+      userMarker.current = new g.marker.AdvancedMarkerElement({ map, position: { lat, lng }, content: el, title: t('booking.picker.deviceLocation') });
     } else {
       userMarker.current.position = { lat, lng };
       userMarker.current.map = map;
@@ -216,24 +218,25 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
     const lat = c ? c.lat() : centerRef.current.lat;
     const lng = c ? c.lng() : centerRef.current.lng;
     const snap = addrRef.current;
-    const l = snap && snap.rev === draftRev.current ? snap.label : coordLabel(lat, lng);
+    // Stored on the booking and shown to the driver → language-neutral English, not the passenger's UI language.
+    const l = snap && snap.rev === draftRev.current ? snap.label : translate('en', 'booking.picker.pin', { coords: `${lat.toFixed(5)}, ${lng.toFixed(5)}` });
     finish();
     onConfirm({ lat, lng, label: l });
   }
   function cancel() { if (closed.current) return; closed.current = true; finish(); onCancel(); }
 
   const geoMsg: Record<GeoState, string | null> = {
-    idle: null, locating: 'Finding your location…', ok: null,
-    denied: 'Location permission denied — pan the map to your point, or enable location in your browser settings.',
-    unavailable: 'Location unavailable — pan the map to choose.',
-    timeout: 'Location timed out — pan the map or press “My location” to retry.',
+    idle: null, locating: t('booking.picker.geo.locating'), ok: null,
+    denied: t('booking.picker.geo.denied'),
+    unavailable: t('booking.picker.geo.unavailable'),
+    timeout: t('booking.picker.geo.timeout'),
   };
   const coarse = accuracyM !== null && accuracyM > 150;
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col bg-page" style={{ height: '100dvh' }}>
       <div className="z-10 flex items-center gap-3 border-b border-edge bg-page/95 px-4 py-3" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
-        <button className="btn-ghost !min-h-0 !py-1.5 text-sm" onClick={cancel} aria-label="Back">‹ Back</button>
+        <button className="btn-ghost !min-h-0 !py-1.5 text-sm" onClick={cancel} aria-label={t('common.back')}>{t('booking.picker.back')}</button>
         <h2 className="font-semibold">{label}</h2>
       </div>
 
@@ -241,17 +244,17 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
         {failed ? (
           <div className="flex h-full items-center justify-center px-6 text-center text-muted">
             <div>
-              <div className="text-sm text-ink">Map temporarily unavailable</div>
-              <div className="mt-1 text-xs">Your entered details are safe.</div>
+              <div className="text-sm text-ink">{t('booking.picker.mapUnavailable')}</div>
+              <div className="mt-1 text-xs">{t('booking.picker.detailsSafe')}</div>
               <div className="mt-4 flex justify-center gap-2">
-                <button className="btn-primary" onClick={() => setRetryKey((k) => k + 1)}>Retry</button>
-                <button className="btn-ghost" onClick={cancel}>Enter address instead</button>
+                <button className="btn-primary" onClick={() => setRetryKey((k) => k + 1)}>{t('common.retry')}</button>
+                <button className="btn-ghost" onClick={cancel}>{t('booking.picker.enterAddress')}</button>
               </div>
             </div>
           </div>
         ) : (
           <>
-            <div ref={containerRef} className="absolute inset-0 h-full w-full" aria-label="Map — drag to position the pin" role="application" />
+            <div ref={containerRef} className="absolute inset-0 h-full w-full" aria-label={t('booking.picker.mapAria')} role="application" />
             {mapLoaded && (
               <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full">
                 <svg width="34" height="46" viewBox="0 0 34 46" aria-hidden>
@@ -261,10 +264,10 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
               </div>
             )}
             {!mapLoaded && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-muted"><span className="animate-pulse">Loading map…</span></div>
+              <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-muted"><span className="animate-pulse">{t('booking.picker.loadingMap')}</span></div>
             )}
             <button className="absolute right-3 top-3 z-10 rounded-full border border-edge bg-page/90 px-3 py-2 text-sm text-ink hover:border-accent/50 disabled:opacity-50" onClick={() => requestLocation(true)} disabled={!mapLoaded}>
-              ⌖ My location
+              ⌖ {t('booking.picker.myLocation')}
             </button>
           </>
         )}
@@ -272,19 +275,19 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
 
       <div className="border-t border-edge bg-panel p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
         {geoMsg[geo] && <p className="mb-2 text-xs text-warn">{geoMsg[geo]}</p>}
-        {geo === 'ok' && coarse && <p className="mb-2 text-xs text-muted">Your device location is approximate (±{Math.round(accuracyM as number)} m).</p>}
+        {geo === 'ok' && coarse && <p className="mb-2 text-xs text-muted">{t('booking.picker.approximate', { m: Math.round(accuracyM as number) })}</p>}
         <div className="mb-3 h-[3.25rem]">
-          <div className="label">Selected {kind === 'pickup' ? 'pickup' : 'destination'}</div>
+          <div className="label">{kind === 'pickup' ? t('booking.picker.selectedPickup') : t('booking.picker.selectedDestination')}</div>
           <div className="mt-0.5 truncate text-sm font-medium">
             {addr ?? coordLabel(center.lat, center.lng)}
-            {resolving && !addr && <span className="ml-2 text-xs text-muted">resolving…</span>}
+            {resolving && !addr && <span className="ml-2 text-xs text-muted">{t('booking.picker.resolving')}</span>}
           </div>
-          <div className="text-xs text-muted">{addr ? ' ' : 'No street address for this point — using map coordinates.'}</div>
+          <div className="text-xs text-muted">{addr ? ' ' : t('booking.picker.noAddress')}</div>
         </div>
         <div className="flex gap-2">
-          <button className="btn-ghost flex-1" onClick={cancel}>Cancel</button>
+          <button className="btn-ghost flex-1" onClick={cancel}>{t('common.cancel')}</button>
           <button className="btn-primary flex-1" onClick={confirm} disabled={failed || !mapLoaded}>
-            {kind === 'pickup' ? 'Confirm pickup' : 'Confirm destination'}
+            {kind === 'pickup' ? t('booking.picker.confirmPickup') : t('booking.picker.confirmDestination')}
           </button>
         </div>
       </div>

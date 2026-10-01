@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { api, uuid } from '@/lib/api-client';
+import { useT } from '@/i18n/I18nProvider';
 
 export interface Selected {
   lat: number;
@@ -30,6 +31,7 @@ interface Result {
 }
 
 export function PlacesInput({ kind, value, text, onText, onSelect, error }: Props) {
+  const { t } = useT();
   const [results, setResults] = useState<Result[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -145,12 +147,12 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error }: Prop
   const inputId = useId();
   return (
     <div ref={boxRef} className="relative">
-      <label className="label" htmlFor={inputId}>{kind}</label>
+      <label className="label" htmlFor={inputId}>{kind === 'From' ? t('booking.places.from') : t('booking.places.to')}</label>
       <input
         id={inputId}
-        aria-label={kind === 'From' ? 'Pickup address' : 'Destination address'}
+        aria-label={kind === 'From' ? t('booking.places.pickupAria') : t('booking.places.destinationAria')}
         className={`field mt-1 ${error ? 'border-danger' : value ? 'border-accent/60' : ''}`}
-        placeholder={kind === 'From' ? 'Pickup location' : 'Destination'}
+        placeholder={kind === 'From' ? t('booking.places.pickupPlaceholder') : t('booking.places.destinationPlaceholder')}
         value={text}
         onChange={(e) => handleText(e.target.value)}
         onKeyDown={onKeyDown}
@@ -169,9 +171,9 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error }: Prop
       {error && <p className="mt-1 text-xs text-danger">{error}</p>}
       {open && (results.length > 0 || loading || status !== 'idle') && (
         <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-[12px] border border-edge bg-elevated shadow-card" role="listbox">
-          {loading && <div className="px-4 py-3 text-sm text-muted">Searching…</div>}
-          {!loading && status === 'none' && <div className="px-4 py-3 text-sm text-muted">No matching places.</div>}
-          {!loading && status === 'unavailable' && <div className="px-4 py-3 text-sm text-warn">Address search is unavailable — pan the map to choose instead.</div>}
+          {loading && <div className="px-4 py-3 text-sm text-muted">{t('booking.places.searching')}</div>}
+          {!loading && status === 'none' && <div className="px-4 py-3 text-sm text-muted">{t('booking.places.none')}</div>}
+          {!loading && status === 'unavailable' && <div className="px-4 py-3 text-sm text-warn">{t('booking.places.unavailable')}</div>}
           {!loading &&
             results.map((r, i) => (
               <button
@@ -191,7 +193,7 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error }: Prop
               </button>
             ))}
           {!loading && demo && results.length > 0 && (
-            <div className="border-t border-edge px-4 py-1.5 text-xs text-muted">Demo places · Cyprus fixtures</div>
+            <div className="border-t border-edge px-4 py-1.5 text-xs text-muted">{t('booking.places.demo')}</div>
           )}
         </div>
       )}

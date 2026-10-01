@@ -62,6 +62,7 @@ export async function trackingView(bookingId: string) {
   };
   let pickupEta: string | null = null;
   let pickupEtaMin: number | null = null;
+  let pickupEtaApprox = false;
 
   if (active) {
     vehicle = {
@@ -93,6 +94,7 @@ export async function trackingView(bookingId: string) {
           const eta = await driverToPickupEta(booking.id, active.driverId, { lat: loc.lat, lng: loc.lng }, { lat: booking.pickupLat, lng: booking.pickupLng });
           pickupEta = `≈ ${eta.etaMin} min${eta.source === 'approx' ? ' (approx)' : ''}`;
           pickupEtaMin = eta.etaMin;
+          pickupEtaApprox = eta.source === 'approx';
         }
       }
     }
@@ -124,6 +126,7 @@ export async function trackingView(bookingId: string) {
     location,
     pickupEta: pickupEta ?? (booking.status === 'EN_ROUTE' || booking.status === 'ASSIGNED' ? 'ETA unavailable' : null),
     pickupEtaMin,
+    pickupEtaApprox,
     fareCents: booking.fareCents ?? null,
     canCancel: PASSENGER_CANCELABLE.includes(booking.status),
     canRetry: booking.status === 'NO_DRIVER',
@@ -154,6 +157,8 @@ export async function shareView(bookingId: string) {
     vehicle: v.vehicle ? { driverName: v.vehicle.driverName.split(' ')[0], make: v.vehicle.make, model: v.vehicle.model, color: v.vehicle.color, plate: v.vehicle.plate } : null,
     location: live ? v.location : null,
     pickupEta: live ? v.pickupEta : null,
+    pickupEtaMin: live ? v.pickupEtaMin : null,
+    pickupEtaApprox: live ? v.pickupEtaApprox : false,
   };
 }
 

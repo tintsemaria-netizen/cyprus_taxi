@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { api } from '@/lib/api-client';
+import { useT } from '@/i18n/I18nProvider';
+import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 export interface PassengerInfo { phone: string; name?: string | null; email?: string | null }
 
@@ -16,6 +18,7 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
   const rootRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
+  const { t } = useT();
 
   const label = passenger.name?.trim() || passenger.email || passenger.phone;
   const secondary = passenger.email || passenger.phone;
@@ -49,7 +52,7 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Account menu"
+        aria-label={t('auth.menu.button')}
         className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-sm font-semibold text-[#0d1608] transition hover:opacity-90"
       >
         {initials}
@@ -62,7 +65,7 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
           <div
             id={menuId}
             role="menu"
-            aria-label="Account"
+            aria-label={t('auth.menu.label')}
             className="fixed inset-x-0 bottom-0 z-50 rounded-t-[16px] border border-edge bg-elevated p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:absolute sm:inset-auto sm:right-0 sm:top-12 sm:w-64 sm:rounded-[14px] sm:pb-2 sm:shadow-xl"
           >
             {/* Identity header → profile settings */}
@@ -74,13 +77,17 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
               </span>
             </a>
             <div className="my-1 border-t border-edge" />
-            <MenuLink href="/rides" onSelect={() => setOpen(false)}>My rides</MenuLink>
-            <MenuLink href="/account#places" onSelect={() => setOpen(false)}>Saved places</MenuLink>
-            <MenuLink href="/account" onSelect={() => setOpen(false)}>Profile settings</MenuLink>
-            <MenuLink href="/privacy" onSelect={() => setOpen(false)}>Help &amp; privacy</MenuLink>
+            <MenuLink href="/rides" onSelect={() => setOpen(false)}>{t('auth.myRides')}</MenuLink>
+            <MenuLink href="/account#places" onSelect={() => setOpen(false)}>{t('auth.menu.savedPlaces')}</MenuLink>
+            <MenuLink href="/account" onSelect={() => setOpen(false)}>{t('auth.menu.profile')}</MenuLink>
+            <MenuLink href="/privacy" onSelect={() => setOpen(false)}>{t('auth.menu.help')}</MenuLink>
+            <div className="flex items-center justify-between gap-3 px-3 py-2">
+              <span className="text-sm text-muted">{t('common.language')}</span>
+              <LanguageSwitcher />
+            </div>
             <div className="my-1 border-t border-edge" />
             <button role="menuitem" onClick={logout} disabled={busy} className="w-full rounded-[10px] px-3 py-3 text-left text-sm text-danger hover:bg-page disabled:opacity-60">
-              {busy ? 'Signing out…' : 'Log out'}
+              {busy ? t('auth.signingOut') : t('auth.logOut')}
             </button>
           </div>
         </>

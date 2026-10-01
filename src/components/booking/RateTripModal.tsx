@@ -1,31 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { api, ApiRequestError } from '@/lib/api-client';
+import { api } from '@/lib/api-client';
+import { useT } from '@/i18n/I18nProvider';
 
 // Post-trip rating of the driver (Task 020). Shown from My rides for a COMPLETED ride that the
 // passenger has not rated yet. Stars are required; tags and a comment are optional. The tag set
 // shown depends on the star rating (positive for 4-5, constructive for 1-3) and the slugs match
 // the server vocabulary in src/server/ratings.ts.
 
-const POSITIVE: [string, string][] = [
-  ['clean_car', 'Clean car'],
-  ['safe_driving', 'Safe driving'],
-  ['on_time', 'On time'],
-  ['friendly', 'Friendly'],
-  ['smooth_ride', 'Smooth ride'],
-  ['great_route', 'Great route'],
-];
-const CONSTRUCTIVE: [string, string][] = [
-  ['late', 'Late'],
-  ['unsafe_driving', 'Unsafe driving'],
-  ['rude', 'Rude'],
-  ['dirty_car', 'Dirty car'],
-  ['wrong_route', 'Wrong route'],
-  ['hard_to_find', 'Hard to find'],
-];
+const POSITIVE = ['clean_car', 'safe_driving', 'on_time', 'friendly', 'smooth_ride', 'great_route'] as const;
+const CONSTRUCTIVE = ['late', 'unsafe_driving', 'rude', 'dirty_car', 'wrong_route', 'hard_to_find'] as const;
 
 export function RateTripModal({ rideId, onClose, onDone }: { rideId: string; onClose: () => void; onDone: (stars: number) => void }) {
+  const { t, tp, tError } = useT();
   const [stars, setStars] = useState(0);
   const [hover, setHover] = useState(0);
   const [tags, setTags] = useState<string[]>([]);
@@ -47,31 +35,30 @@ export function RateTripModal({ rideId, onClose, onDone }: { rideId: string; onC
   }
 
   async function submit() {
-    if (stars < 1) { setErr('Pick a star rating first.'); return; }
+    if (stars < 1) { setErr(t('rides.rate.pickStars')); return; }
     setBusy(true); setErr(null);
     try {
       await api(`/passenger/rides/${rideId}/rating`, { method: 'POST', body: { stars, tags, comment: comment.trim() || undefined } });
       onDone(stars);
     } catch (e) {
-      if (e instanceof ApiRequestError) setErr(e.body.message);
-      else setErr('Could not submit your rating. Please try again.');
+      setErr(tError(e));
     } finally { setBusy(false); }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={onClose}>
       <div className="card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-lg font-bold">Rate your trip</h2>
-        <p className="mt-1 text-sm text-muted">How was your ride with the driver?</p>
+        <h2 className="text-lg font-bold">{t('rides.rate.title')}</h2>
+        <p className="mt-1 text-sm text-muted">{t('rides.rate.subtitle')}</p>
 
-        <div className="mt-4 flex justify-center gap-1" role="radiogroup" aria-label="Star rating">
+        <div className="mt-4 flex justify-center gap-1" role="radiogroup" aria-label={t('rides.rate.starsLabel')}>
           {[1, 2, 3, 4, 5].map((n) => (
             <button
               key={n}
               type="button"
               role="radio"
               aria-checked={stars === n}
-              aria-label={`${n} star${n > 1 ? 's' : ''}`}
+              aria-label={tp('rides.rate.star', n)}
               className="p-1 text-3xl leading-none transition"
               onMouseEnter={() => setHover(n)}
               onMouseLeave={() => setHover(0)}
@@ -85,7 +72,7 @@ export function RateTripModal({ rideId, onClose, onDone }: { rideId: string; onC
         {stars > 0 && (
           <>
             <div className="mt-4 flex flex-wrap gap-2">
-              {tagSet.map(([slug, label]) => (
+              {tagSet.map((slug) => (
                 <button
                   key={slug}
                   type="button"
@@ -93,14 +80,14 @@ export function RateTripModal({ rideId, onClose, onDone }: { rideId: string; onC
                   onClick={() => toggleTag(slug)}
                   className={`rounded-full border px-3 py-1 text-xs transition ${tags.includes(slug) ? 'border-accent bg-accent text-[#0d1608]' : 'border-edge text-muted hover:text-ink'}`}
                 >
-                  {label}
+                  {t(`rides.rate.tags.${slug}`)}
                 </button>
               ))}
             </div>
             <textarea
               className="field mt-3 h-20 resize-none"
               maxLength={500}
-              placeholder="Add a comment (optional)"
+              placeholder={t('rides.rate.commentPlaceholder')}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
             />
@@ -109,8 +96,8 @@ export function RateTripModal({ rideId, onClose, onDone }: { rideId: string; onC
 
         {err && <p className="mt-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}
 
-        <button className="btn-primary mt-4 w-full" disabled={busy || stars < 1} onClick={submit}>{busy ? 'Submitting…' : 'Submit rating'}</button>
-        <button className="mt-2 block w-full text-center text-xs text-muted hover:text-ink" onClick={onClose}>Not now</button>
+        <button className="btn-primary mt-4 w-full" disabled={busy || stars < 1} onClick={submit}>{busy ? t('rides.rate.submitting') : t('rides.rate.submit')}</button>
+        <button className="mt-2 block w-full text-center text-xs text-muted hover:text-ink" onClick={onClose}>{t('rides.rate.notNow')}</button>
       </div>
     </div>
   );

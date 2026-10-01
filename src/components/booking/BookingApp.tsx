@@ -11,6 +11,9 @@ import { PassengerLoginModal } from './PassengerLoginModal';
 import { AccountMenu } from './AccountMenu';
 import { nicosiaInputValue } from '@/lib/timezone';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
+import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
+import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
+import { INTL_TAG } from '@/i18n/config';
 
 interface PublicConfig {
   demoMode: boolean;
@@ -20,13 +23,21 @@ interface PublicConfig {
   operatorName: string | null;
 }
 
-const CLASS_META: Record<string, { seatsLabel: string; blurb: string }> = {
-  COMFORT: { seatsLabel: '4 seats', blurb: 'Everyday sedan' },
-  XL: { seatsLabel: '6 seats', blurb: 'Extra space / group' },
+const CLASS_META: Record<string, { seatsLabel: MsgKey; blurb: MsgKey }> = {
+  COMFORT: { seatsLabel: 'booking.classes.COMFORT.seats', blurb: 'booking.classes.COMFORT.blurb' },
+  XL: { seatsLabel: 'booking.classes.XL.seats', blurb: 'booking.classes.XL.blurb' },
 };
+
+// Render a translated sentence with one `{slot}` replaced by a React node (keeps styled
+// values inside a single translatable string, since word order differs between languages).
+function withSlot(template: string, slot: string, node: React.ReactNode): React.ReactNode {
+  const [before, after = ''] = template.split(`{${slot}}`);
+  return <>{before}{node}{after}</>;
+}
 
 export default function BookingApp() {
   const router = useRouter();
+  const { t, tp, fmt, tError, locale } = useT();
   const [cfg, setCfg] = useState<PublicConfig | null>(null);
   const [pickup, setPickup] = useState<Selected | null>(null);
   const [pickupText, setPickupText] = useState('');
@@ -111,14 +122,16 @@ export default function BookingApp() {
         const lat = pos.coords.latitude, lng = pos.coords.longitude;
         setMyLoc({ lat, lng });
         if (pickupRef.current || pickupTextRef.current.trim() !== '') return; // passenger already acting
-        let label = 'Current location';
+        // The stored label travels with the booking to the driver → language-neutral English; the
+        // passenger sees their own language in the field.
+        let label: string | null = null;
         try {
           const r = await api<{ place: { label: string } | null }>(`/places/reverse?lat=${lat}&lng=${lng}`, { timeoutMs: 6000 });
           if (r.place?.label) label = r.place.label;
         } catch { /* keep the generic label */ }
         if (cancelled || pickupRef.current || pickupTextRef.current.trim() !== '') return; // re-check after await
-        setPickup({ lat, lng, label });
-        setPickupText(label);
+        setPickup({ lat, lng, label: label ?? translate('en', 'booking.currentLocation') });
+        setPickupText(label ?? t('booking.currentLocation'));
         setAutoPickup(true);
       },
       () => { /* denied / unavailable → keep the island view + manual selection */ },
@@ -228,7 +241,7 @@ export default function BookingApp() {
           });
           return [c.key, q] as const;
         } catch (e) {
-          if (e instanceof ApiRequestError) setQuoteErr(e.body.message);
+          if (e instanceof ApiRequestError) setQuoteErr(tError(e));
           return [c.key, null] as const;
         }
       }));
@@ -238,9 +251,9 @@ export default function BookingApp() {
       setQuotes(next); setQuoting(false);
     }, 500);
     return () => { clearTimeout(t); controller.abort(); };
-  }, [pickup, dropoff, pax, when, scheduledAt, scheduleOffsetMin, classKeys]);
+  }, [pickup, dropoff, pax, when, scheduledAt, scheduleOffsetMin, classKeys, tError]);
   const quote: QuoteBody | null = quotes[vClass] ?? null;
-  const eur = (c: number) => `€${(c / 100).toFixed(2)}`;
+  const eur = (c: number) => fmt.money(c, 'EUR');
 
   const maxPax = cfg?.classes.find((c) => c.key === vClass)?.maxPassengers ?? (vClass === 'XL' ? 6 : 4);
 
@@ -250,11 +263,11 @@ export default function BookingApp() {
 
   function validate(): boolean {
     const e: Record<string, string> = {};
-    if (!pickup) e.pickup = 'Choose a pickup from the list or tap the map.';
-    if (!dropoff) e.dropoff = 'Choose a destination from the list or tap the map.';
-    if (passenger && !name.trim()) e.name = 'Enter the name the driver should ask for.';
-    if (when === 'SCHEDULE' && !scheduledAt) e.scheduledAt = 'Pick a date and time.';
-    if (pax < 1 || pax > maxPax) e.pax = `1–${maxPax} passengers for this class.`;
+    if (!pickup) e.pickup = t('booking.validation.pickup');
+    if (!dropoff) e.dropoff = t('booking.validation.dropoff');
+    if (passenger && !name.trim()) e.name = t('booking.validation.name');
+    if (when === 'SCHEDULE' && !scheduledAt) e.scheduledAt = t('booking.validation.scheduledAt');
+    if (pax < 1 || pax > maxPax) e.pax = tp('booking.validation.paxRange', maxPax);
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -328,7 +341,7 @@ export default function BookingApp() {
           // Keep the user on review and let them pick which occurrence they meant.
           const opts = (err.body as unknown as { scheduleOptions?: string[] }).scheduleOptions || [];
           setAmbiguous(opts.length ? opts : ['180', '120']);
-          setBanner(err.body.message);
+          setBanner(tError(err));
           setSubmitting(false);
           return;
         }
@@ -336,9 +349,9 @@ export default function BookingApp() {
           setErrors(err.body.fieldErrors);
           setStep('form');
         }
-        setBanner(err.body.message || 'Could not create the booking.');
+        setBanner(err.body.message ? tError(err) : t('booking.review.bookingFailed'));
       } else {
-        setBanner('Network problem — your details are safe. Check connection and retry.');
+        setBanner(t('booking.review.networkSafe'));
       }
       setSubmitting(false);
     }
@@ -374,9 +387,9 @@ export default function BookingApp() {
       {cfg?.demoMode && <DemoBanner />}
       {cfgError && (
         <div className="flex items-center justify-center gap-3 bg-warn/15 border-b border-warn/30 px-3 py-1.5 text-xs sm:text-xs text-warn">
-          <span>Couldn&apos;t load service settings — booking may be unavailable. The map still works.</span>
+          <span>{t('booking.config.loadFailed')}</span>
           <button className="rounded border border-warn/40 px-2 py-0.5 hover:bg-warn/10" onClick={loadConfig} disabled={cfgLoading}>
-            {cfgLoading ? 'Retrying…' : 'Retry'}
+            {cfgLoading ? t('booking.config.retrying') : t('common.retry')}
           </button>
         </div>
       )}
@@ -387,20 +400,21 @@ export default function BookingApp() {
               trailing "Login" tab is dropped in favour of the account avatar (below). */}
           <nav className="hidden gap-2 rounded-[12px] border border-edge bg-elevated p-1 sm:flex">
             {[
-              { href: '/', label: 'Book', active: true },
-              { href: '/rides', label: 'My rides', active: false },
-              { href: '/privacy', label: 'Privacy', active: false },
-              ...(passenger ? [] : [{ href: '/login', label: 'Login', active: false }]),
+              { href: '/', label: t('common.book'), active: true },
+              { href: '/rides', label: t('booking.nav.rides'), active: false },
+              { href: '/privacy', label: t('booking.nav.privacy'), active: false },
+              ...(passenger ? [] : [{ href: '/login', label: t('booking.nav.login'), active: false }]),
             ].map((n) => (
               <a key={n.href} href={n.href} className={`rounded-[9px] px-3 py-2 text-sm font-medium transition ${n.active ? 'bg-accent text-[#0d1608]' : 'text-muted hover:text-ink'}`}>
                 {n.label}
               </a>
             ))}
           </nav>
+          <LanguageSwitcher compact />
           {passenger ? (
             <AccountMenu passenger={passenger} onLoggedOut={() => setPassenger(null)} />
           ) : (
-            <a href="/login" className="btn-ghost !min-h-0 !py-1.5 text-base sm:hidden">Login</a>
+            <a href="/login" className="btn-ghost !min-h-0 !py-1.5 text-base sm:hidden">{t('booking.nav.login')}</a>
           )}
         </div>
       </header>
@@ -423,18 +437,18 @@ export default function BookingApp() {
                 {step === 'form' ? (
                   /* ---- FORM (inlined so inputs keep focus across renders) ---- */
                   <div>
-                    <p className="label">Let&apos;s get you there</p>
-                    <h1 className="mb-4 mt-1 text-2xl font-bold">Where to next?</h1>
+                    <p className="label">{t('booking.form.eyebrow')}</p>
+                    <h1 className="mb-4 mt-1 text-2xl font-bold">{t('booking.form.title')}</h1>
 
                     {banner && <p className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{banner}</p>}
 
                     <div className="space-y-3">
                       <PlacesInput kind="From" value={pickup} text={pickupText} onText={(t) => { setPickupText(t); if (autoPickup) setAutoPickup(false); }} onSelect={(s) => { setPickup(s); setAutoPickup(false); }} error={errors.pickup} />
                       {autoPickup && pickup && (
-                        <p className="mt-1 text-xs text-accent">📍 Using your current location — change it on the map or type an address.</p>
+                        <p className="mt-1 text-xs text-accent">📍 {t('booking.form.usingLocation')}</p>
                       )}
                       <div className="flex items-center justify-between">
-                        <button type="button" className="chip hover:border-accent/50" onClick={() => setPicker('pickup')}>⌖ Set pickup on map</button>
+                        <button type="button" className="chip hover:border-accent/50" onClick={() => setPicker('pickup')}>⌖ {t('booking.form.setPickupOnMap')}</button>
                         <button
                           type="button"
                           className="chip hover:border-accent/50"
@@ -444,31 +458,31 @@ export default function BookingApp() {
                             setPickupText(dropoffText);
                             setDropoffText(pickupText);
                           }}
-                          aria-label="Swap pickup and destination"
+                          aria-label={t('booking.form.swapAria')}
                         >
-                          ⇅ Swap
+                          ⇅ {t('booking.form.swap')}
                         </button>
                       </div>
                       <PlacesInput kind="To" value={dropoff} text={dropoffText} onText={setDropoffText} onSelect={setDropoff} error={errors.dropoff} />
                       {!dropoff && (places.home || places.work) && (
                         <div className="mt-1 flex flex-wrap gap-1">
-                          {places.home && <button type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: places.home!.lat, lng: places.home!.lng, label: places.home!.label }); setDropoffText(places.home!.label); }}>🏠 Home</button>}
-                          {places.work && <button type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: places.work!.lat, lng: places.work!.lng, label: places.work!.label }); setDropoffText(places.work!.label); }}>💼 Work</button>}
+                          {places.home && <button type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: places.home!.lat, lng: places.home!.lng, label: places.home!.label }); setDropoffText(places.home!.label); }}>🏠 {t('booking.form.home')}</button>}
+                          {places.work && <button type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: places.work!.lat, lng: places.work!.lng, label: places.work!.label }); setDropoffText(places.work!.label); }}>💼 {t('booking.form.work')}</button>}
                         </div>
                       )}
                       {!dropoff && destinations.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1">
-                          <span className="text-xs text-muted">Recent:</span>
+                          <span className="text-xs text-muted">{t('booking.form.recent')}</span>
                           {destinations.map((d) => (
                             <button key={d.label} type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: d.lat, lng: d.lng, label: d.label }); setDropoffText(d.label); }}>{d.label.length > 22 ? d.label.slice(0, 21) + '…' : d.label}</button>
                           ))}
                         </div>
                       )}
-                      <button type="button" className="chip hover:border-accent/50" onClick={() => setPicker('dropoff')}>⌖ Set destination on map</button>
+                      <button type="button" className="chip hover:border-accent/50" onClick={() => setPicker('dropoff')}>⌖ {t('booking.form.setDestinationOnMap')}</button>
                     </div>
 
                     <div className="mt-5">
-                      <p className="label mb-2" id="ride-class-label">Choose your ride</p>
+                      <p className="label mb-2" id="ride-class-label">{t('booking.form.chooseRide')}</p>
                       <div className="space-y-2" role="radiogroup" aria-labelledby="ride-class-label">
                         {classes.map((c) => {
                           const q = quotes[c.key as 'COMFORT' | 'XL'];
@@ -486,8 +500,8 @@ export default function BookingApp() {
                               className={`flex w-full items-center justify-between gap-3 rounded-[12px] border px-4 py-3 text-left transition ${selected ? 'border-accent bg-accent/10' : 'border-edge bg-elevated hover:border-accent/40'}`}
                             >
                               <span className="min-w-0">
-                                <span className="block font-semibold">{c.label}</span>
-                                <span className="text-xs text-muted">👥 {CLASS_META[c.key]?.seatsLabel} · {CLASS_META[c.key]?.blurb}</span>
+                                <span className="block font-semibold">{t(`common.vClass.${c.key}`)}</span>
+                                <span className="text-xs text-muted">👥 {CLASS_META[c.key] && t(CLASS_META[c.key].seatsLabel)} · {CLASS_META[c.key] && t(CLASS_META[c.key].blurb)}</span>
                               </span>
                               <span className="shrink-0 text-right">
                                 {pickup && dropoff ? (
@@ -496,7 +510,7 @@ export default function BookingApp() {
                                       <span className={`block font-semibold tabular-nums ${selected ? 'text-accent' : 'text-ink'}`}>≈ {eur(q.totalCents)}</span>
                                       <span className="block text-xs text-muted tabular-nums">{eur(q.rangeLowCents)}–{eur(q.rangeHighCents)}</span>
                                     </>
-                                  ) : <span className="text-xs text-muted">{quoting ? 'Pricing…' : '—'}</span>
+                                  ) : <span className="text-xs text-muted">{quoting ? t('booking.form.pricing') : '—'}</span>
                                 ) : <span className={selected ? 'text-accent' : 'text-muted'} aria-hidden>›</span>}
                               </span>
                             </button>
@@ -510,14 +524,14 @@ export default function BookingApp() {
                       <div className="flex gap-2 rounded-[12px] border border-edge bg-elevated p-1">
                         {(['NOW', 'SCHEDULE'] as const).map((w) => (
                           <button key={w} type="button" aria-pressed={when === w} onClick={() => setWhen(w)} className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium transition ${when === w ? 'bg-accent text-[#0d1608]' : 'text-muted hover:text-ink'}`}>
-                            {w === 'NOW' ? 'Now' : 'Schedule'}
+                            {w === 'NOW' ? t('booking.form.now') : t('booking.form.schedule')}
                           </button>
                         ))}
                       </div>
                       {when === 'SCHEDULE' && (
                         <div className="mt-2">
                           <input type="datetime-local" className={`field ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
-                          <p className="mt-1 text-xs text-muted">Time is <strong>{cfg?.timezone ?? 'Europe/Nicosia'}</strong> (Cyprus) regardless of your device. We start matching a nearby driver automatically shortly before your pickup time.</p>
+                          <p className="mt-1 text-xs text-muted">{withSlot(t('booking.form.timezoneNote'), 'tz', <strong>{cfg?.timezone ?? 'Europe/Nicosia'}</strong>)}</p>
                           {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
                         </div>
                       )}
@@ -526,45 +540,45 @@ export default function BookingApp() {
                     {pickup && dropoff && (
                       <div className="mt-3 rounded-[12px] border border-edge bg-elevated px-3 py-2.5 text-xs text-muted">
                         {route?.min != null && (
-                          <div>Estimated trip: <span className="text-ink font-medium">≈ {route.min} min · {route.km} km</span> driving.</div>
+                          <div>{withSlot(t('booking.trip.estimate'), 'value', <span className="text-ink font-medium">{t('booking.trip.estimateValue', { min: route.min, km: route.km != null ? new Intl.NumberFormat(INTL_TAG[locale], { maximumFractionDigits: 1 }).format(route.km) : '' })}</span>)}</div>
                         )}
                         {quote ? (
                           <div className="mt-1">
-                            {quote.night && <span>Night tariff · </span>}
-                            {quote.holiday && <span>Holiday · </span>}
-                            <span>Regulated meter estimate — the final amount is set by the taximeter and paid to the driver.</span>
-                            {!quote.routeAvailable && <span> Distance approximate (routing unavailable).</span>}
+                            {quote.night && <span>{t('booking.trip.night')} · </span>}
+                            {quote.holiday && <span>{t('booking.trip.holiday')} · </span>}
+                            <span>{t('booking.trip.meterNote')}</span>
+                            {!quote.routeAvailable && <span> {t('booking.trip.approxDistance')}</span>}
                             {quote.airport && <AirportFareNote />}
                           </div>
                         ) : quoteErr ? (
-                          <div className="mt-1 text-warn">Couldn&apos;t estimate the fare: {quoteErr}</div>
+                          <div className="mt-1 text-warn">{t('booking.trip.quoteFailed', { error: quoteErr })}</div>
                         ) : null}
                       </div>
                     )}
 
                     {passenger && (
                       <div className="mt-4 rounded-[12px] border border-edge bg-elevated px-3 py-2.5">
-                        <label className="label" htmlFor="bk-name">Driver will ask for</label>
-                        <input id="bk-name" className={`field mt-1 ${errors.name ? 'border-danger' : ''}`} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} autoComplete="name" placeholder="Your name" />
+                        <label className="label" htmlFor="bk-name">{t('booking.contact.driverAsksFor')}</label>
+                        <input id="bk-name" className={`field mt-1 ${errors.name ? 'border-danger' : ''}`} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} autoComplete="name" placeholder={t('booking.contact.namePlaceholder')} />
                         {errors.name && <p className="mt-1 text-xs text-danger">{errors.name}</p>}
-                        <p className="mt-2 text-xs text-muted">The driver can call you on your verified number <span className="text-ink">{passenger.phone}</span>.</p>
+                        <p className="mt-2 text-xs text-muted">{withSlot(t('booking.contact.callYou'), 'phone', <span className="text-ink">{passenger.phone}</span>)}</p>
                       </div>
                     )}
 
                     <details className="mt-4 rounded-[12px] border border-edge bg-elevated px-3 py-2.5" open={pax > 1 || !!note || !!errors.pax}>
-                      <summary className="cursor-pointer text-sm font-medium">Options <span className="text-xs font-normal text-muted">· {pax} passenger{pax > 1 ? 's' : ''}{note ? ' · note' : ''}</span></summary>
+                      <summary className="cursor-pointer text-sm font-medium">{t('booking.options.title')} <span className="text-xs font-normal text-muted">· {tp('common.passengers', pax)}{note ? ` · ${t('booking.options.note')}` : ''}</span></summary>
                       <div className="mt-3 space-y-3">
                         <div>
-                          <span className="label" id="bk-pax-label">Passengers</span>
+                          <span className="label" id="bk-pax-label">{t('booking.options.passengers')}</span>
                           <div className="mt-1 flex items-center gap-2" role="group" aria-labelledby="bk-pax-label">
-                            <button type="button" aria-label="Fewer passengers" className="btn-ghost !min-h-[44px] !px-4" onClick={() => setPax((p) => Math.max(1, p - 1))}>−</button>
+                            <button type="button" aria-label={t('booking.options.fewer')} className="btn-ghost !min-h-[44px] !px-4" onClick={() => setPax((p) => Math.max(1, p - 1))}>−</button>
                             <span className="w-8 text-center text-lg font-semibold" aria-live="polite">{pax}</span>
-                            <button type="button" aria-label="More passengers" className="btn-ghost !min-h-[44px] !px-4" onClick={() => setPax((p) => Math.min(maxPax, p + 1))}>+</button>
+                            <button type="button" aria-label={t('booking.options.more')} className="btn-ghost !min-h-[44px] !px-4" onClick={() => setPax((p) => Math.min(maxPax, p + 1))}>+</button>
                           </div>
                         </div>
                         <div>
-                          <label className="label" htmlFor="bk-note">Note for the driver (optional)</label>
-                          <textarea id="bk-note" className="field mt-1 min-h-[44px]" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} rows={2} placeholder="Flight number, luggage, meeting point…" />
+                          <label className="label" htmlFor="bk-note">{t('booking.options.noteLabel')}</label>
+                          <textarea id="bk-note" className="field mt-1 min-h-[44px]" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} rows={2} placeholder={t('booking.options.notePlaceholder')} />
                         </div>
                       </div>
                     </details>
@@ -572,24 +586,24 @@ export default function BookingApp() {
                 ) : (
                   /* ---- REVIEW ---- */
                   <div>
-                    <button className="mb-3 text-sm text-muted hover:text-ink" onClick={() => setStep('form')}>‹ Edit</button>
-                    <h2 className="text-xl font-bold">Review your request</h2>
+                    <button className="mb-3 text-sm text-muted hover:text-ink" onClick={() => setStep('form')}>{t('booking.review.edit')}</button>
+                    <h2 className="text-xl font-bold">{t('booking.review.title')}</h2>
                     {banner && <p className="my-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{banner}</p>}
                     <div className="mt-4 space-y-3 text-sm">
-                      <Row label="Pickup" value={pickup?.label ?? '—'} dot="accent" />
-                      <Row label="Destination" value={dropoff?.label ?? '—'} dot="ink" />
-                      <Row label="When" value={when === 'NOW' ? 'Now (immediate request)' : `${scheduledAt.replace('T', ' ')} · ${cfg?.timezone}`} />
-                      <Row label="Class" value={vClass === 'XL' ? 'XL' : 'Comfort'} />
-                      <Row label="Passengers" value={String(pax)} />
-                      <Row label="Driver asks for" value={name || passenger?.name || '—'} />
-                      <Row label="Your phone" value={passenger?.phone ?? phone} />
-                      {note && <Row label="Note" value={note} />}
-                      <Row label="Fare" value={quote ? `≈ ${eur(quote.totalCents)} (${eur(quote.rangeLowCents)}–${eur(quote.rangeHighCents)}) · meter estimate` : 'Set by the taximeter'} />
+                      <Row label={t('booking.review.pickup')} value={pickup?.label ?? '—'} dot="accent" />
+                      <Row label={t('booking.review.destination')} value={dropoff?.label ?? '—'} dot="ink" />
+                      <Row label={t('booking.review.when')} value={when === 'NOW' ? t('booking.review.nowImmediate') : `${scheduledAt.replace('T', ' ')} · ${cfg?.timezone}`} />
+                      <Row label={t('booking.review.class')} value={t(`common.vClass.${vClass}`)} />
+                      <Row label={t('booking.review.passengers')} value={String(pax)} />
+                      <Row label={t('booking.review.driverAsksFor')} value={name || passenger?.name || '—'} />
+                      <Row label={t('booking.review.yourPhone')} value={passenger?.phone ?? phone} />
+                      {note && <Row label={t('booking.review.note')} value={note} />}
+                      <Row label={t('booking.review.fare')} value={quote ? t('booking.review.fareValue', { total: eur(quote.totalCents), low: eur(quote.rangeLowCents), high: eur(quote.rangeHighCents) }) : t('booking.review.fareByMeter')} />
                     </div>
                     {quote?.airport && <AirportFareNote />}
                     {ambiguous ? (
                       <div className="mt-4 rounded-[12px] border border-warn/40 bg-warn/10 p-3">
-                        <p className="text-sm text-warn">On this night the clocks change and this time occurs twice. Which one do you mean?</p>
+                        <p className="text-sm text-warn">{t('booking.review.ambiguousPrompt')}</p>
                         <div className="mt-2 grid gap-2">
                           {ambiguous.map((off) => {
                             const hrs = Number(off) / 60;
@@ -600,16 +614,16 @@ export default function BookingApp() {
                                 disabled={submitting}
                                 onClick={() => { setScheduleOffsetMin(Number(off)); setAmbiguous(null); submit(Number(off)); }}
                               >
-                                {scheduledAt.replace('T', ' ')} · {hrs >= 3 ? 'earlier (summer time' : 'later (winter time'}, UTC+{hrs})
+                                {t(hrs >= 3 ? 'booking.review.ambiguousEarlier' : 'booking.review.ambiguousLater', { time: scheduledAt.replace('T', ' '), offset: hrs })}
                               </button>
                             );
                           })}
                         </div>
                       </div>
                     ) : (
-                      <button className="btn-primary mt-5 w-full" onClick={() => submit()} disabled={submitting}>{submitting ? 'Sending…' : 'Confirm request'}</button>
+                      <button className="btn-primary mt-5 w-full" onClick={() => submit()} disabled={submitting}>{submitting ? t('booking.review.sending') : t('booking.review.confirm')}</button>
                     )}
-                    <p className="mt-2 text-center text-xs text-muted">{when === 'NOW' ? 'We’ll automatically offer your ride to the nearest available driver.' : 'We’ll automatically match a nearby driver shortly before pickup.'} You&apos;ll get a private tracking link. Pay the driver directly.</p>
+                    <p className="mt-2 text-center text-xs text-muted">{when === 'NOW' ? t('booking.review.autoMatchNow') : t('booking.review.autoMatchScheduled')} {t('booking.review.trackingAndPay')}</p>
                   </div>
                 )}
               </div>
@@ -618,10 +632,12 @@ export default function BookingApp() {
                 <div className="border-t border-edge p-3 sm:p-4" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
                   <button className="btn-primary w-full" onClick={toReview}>
                     {pickup && dropoff
-                      ? `Request ${classes.find((c) => c.key === vClass)?.label ?? 'ride'}${quote ? ` · ≈ ${eur(quote.totalCents)}` : ''}`
-                      : 'Request a ride'}
+                      ? (quote
+                        ? t('booking.cta.requestClassPrice', { vClass: t(`common.vClass.${vClass}`), price: eur(quote.totalCents) })
+                        : t('booking.cta.requestClass', { vClass: t(`common.vClass.${vClass}`) }))
+                      : t('booking.cta.request')}
                   </button>
-                  {!passenger && pickup && dropoff && <p className="mt-2 text-center text-xs text-muted">You&apos;ll sign in before confirming.</p>}
+                  {!passenger && pickup && dropoff && <p className="mt-2 text-center text-xs text-muted">{t('booking.cta.signInFirst')}</p>}
                 </div>
               )}
             </div>
@@ -660,9 +676,10 @@ export default function BookingApp() {
 // Airport trips: official fixed fares (Road Transport Department) apply and can differ from the
 // meter estimate. Shown until the fixed-fare table is implemented (2026-10-01 audit, Stage 0.7).
 function AirportFareNote() {
+  const { t } = useT();
   return (
     <p className="mt-2 rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">
-      Airport trip: official fixed airport fares apply. The driver charges the official fare, which may differ from this estimate.
+      {t('booking.trip.airportNote')}
     </p>
   );
 }

@@ -7,6 +7,9 @@ import { ChatPanel } from '@/components/ChatPanel';
 import { NotifyToggle } from '@/components/NotifyToggle';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
+import { useT } from '@/i18n/I18nProvider';
+import type { MsgKey } from '@/i18n/I18nProvider';
+import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 interface TrackView {
   reference: string;
@@ -22,7 +25,8 @@ interface TrackView {
   vehicle: null | { driverName: string; make: string; model: string; color: string; plate: string; vClass: string; phone: string | null; rating: { average: number; count: number } | null };
   location: null | { lat: number; lng: number; freshness: string; poorAccuracy: boolean; sampledAt: string };
   pickupEta: string | null;
-  pickupEtaMin?: number | null;
+  pickupEtaMin: number | null;
+  pickupEtaApprox: boolean;
   fareCents: number | null;
   startCode: string | null;
   waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
@@ -32,19 +36,20 @@ interface TrackView {
   timeline: { type: string; at: string; status: string | null }[];
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  REQUESTED: 'Scheduled ride',
-  SEARCHING: 'Finding you a driver',
-  NO_DRIVER: 'No drivers available',
-  ASSIGNED: 'Driver assigned',
-  EN_ROUTE: 'Driver on the way',
-  ARRIVED: 'Driver has arrived',
-  IN_PROGRESS: 'On the trip',
-  COMPLETED: 'Trip completed',
-  CANCELED: 'Booking canceled',
-};
+const TIMELINE_KEYS = new Set([
+  'CREATED', 'SCHEDULED_PROMOTED', 'RESEARCH', 'SEARCH_REPAIRED', 'REMATCH', 'OFFERED', 'OFFER_ACCEPTED', 'ASSIGNED', 'REASSIGNED',
+  'UNASSIGNED', 'ARRIVED', 'TRIP_STARTED', 'COMPLETED', 'NO_DRIVER', 'CANCELED', 'TERMINATED', 'STATUS_SEARCHING', 'STATUS_NO_DRIVER',
+  'STATUS_ASSIGNED', 'STATUS_EN_ROUTE', 'STATUS_ARRIVED', 'STATUS_IN_PROGRESS', 'STATUS_COMPLETED', 'STATUS_CANCELED',
+]);
+const STATUS_KEYS = new Set(['REQUESTED', 'SEARCHING', 'NO_DRIVER', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELED']);
 
+// Render a translated template whose {slot} placeholder is a React node (e.g. a styled span).
+function rich(template: string, node: React.ReactNode): React.ReactNode {
+  const [before, after = ''] = template.split('\u0000');
+  return <>{before}{node}{after}</>;
+}
 export default function TrackApp() {
+  const { t, tp, fmt, tError } = useT();
   const [view, setView] = useState<TrackView | null>(null);
   const [phase, setPhase] = useState<'loading' | 'ready' | 'noauth' | 'error'>('loading');
   const [reconnecting, setReconnecting] = useState(false);
@@ -168,7 +173,7 @@ export default function TrackApp() {
       await load();
     } catch (e) {
       setConfirmCancel(false);
-      setActionError(e instanceof ApiRequestError ? e.body.message : 'Could not cancel — check your connection and try again.');
+      setActionError(e instanceof ApiRequestError ? tError(e) : t('track.cancelFailed'));
     } finally {
       setCancelling(false);
     }
@@ -179,14 +184,14 @@ export default function TrackApp() {
     setShareMsg(null);
     try {
       const r = await api<{ url: string }>('/tracking/share', { method: 'POST' });
-      const text = 'Follow my IL-Y ride live';
+      const text = t('track.shareText');
       if (typeof navigator !== 'undefined' && navigator.share) {
-        try { await navigator.share({ title: 'My IL-Y ride', text, url: r.url }); return; } catch { /* dismissed — fall back to copy */ }
+        try { await navigator.share({ title: t('track.shareTitle'), text, url: r.url }); return; } catch { /* dismissed — fall back to copy */ }
       }
       await navigator.clipboard.writeText(r.url);
-      setShareMsg('Link copied — it shows your car and live position only, and stops when the trip ends.');
+      setShareMsg(t('track.shareCopied'));
     } catch (e) {
-      setShareMsg(e instanceof ApiRequestError ? e.body.message : 'Could not create a share link. Try again.');
+      setShareMsg(e instanceof ApiRequestError ? tError(e) : t('track.shareFailed'));
     }
   }
 
@@ -195,8 +200,8 @@ export default function TrackApp() {
   useEffect(() => {
     if (!arrived) return;
     setNowMs(Date.now());
-    const t = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(t);
+    const iv = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(iv);
   }, [arrived]);
 
   async function retry() {
@@ -206,23 +211,23 @@ export default function TrackApp() {
       await api('/tracking/research', { method: 'POST', body: { expectedRevision: view.revision } });
       await load();
     } catch (e) {
-      setActionError(e instanceof ApiRequestError ? e.body.message : 'Could not search again — check your connection.');
+      setActionError(e instanceof ApiRequestError ? tError(e) : t('track.researchFailed'));
     } finally {
       setRetrying(false);
     }
   }
 
   if (phase === 'loading') {
-    return <Centered><div className="animate-pulse text-muted">Loading your ride…</div></Centered>;
+    return <Centered><div className="animate-pulse text-muted">{t('track.loadingRide')}</div></Centered>;
   }
   if (phase === 'noauth') {
     return (
       <Centered>
         <div className="card max-w-sm p-6 text-center">
           <Logo className="mb-4 justify-center" />
-          <h1 className="text-lg font-semibold">No active ride here</h1>
-          <p className="mt-2 text-sm text-muted">Open your private tracking link, or book a new ride.</p>
-          <a href="/" className="btn-primary mt-4 w-full">Book a ride</a>
+          <h1 className="text-lg font-semibold">{t('track.noRideTitle')}</h1>
+          <p className="mt-2 text-sm text-muted">{t('track.noRideBody')}</p>
+          <a href="/" className="btn-primary mt-4 w-full">{t('track.bookRide')}</a>
         </div>
       </Centered>
     );
@@ -232,16 +237,16 @@ export default function TrackApp() {
       <Centered>
         <div className="card max-w-sm p-6 text-center">
           <Logo className="mb-4 justify-center" />
-          <h1 className="text-lg font-semibold">Can&apos;t reach the server</h1>
-          <p className="mt-2 text-sm text-muted">Check your connection and try again. Your booking is safe.</p>
-          <button className="btn-primary mt-4 w-full" onClick={() => { setPhase('loading'); bootstrap(); }}>Retry</button>
-          <a href="/" className="mt-3 block text-sm text-muted hover:text-ink">Book a new ride</a>
+          <h1 className="text-lg font-semibold">{t('track.unreachableTitle')}</h1>
+          <p className="mt-2 text-sm text-muted">{t('track.unreachableBody')}</p>
+          <button className="btn-primary mt-4 w-full" onClick={() => { setPhase('loading'); bootstrap(); }}>{t('common.retry')}</button>
+          <a href="/" className="mt-3 block text-sm text-muted hover:text-ink">{t('track.bookNewRide')}</a>
         </div>
       </Centered>
     );
   }
   if (!view) {
-    return <Centered><div className="text-muted">Reconnecting…</div></Centered>;
+    return <Centered><div className="text-muted">{t('track.reconnecting')}</div></Centered>;
   }
 
   const terminal = view.status === 'COMPLETED' || view.status === 'CANCELED';
@@ -252,19 +257,26 @@ export default function TrackApp() {
   // Before pickup, anchor on the pickup; during the trip, anchor on the destination.
   if (view.status === 'IN_PROGRESS') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
   else markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label });
-  if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: 'Your driver', stale: liveLocation.freshness === 'stale' });
+  if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: t('track.yourDriver'), stale: liveLocation.freshness === 'stale' });
 
-  const etaText = !disconnected && view.pickupEta && view.pickupEta.includes('min') ? view.pickupEta.replace('≈ ', '').replace(' (estimate)', '') : null;
+  const etaMinText = view.pickupEtaMin != null ? tp('common.minutes', view.pickupEtaMin) : null;
+  const etaText = !disconnected && etaMinText ? (view.pickupEtaApprox ? t('track.etaApprox', { min: etaMinText }) : etaMinText) : null;
+  const statusLabel = STATUS_KEYS.has(view.status) ? t(`common.status.${view.status}` as MsgKey) : view.status;
   const headline =
     (view.status === 'EN_ROUTE' || view.status === 'ASSIGNED') && view.vehicle
-      ? `Meet ${view.vehicle.driverName}${etaText ? ' — ' + etaText : ''}`
-      : STATUS_LABEL[view.status] ?? view.status;
+      ? (etaText ? t('track.meetDriverEta', { name: view.vehicle.driverName, eta: etaText }) : t('track.meetDriver', { name: view.vehicle.driverName }))
+      : statusLabel;
+  const vehicleDesc = view.vehicle ? `${view.vehicle.color} ${view.vehicle.make} ${view.vehicle.model}` : '';
+  const SLOT = '\u0000';
 
   return (
     <div className="relative flex h-[100dvh] flex-col overflow-hidden">
       <header className="z-20 flex items-center justify-between border-b border-edge bg-page/90 px-4 py-3 backdrop-blur">
         <Logo />
-        <a href="/" className="text-sm text-muted hover:text-ink">Book</a>
+        <div className="flex items-center gap-3">
+          <LanguageSwitcher />
+          <a href="/" className="text-sm text-muted hover:text-ink">{t('common.book')}</a>
+        </div>
       </header>
 
       <div className="relative flex-1">
@@ -275,9 +287,9 @@ export default function TrackApp() {
         {/* status pill */}
         <div className="absolute left-4 top-4 z-10 max-w-[70%]">
           <span className="chip !bg-page/90 !text-accent">
-            {view.status === 'EN_ROUTE' ? '● DRIVER ON THE WAY' : `● ${(STATUS_LABEL[view.status] ?? view.status).toUpperCase()}`}
+            {view.status === 'EN_ROUTE' ? `● ${t('track.pillEnRoute')}` : `● ${statusLabel.toUpperCase()}`}
           </span>
-          {reconnecting && <span className="chip ml-2 !bg-page/90 !text-warn">Reconnecting…</span>}
+          {reconnecting && <span className="chip ml-2 !bg-page/90 !text-warn">{t('track.reconnecting')}</span>}
         </div>
 
         {/* bottom sheet */}
@@ -288,13 +300,13 @@ export default function TrackApp() {
               <div className="shrink-0 border-b border-edge p-4 pb-3 sm:p-5 sm:pb-3">
                 <h1 className="text-xl font-bold" role="status" aria-live="polite">{headline}</h1>
                 {view.status === 'REQUESTED' && (
-                  <p className="mt-1 text-sm text-muted">Scheduled request — we’ll dispatch a driver near your pickup time.</p>
+                  <p className="mt-1 text-sm text-muted">{t('track.scheduledNote')}</p>
                 )}
                 {view.status === 'SEARCHING' && (
-                  <p className="mt-1 text-sm text-muted">Matching you with the nearest available driver…</p>
+                  <p className="mt-1 text-sm text-muted">{t('track.searchingNote')}</p>
                 )}
                 {view.status === 'NO_DRIVER' && (
-                  <p className="mt-1 text-sm text-muted">No drivers are free nearby right now. You can search again or cancel.</p>
+                  <p className="mt-1 text-sm text-muted">{t('track.noDriverNote')}</p>
                 )}
 
                 {view.vehicle ? (
@@ -303,24 +315,24 @@ export default function TrackApp() {
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-semibold">{view.vehicle.driverName}</div>
                       <div className="truncate text-sm text-muted">
-                        {view.vehicle.rating && <span className="whitespace-nowrap text-accent" aria-label={`Rated ${view.vehicle.rating.average} out of 5 from ${view.vehicle.rating.count} trips`}>★ {view.vehicle.rating.average.toFixed(1)} · </span>}
-                        {view.vehicle.color} {view.vehicle.make} {view.vehicle.model}
+                        {view.vehicle.rating && <span className="whitespace-nowrap text-accent" aria-label={tp('track.ratingAria', view.vehicle.rating.count, { avg: view.vehicle.rating.average })}>★ {view.vehicle.rating.average.toFixed(1)} · </span>}
+                        {vehicleDesc}
                       </div>
                     </div>
-                    <span className="shrink-0 rounded-[8px] border border-edge bg-page px-2.5 py-1.5 font-mono text-base font-bold tracking-wide" aria-label={`Number plate ${view.vehicle.plate}`}>{view.vehicle.plate}</span>
+                    <span className="shrink-0 rounded-[8px] border border-edge bg-page px-2.5 py-1.5 font-mono text-base font-bold tracking-wide" aria-label={t('track.plateAria', { plate: view.vehicle.plate })}>{view.vehicle.plate}</span>
                   </div>
                 ) : view.status === 'SEARCHING' ? (
                   <div className="mt-4 flex items-center gap-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm text-muted">
                     <span className="inline-block h-3 w-3 animate-ping rounded-full bg-accent" />
-                    Reserving the nearest driver for you…
+                    {t('track.reserving')}
                   </div>
                 ) : null}
 
                 {/* start code — shown to the driver at pickup */}
                 {view.startCode && (
                   <div className="mt-3 flex items-center justify-between gap-3 rounded-[12px] border border-accent/50 bg-accent/10 px-3 py-2">
-                    <div className="text-xs text-muted">Give this code to your driver when you get in</div>
-                    <div className="font-mono text-2xl font-bold tracking-[0.3em] text-accent" aria-label={`Start code ${view.startCode.split('').join(' ')}`}>{view.startCode}</div>
+                    <div className="text-xs text-muted">{t('track.startCodeHint')}</div>
+                    <div className="font-mono text-2xl font-bold tracking-[0.3em] text-accent" aria-label={t('track.startCodeAria', { code: view.startCode.split('').join(' ') })}>{view.startCode}</div>
                   </div>
                 )}
               </div>
@@ -335,64 +347,70 @@ export default function TrackApp() {
                   return (
                     <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
                       {freeLeft > 0
-                        ? <span>Your driver is waiting · <span className="font-mono text-accent">{mmss(freeLeft)}</span> free time left</span>
-                        : <span className="text-warn">Free waiting time elapsed{view.waiting.paidRateCentsPerMin > 0 ? ` · €${(view.waiting.paidRateCentsPerMin / 100).toFixed(2)}/min applies` : ''}.</span>}
+                        ? <span>{rich(t('track.waitingFree', { time: SLOT }), <span className="font-mono text-accent">{mmss(freeLeft)}</span>)}</span>
+                        : <span className="text-warn">{view.waiting.paidRateCentsPerMin > 0 ? t('track.waitingElapsedPaid', { rate: fmt.money(view.waiting.paidRateCentsPerMin) }) : t('track.waitingElapsed')}</span>}
                     </div>
                   );
                 })()}
 
                 {/* stops */}
                 <div className="mt-4 space-y-2 text-sm">
-                  <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" /><span className="text-muted">Pickup</span><span className="ml-auto truncate font-medium">{view.pickup.label}</span></div>
-                  <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-ink" /><span className="text-muted">Destination</span><span className="ml-auto truncate font-medium">{view.dropoff.label}</span></div>
+                  <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" /><span className="text-muted">{t('track.pickup')}</span><span className="ml-auto truncate font-medium">{view.pickup.label}</span></div>
+                  <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-ink" /><span className="text-muted">{t('track.destination')}</span><span className="ml-auto truncate font-medium">{view.dropoff.label}</span></div>
                 </div>
 
                 {liveLocation && (
                   <p className="mt-2 text-xs text-muted">
-                    Location {liveLocation.freshness}{liveLocation.poorAccuracy ? ' · low accuracy' : ''} · updated {new Date(liveLocation.sampledAt).toLocaleTimeString('en-GB')}
+                    {t(liveLocation.poorAccuracy ? 'track.locationLineLowAcc' : 'track.locationLine', {
+                      freshness: ['fresh', 'stale', 'disconnected'].includes(liveLocation.freshness) ? t(`track.freshness.${liveLocation.freshness}` as MsgKey) : liveLocation.freshness,
+                      time: fmt.time(liveLocation.sampledAt),
+                    })}
                   </p>
                 )}
-                {disconnected && <p className="mt-2 text-xs text-warn">Live position paused — reconnecting…</p>}
-                {(view.status === 'EN_ROUTE' || view.status === 'ASSIGNED') && !liveLocation && !disconnected && <p className="mt-2 text-xs text-muted">ETA unavailable — waiting for the driver&apos;s GPS.</p>}
+                {disconnected && <p className="mt-2 text-xs text-warn">{t('track.livePaused')}</p>}
+                {(view.status === 'EN_ROUTE' || view.status === 'ASSIGNED') && !liveLocation && !disconnected && <p className="mt-2 text-xs text-muted">{t('track.etaUnavailable')}</p>}
 
                 {/* actions */}
                 {!terminal && (
                   <div className="mt-4 space-y-2">
                     <NotifyToggle pushUrl="/tracking/push" className="pb-1" />
                     <div className="grid grid-cols-2 gap-2">
-                      <button type="button" className="btn-ghost !min-h-[44px] text-sm" onClick={share}>↗ Share trip</button>
-                      <button type="button" className="btn-ghost !min-h-[44px] text-sm" onClick={() => setSafety(true)}>🛡 Safety</button>
+                      <button type="button" className="btn-ghost !min-h-[44px] text-sm" onClick={share}>{t('track.shareTrip')}</button>
+                      <button type="button" className="btn-ghost !min-h-[44px] text-sm" onClick={() => setSafety(true)}>{t('track.safety')}</button>
                     </div>
                     {shareMsg && <p role="status" className="text-xs text-muted">{shareMsg}</p>}
                     {view.vehicle?.phone && (
-                      <a href={`tel:${view.vehicle.phone}`} className="btn-primary w-full">📞 Call driver</a>
+                      <a href={`tel:${view.vehicle.phone}`} className="btn-primary w-full">{t('track.callDriver')}</a>
                     )}
                     {view.vehicle && (
                       <ChatPanel listUrl="/tracking/messages" postUrl="/tracking/messages" pushUrl="/tracking/push" me="PASSENGER" peerLabel="driver" />
                     )}
                     <button className="w-full text-sm text-muted hover:text-ink" onClick={() => setShowDetails((s) => !s)}>
-                      {showDetails ? 'Hide trip details' : 'Trip details ›'}
+                      {showDetails ? t('track.hideDetails') : t('track.showDetails')}
                     </button>
                     {showDetails && (
                       <div className="rounded-[12px] border border-edge bg-elevated p-3 text-xs text-muted">
-                        <div>Reference: <span className="font-mono text-ink">{view.reference}</span></div>
-                        <div className="mt-1">Class: {view.vClass} · {view.passengerCount} passenger(s)</div>
-                        <div className="mt-1">Fare: {view.fareCents != null ? `≈ €${(view.fareCents / 100).toFixed(2)} (metered estimate)` : view.fareWording}</div>
+                        <div>{rich(t('track.reference', { ref: SLOT }), <span className="font-mono text-ink">{view.reference}</span>)}</div>
+                        <div className="mt-1">{t('track.classLine', { vClass: view.vClass === 'COMFORT' || view.vClass === 'XL' ? t(`common.vClass.${view.vClass}`) : view.vClass, passengers: tp('common.passengers', view.passengerCount) })}</div>
+                        <div className="mt-1">{t('track.fareLine', { fare: view.fareCents != null ? t('track.fareMetered', { amount: fmt.money(view.fareCents) }) : view.fareWording })}</div>
                         <ul className="mt-2 space-y-1">
-                          {view.timeline.map((t, i) => (
-                            <li key={i}>· {t.type.replace(/_/g, ' ').toLowerCase()} — {new Date(t.at).toLocaleTimeString('en-GB')}</li>
+                          {view.timeline.map((ev, i) => (
+                            <li key={i}>{t('track.timelineEntry', {
+                              event: TIMELINE_KEYS.has(ev.type) ? t(`track.timeline.${ev.type}` as MsgKey) : ev.type.replace(/_/g, ' ').toLowerCase(),
+                              time: fmt.time(ev.at),
+                            })}</li>
                           ))}
                         </ul>
                       </div>
                     )}
                     {view.canRetry && (
                       <button className="btn-primary w-full" onClick={retry} disabled={retrying}>
-                        {retrying ? 'Searching…' : 'Search again'}
+                        {retrying ? t('track.searching') : t('track.searchAgain')}
                       </button>
                     )}
                     {view.canCancel && (
                       <button className="w-full rounded-[12px] border border-danger/40 px-4 py-2.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-50" onClick={() => setConfirmCancel(true)} disabled={cancelling}>
-                        {cancelling ? 'Cancelling…' : 'Cancel booking'}
+                        {cancelling ? t('track.cancelling') : t('track.cancelBooking')}
                       </button>
                     )}
                   </div>
@@ -402,29 +420,29 @@ export default function TrackApp() {
                   <div className="mt-4">
                     {view.status === 'COMPLETED' && view.receipt ? (
                       <div className="rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-                        <div className="mb-2 font-semibold">Trip receipt</div>
+                        <div className="mb-2 font-semibold">{t('track.receiptTitle')}</div>
                         {view.receipt.estimateCents != null && (
-                          <div className="flex justify-between"><span className="text-muted">Fare estimate</span><span>€{(view.receipt.estimateCents / 100).toFixed(2)}</span></div>
+                          <div className="flex justify-between"><span className="text-muted">{t('track.fareEstimate')}</span><span>{fmt.money(view.receipt.estimateCents, view.receipt.currency)}</span></div>
                         )}
                         {view.receipt.waitingCents > 0 && (
-                          <div className="flex justify-between"><span className="text-muted">Waiting</span><span>€{(view.receipt.waitingCents / 100).toFixed(2)}</span></div>
+                          <div className="flex justify-between"><span className="text-muted">{t('track.waiting')}</span><span>{fmt.money(view.receipt.waitingCents, view.receipt.currency)}</span></div>
                         )}
                         <div className="mt-2 border-t border-edge pt-2 text-xs text-muted">
                           {view.receipt.priceType === 'REGULATED_METER_ESTIMATE'
-                            ? 'Estimate only — the final regulated meter amount is settled with the driver.'
-                            : 'Fare as quoted.'}
+                            ? t('track.receiptMeterNote')
+                            : t('track.receiptQuoted')}
                         </div>
                         <div className="mt-1 flex justify-between text-xs text-muted">
-                          <span>Payment: {view.receipt.paymentMethod === 'CASH_TO_DRIVER' ? 'cash to driver' : view.receipt.paymentMethod}</span>
-                          <span>{view.receipt.paymentStatus === 'PENDING' ? 'to be collected' : 'collected'}</span>
+                          <span>{t('track.paymentLine', { method: view.receipt.paymentMethod === 'CASH_TO_DRIVER' ? t('track.paymentCash') : view.receipt.paymentMethod })}</span>
+                          <span>{view.receipt.paymentStatus === 'PENDING' ? t('track.toBeCollected') : t('track.collected')}</span>
                         </div>
                       </div>
                     ) : (
                       <div className="rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-                        {view.status === 'COMPLETED' ? 'Thanks for riding with IL-Y.' : 'This booking was canceled.'}
+                        {view.status === 'COMPLETED' ? t('track.thanks') : t('track.canceledNote')}
                       </div>
                     )}
-                    <a href="/" className="btn-primary mt-3 w-full">Book another ride</a>
+                    <a href="/" className="btn-primary mt-3 w-full">{t('track.bookAnother')}</a>
                   </div>
                 )}
               </div>
@@ -434,9 +452,11 @@ export default function TrackApp() {
       </div>
       {confirmCancel && (
         <ConfirmSheet
-          title="Cancel this ride?"
-          body={view.vehicle ? <>Your driver {view.vehicle.driverName} will be notified{etaText ? ` (they are ${etaText} away)` : ''}. There is no cancellation fee.</> : 'We will stop looking for a driver. There is no cancellation fee.'}
-          confirmLabel="Cancel ride"
+          title={t('track.cancelTitle')}
+          body={view.vehicle
+            ? (etaText ? t('track.cancelBodyDriverEta', { name: view.vehicle.driverName, eta: etaText }) : t('track.cancelBodyDriver', { name: view.vehicle.driverName }))
+            : t('track.cancelBodySearching')}
+          confirmLabel={t('track.cancelConfirm')}
           danger
           busy={cancelling}
           onConfirm={cancel}
@@ -446,15 +466,15 @@ export default function TrackApp() {
       {safety && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-4 sm:items-center sm:pb-0" onClick={() => setSafety(false)}>
           <div role="dialog" aria-modal="true" aria-labelledby="safety-title" className="card w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
-            <h2 id="safety-title" className="text-lg font-bold">Safety</h2>
-            <a href="tel:112" className="mt-4 block w-full rounded-[12px] border border-danger bg-danger/15 px-4 py-3 text-center font-semibold text-danger">Call emergency services · 112</a>
+            <h2 id="safety-title" className="text-lg font-bold">{t('track.safetyTitle')}</h2>
+            <a href="tel:112" className="mt-4 block w-full rounded-[12px] border border-danger bg-danger/15 px-4 py-3 text-center font-semibold text-danger">{t('track.callEmergency')}</a>
             <div className="mt-4 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-              <div className="text-muted">Tell them</div>
-              <div className="mt-1">Trip <span className="font-mono">{view.reference}</span>{view.vehicle ? <> · {view.vehicle.color} {view.vehicle.make} {view.vehicle.model}, plate <span className="font-mono font-bold">{view.vehicle.plate}</span></> : null}</div>
-              <div className="mt-1 text-muted">Pickup: {view.pickup.label}</div>
+              <div className="text-muted">{t('track.tellThem')}</div>
+              <div className="mt-1">{rich(t('track.tripRef', { ref: SLOT }), <span className="font-mono">{view.reference}</span>)}{view.vehicle ? <> · {rich(t('track.carPlate', { car: vehicleDesc, plate: SLOT }), <span className="font-mono font-bold">{view.vehicle.plate}</span>)}</> : null}</div>
+              <div className="mt-1 text-muted">{t('track.pickupLine', { label: view.pickup.label })}</div>
             </div>
-            <button className="btn-ghost mt-3 w-full" onClick={() => { setSafety(false); share(); }}>↗ Share trip with someone</button>
-            <button className="mt-2 block w-full text-center text-sm text-muted hover:text-ink" onClick={() => setSafety(false)}>Close</button>
+            <button className="btn-ghost mt-3 w-full" onClick={() => { setSafety(false); share(); }}>{t('track.shareWithSomeone')}</button>
+            <button className="mt-2 block w-full text-center text-sm text-muted hover:text-ink" onClick={() => setSafety(false)}>{t('common.close')}</button>
           </div>
         </div>
       )}

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Logo } from '@/components/Brand';
 import { api } from '@/lib/api-client';
+import { useT } from '@/i18n/I18nProvider';
 
 export interface Me {
   id: string;
@@ -16,6 +17,7 @@ export interface Me {
 export function StaffShell({ roles, children }: { roles: Me['role'][]; children: (me: Me) => React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useT();
   const [me, setMe] = useState<Me | null>(null);
   const [state, setState] = useState<'loading' | 'ok' | 'denied'>('loading');
 
@@ -48,7 +50,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
 
   const nav =
     me.role === 'DRIVER'
-      ? [{ href: '/driver', label: 'My trip' }]
+      ? [{ href: '/driver', label: t('common.myTrip') }]
       : [
           { href: '/dispatch', label: 'Dispatch' },
           ...(me.role === 'ADMIN'
@@ -82,7 +84,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
         </div>
         <div className="flex items-center gap-3">
           <span className="hidden text-xs text-muted sm:inline">{me.displayName} · {me.role}</span>
-          <button onClick={logout} className="btn-ghost !min-h-0 !py-1.5 text-sm">Sign out</button>
+          <button onClick={logout} className="btn-ghost !min-h-0 !py-1.5 text-sm">{t('common.signOut')}</button>
         </div>
       </header>
       {/* mobile nav */}

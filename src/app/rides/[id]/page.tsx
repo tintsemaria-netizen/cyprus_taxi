@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import { Logo } from '@/components/Brand';
 import { api, ApiRequestError } from '@/lib/api-client';
+import { useT } from '@/i18n/I18nProvider';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,11 +24,11 @@ interface Receipt {
   rating: { stars: number } | null;
 }
 
-const eur = (cents: number, ccy: string) => `${ccy === 'EUR' ? '€' : ccy + ' '}${(cents / 100).toFixed(2)}`;
-const PAYMENT: Record<string, string> = { CASH_TO_DRIVER: 'Cash to driver' };
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { t, tp, fmt } = useT();
+  const eur = (cents: number, ccy: string) => fmt.money(cents, ccy);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,11 +36,11 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     (async () => {
       try { setReceipt(await api<Receipt>(`/passenger/rides/${id}/receipt`)); }
       catch (e) {
-        if (e instanceof ApiRequestError) setError(e.status === 401 ? 'Sign in to view this receipt.' : e.body.message);
-        else setError('Could not load the receipt.');
+        if (e instanceof ApiRequestError) setError(e.status === 401 ? t('rides.receipt.signInToView') : e.body.message);
+        else setError(t('rides.receipt.loadFailed'));
       }
     })();
-  }, [id]);
+  }, [id, t]);
 
   const f = receipt?.fare;
 
@@ -47,21 +48,21 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     <div className="mx-auto max-w-lg p-4 sm:p-6">
       <header className="mb-4 flex items-center justify-between">
         <a href="/"><Logo className="h-8" /></a>
-        <a href="/rides" className="text-sm text-muted hover:text-ink">‹ My rides</a>
+        <a href="/rides" className="text-sm text-muted hover:text-ink">{t('rides.receipt.backToRides')}</a>
       </header>
 
       {error ? (
         <div className="card p-6 text-center text-sm text-muted">{error}</div>
       ) : !receipt ? (
-        <p className="text-muted">Loading…</p>
+        <p className="text-muted">{t('common.loading')}</p>
       ) : (
         <div className="card p-5">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold">Receipt</h1>
+            <h1 className="text-lg font-bold">{t('rides.receipt.title')}</h1>
             <span className="text-xs text-muted">#{receipt.reference}</span>
           </div>
           <p className="mt-0.5 text-xs text-muted">
-            {receipt.completedAt ? new Date(receipt.completedAt).toLocaleString('en-GB') : 'Completed'} · {receipt.vClass} · {receipt.passengerCount} pax
+            {receipt.completedAt ? fmt.dateTime(receipt.completedAt) : t('rides.receipt.completed')} · {receipt.vClass} · {tp('common.passengers', receipt.passengerCount)}
           </p>
 
           <div className="mt-4 space-y-1 text-sm">
@@ -71,7 +72,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
           {receipt.driver && (
             <div className="mt-4 border-t border-edge pt-3 text-sm">
-              <div className="text-muted">Driver</div>
+              <div className="text-muted">{t('rides.receipt.driver')}</div>
               <div className="font-medium">{receipt.driver.name}</div>
               <div className="text-xs text-muted">{receipt.driver.vehicle} · {receipt.driver.plate}</div>
             </div>
@@ -79,7 +80,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
           {f && (
             <div className="mt-4 border-t border-edge pt-3">
-              <div className="mb-1 text-sm text-muted">{f.isUpfront ? 'Fare' : 'Estimated fare'}</div>
+              <div className="mb-1 text-sm text-muted">{f.isUpfront ? t('rides.receipt.fare') : t('rides.receipt.estimatedFare')}</div>
               <div className="space-y-1 text-sm">
                 {f.lines.map((l, i) => (
                   <div key={i} className="flex justify-between gap-3">
@@ -89,22 +90,22 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 ))}
                 {f.waitingCents > 0 && (
                   <div className="flex justify-between gap-3">
-                    <span className="text-muted">Waiting</span>
+                    <span className="text-muted">{t('rides.receipt.waiting')}</span>
                     <span className="shrink-0 tabular-nums">{eur(f.waitingCents, f.currency)}</span>
                   </div>
                 )}
               </div>
               <div className="mt-2 flex items-baseline justify-between border-t border-edge pt-2">
-                <span className="font-semibold">{f.isUpfront ? 'Total' : 'Estimated total'}</span>
+                <span className="font-semibold">{f.isUpfront ? t('rides.receipt.total') : t('rides.receipt.estimatedTotal')}</span>
                 <span className="text-lg font-bold tabular-nums">
                   {f.isUpfront && f.finalCents != null ? eur(f.finalCents, f.currency) : f.estimateCents != null ? eur(f.estimateCents, f.currency) : '—'}
                 </span>
               </div>
-              <p className="mt-2 text-xs text-muted">{f.note}</p>
+              <p className="mt-2 text-xs text-muted">{f.isUpfront ? t('rides.receipt.noteUpfront') : t('rides.receipt.noteMeter')}</p>
               <div className="mt-3 flex items-center justify-between text-xs">
-                <span className="text-muted">{PAYMENT[f.paymentMethod] ?? f.paymentMethod}</span>
+                <span className="text-muted">{f.paymentMethod === 'CASH_TO_DRIVER' ? t('common.payment.CASH_TO_DRIVER') : f.paymentMethod}</span>
                 <span className={f.paymentStatus === 'COLLECTED' ? 'text-accent' : 'text-muted'}>
-                  {f.paymentStatus === 'COLLECTED' ? 'Paid' : 'Payment pending'}
+                  {f.paymentStatus === 'COLLECTED' ? t('rides.receipt.paid') : t('rides.receipt.paymentPending')}
                 </span>
               </div>
             </div>
@@ -112,7 +113,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
           {receipt.rating && (
             <div className="mt-4 border-t border-edge pt-3 text-sm">
-              <span className="text-muted">Your rating: </span>
+              <span className="text-muted">{t('rides.receipt.yourRating')} </span>
               <span className="text-accent">{'★'.repeat(receipt.rating.stars)}<span className="text-muted/40">{'★'.repeat(5 - receipt.rating.stars)}</span></span>
             </div>
           )}

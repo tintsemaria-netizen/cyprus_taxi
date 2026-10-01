@@ -3,13 +3,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { enablePush, pushPermission, pushSupported } from '@/lib/push-client';
+import { useT } from '@/i18n/I18nProvider';
 
 interface Msg { id: string; sender: 'PASSENGER' | 'DRIVER'; body: string; at: string }
 
 // Collapsible passenger↔driver chat. Polls the given list endpoint and posts to the
 // given endpoint; `me` decides bubble alignment. Works for both roles. When `pushUrl`
 // is given, offers Web Push enrolment so new messages notify even in the background.
-export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUrl: string; postUrl: string; me: 'PASSENGER' | 'DRIVER'; peerLabel: string; pushUrl?: string }) {
+// `peerLabel` is kept for API compatibility; the visible (localized) peer wording is derived from `me`.
+export function ChatPanel({ listUrl, postUrl, me, pushUrl }: { listUrl: string; postUrl: string; me: 'PASSENGER' | 'DRIVER'; peerLabel: string; pushUrl?: string }) {
+  const { t, fmt, tError } = useT();
+  const peerIsDriver = me === 'PASSENGER';
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [open, setOpen] = useState(true); // chat available (driver assigned, pre-terminal)
   const [hasOlder, setHasOlder] = useState(false);
@@ -99,7 +103,7 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUr
       mergeIn([r.message]);
       setText('');
     } catch (e) {
-      if (e instanceof ApiRequestError) setErr(e.body.message);
+      if (e instanceof ApiRequestError) setErr(tError(e));
     } finally {
       setSending(false);
     }
@@ -109,10 +113,10 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUr
     <div className="rounded-[12px] border border-edge bg-elevated">
       <button type="button" className="flex w-full items-center justify-between px-3 py-2.5 text-left" onClick={() => setExpanded((e) => !e)}>
         <span className="flex items-center gap-2 text-sm font-medium">
-          💬 Chat with {peerLabel}
+          {peerIsDriver ? t('track.chat.titleDriver') : t('track.chat.titlePassenger')}
           {unread > 0 && <span className="rounded-full bg-accent px-1.5 text-xs font-bold text-[#10191C]">{unread > 9 ? '9+' : unread}</span>}
         </span>
-        <span className="text-xs text-muted">{expanded ? 'Hide' : 'Open'}</span>
+        <span className="text-xs text-muted">{expanded ? t('track.chat.hide') : t('track.chat.open')}</span>
       </button>
 
       {expanded && (
@@ -121,16 +125,16 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUr
             {hasOlder && (
               <div className="text-center">
                 <button type="button" className="text-xs text-accent hover:underline disabled:opacity-50" disabled={loadingOlder} onClick={loadOlder}>
-                  {loadingOlder ? 'Loading…' : 'Load earlier messages'}
+                  {loadingOlder ? t('common.loading') : t('track.chat.loadEarlier')}
                 </button>
               </div>
             )}
-            {msgs.length === 0 && <p className="py-4 text-center text-xs text-muted">No messages yet. Say hello 👋</p>}
+            {msgs.length === 0 && <p className="py-4 text-center text-xs text-muted">{t('track.chat.empty')}</p>}
             {msgs.map((m) => (
               <div key={m.id} className={`flex ${m.sender === me ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] rounded-[12px] px-3 py-1.5 text-sm ${m.sender === me ? 'bg-accent text-[#10191C]' : 'bg-panel text-ink'}`}>
                   {m.body}
-                  <span className={`ml-2 align-bottom text-[11px] ${m.sender === me ? 'text-[#10191C]/60' : 'text-muted'}`}>{new Date(m.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className={`ml-2 align-bottom text-[11px] ${m.sender === me ? 'text-[#10191C]/60' : 'text-muted'}`}>{fmt.time(m.at)}</span>
                 </div>
               </div>
             ))}
@@ -138,12 +142,12 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUr
           {pushUrl && pushSupported() && open && (
             <div className="border-t border-edge px-3 py-1.5 text-xs">
               {notif === 'on' ? (
-                <span className="text-muted">🔔 Notifications on</span>
+                <span className="text-muted">{t('track.chat.notifOn')}</span>
               ) : notif === 'denied' ? (
-                <span className="text-muted">🔕 Notifications blocked in your browser settings</span>
+                <span className="text-muted">{t('track.chat.notifBlocked')}</span>
               ) : (
                 <button type="button" className="text-accent hover:underline disabled:opacity-50" disabled={notif === 'busy'} onClick={turnOnNotifications}>
-                  {notif === 'busy' ? 'Enabling…' : '🔔 Notify me of new messages'}
+                  {notif === 'busy' ? t('track.chat.enabling') : t('track.chat.notifyMe')}
                 </button>
               )}
             </div>
@@ -153,16 +157,16 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUr
             <div className="flex items-center gap-2 border-t border-edge p-2">
               <input
                 className="field !min-h-0 flex-1 !py-2 text-sm"
-                placeholder={`Message your ${peerLabel.toLowerCase()}…`}
+                placeholder={peerIsDriver ? t('track.chat.placeholderDriver') : t('track.chat.placeholderPassenger')}
                 value={text}
                 maxLength={1000}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void send(); } }}
               />
-              <button type="button" className="btn-primary !min-h-0 !py-2 text-sm" disabled={sending || !text.trim()} onClick={() => void send()}>Send</button>
+              <button type="button" className="btn-primary !min-h-0 !py-2 text-sm" disabled={sending || !text.trim()} onClick={() => void send()}>{t('track.chat.send')}</button>
             </div>
           ) : (
-            <p className="border-t border-edge px-3 py-2 text-center text-xs text-muted">Chat is closed for this ride.</p>
+            <p className="border-t border-edge px-3 py-2 text-center text-xs text-muted">{t('track.chat.closed')}</p>
           )}
         </div>
       )}

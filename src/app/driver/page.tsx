@@ -8,6 +8,8 @@ import { NotifyToggle } from '@/components/NotifyToggle';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { unlockOfferSound, playOfferChime, vibrateOffer, keepScreenOn } from '@/lib/driver-alerts';
+import { useT, MsgKey } from '@/i18n/I18nProvider';
+import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,18 +42,32 @@ interface Dashboard {
 
 type Tab = 'home' | 'trips' | 'earnings' | 'profile';
 
-const money = (cents: number | null, currency = 'EUR') => {
-  if (cents == null) return '—';
-  try { return new Intl.NumberFormat('en-IE', { style: 'currency', currency }).format(cents / 100); } catch { return `${(cents / 100).toFixed(2)} ${currency}`; }
-};
-const dur = (s: number) => (s < 60 ? `${s}s` : s < 3600 ? `${Math.round(s / 60)}m` : `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m`);
-const km = (m: number) => (m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`);
+// Locale-aware formatting helpers for the driver app (money, durations, distances, status labels).
+function useDriverFmt() {
+  const { t, fmt } = useT();
+  const money = (cents: number | null, currency = 'EUR') => {
+    if (cents == null) return '—';
+    try { return fmt.money(cents, currency); } catch { return `${(cents / 100).toFixed(2)} ${currency}`; }
+  };
+  const dur = (s: number) => (s < 60 ? t('driver.units.sec', { n: s }) : s < 3600 ? t('driver.units.min', { n: Math.round(s / 60) }) : t('driver.units.hourMin', { h: Math.floor(s / 3600), m: Math.round((s % 3600) / 60) }));
+  const km = (m: number) => (m < 1000 ? t('driver.units.meters', { n: Math.round(m) }) : t('driver.units.km', { n: (m / 1000).toFixed(1) }));
+  // Translate a dynamic key, falling back to the given text when the catalog has no entry.
+  const tOr = (key: string, fallback: string) => { const v = t(key as MsgKey); return v === key ? fallback : v; };
+  const statusLabel = (st: string) => (st === 'RELEASED' ? t('driver.status.RELEASED') : tOr(`common.status.${st}`, st.replace(/_/g, ' ')));
+  const fareLabel = (l: string) => tOr(`driver.fareLabel.${l}`, l);
+  const paymentLabel = (pm: string) => tOr(`driver.payment.${pm}`, pm);
+  return { money, dur, km, tOr, statusLabel, fareLabel, paymentLabel };
+}
 
 export default function Page() {
   return <StaffShell roles={['DRIVER']}>{() => <Driver />}</StaffShell>;
 }
 
 function Driver() {
+  const { t, tError } = useT();
+  // Ref so the long-lived polling callbacks always use the current locale without re-subscribing.
+  const tErrRef = useRef(tError);
+  tErrRef.current = tError;
   const [tab, setTab] = useState<Tab>('home');
   const [activeDetailId, setActiveDetailId] = useState<string | null>(null);
   const [data, setData] = useState<CurrentTrip | null>(null);
@@ -73,7 +89,7 @@ function Driver() {
 
   const load = useCallback(async () => {
     try { setData(await api<CurrentTrip>('/driver/current-trip')); }
-    catch (e) { if (e instanceof ApiRequestError) setBanner(e.body.message); }
+    catch (e) { if (e instanceof ApiRequestError) setBanner(tErrRef.current(e)); }
   }, []);
   const loadDash = useCallback(async () => {
     try { setDash(await api<Dashboard>('/driver/dashboard')); } catch { /* keep last */ }
@@ -97,15 +113,15 @@ function Driver() {
     watchId.current = navigator.geolocation.watchPosition(
       (p) => { lastPos.current = p; const c = { lat: p.coords.latitude, lng: p.coords.longitude }; posRef.current = c; setPos(c); setGps((g) => ({ ...g, error: null })); },
       (err) => {
-        if (err.code === err.PERMISSION_DENIED) { setGps((g) => ({ ...g, active: false, error: 'Location permission denied. Allow location for this site to share GPS.' })); stopGps(); return; }
+        if (err.code === err.PERMISSION_DENIED) { setGps((g) => ({ ...g, active: false, error: 'denied' })); stopGps(); return; }
         if (highAccuracy) { beginWatch(false); return; }
-        setGps((g) => ({ ...g, error: lastPos.current ? null : 'Acquiring GPS… keep location on; a moving vehicle outdoors gets the best fix.' }));
+        setGps((g) => ({ ...g, error: lastPos.current ? null : 'acquiring' }));
       },
       highAccuracy ? { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 } : { enableHighAccuracy: false, maximumAge: 60000, timeout: 30000 },
     );
   }
   function startGps() {
-    if (!('geolocation' in navigator)) { setGps({ active: false, error: 'Geolocation not supported on this device/browser.', last: null }); return; }
+    if (!('geolocation' in navigator)) { setGps({ active: false, error: 'unsupported', last: null }); return; }
     session.current = uuid(); seq.current = 0; setGps({ active: true, error: null, last: null });
     beginWatch(true); sendTimer.current = setInterval(sendSample, 5000);
   }
@@ -113,7 +129,7 @@ function Driver() {
     const p = lastPos.current; if (!p) return; seq.current += 1;
     try {
       await api('/driver/location', { method: 'POST', body: { lat: p.coords.latitude, lng: p.coords.longitude, accuracyM: p.coords.accuracy ?? 0, heading: p.coords.heading ?? undefined, speed: p.coords.speed ?? undefined, sampledAt: new Date(p.timestamp).toISOString(), gpsSession: session.current, sequence: seq.current } });
-      setGps((g) => ({ ...g, last: new Date().toLocaleTimeString('en-GB'), error: null }));
+      setGps((g) => ({ ...g, last: new Date().toISOString(), error: null }));
     } catch (e) { if (e instanceof ApiRequestError && (e.body.code === 'OFF_DUTY' || e.body.code === 'INACTIVE')) stopGps(); }
   }
   async function setDuty(onDuty: boolean) {
@@ -122,7 +138,7 @@ function Driver() {
       const r = await api<{ onDuty: boolean }>('/driver/availability', { method: 'PATCH', body: { onDuty, available: onDuty } });
       if (!r.onDuty) stopGps();
       await load(); await loadDash();
-    } catch (e) { if (e instanceof ApiRequestError) setBanner(e.body.message); }
+    } catch (e) { if (e instanceof ApiRequestError) setBanner(tErrRef.current(e)); }
   }
 
   // Offer polling — runs regardless of the visible tab (never stops on tab switch).
@@ -156,7 +172,7 @@ function Driver() {
   async function acceptCurrentOffer(id: string) {
     setOfferBusy(true);
     try { await api(`/driver/offers/${id}/accept`, { method: 'POST' }); setOffer(null); setTab('home'); await load(); await loadDash(); }
-    catch (e) { if (e instanceof ApiRequestError) setBanner(e.body.message); setOffer(null); }
+    catch (e) { if (e instanceof ApiRequestError) setBanner(tErrRef.current(e)); setOffer(null); }
     finally { setOfferBusy(false); }
   }
   async function declineCurrentOffer(id: string) {
@@ -167,7 +183,7 @@ function Driver() {
   async function tripAction(path: string, body: Record<string, unknown>, opts?: { stopGps?: boolean }) {
     if (!data?.trip) return;
     try { await api(`/driver/bookings/${data.trip.bookingId}/${path}`, { method: 'POST', body: { expectedRevision: data.trip.revision, ...body } }); if (opts?.stopGps) stopGps(); setStartCode(''); await load(); await loadDash(); }
-    catch (e) { if (e instanceof ApiRequestError) setBanner(e.body.message); await load(); }
+    catch (e) { if (e instanceof ApiRequestError) setBanner(tErrRef.current(e)); await load(); }
   }
 
   const tripStatus = data?.trip?.status; const tripId = data?.trip?.bookingId;
@@ -185,7 +201,7 @@ function Driver() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripStatus, tripId]);
 
-  if (!data) return <div className="p-8 text-muted">Loading…</div>;
+  if (!data) return <div className="p-8 text-muted">{t('common.loading')}</div>;
   const trip = data.trip;
   const offerSecs = offer ? Math.max(0, Math.ceil((new Date(offer.expiresAt).getTime() - nowMs) / 1000)) : 0;
 
@@ -196,14 +212,14 @@ function Driver() {
       {/* Persistent cross-section bars: an offer alert, or a return-to-active-trip bar. */}
       {tab !== 'home' && offer && !trip && (
         <button onClick={() => setTab('home')} className="mb-3 flex w-full items-center justify-between rounded-[12px] border-2 border-accent bg-accent/10 px-3 py-2 text-sm">
-          <span className="font-semibold text-accent">New ride offer</span>
-          <span className={offerSecs <= 5 ? 'text-danger' : 'text-muted'}>⏳ {offerSecs}s · View</span>
+          <span className="font-semibold text-accent">{t('driver.banner.newOffer')}</span>
+          <span className={offerSecs <= 5 ? 'text-danger' : 'text-muted'}>{t('driver.banner.offerCountdown', { secs: offerSecs })}</span>
         </button>
       )}
       {tab !== 'home' && trip && (
         <button onClick={() => setTab('home')} className="mb-3 flex w-full items-center justify-between rounded-[12px] border border-edge bg-elevated px-3 py-2 text-sm">
-          <span className="font-medium">Active trip · {trip.reference}</span>
-          <span className="text-accent">Return →</span>
+          <span className="font-medium">{t('driver.banner.activeTrip', { reference: trip.reference })}</span>
+          <span className="text-accent">{t('driver.banner.returnToTrip')}</span>
         </button>
       )}
 
@@ -233,28 +249,30 @@ function HomeSection(props: {
   onAccept: (id: string) => void; onDecline: (id: string) => void; onTripAction: (path: string, body: Record<string, unknown>, opts?: { stopGps?: boolean }) => void; goTrips: () => void;
 }) {
   const { data, dash, gps, offer, offerSecs, offerBusy, nowMs, pos, navRoute, startCode, setStartCode } = props;
+  const { t, tp, fmt } = useT();
+  const { money, dur, km, statusLabel } = useDriverFmt();
   const [ask, setAsk] = useState<'complete' | 'release' | null>(null);
   const trip = data.trip;
   const blocker = dash?.alerts.find((a) => a.level === 'blocker');
 
   const navMarkers: MapMarker[] = [];
-  if (pos) navMarkers.push({ id: 'me', lat: pos.lat, lng: pos.lng, kind: 'vehicle', label: 'You' });
-  if (trip) { navMarkers.push({ id: 'pk', lat: trip.pickup.lat, lng: trip.pickup.lng, kind: 'pickup', label: 'Pickup' }); if (trip.status === 'IN_PROGRESS') navMarkers.push({ id: 'dp', lat: trip.dropoff.lat, lng: trip.dropoff.lng, kind: 'dropoff', label: 'Destination' }); }
+  if (pos) navMarkers.push({ id: 'me', lat: pos.lat, lng: pos.lng, kind: 'vehicle', label: t('driver.map.you') });
+  if (trip) { navMarkers.push({ id: 'pk', lat: trip.pickup.lat, lng: trip.pickup.lng, kind: 'pickup', label: t('driver.map.pickup') }); if (trip.status === 'IN_PROGRESS') navMarkers.push({ id: 'dp', lat: trip.dropoff.lat, lng: trip.dropoff.lng, kind: 'dropoff', label: t('driver.map.destination') }); }
 
   return (
     <div className="space-y-4">
       {/* Status / duty */}
       <div className="card flex items-center justify-between p-4">
         <div>
-          <div className="font-semibold">{dash?.driver.name ? `Hi, ${dash.driver.name}` : (data.onDuty ? 'On duty' : 'Off duty')}</div>
-          <div className="text-xs text-muted">{dash?.vehicle ? `${dash.vehicle.plate} · ${dash.vehicle.label}` : 'No approved vehicle'}</div>
-          <div className="mt-0.5 text-xs">{data.onDuty ? <span className="text-accent">● On duty{data.trip ? ' · on a trip' : ' · ready for requests'}</span> : <span className="text-muted">Off duty</span>}</div>
+          <div className="font-semibold">{dash?.driver.name ? t('driver.duty.greeting', { name: dash.driver.name }) : (data.onDuty ? t('driver.duty.onDuty') : t('driver.duty.offDuty'))}</div>
+          <div className="text-xs text-muted">{dash?.vehicle ? `${dash.vehicle.plate} · ${dash.vehicle.label}` : t('driver.duty.noVehicle')}</div>
+          <div className="mt-0.5 text-xs">{data.onDuty ? <span className="text-accent">{data.trip ? t('driver.duty.onDutyOnTrip') : t('driver.duty.onDutyReady')}</span> : <span className="text-muted">{t('driver.duty.offDuty')}</span>}</div>
         </div>
         <div className="flex flex-col items-end gap-1">
           {blocker ? (
-            <span className="rounded-full bg-danger/15 px-3 py-1 text-xs text-danger">Can’t go online</span>
+            <span className="rounded-full bg-danger/15 px-3 py-1 text-xs text-danger">{t('driver.duty.cantGoOnline')}</span>
           ) : (
-            <button className={`min-h-[44px] ${data.onDuty ? 'btn-ghost' : 'btn-primary'}`} onClick={() => props.onDuty(!data.onDuty)}>{data.onDuty ? 'Go offline' : 'Go online'}</button>
+            <button className={`min-h-[44px] ${data.onDuty ? 'btn-ghost' : 'btn-primary'}`} onClick={() => props.onDuty(!data.onDuty)}>{data.onDuty ? t('driver.duty.goOffline') : t('driver.duty.goOnline')}</button>
           )}
           <NotifyToggle pushUrl="/driver/push" />
         </div>
@@ -272,49 +290,49 @@ function HomeSection(props: {
       {data.onDuty && (
         <div className="card p-4">
           <div className="flex items-center justify-between">
-            <div><div className="font-semibold">Location sharing</div><div className="text-xs text-muted">{gps.active ? <span className="text-accent">● Sharing active{gps.last ? ` · sent ${gps.last}` : ''}</span> : 'Off'}</div></div>
-            {gps.active ? <button className="btn-ghost min-h-[44px]" onClick={props.onStopGps}>Stop</button> : <button className="btn-primary min-h-[44px]" onClick={props.onStartGps}>Start sharing</button>}
+            <div><div className="font-semibold">{t('driver.gps.title')}</div><div className="text-xs text-muted">{gps.active ? <span className="text-accent">{t('driver.gps.active')}{gps.last ? t('driver.gps.sentAt', { time: fmt.time(gps.last) }) : ''}</span> : t('driver.gps.off')}</div></div>
+            {gps.active ? <button className="btn-ghost min-h-[44px]" onClick={props.onStopGps}>{t('driver.gps.stop')}</button> : <button className="btn-primary min-h-[44px]" onClick={props.onStartGps}>{t('driver.gps.start')}</button>}
           </div>
-          {gps.error && <p className={`mt-2 text-xs ${gps.error.startsWith('Acquiring') ? 'text-warn' : 'text-danger'}`}>{gps.error}</p>}
-          <p className="mt-2 text-xs text-muted">Foreground GPS only, while on duty. Real device GPS — never simulated.</p>
+          {gps.error && <p className={`mt-2 text-xs ${gps.error === 'acquiring' ? 'text-warn' : 'text-danger'}`}>{t(`driver.gps.${gps.error as 'denied' | 'acquiring' | 'unsupported'}`)}</p>}
+          <p className="mt-2 text-xs text-muted">{t('driver.gps.note')}</p>
         </div>
       )}
 
       {/* Offer takes priority */}
       {offer && !trip && (
         <div className="card border-2 border-accent p-4">
-          <div className="flex items-center justify-between"><span className="font-semibold text-accent">New ride offer</span><span className={`chip ${offerSecs <= 5 ? '!text-danger' : ''}`}>⏳ {offerSecs}s</span></div>
+          <div className="flex items-center justify-between"><span className="font-semibold text-accent">{t('driver.offer.title')}</span><span className={`chip ${offerSecs <= 5 ? '!text-danger' : ''}`}>⏳ {t('driver.units.sec', { n: offerSecs })}</span></div>
           <div className="mt-3 space-y-2 text-sm">
-            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" /><span className="text-muted">Pickup</span><span className="ml-auto text-right font-medium">{offer.pickup.label}</span></div>
-            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-ink" /><span className="text-muted">Destination</span><span className="ml-auto text-right font-medium">{offer.dropoff.label}</span></div>
+            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" /><span className="text-muted">{t('driver.offer.pickup')}</span><span className="ml-auto text-right font-medium">{offer.pickup.label}</span></div>
+            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-ink" /><span className="text-muted">{t('driver.offer.destination')}</span><span className="ml-auto text-right font-medium">{offer.dropoff.label}</span></div>
           </div>
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
-            {offer.pickupEtaSec != null && <span className="rounded-full bg-elevated px-2 py-1">≈ {Math.max(1, Math.round(offer.pickupEtaSec / 60))} min to pickup</span>}
-            {offer.pickupDistanceM != null && <span className="rounded-full bg-elevated px-2 py-1">{km(offer.pickupDistanceM)} away</span>}
-            <span className="rounded-full bg-elevated px-2 py-1">{offer.passengerCount}p · {offer.vClass}</span>
-            {offer.scheduledAt && <span className="rounded-full bg-elevated px-2 py-1">🕒 {new Date(offer.scheduledAt).toLocaleString('en-GB')}</span>}
+            {offer.pickupEtaSec != null && <span className="rounded-full bg-elevated px-2 py-1">{t('driver.offer.etaToPickup', { min: Math.max(1, Math.round(offer.pickupEtaSec / 60)) })}</span>}
+            {offer.pickupDistanceM != null && <span className="rounded-full bg-elevated px-2 py-1">{t('driver.offer.away', { dist: km(offer.pickupDistanceM) })}</span>}
+            <span className="rounded-full bg-elevated px-2 py-1">{t('driver.units.paxShort', { count: offer.passengerCount })} · {offer.vClass}</span>
+            {offer.scheduledAt && <span className="rounded-full bg-elevated px-2 py-1">🕒 {fmt.dateTime(offer.scheduledAt)}</span>}
           </div>
           {/* Complete passenger info (phone revealed on accept). */}
           <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-            <div className="font-medium">{offer.passengerName} · {offer.passengerCount} passenger{offer.passengerCount === 1 ? '' : 's'} · {offer.vClass}</div>
-            {offer.note && <div className="mt-1 text-xs text-warn">Note: {offer.note}</div>}
-            <div className="mt-1 text-xs text-muted">Passenger phone becomes available once you accept.</div>
+            <div className="font-medium">{t('driver.offer.passengerLine', { name: offer.passengerName, passengers: tp('common.passengers', offer.passengerCount), vClass: offer.vClass })}</div>
+            {offer.note && <div className="mt-1 text-xs text-warn">{t('driver.offer.note', { note: offer.note })}</div>}
+            <div className="mt-1 text-xs text-muted">{t('driver.offer.phoneHidden')}</div>
           </div>
           {/* Full fare breakdown so the driver sees all prices before accepting. */}
           <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
             <div className="mb-1 flex items-center justify-between">
-              <span className="font-medium">Fare</span>
-              <span className="text-xs text-muted">{offer.priceType === 'UPFRONT_DYNAMIC' ? 'Upfront (fixed price)' : 'Regulated meter — estimate'}</span>
+              <span className="font-medium">{t('driver.offer.fare')}</span>
+              <span className="text-xs text-muted">{offer.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.upfront') : t('driver.offer.meterEstimate')}</span>
             </div>
             {offer.fareBreakdown?.length ? offer.fareBreakdown.map((l, i) => (
               <div key={i} className="flex justify-between gap-3 text-xs text-muted"><span className="min-w-0 truncate">{l.label}</span><span className="shrink-0">{money(l.cents, offer.currency)}</span></div>
-            )) : <div className="text-xs text-muted">No fare estimate on this order.</div>}
-            <div className="mt-1 flex justify-between border-t border-edge pt-1 font-semibold"><span>{offer.priceType === 'UPFRONT_DYNAMIC' ? 'Total' : 'Estimated total'}</span><span>{offer.fareCents != null ? money(offer.fareCents, offer.currency) : '—'}</span></div>
-            {offer.priceType !== 'UPFRONT_DYNAMIC' && <div className="mt-1 text-xs text-muted">The final metered amount is settled with the passenger.</div>}
+            )) : <div className="text-xs text-muted">{t('driver.offer.noEstimate')}</div>}
+            <div className="mt-1 flex justify-between border-t border-edge pt-1 font-semibold"><span>{offer.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.total') : t('driver.offer.estimatedTotal')}</span><span>{offer.fareCents != null ? money(offer.fareCents, offer.currency) : '—'}</span></div>
+            {offer.priceType !== 'UPFRONT_DYNAMIC' && <div className="mt-1 text-xs text-muted">{t('driver.offer.meterSettled')}</div>}
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <button className="btn-ghost min-h-[44px] !text-danger border border-danger/40" disabled={offerBusy} onClick={() => props.onDecline(offer.offerId)}>Decline</button>
-            <button className="btn-primary min-h-[44px]" disabled={offerBusy || offerSecs === 0} onClick={() => props.onAccept(offer.offerId)}>Accept</button>
+            <button className="btn-ghost min-h-[44px] !text-danger border border-danger/40" disabled={offerBusy} onClick={() => props.onDecline(offer.offerId)}>{t('driver.offer.decline')}</button>
+            <button className="btn-primary min-h-[44px]" disabled={offerBusy || offerSecs === 0} onClick={() => props.onAccept(offer.offerId)}>{t('driver.offer.accept')}</button>
           </div>
         </div>
       )}
@@ -322,64 +340,64 @@ function HomeSection(props: {
       {/* Active trip (priority over stats) */}
       {trip ? (
         <div className="card p-4">
-          <div className="flex items-center justify-between"><span className="font-mono text-accent">{trip.reference}</span><span className="chip">{trip.status.replace(/_/g, ' ')}</span></div>
+          <div className="flex items-center justify-between"><span className="font-mono text-accent">{trip.reference}</span><span className="chip">{statusLabel(trip.status)}</span></div>
           <div className="mt-3 h-56 overflow-hidden rounded-[12px] border border-edge"><AutoMapView markers={navMarkers} route={navRoute} center={pos ?? trip.pickup} zoom={13} interactive className="h-full w-full" /></div>
-          <p className="mt-1 text-xs text-muted">{trip.status === 'IN_PROGRESS' ? 'Route to destination' : 'Route to pickup'}{!pos && ' · start location sharing to show your position'}</p>
+          <p className="mt-1 text-xs text-muted">{trip.status === 'IN_PROGRESS' ? t('driver.trip.routeToDestination') : t('driver.trip.routeToPickup')}{!pos && t('driver.trip.noPosHint')}</p>
           <div className="mt-3 space-y-2 text-sm">
-            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" /><span className="text-muted">Pickup</span><span className="ml-auto text-right font-medium">{trip.pickup.label}</span></div>
-            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-ink" /><span className="text-muted">Destination</span><span className="ml-auto text-right font-medium">{trip.dropoff.label}</span></div>
+            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" /><span className="text-muted">{t('driver.trip.pickup')}</span><span className="ml-auto text-right font-medium">{trip.pickup.label}</span></div>
+            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-ink" /><span className="text-muted">{t('driver.trip.destination')}</span><span className="ml-auto text-right font-medium">{trip.dropoff.label}</span></div>
           </div>
           <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-            <div className="font-medium">{trip.passengerName} · {trip.passengerCount}p · {trip.vClass}</div>
-            {trip.note && <div className="mt-1 text-xs text-muted">Note: {trip.note}</div>}
+            <div className="font-medium">{trip.passengerName} · {t('driver.units.paxShort', { count: trip.passengerCount })} · {trip.vClass}</div>
+            {trip.note && <div className="mt-1 text-xs text-muted">{t('driver.trip.note', { note: trip.note })}</div>}
             <div className="mt-3"><ChatPanel key={trip.bookingId} listUrl={`/driver/bookings/${trip.bookingId}/messages`} postUrl={`/driver/bookings/${trip.bookingId}/messages`} pushUrl="/driver/push" me="DRIVER" peerLabel="passenger" /></div>
             <div className="mt-3 flex gap-2">
-              <a href={`tel:${trip.passengerPhone}`} className="btn-ghost !min-h-[44px] flex-1 !py-2 text-sm">📞 Call</a>
-              <a href={`https://www.google.com/maps/dir/?api=1&destination=${(trip.status === 'IN_PROGRESS' ? trip.dropoff : trip.pickup).lat},${(trip.status === 'IN_PROGRESS' ? trip.dropoff : trip.pickup).lng}&travelmode=driving`} target="_blank" rel="noreferrer" className="btn-ghost !min-h-[44px] flex-1 !py-2 text-sm">🧭 Navigate</a>
+              <a href={`tel:${trip.passengerPhone}`} className="btn-ghost !min-h-[44px] flex-1 !py-2 text-sm">{t('driver.trip.call')}</a>
+              <a href={`https://www.google.com/maps/dir/?api=1&destination=${(trip.status === 'IN_PROGRESS' ? trip.dropoff : trip.pickup).lat},${(trip.status === 'IN_PROGRESS' ? trip.dropoff : trip.pickup).lng}&travelmode=driving`} target="_blank" rel="noreferrer" className="btn-ghost !min-h-[44px] flex-1 !py-2 text-sm">{t('driver.trip.navigate')}</a>
             </div>
-            <p className="mt-2 text-xs text-warn">Switching to another app pauses your live location. Come back to IL-Y regularly so the passenger can see you.</p>
+            <p className="mt-2 text-xs text-warn">{t('driver.trip.navigateWarning')}</p>
           </div>
           {trip.status === 'ARRIVED' && trip.waiting && (() => {
             const elapsed = Math.max(0, Math.floor((nowMs - new Date(trip.waiting.arrivedAt).getTime()) / 1000));
             const freeLeft = Math.max(0, trip.waiting.graceSeconds - elapsed);
             const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-            return <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">{freeLeft > 0 ? <span>Free waiting: <span className="font-mono text-accent">{mmss(freeLeft)}</span> left</span> : <span className="text-warn">Free waiting elapsed{trip.waiting.paidRateCentsPerMin > 0 ? ` · paid €${(trip.waiting.paidRateCentsPerMin / 100).toFixed(2)}/min` : ' (no pre-pickup charge)'}</span>}</div>;
+            return <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">{freeLeft > 0 ? (() => { const [before, after] = t('driver.trip.freeWaitingLeft', { time: '\u0000' }).split('\u0000'); return <span>{before}<span className="font-mono text-accent">{mmss(freeLeft)}</span>{after}</span>; })() : <span className="text-warn">{trip.waiting.paidRateCentsPerMin > 0 ? t('driver.trip.freeWaitingElapsedPaid', { rate: money(trip.waiting.paidRateCentsPerMin, 'EUR') }) : t('driver.trip.freeWaitingElapsedFree')}</span>}</div>;
           })()}
           <div className="mt-4 grid gap-2">
-            {trip.status === 'ASSIGNED' && <button className="btn-primary min-h-[44px] w-full" onClick={() => props.onTripAction('status', { to: 'EN_ROUTE' })}>I&apos;m on the way</button>}
-            {trip.status === 'EN_ROUTE' && <button className="btn-primary min-h-[44px] w-full" onClick={() => props.onTripAction('arrive', {})}>I&apos;ve arrived</button>}
+            {trip.status === 'ASSIGNED' && <button className="btn-primary min-h-[44px] w-full" onClick={() => props.onTripAction('status', { to: 'EN_ROUTE' })}>{t('driver.trip.onTheWay')}</button>}
+            {trip.status === 'EN_ROUTE' && <button className="btn-primary min-h-[44px] w-full" onClick={() => props.onTripAction('arrive', {})}>{t('driver.trip.arrived')}</button>}
             {trip.status === 'ARRIVED' && (
               <div className="grid gap-2">
-                <input inputMode="numeric" maxLength={4} placeholder="Passenger start code (4 digits)" value={startCode} onChange={(e) => setStartCode(e.target.value.replace(/\D/g, '').slice(0, 4))} className="w-full rounded-[12px] border border-edge bg-page px-3 py-2.5 text-center font-mono text-lg tracking-[0.4em]" />
-                <button className="btn-primary min-h-[44px] w-full" disabled={startCode.length !== 4} onClick={() => props.onTripAction('start', { code: startCode })}>Start trip</button>
+                <input inputMode="numeric" maxLength={4} placeholder={t('driver.trip.startCodePlaceholder')} value={startCode} onChange={(e) => setStartCode(e.target.value.replace(/\D/g, '').slice(0, 4))} className="w-full rounded-[12px] border border-edge bg-page px-3 py-2.5 text-center font-mono text-lg tracking-[0.4em]" />
+                <button className="btn-primary min-h-[44px] w-full" disabled={startCode.length !== 4} onClick={() => props.onTripAction('start', { code: startCode })}>{t('driver.trip.startTrip')}</button>
               </div>
             )}
-            {trip.status === 'IN_PROGRESS' && <button className="btn-primary min-h-[44px] w-full" onClick={() => setAsk('complete')}>Complete trip</button>}
-            {['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(trip.status) && <button className="btn-primary min-h-[44px] w-full !bg-elevated !text-danger border border-danger/40" onClick={() => setAsk('release')}>Can&apos;t take it — release</button>}
+            {trip.status === 'IN_PROGRESS' && <button className="btn-primary min-h-[44px] w-full" onClick={() => setAsk('complete')}>{t('driver.trip.completeTrip')}</button>}
+            {['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(trip.status) && <button className="btn-primary min-h-[44px] w-full !bg-elevated !text-danger border border-danger/40" onClick={() => setAsk('release')}>{t('driver.trip.release')}</button>}
           </div>
           {ask === 'complete' && (
-            <ConfirmSheet title="Complete this trip?" body={`Confirm you have dropped ${trip.passengerName} at the destination. Collect the metered fare from the passenger.`} confirmLabel="Complete trip"
-              onConfirm={() => { setAsk(null); props.onTripAction('complete', {}, { stopGps: true }); }} onCancel={() => setAsk(null)} cancelLabel="Not yet" />
+            <ConfirmSheet title={t('driver.trip.completeTitle')} body={t('driver.trip.completeBody', { name: trip.passengerName })} confirmLabel={t('driver.trip.completeTrip')}
+              onConfirm={() => { setAsk(null); props.onTripAction('complete', {}, { stopGps: true }); }} onCancel={() => setAsk(null)} cancelLabel={t('driver.trip.notYet')} />
           )}
           {ask === 'release' && (
-            <ConfirmSheet title="Release this ride?" body="It will be offered to another driver straight away and the passenger will be told we are finding a new driver." confirmLabel="Release ride" danger
-              onConfirm={() => { setAsk(null); props.onTripAction('cancel', {}); }} onCancel={() => setAsk(null)} cancelLabel="Keep the ride" />
+            <ConfirmSheet title={t('driver.trip.releaseTitle')} body={t('driver.trip.releaseBody')} confirmLabel={t('driver.trip.releaseConfirm')} danger
+              onConfirm={() => { setAsk(null); props.onTripAction('cancel', {}); }} onCancel={() => setAsk(null)} cancelLabel={t('driver.trip.keepRide')} />
           )}
         </div>
       ) : !offer && (
         <>
           {/* Today's three figures */}
           <div className="grid grid-cols-3 gap-2">
-            <Figure label="Today’s earnings" value={dash ? (dash.today.recordedEarnings.length ? dash.today.recordedEarnings.map((e) => money(e.cents, e.currency)).join(' · ') : money(0)) : '—'} sub={dash && dash.today.pendingFinalTrips > 0 ? `${dash.today.pendingFinalTrips} pending` : 'recorded'} />
-            <Figure label="Completed" value={dash ? String(dash.today.completedTrips) : '—'} sub="trips today" />
-            <Figure label="Online" value={dash ? dur(dash.today.onlineSeconds) : '—'} sub="today" />
+            <Figure label={t('driver.home.todaysEarnings')} value={dash ? (dash.today.recordedEarnings.length ? dash.today.recordedEarnings.map((e) => money(e.cents, e.currency)).join(' · ') : money(0)) : '—'} sub={dash && dash.today.pendingFinalTrips > 0 ? tp('driver.home.pending', dash.today.pendingFinalTrips) : t('driver.home.recorded')} />
+            <Figure label={t('driver.home.completed')} value={dash ? String(dash.today.completedTrips) : '—'} sub={tp('driver.home.tripsToday', dash?.today.completedTrips ?? 0)} />
+            <Figure label={t('driver.home.online')} value={dash ? dur(dash.today.onlineSeconds) : '—'} sub={t('driver.home.today')} />
           </div>
-          {dash && dash.today.pendingFinalTrips === 0 && dash.today.completedTrips === 0 && <p className="text-center text-xs text-muted">Recorded earnings = completed trips with a known final amount. This is before expenses; it is not net profit.</p>}
+          {dash && dash.today.pendingFinalTrips === 0 && dash.today.completedTrips === 0 && <p className="text-center text-xs text-muted">{t('driver.home.earningsNote')}</p>}
 
           {/* Idle: last trips + one warning + help */}
           <div className="card p-4">
-            <div className="mb-2 flex items-center justify-between"><span className="font-semibold">Last trips</span><button onClick={props.goTrips} className="text-xs text-accent">See all</button></div>
-            {dash?.latestTrips.length ? <div className="space-y-2">{dash.latestTrips.map((t) => <TripRow key={t.bookingId} t={t} />)}</div> : <p className="py-4 text-center text-sm text-muted">No trips yet. Go online to get your first ride.</p>}
+            <div className="mb-2 flex items-center justify-between"><span className="font-semibold">{t('driver.home.lastTrips')}</span><button onClick={props.goTrips} className="text-xs text-accent">{t('driver.home.seeAll')}</button></div>
+            {dash?.latestTrips.length ? <div className="space-y-2">{dash.latestTrips.map((t) => <TripRow key={t.bookingId} t={t} />)}</div> : <p className="py-4 text-center text-sm text-muted">{t('driver.home.noTrips')}</p>}
           </div>
           {dash?.alerts.find((a) => a.level === 'warning') && (() => { const w = dash.alerts.find((a) => a.level === 'warning')!; return <div className="rounded-[12px] border border-warn/40 bg-warn/10 p-3 text-sm text-warn">{w.message}{w.action && <a href={w.action.href} className="ml-2 underline">{w.action.label}</a>}</div>; })()}
         </>
@@ -392,14 +410,16 @@ function Figure({ label, value, sub }: { label: string; value: string; sub: stri
   return <div className="rounded-[12px] border border-edge bg-elevated p-3 text-center"><div className="truncate text-lg font-semibold">{value}</div><div className="text-xs text-muted">{label}</div><div className="text-xs text-muted">{sub}</div></div>;
 }
 function TripRow({ t, onClick }: { t: TripCard; onClick?: () => void }) {
+  const { fmt } = useT();
+  const { money, statusLabel, fareLabel, paymentLabel } = useDriverFmt();
   const badge = t.driverStatus === 'COMPLETED' ? 'text-accent' : t.driverStatus === 'RELEASED' ? 'text-muted' : 'text-warn';
   return (
     <button onClick={onClick} className="flex w-full items-center justify-between gap-2 rounded-[10px] border border-edge p-2 text-left text-sm">
       <div className="min-w-0">
         <div className="truncate">{t.pickupLabel} → {t.dropoffLabel}</div>
-        <div className="text-xs text-muted">{new Date(t.at).toLocaleString('en-GB')} · <span className={badge}>{t.driverStatus.replace(/_/g, ' ').toLowerCase()}</span></div>
+        <div className="text-xs text-muted">{fmt.dateTime(t.at)} · <span className={badge}>{statusLabel(t.driverStatus)}</span></div>
       </div>
-      <div className="shrink-0 text-right"><div className="font-medium">{t.fare.cents != null ? money(t.fare.cents, t.fare.currency) : (t.fare.label === 'Pending' ? 'Pending' : '—')}</div><div className="text-xs text-muted">{t.fare.label}{t.payment ? ` · ${t.payment}` : ''}</div></div>
+      <div className="shrink-0 text-right"><div className="font-medium">{t.fare.cents != null ? money(t.fare.cents, t.fare.currency) : (t.fare.label === 'Pending' ? fareLabel('Pending') : '—')}</div><div className="text-xs text-muted">{fareLabel(t.fare.label)}{t.payment ? ` · ${paymentLabel(t.payment)}` : ''}</div></div>
     </button>
   );
 }
@@ -407,6 +427,7 @@ function TripRow({ t, onClick }: { t: TripCard; onClick?: () => void }) {
 // ---- Trips ----
 type Range = 'today' | 'week' | 'month';
 function TripsSection({ onOpen, activeDetail, onCloseDetail, onSettled }: { onOpen: (id: string) => void; activeDetail: string | null; onCloseDetail: () => void; onSettled: () => void }) {
+  const { t, tError } = useT();
   const [range, setRange] = useState<Range>('today');
   const [items, setItems] = useState<TripCard[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -419,22 +440,22 @@ function TripsSection({ onOpen, activeDetail, onCloseDetail, onSettled }: { onOp
       const q = new URLSearchParams({ range, limit: '20', ...(reset ? {} : cursor ? { cursor } : {}) });
       const r = await api<{ items: TripCard[]; nextCursor: string | null }>(`/driver/trips?${q}`);
       setItems((prev) => (reset ? r.items : [...prev, ...r.items])); setCursor(r.nextCursor);
-    } catch (e) { setErr((e as Error)?.message ?? 'Failed to load'); } finally { setLoading(false); }
-  }, [range, cursor]);
+    } catch (e) { setErr(e ? tError(e) : t('driver.trips.loadFailed')); } finally { setLoading(false); }
+  }, [range, cursor, t, tError]);
 
   useEffect(() => { setItems([]); setCursor(null); loadPage(true); /* eslint-disable-next-line */ }, [range]);
 
   return (
     <div className="space-y-3">
-      <h1 className="text-xl font-semibold">Trips</h1>
+      <h1 className="text-xl font-semibold">{t('driver.trips.title')}</h1>
       <div className="flex gap-1 rounded-[12px] border border-edge bg-elevated p-1">
-        {(['today', 'week', 'month'] as Range[]).map((r) => <button key={r} onClick={() => setRange(r)} className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium ${range === r ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>{r[0].toUpperCase() + r.slice(1)}</button>)}
+        {(['today', 'week', 'month'] as Range[]).map((r) => <button key={r} onClick={() => setRange(r)} className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium ${range === r ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>{t(`driver.range.${r}`)}</button>)}
       </div>
-      {err && <div className="rounded-[12px] border border-danger/40 bg-danger/10 p-3 text-sm">{err} <button className="underline" onClick={() => loadPage(true)}>Retry</button></div>}
-      {items.length === 0 && !loading && !err ? <p className="py-8 text-center text-sm text-muted">No trips in this range.</p> : (
+      {err && <div className="rounded-[12px] border border-danger/40 bg-danger/10 p-3 text-sm">{err} <button className="underline" onClick={() => loadPage(true)}>{t('driver.trips.retry')}</button></div>}
+      {items.length === 0 && !loading && !err ? <p className="py-8 text-center text-sm text-muted">{t('driver.trips.empty')}</p> : (
         <div className="space-y-2">{items.map((t) => <TripRow key={t.bookingId + t.at} t={t} onClick={() => onOpen(t.bookingId)} />)}</div>
       )}
-      {cursor && <button onClick={() => loadPage(false)} disabled={loading} className="btn-ghost w-full">{loading ? 'Loading…' : 'Load more'}</button>}
+      {cursor && <button onClick={() => loadPage(false)} disabled={loading} className="btn-ghost w-full">{loading ? t('common.loading') : t('driver.trips.loadMore')}</button>}
       {activeDetail && <TripDetailModal bookingId={activeDetail} onClose={onCloseDetail} onSettled={() => { onSettled(); loadPage(true); }} />}
     </div>
   );
@@ -445,6 +466,8 @@ interface Detail extends TripCard {
   releaseReason: string | null; settlement: { current: { revision: number; reportedFinalCents: number; currency: string; paymentReceived: boolean } | null; history: unknown[] } | null; canResume: boolean; canSettle: boolean;
 }
 function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string; onClose: () => void; onSettled: () => void }) {
+  const { t, tError, fmt } = useT();
+  const { money, statusLabel, fareLabel, paymentLabel } = useDriverFmt();
   const [d, setD] = useState<Detail | null>(null);
   const [amount, setAmount] = useState('');
   const [received, setReceived] = useState(false);
@@ -452,17 +475,17 @@ function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string;
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const load = useCallback(async () => { try { setD(await api<Detail>(`/driver/trips/${bookingId}`)); } catch (e) { setErr((e as Error)?.message ?? 'Failed'); } }, [bookingId]);
+  const load = useCallback(async () => { try { setD(await api<Detail>(`/driver/trips/${bookingId}`)); } catch (e) { setErr(e ? tError(e) : t('driver.detail.loadFailed')); } }, [bookingId, t, tError]);
   useEffect(() => { load(); }, [load]);
 
   async function submitSettlement() {
     setBusy(true); setErr(null);
     const cents = Math.round(parseFloat(amount) * 100);
-    if (!Number.isFinite(cents) || cents < 0) { setErr('Enter a valid amount.'); setBusy(false); return; }
+    if (!Number.isFinite(cents) || cents < 0) { setErr(t('driver.detail.invalidAmount')); setBusy(false); return; }
     try {
       await api(`/driver/bookings/${bookingId}/settlement`, { method: 'POST', body: { reportedFinalCents: cents, paymentReceived: received, ...(d?.settlement?.current ? { correctionReason: reason, expectedRevision: d.settlement.current.revision } : {}) } });
       setAmount(''); setReason(''); await load(); onSettled();
-    } catch (e) { setErr(e instanceof ApiRequestError ? e.body.message : 'Failed to save'); } finally { setBusy(false); }
+    } catch (e) { setErr(e instanceof ApiRequestError ? tError(e) : t('driver.detail.saveFailed')); } finally { setBusy(false); }
   }
 
   return (
@@ -470,25 +493,25 @@ function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string;
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-[16px] border border-edge bg-page p-4 sm:rounded-[16px]" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 flex items-center justify-between"><span className="font-mono text-accent">{d?.reference ?? '…'}</span><button onClick={onClose} className="text-muted">✕</button></div>
         {err && <p className="mb-2 text-sm text-danger">{err}</p>}
-        {!d ? <p className="text-muted">Loading…</p> : (
+        {!d ? <p className="text-muted">{t('common.loading')}</p> : (
           <div className="space-y-3 text-sm">
-            <div><span className="chip">{d.driverStatus.replace(/_/g, ' ')}</span></div>
-            <div className="space-y-1"><div>{d.pickupLabel} → {d.dropoffLabel}</div><div className="text-xs text-muted">{d.vClass} · {d.passengerCount}p · assigned {new Date(d.timestamps.assignedAt).toLocaleString('en-GB')}{d.timestamps.endedAt ? ` · ended ${new Date(d.timestamps.endedAt).toLocaleString('en-GB')}` : ''}</div></div>
-            {d.releaseReason && <p className="text-xs text-muted">Released: {d.releaseReason}</p>}
+            <div><span className="chip">{statusLabel(d.driverStatus)}</span></div>
+            <div className="space-y-1"><div>{d.pickupLabel} → {d.dropoffLabel}</div><div className="text-xs text-muted">{t('driver.detail.meta', { vClass: d.vClass, pax: t('driver.units.paxShort', { count: d.passengerCount }), assigned: fmt.dateTime(d.timestamps.assignedAt) })}{d.timestamps.endedAt ? t('driver.detail.ended', { ended: fmt.dateTime(d.timestamps.endedAt) }) : ''}</div></div>
+            {d.releaseReason && <p className="text-xs text-muted">{t('driver.detail.released', { reason: d.releaseReason })}</p>}
             <div className="rounded-[12px] border border-edge bg-elevated p-3">
-              <div className="flex items-center justify-between"><span className="text-muted">Fare</span><span className="font-medium">{d.fare.cents != null ? money(d.fare.cents, d.fare.currency) : d.fare.label}</span></div>
-              <div className="text-xs text-muted">{d.fare.label}{d.payment ? ` · payment ${d.payment}` : ''}</div>
-              {d.settlement?.current && <div className="mt-1 text-xs text-muted">Driver-reported (rev {d.settlement.current.revision}){d.settlement.current.paymentReceived ? ' · marked received' : ''}. Driver-reported — not bank/provider verified.</div>}
+              <div className="flex items-center justify-between"><span className="text-muted">{t('driver.detail.fare')}</span><span className="font-medium">{d.fare.cents != null ? money(d.fare.cents, d.fare.currency) : fareLabel(d.fare.label)}</span></div>
+              <div className="text-xs text-muted">{fareLabel(d.fare.label)}{d.payment ? t('driver.detail.paymentSuffix', { payment: paymentLabel(d.payment) }) : ''}</div>
+              {d.settlement?.current && <div className="mt-1 text-xs text-muted">{d.settlement.current.paymentReceived ? t('driver.detail.reportedReceived', { rev: d.settlement.current.revision }) : t('driver.detail.reported', { rev: d.settlement.current.revision })}</div>}
             </div>
-            {d.canResume && <a href="/driver" className="btn-primary block w-full text-center">Return to active trip</a>}
+            {d.canResume && <a href="/driver" className="btn-primary block w-full text-center">{t('driver.detail.returnToTrip')}</a>}
             {d.canSettle && (
               <div className="rounded-[12px] border border-edge bg-elevated p-3">
-                <p className="font-medium">{d.settlement?.current ? 'Correct settlement' : 'Record metered amount'}</p>
-                <p className="mb-2 text-xs text-muted">The final regulated meter amount is settled with the passenger. Record it for your own statement.</p>
-                <input inputMode="decimal" placeholder="Metered amount (e.g. 18.50)" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))} className="w-full rounded-[10px] border border-edge bg-page px-3 py-2" />
-                <label className="mt-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={received} onChange={(e) => setReceived(e.target.checked)} /> Payment received (cash)</label>
-                {d.settlement?.current && <input placeholder="Reason for correction" value={reason} onChange={(e) => setReason(e.target.value)} className="mt-2 w-full rounded-[10px] border border-edge bg-page px-3 py-2 text-xs" />}
-                <button onClick={submitSettlement} disabled={busy || !amount} className="btn-primary mt-2 w-full">{busy ? 'Saving…' : 'Save'}</button>
+                <p className="font-medium">{d.settlement?.current ? t('driver.detail.correctSettlement') : t('driver.detail.recordMetered')}</p>
+                <p className="mb-2 text-xs text-muted">{t('driver.detail.settlementNote')}</p>
+                <input inputMode="decimal" placeholder={t('driver.detail.amountPlaceholder')} value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))} className="w-full rounded-[10px] border border-edge bg-page px-3 py-2" />
+                <label className="mt-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={received} onChange={(e) => setReceived(e.target.checked)} /> {t('driver.detail.paymentReceived')}</label>
+                {d.settlement?.current && <input placeholder={t('driver.detail.reasonPlaceholder')} value={reason} onChange={(e) => setReason(e.target.value)} className="mt-2 w-full rounded-[10px] border border-edge bg-page px-3 py-2 text-xs" />}
+                <button onClick={submitSettlement} disabled={busy || !amount} className="btn-primary mt-2 w-full">{busy ? t('driver.detail.saving') : t('driver.detail.save')}</button>
               </div>
             )}
           </div>
@@ -500,6 +523,8 @@ function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string;
 
 // ---- Earnings ----
 function EarningsSection() {
+  const { t, tp, tError } = useT();
+  const { money } = useDriverFmt();
   const [range, setRange] = useState<Range>('week');
   const [data, setData] = useState<{ summary: { byCurrency: { currency: string; completedTrips: number; recordedEarningsCents: number; knownFinalTrips: number; pendingFinalTrips: number; collectedCents: number }[]; completedTrips: number; pendingFinalTrips: number; onlineSeconds: number }; daily: { day: string; recordedEarningsCents: number; completedTrips: number; currency: string }[] } | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -507,42 +532,42 @@ function EarningsSection() {
 
   const load = useCallback(async () => {
     setLoading(true); setErr(null);
-    try { setData(await api(`/driver/earnings?range=${range}`)); } catch (e) { setErr((e as Error)?.message ?? 'Failed'); } finally { setLoading(false); }
-  }, [range]);
+    try { setData(await api(`/driver/earnings?range=${range}`)); } catch (e) { setErr(e ? tError(e) : t('driver.detail.loadFailed')); } finally { setLoading(false); }
+  }, [range, t, tError]);
   useEffect(() => { load(); }, [load]);
 
   const max = Math.max(1, ...(data?.daily.map((d) => d.recordedEarningsCents) ?? [0]));
   return (
     <div className="space-y-3">
-      <h1 className="text-xl font-semibold">Earnings</h1>
+      <h1 className="text-xl font-semibold">{t('driver.earnings.title')}</h1>
       <div className="flex gap-1 rounded-[12px] border border-edge bg-elevated p-1">
-        {(['today', 'week', 'month'] as Range[]).map((r) => <button key={r} onClick={() => setRange(r)} className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium ${range === r ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>{r[0].toUpperCase() + r.slice(1)}</button>)}
+        {(['today', 'week', 'month'] as Range[]).map((r) => <button key={r} onClick={() => setRange(r)} className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium ${range === r ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>{t(`driver.range.${r}`)}</button>)}
       </div>
-      {err && <div className="rounded-[12px] border border-danger/40 bg-danger/10 p-3 text-sm">Couldn’t load earnings: {err} <button className="underline" onClick={load}>Retry</button></div>}
-      {loading && !data && <p className="text-muted">Loading…</p>}
+      {err && <div className="rounded-[12px] border border-danger/40 bg-danger/10 p-3 text-sm">{t('driver.earnings.loadFailed', { error: err })} <button className="underline" onClick={load}>{t('driver.trips.retry')}</button></div>}
+      {loading && !data && <p className="text-muted">{t('common.loading')}</p>}
       {data && (
         <>
-          {data.summary.byCurrency.length === 0 ? <p className="py-6 text-center text-sm text-muted">No completed trips in this range.</p> : data.summary.byCurrency.map((c) => (
+          {data.summary.byCurrency.length === 0 ? <p className="py-6 text-center text-sm text-muted">{t('driver.earnings.empty')}</p> : data.summary.byCurrency.map((c) => (
             <div key={c.currency} className="card p-4">
               <div className="text-3xl font-semibold">{money(c.recordedEarningsCents, c.currency)}</div>
-              <div className="text-xs text-muted">recorded earnings ({c.currency}) · {c.completedTrips} completed{c.pendingFinalTrips > 0 ? ` · ${c.pendingFinalTrips} pending final` : ''}</div>
-              {c.collectedCents > 0 && <div className="mt-1 text-xs text-muted">Recorded collected: {money(c.collectedCents, c.currency)} (driver-reported)</div>}
+              <div className="text-xs text-muted">{t('driver.earnings.summary', { currency: c.currency, completed: c.completedTrips })}{c.pendingFinalTrips > 0 ? t('driver.earnings.pendingFinal', { count: c.pendingFinalTrips }) : ''}</div>
+              {c.collectedCents > 0 && <div className="mt-1 text-xs text-muted">{t('driver.earnings.collected', { amount: money(c.collectedCents, c.currency) })}</div>}
             </div>
           ))}
-          <p className="text-xs text-muted">Recorded earnings = completed trips with a known final amount, before expenses — not net profit. Unknown metered amounts are pending, not zero. Payment is to the driver; this is not platform revenue.</p>
+          <p className="text-xs text-muted">{t('driver.earnings.note')}</p>
 
           <div className="card p-4">
-            <div className="mb-2 font-medium">Daily</div>
-            {data.daily.length === 0 ? <p className="text-sm text-muted">No data.</p> : (
+            <div className="mb-2 font-medium">{t('driver.earnings.daily')}</div>
+            {data.daily.length === 0 ? <p className="text-sm text-muted">{t('driver.earnings.noData')}</p> : (
               <>
-                <div className="flex items-end gap-1" style={{ height: 120 }} role="img" aria-label="Daily recorded earnings">
+                <div className="flex items-end gap-1" style={{ height: 120 }} role="img" aria-label={t('driver.earnings.chartLabel')}>
                   {data.daily.map((d) => <div key={d.day + d.currency} className="flex min-w-[8px] flex-1 flex-col items-center justify-end" title={`${d.day}: ${money(d.recordedEarningsCents, d.currency)}`}><div className="w-full rounded-t bg-accent" style={{ height: `${(d.recordedEarningsCents / max) * 100}%` }} /></div>)}
                 </div>
-                <details className="mt-2 text-xs text-muted"><summary className="cursor-pointer">Show as list</summary><ul className="mt-1 space-y-0.5">{data.daily.map((d) => <li key={d.day + d.currency}>{d.day}: {money(d.recordedEarningsCents, d.currency)} · {d.completedTrips} trips</li>)}</ul></details>
+                <details className="mt-2 text-xs text-muted"><summary className="cursor-pointer">{t('driver.earnings.showList')}</summary><ul className="mt-1 space-y-0.5">{data.daily.map((d) => <li key={d.day + d.currency}>{d.day}: {money(d.recordedEarningsCents, d.currency)} · {tp('driver.earnings.trips', d.completedTrips)}</li>)}</ul></details>
               </>
             )}
           </div>
-          <a href={`/api/v1/driver/earnings/export?range=${range}`} className="btn-ghost block w-full text-center">Download statement (CSV)</a>
+          <a href={`/api/v1/driver/earnings/export?range=${range}`} className="btn-ghost block w-full text-center">{t('driver.earnings.download')}</a>
         </>
       )}
     </div>
@@ -551,6 +576,8 @@ function EarningsSection() {
 
 // ---- Profile ----
 function ProfileSection({ dash }: { dash: Dashboard | null }) {
+  const { t, tp } = useT();
+  const { tOr } = useDriverFmt();
   const [docs, setDocs] = useState<{ available: boolean; note?: string; documents: { slot: string; status: string; expiresAt: string | null }[] } | null>(null);
   useEffect(() => { api<typeof docs>('/driver/documents').then(setDocs).catch(() => {}); }, []);
   async function signOut() { await api('/auth/logout', { method: 'POST' }).catch(() => {}); window.location.href = '/driver/login'; }
@@ -558,53 +585,54 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
 
   return (
     <div className="space-y-3">
-      <h1 className="text-xl font-semibold">Profile</h1>
+      <div className="flex items-center justify-between gap-2"><h1 className="text-xl font-semibold">{t('driver.profile.title')}</h1><LanguageSwitcher /></div>
       <div className="card p-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="font-semibold">{dash?.driver.name ?? 'Driver'}</div>
+          <div className="font-semibold">{dash?.driver.name ?? t('driver.profile.driverFallback')}</div>
           {dash && (dash.driver.rating.count > 0
-            ? <div className="text-sm font-semibold text-accent" title={`${dash.driver.rating.count} rating${dash.driver.rating.count > 1 ? 's' : ''}`}>★ {dash.driver.rating.average?.toFixed(1)} <span className="text-xs font-normal text-muted">({dash.driver.rating.count})</span></div>
-            : <div className="text-xs text-muted">No ratings yet</div>)}
+            ? <div className="text-sm font-semibold text-accent" title={tp('driver.profile.ratings', dash.driver.rating.count)}>★ {dash.driver.rating.average?.toFixed(1)} <span className="text-xs font-normal text-muted">({dash.driver.rating.count})</span></div>
+            : <div className="text-xs text-muted">{t('driver.profile.noRatings')}</div>)}
         </div>
-        <div className="text-xs text-muted">Eligibility: {dash?.driver.eligibility ?? '—'}</div>
+        <div className="text-xs text-muted">{t('driver.profile.eligibility', { value: dash?.driver.eligibility ? tOr(`driver.profile.eligibilityValue.${dash.driver.eligibility}`, dash.driver.eligibility) : '—' })}</div>
         <div className="mt-2"><NotifyToggle pushUrl="/driver/push" /></div>
       </div>
 
       <div className="card p-4">
-        <div className="mb-1 font-medium">Vehicle</div>
-        {dash?.vehicle ? <div className="text-sm">{dash.vehicle.plate} · {dash.vehicle.label} · {dash.vehicle.vClass} · {dash.vehicle.seats} seats</div> : <div className="text-sm text-muted">No approved vehicle.</div>}
-        <p className="mt-1 text-xs text-muted">A vehicle change goes through operator review; you can’t change the operational binding yourself.</p>
+        <div className="mb-1 font-medium">{t('driver.profile.vehicle')}</div>
+        {dash?.vehicle ? <div className="text-sm">{dash.vehicle.plate} · {dash.vehicle.label} · {dash.vehicle.vClass} · {tp('driver.profile.seats', dash.vehicle.seats)}</div> : <div className="text-sm text-muted">{t('driver.profile.noVehicle')}</div>}
+        <p className="mt-1 text-xs text-muted">{t('driver.profile.vehicleNote')}</p>
       </div>
 
       <div className="card p-4">
-        <div className="mb-1 font-medium">Documents</div>
-        {!docs ? <p className="text-sm text-muted">Loading…</p> : !docs.available ? <p className="text-sm text-muted">{docs.note}</p> : docs.documents.length === 0 ? <p className="text-sm text-muted">No documents on file.</p> : (
-          <ul className="space-y-1 text-sm">{docs.documents.map((d) => <li key={d.slot} className="flex items-center justify-between"><span>{d.slot.replace(/_/g, ' ')}</span><span className={statusColor[d.status] ?? 'text-muted'}>{d.status.replace(/_/g, ' ').toLowerCase()}{d.expiresAt ? ` · ${d.expiresAt.slice(0, 10)}` : ''}</span></li>)}</ul>
+        <div className="mb-1 font-medium">{t('driver.profile.documents')}</div>
+        {!docs ? <p className="text-sm text-muted">{t('common.loading')}</p> : !docs.available ? <p className="text-sm text-muted">{docs.note}</p> : docs.documents.length === 0 ? <p className="text-sm text-muted">{t('driver.profile.noDocuments')}</p> : (
+          <ul className="space-y-1 text-sm">{docs.documents.map((d) => <li key={d.slot} className="flex items-center justify-between"><span>{d.slot.replace(/_/g, ' ')}</span><span className={statusColor[d.status] ?? 'text-muted'}>{tOr(`driver.profile.docStatus.${d.status}`, d.status.replace(/_/g, ' ').toLowerCase())}{d.expiresAt ? ` · ${d.expiresAt.slice(0, 10)}` : ''}</span></li>)}</ul>
         )}
-        {docs?.documents.some((d) => d.status === 'EXPIRING' || d.status === 'EXPIRED' || d.status === 'ACTION_NEEDED') && <p className="mt-2 text-xs text-muted">To renew a document, contact the operator (see Help). Self-serve document renewal is not yet available.</p>}
+        {docs?.documents.some((d) => d.status === 'EXPIRING' || d.status === 'EXPIRED' || d.status === 'ACTION_NEEDED') && <p className="mt-2 text-xs text-muted">{t('driver.profile.renewNote')}</p>}
       </div>
 
       <div className="card p-4">
-        <div className="mb-1 font-medium">Help</div>
+        <div className="mb-1 font-medium">{t('driver.profile.help')}</div>
         {dash?.support && (dash.support.phone || dash.support.email) ? (
           <div className="space-y-1 text-sm">
             {dash.support.operatorName && <div className="text-muted">{dash.support.operatorName}</div>}
             {dash.support.phone && <a href={`tel:${dash.support.phone}`} className="block text-accent">📞 {dash.support.phone}</a>}
             {dash.support.email && <a href={`mailto:${dash.support.email}`} className="block text-accent">✉️ {dash.support.email}</a>}
           </div>
-        ) : <p className="text-sm text-muted">Support contact isn’t configured yet. Ask the operator to set it in admin settings.</p>}
+        ) : <p className="text-sm text-muted">{t('driver.profile.noSupport')}</p>}
       </div>
 
-      <button onClick={signOut} className="btn-ghost w-full !text-danger">Sign out</button>
+      <button onClick={signOut} className="btn-ghost w-full !text-danger">{t('driver.profile.signOut')}</button>
     </div>
   );
 }
 
 // ---- Bottom nav ----
 function BottomNav({ tab, setTab, hasOffer, hasTrip }: { tab: Tab; setTab: (t: Tab) => void; hasOffer: boolean; hasTrip: boolean }) {
+  const { t } = useT();
   const items: { id: Tab; label: string; icon: string }[] = [
-    { id: 'home', label: 'Home', icon: '🏠' }, { id: 'trips', label: 'Trips', icon: '🧾' },
-    { id: 'earnings', label: 'Earnings', icon: '€' }, { id: 'profile', label: 'Profile', icon: '👤' },
+    { id: 'home', label: t('driver.nav.home'), icon: '🏠' }, { id: 'trips', label: t('driver.nav.trips'), icon: '🧾' },
+    { id: 'earnings', label: t('driver.nav.earnings'), icon: '€' }, { id: 'profile', label: t('driver.nav.profile'), icon: '👤' },
   ];
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-page/95 backdrop-blur" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
