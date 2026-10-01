@@ -1,5 +1,28 @@
 # Session handoff
 
+## Batch 2 — passenger + driver UX (2026-10-01) — release afa8780, DEPLOYED + live-verified
+- **Booking:** all classes quoted in parallel (price + range per class, list right under the stops);
+  sticky "Request <class> · ≈ €X" CTA; contact from the account (verified phone read-only — the typed
+  phone was ignored server-side); passengers/note under "Options"; sign-in before review. Sign-in
+  modal defaults to **email + password** (phone OTP is unavailable without Twilio).
+- **Tracking:** pickup ETA + route from ASSIGNED; pinned status/driver/plate/start code with a
+  scrolling body; sheet above map controls; driver rating once ≥5 trips (`PUBLIC_RATING_MIN_COUNT`);
+  **Share trip** = read-only VIEW grant (`TrackingGrant.scope`, migration
+  `20261001170000_tracking_grant_scope`) → `/share#t=…` (car, plate, status, ETA, live position only;
+  never start code/phones/chat/cancel; not exchangeable for FULL; position hidden after the trip);
+  Safety sheet with 112; `ConfirmSheet` replaces native confirm/alert for passengers + drivers.
+- **Driver:** offer chime + vibration until answered (`src/lib/driver-alerts.ts`), Screen Wake Lock
+  while on duty, offer pushes `requireInteraction` + vibrate (public/sw.js), Navigate warning;
+  KYC photos re-encoded in the browser under 2 MB (`src/lib/image-compress.ts`).
+- **A11y:** labels↔inputs (useId in reusable fields), radiogroup/aria-pressed, live headlines,
+  `edge-strong` input borders (≥3:1), min 12px text, /rides error state + retry.
+- **Evidence:** suite 138 passed / 1 skipped; Playwright `tests-e2e/batch2-visual.spec.ts` 8/8 at
+  390×844 + 320×640 on a local prod build (fixture `tests-e2e/seed-batch2.ts`), live
+  `batch2-live.spec.ts` 1/1 on prod (real Google route + per-class prices); screenshots
+  `docs/qa-screenshots/batch2/`. Live: tracking/share 401 unauth, share/view bogus → 404, sw.js updated.
+- **Not done:** native confirms remain only in staff consoles (dispatch/admin). No on-phone check of
+  wake lock/vibration/sound (no device here) — the APIs degrade silently where unsupported.
+
 ## Batch 1 — dispatch correctness + security (2026-10-01) — release f96425f, DEPLOYED + live-verified
 - **Dispatch (d149583):** `src/server/dispatch/search.ts` (`startSearchTx`/`stopSearchTx`) is the only
   way into/out of SEARCHING — staff →SEARCHING and immediate-ride unassign no longer strand rides
