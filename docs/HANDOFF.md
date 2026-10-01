@@ -1,5 +1,25 @@
 # Session handoff
 
+## Batch 4 — data & privacy (2026-10-01) — release 50f69a0, DEPLOYED + live-verified
+- **Analytics GPS:** `gps.sample` events now pseudonymous (`driverPseudo` aggregateId), ~500 m grid
+  (`coarsenCoord`), no heading; duty events correlate by pseudonym. ClickHouse schema v2 (versioned
+  one-time migrations in `src/server/analytics/schema.ts` → `migrationStatements`): TTL
+  `CH_GPS_TTL_DAYS` (90) for gps only, legacy exact rows deleted, raw duty ids cleared — validated on a
+  throwaway CH 24.8, then live (versions [1,2], TTL present, 0 legacy rows). PG migration
+  `20261001180000_privacy_analytics_cleanup` removed 7 legacy gps domain events.
+- **KYC files:** scan before write (infected never stored); replaced docs' files deleted;
+  `src/server/kyc-retention.ts` in maintenance — REJECTED after `KYC_REJECTED_RETENTION_DAYS` (30),
+  abandoned drafts after `KYC_DRAFT_RETENTION_DAYS` (90), orphans after 1 day; `FILES_PURGED` event.
+- **Passenger rights:** `GET /passenger/me/export`, `POST /passenger/me/delete {confirm:"DELETE"}`
+  (blocked during an active ride; anonymises ride history, keeps financial rows) — `/account`
+  "Your data" section (EN/EL/RU). `src/server/passenger-data.ts`.
+- **Driver days:** reporting windows + daily chart use Europe/Nicosia days (`startOfNicosiaDay`,
+  `nicosiaDayKey` in `src/lib/timezone.ts`).
+- **Evidence:** suite 152 passed / 1 skipped; prod backup taken right before deploy
+  (pg-20261001T142947Z); live: export/delete 401 unauth, dispatch + analytics alive.
+- **Owner decisions still open:** retention periods for bookings/chat/accounts (defaults above are
+  conservative placeholders) and the legal basis text in /privacy.
+
 ## Batch 3 — i18n EN / EL / RU (2026-10-01) — release 290929a, DEPLOYED + live-verified
 - **System:** `src/i18n` — locale from `lang` cookie → Accept-Language → en; `<html lang>` server-side
   (`src/i18n/server.ts`, root layout). `useT()` → typed `t`, plural `tp` (Intl.PluralRules; RU
