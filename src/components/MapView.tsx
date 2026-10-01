@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { publicMapConfig } from '@/lib/config';
 
@@ -63,7 +63,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     let map: maplibregl.Map | null = null;
     (async () => {
       try {
-        const maplibre = (await import('maplibre-gl')).default;
+        const maplibre = await import('maplibre-gl');
         if (cancelled || !containerRef.current) return;
         map = new maplibre.Map({
           container: containerRef.current,
@@ -102,7 +102,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     const map = mapRef.current;
     if (!map || !ready) return;
     (async () => {
-      const maplibre = (await import('maplibre-gl')).default;
+      const maplibre = await import('maplibre-gl');
       markerObjs.current.forEach((m) => m.remove());
       markerObjs.current = [];
       for (const mk of markers) {
@@ -132,6 +132,8 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         map.easeTo({ center: [markers[0].lng, markers[0].lat], zoom: 12, duration: 400 });
       }
     })();
+    // fitPadding is layout-only: re-fitting when it changes identity would fight the user's panning.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [markers, ready]);
 
   // Zoom to a focus point (e.g. the passenger's detected location), once per change.

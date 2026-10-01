@@ -1,0 +1,57 @@
+# IL-Y continuous integration (2026-10-01 audit, Stage 1.6): every push / PR to main must
+# typecheck, pass the full test suite on a real PostgreSQL, build for production and have no
+# critical runtime-dependency advisories. Deploys stay manual (scripts/deploy.sh on the host).
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: taxi
+          POSTGRES_PASSWORD: ci-pass
+          POSTGRES_DB: taxi_cyprus_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U taxi -d taxi_cyprus_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      # The DB tests refuse to run unless the database name ends in _test.
+      DATABASE_URL: postgresql://taxi:ci-pass@localhost:5432/taxi_cyprus_test?schema=public
+      SESSION_SECRET: ci-session-secret-0123456789abcdef0123456789abcdef
+      TRACKING_RECEIPT_SECRET: ci-tracking-secret-0123456789abcdef0123456789ab
+      DEMO_MODE: 'true'
+      DEMO_PASSWORD: ci-demo-pass-123
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        run: npx prisma generate && npx tsc --noEmit
+      - name: Lint
+        run: npm run lint
+      - name: Migrate (fresh database) + seed
+        run: npx prisma migrate deploy && npx tsx prisma/seed.ts
+      - name: Tests
+        run: npx vitest run
+      - name: Production build
+        run: npm run build
+      - name: Dependency audit (runtime, critical)
+        run: npm audit --omit=dev --audit-level=critical

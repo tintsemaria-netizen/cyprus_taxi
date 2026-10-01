@@ -99,7 +99,7 @@ function Driver() {
     load(); loadDash();
     const t = setInterval(() => { if (document.visibilityState === 'visible') { load(); loadDash(); } }, 5000);
     return () => { clearInterval(t); stopGps(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [load, loadDash]);
 
   function stopGps() {
@@ -443,7 +443,9 @@ function TripsSection({ onOpen, activeDetail, onCloseDetail, onSettled }: { onOp
     } catch (e) { setErr(e ? tError(e) : t('driver.trips.loadFailed')); } finally { setLoading(false); }
   }, [range, cursor, t, tError]);
 
-  useEffect(() => { setItems([]); setCursor(null); loadPage(true); /* eslint-disable-next-line */ }, [range]);
+  // Reset only when the range changes; a reset load ignores the cursor, so loadPage's identity is irrelevant here.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setItems([]); setCursor(null); loadPage(true); }, [range]);
 
   return (
     <div className="space-y-3">

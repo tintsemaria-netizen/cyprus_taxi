@@ -32,7 +32,7 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
     document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onKey);
     return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [open]);
 
   function close() { setOpen(false); btnRef.current?.focus(); }

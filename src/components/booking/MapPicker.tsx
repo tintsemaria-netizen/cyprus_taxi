@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { publicMapConfig } from '@/lib/config';
 import { api } from '@/lib/api-client';
@@ -158,7 +158,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
     let loadTimer: ReturnType<typeof setTimeout> | null = null;
     (async () => {
       try {
-        const maplibre = (await import('maplibre-gl')).default;
+        const maplibre = await import('maplibre-gl');
         if (disposed || closed.current || gen !== mapGen.current || !containerRef.current) return;
         // Retry preserves the current draft: centre on the last draft coordinate.
         const start = centerRef.current;
@@ -227,7 +227,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
 
   function showUser(lat: number, lng: number, acc: number, gen: number) {
     (async () => {
-      const maplibre = (await import('maplibre-gl')).default;
+      const maplibre = await import('maplibre-gl');
       const map = mapRef.current;
       if (!map || closed.current || gen !== mapGen.current) return;
       if (!userMarker.current) {

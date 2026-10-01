@@ -66,12 +66,12 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error }: Prop
       document.removeEventListener('mousedown', onDoc);
       invalidatePending();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   useEffect(() => {
     if (value) { invalidatePending(); setOpen(false); setResults([]); setStatus('idle'); setActive(-1); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [value]);
 
   function handleText(t: string) {
@@ -159,6 +159,7 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error }: Prop
         onFocus={() => results.length && setOpen(true)}
         autoComplete="off"
         role="combobox"
+        aria-controls={`${inputId}-list`}
         aria-expanded={open}
         aria-autocomplete="list"
         aria-invalid={!!error}
@@ -170,7 +171,7 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error }: Prop
       )}
       {error && <p className="mt-1 text-xs text-danger">{error}</p>}
       {open && (results.length > 0 || loading || status !== 'idle') && (
-        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-[12px] border border-edge bg-elevated shadow-card" role="listbox">
+        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-[12px] border border-edge bg-elevated shadow-card" role="listbox" id={`${inputId}-list`}>
           {loading && <div className="px-4 py-3 text-sm text-muted">{t('booking.places.searching')}</div>}
           {!loading && status === 'none' && <div className="px-4 py-3 text-sm text-muted">{t('booking.places.none')}</div>}
           {!loading && status === 'unavailable' && <div className="px-4 py-3 text-sm text-warn">{t('booking.places.unavailable')}</div>}

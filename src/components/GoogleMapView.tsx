@@ -67,8 +67,12 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
 
   useEffect(() => {
     let cancelled = false;
+    // Stable Map instances (created once per component) — captured for the cleanup below.
+    const animCache = animMap.current;
+    const markerCache = markerMap.current;
+    const posCache = posMap.current;
     let ro: ResizeObserver | null = null;
-    let timers: ReturnType<typeof setTimeout>[] = [];
+    const timers: ReturnType<typeof setTimeout>[] = [];
     loadGoogleMaps()
       .then((g) => {
         if (cancelled || !containerRef.current) return;
@@ -112,10 +116,10 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       cancelled = true;
       ro?.disconnect();
       timers.forEach(clearTimeout);
-      animMap.current.forEach((id) => cancelAnimationFrame(id));
-      animMap.current.clear();
-      markerMap.current.clear();
-      posMap.current.clear();
+      animCache.forEach((id) => cancelAnimationFrame(id));
+      animCache.clear();
+      markerCache.clear();
+      posCache.clear();
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

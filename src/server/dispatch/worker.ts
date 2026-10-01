@@ -37,7 +37,7 @@ export function getDispatchHealth() {
 export function startWorkers() {
   if (state.timer) return; // already started
   state.timer = setInterval(() => { void runOnce(); }, TICK_MS);
-  // eslint-disable-next-line no-console
+   
   console.log(`[worker] ${state.workerId} started (tick ${TICK_MS}ms)`);
 }
 // Back-compat alias (older callers / tests).
@@ -82,7 +82,7 @@ export async function runOnce(): Promise<void> {
       } catch (e) { console.error('[maintenance] error', e); }
     }
   } catch (e) {
-    // eslint-disable-next-line no-console
+     
     console.error('[worker] tick error', e);
   } finally {
     state.running = false;
@@ -122,7 +122,7 @@ async function runDispatchSection(now: Date): Promise<void> {
     } catch (e) {
       // Isolate per-job failure (e.g. a slow/erroring route lookup) so it never stops
       // deadline handling for the rest of the queue this tick.
-      // eslint-disable-next-line no-console
+       
       console.error(`[dispatch] job ${j.id} error`, e);
     } finally {
       await prisma.dispatchJob.updateMany({ where: { id: j.id, leaseOwner: state.workerId }, data: { leaseUntil: null, leaseOwner: null } });

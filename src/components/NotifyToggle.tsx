@@ -17,7 +17,7 @@ export function NotifyToggle({ pushUrl, className }: { pushUrl: string; classNam
     if (p === 'granted') { setState('busy'); enablePush(pushUrl).then((r) => setState(r.ok ? 'on' : 'idle')); }
     else if (p === 'denied') setState('denied');
     else setState('idle');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [pushUrl]);
 
   if (state === 'unsupported') return null;

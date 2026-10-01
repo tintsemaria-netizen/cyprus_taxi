@@ -5,7 +5,7 @@ import path from 'path';
 // Isolated upload dir for the KYC retention test. config reads PRIVATE_UPLOAD_DIR at import time and
 // imports are hoisted, so set it in vi.hoisted (runs before any import).
 const UPLOADS = vi.hoisted(() => {
-  const dir = `${require('os').tmpdir()}/kyc-test-${process.pid}`;
+  const dir = `${process.env.TMPDIR || '/tmp'}/kyc-test-${process.pid}`;
   process.env.PRIVATE_UPLOAD_DIR = dir;
   return dir;
 });

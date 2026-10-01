@@ -131,7 +131,7 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
     rangeLowCents = totalCents;
     rangeHighCents = totalCents;
     dynamic = { multiplier: dyn.multiplier, applied: dyn.applied, demandSupplyRatio: dyn.demandSupplyRatio, reasons: dyn.reasons, version: dyn.version };
-    // eslint-disable-next-line no-console
+     
     console.log(`[pricing] dynamic quote ×${dyn.multiplier} demand=${snap.activeRequests} supply=${snap.availableDrivers} weather=${weather?.severity ?? 0} reasons=${dyn.reasons.join('|')}`);
   }
 

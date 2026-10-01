@@ -21,7 +21,7 @@ export async function GET(req: Request) {
   let dispatchAlive: boolean;
   let notificationsAlive = true;
   let lastTickAgoMs: number | null;
-  let workers: Record<string, { ageMs: number; detail: unknown }> = {};
+  const workers: Record<string, { ageMs: number; detail: unknown }> = {};
 
   if (dedicated) {
     try {

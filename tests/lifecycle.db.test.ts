@@ -140,10 +140,11 @@ describe('M3 trip lifecycle', () => {
     // Now an IN_PROGRESS trip with stale GPS must NOT be rematched.
     const t2 = await assignedBooking('Maria', 20);
     let rev = t2.revision;
-    rev = (await changeStatus({ bookingId: t2.bookingId, to: 'EN_ROUTE', expectedRevision: rev, actor: 'DRIVER', driverId: t2.driverId, actorId: 'u' }) as any).revision;
-    rev = (await arriveAtPickup(t2.bookingId, t2.driverId, rev) as any).revision;
+    const revOf = (r: object) => ('revision' in r && typeof r.revision === 'number' ? r.revision : -1);
+    rev = revOf(await changeStatus({ bookingId: t2.bookingId, to: 'EN_ROUTE', expectedRevision: rev, actor: 'DRIVER', driverId: t2.driverId, actorId: 'u' }));
+    rev = revOf(await arriveAtPickup(t2.bookingId, t2.driverId, rev));
     const code = (await prisma.booking.findUnique({ where: { id: t2.bookingId } }))!.startCode!;
-    rev = (await startTrip(t2.bookingId, t2.driverId, rev, code) as any).revision;
+    await startTrip(t2.bookingId, t2.driverId, rev, code);
     await prisma.latestDriverLocation.update({ where: { driverId: t2.driverId }, data: { sampledAt: new Date(Date.now() - 10 * 60 * 1000), receivedAt: new Date(Date.now() - 10 * 60 * 1000) } });
     await runOnce();
     expect((await prisma.booking.findUnique({ where: { id: t2.bookingId } }))!.status).toBe('IN_PROGRESS');

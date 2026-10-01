@@ -2,7 +2,6 @@ import { prisma } from '@/lib/db';
 import { Prisma, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { generateToken } from '@/lib/crypto';
-import { deleteApplicationFiles } from '@/server/storage';
 
 // Driver application domain (Task 015). One application per applicant. All transitions are
 // server-validated + audited; approval alone provisions an operational driver.

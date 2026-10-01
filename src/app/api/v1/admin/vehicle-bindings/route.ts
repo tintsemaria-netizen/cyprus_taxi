@@ -1,4 +1,4 @@
-import { apiOk, apiError, Errors } from '@/lib/http';
+import { apiOk, Errors } from '@/lib/http';
 import { requireStaff, isStaffCtx } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';

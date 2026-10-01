@@ -79,7 +79,7 @@ export default function SharePage() {
         <Logo />
         <div className="flex items-center gap-2">
           <span className="hidden text-xs text-muted min-[400px]:inline">{t('track.share.headerTag')}</span>
-          <LanguageSwitcher />
+          <LanguageSwitcher compact />
         </div>
       </header>
       <div className="relative flex-1">
