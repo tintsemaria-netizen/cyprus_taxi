@@ -86,6 +86,18 @@ Deploy reminder: `export APP_RELEASE=$(git rev-parse HEAD)` then build + `up -d 
 - **Activate:** add an email provider + transport (e.g. SMTP or a provider SDK) and the matching
   env, then send the existing receipt payload. Until then the in-app receipt stands on its own.
 
+## 9. Telegram alerts (watchdog)
+
+- **Status:** `deploy/watchdog.sh` runs every minute from root cron (`# taxi-watchdog`), independent
+  of the app: origin `/health/live` (503 when dispatch/notifications heartbeats are stale), public URL
+  via Cloudflare, containers running, disk < 85%, fresh non-empty pg backup (< 26h). Alerts after 2
+  consecutive failures, hourly reminders while failing, ✅ on recovery. Until configured it only logs
+  to `deploy/watchdog-state/watchdog.log`.
+- **Activate:** create a bot with @BotFather, send it any message (or add it to a group), get the
+  chat id (`https://api.telegram.org/bot<TOKEN>/getUpdates` → `chat.id`), then create
+  `deploy/secrets/telegram.env` (chmod 600) with `TELEGRAM_BOT_TOKEN=...` and `TELEGRAM_CHAT_ID=...`.
+  **Verify:** `sudo deploy/watchdog.sh --test` → a 🧪 message arrives.
+
 ## Not an external blocker (environment limitation here)
 
 - **Real on-phone journey** (device GPS + handset push delivery) and multi-device UI regression

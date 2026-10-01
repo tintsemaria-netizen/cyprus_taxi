@@ -1,5 +1,19 @@
 # Session handoff
 
+## Stage 0 ops/UX pass (2026-10-01) — release 991bda3, DEPLOYED + live-verified
+- **Monitoring:** `/health/live` → 503 "degraded" if dispatch/notifications heartbeat stale.
+  `deploy/watchdog.sh` (root cron every minute, `# taxi-watchdog`) → Telegram alerts; checks origin
+  health, public URL, containers, disk, backup freshness/size. Verified: cron runs, all checks OK,
+  simulated outage/recovery produce the right messages. **Waiting on owner:** bot token + chat id in
+  `deploy/secrets/telegram.env` (see EXTERNAL-ENABLEMENT §9), then `sudo deploy/watchdog.sh --test`.
+- **Backups:** backup.sh now bash + pipefail + min-size check; cron switched `/bin/sh`→`/bin/bash`
+  (old crontab saved at deploy/watchdog-state/cron.bak). Manual run OK (pg 140K).
+- **Booking UX:** review step shows fare estimate/range (no "Confirmed by dispatcher"), automatic
+  matching copy; airport (LCA/PFO, 2.5 km) quotes return `airport:true` and show an official
+  fixed-fare notice (live-verified). /terms dispatcher sentence corrected.
+- **Remaining Stage 0 (owner-dependent):** LEGACY-driver gate (which drivers pass KYC), real
+  privacy/terms (lawyer), RTD fixed airport fare table → REGULATED_FIXED engine.
+
 ## Security hotfix + team audit (2026-10-01) — release f1294f5, DEPLOYED + live-verified
 - **Team audit:** 7 specialist agents (security, backend, QA, UX, product, Cyprus regulatory, ops) +
   synthesis → `docs/AUDIT-2026-10-01.md` (66 findings; staged roadmap Stage 0-3; owner-decision list).
