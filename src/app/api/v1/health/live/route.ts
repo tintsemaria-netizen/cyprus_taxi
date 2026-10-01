@@ -45,10 +45,11 @@ export async function GET(req: Request) {
   const analytics = workers['analytics'] ? { alive: workers['analytics'].ageMs < 120_000, ageMs: workers['analytics'].ageMs } : { alive: false, ageMs: null };
 
   const ok = dispatchAlive && notificationsAlive;
-  // Public requests (through nginx, which always sets X-Forwarded-For) get only the status; the
-  // detailed view (release, demo flag, worker internals) is for on-host callers — the watchdog and
-  // deploy checks hit 127.0.0.1:8097 directly (2026-10-01 audit: no internals on the public URL).
-  if (req.headers.get('x-forwarded-for')) {
+  // Public requests (through nginx, which always sets X-Real-IP) get only the status; the detailed
+  // view (release, demo flag, worker internals) is for on-host callers — the watchdog and deploy
+  // checks hit 127.0.0.1:8097 directly (2026-10-01 audit: no internals on the public URL).
+  // Not X-Forwarded-For: Next.js adds that itself to direct requests.
+  if (req.headers.get('x-real-ip')) {
     return NextResponse.json({ status: ok ? 'live' : 'degraded' }, { status: ok ? 200 : 503 });
   }
   return NextResponse.json({
