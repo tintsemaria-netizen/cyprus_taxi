@@ -23,19 +23,26 @@ export interface BrowserSubscription {
 
 const MAX_SUBS_PER_AUDIENCE = 10;
 
-// SSRF guard: web-push POSTs to this endpoint, so it must be a public HTTPS push host.
-// Reject non-https, bare-IP hosts (blocks loopback/private/link-local/metadata) and
-// localhost/.local. Real FCM/Mozilla/Apple endpoints are public domain names.
+// SSRF guard: web-push POSTs to this endpoint from inside our network, so only the real browser
+// push services are allowed (2026-10-01 audit: a hostname-only check let single-label internal
+// names like `taxicy-clickhouse` and DNS-rebinding domains through). HTTPS on the default port,
+// host equal to or a subdomain of a known push service.
+const PUSH_HOST_SUFFIXES = [
+  'fcm.googleapis.com', // Chrome, Edge (Chromium), Android, Opera, Samsung
+  'android.googleapis.com', // legacy GCM endpoints
+  'push.services.mozilla.com', // Firefox (updates.push.services.mozilla.com)
+  'push.apple.com', // Safari / iOS web apps (web.push.apple.com)
+  'notify.windows.com', // legacy Edge / WNS
+];
+
 export function isSafePushEndpoint(endpoint: string): boolean {
   let u: URL;
   try { u = new URL(endpoint); } catch { return false; }
   if (u.protocol !== 'https:') return false;
-  const host = u.hostname.toLowerCase();
-  if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.localhost')) return false;
-  const isV4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
-  const isV6 = host.includes(':') || host.startsWith('[');
-  if (isV4 || isV6) return false; // never allow an IP-literal destination
-  return true;
+  if (u.port && u.port !== '443') return false;
+  if (u.username || u.password) return false;
+  const host = u.hostname.toLowerCase().replace(/\.$/, '');
+  return PUSH_HOST_SUFFIXES.some((s) => host === s || host.endsWith(`.${s}`));
 }
 
 function validKeys(k: { p256dh?: string; auth?: string }): boolean {

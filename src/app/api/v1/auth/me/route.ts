@@ -1,6 +1,7 @@
 import { apiOk, Errors } from '@/lib/http';
 import { getStaff } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { isPrivileged, mfaSetupRequired } from '@/server/staff-mfa';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,5 +13,8 @@ export async function GET() {
     const d = await prisma.driver.findUnique({ where: { userId: ctx.user.id } });
     driverId = d?.id ?? null;
   }
-  return apiOk({ id: ctx.user.id, role: ctx.user.role, displayName: ctx.user.displayName, driverId });
+  return apiOk({
+    id: ctx.user.id, role: ctx.user.role, displayName: ctx.user.displayName, driverId,
+    mfa: { eligible: isPrivileged(ctx.user), enabled: !!ctx.user.totpEnabledAt, setupRequired: mfaSetupRequired(ctx.user) },
+  });
 }

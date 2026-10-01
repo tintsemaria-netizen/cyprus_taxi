@@ -2,7 +2,7 @@
 
 **Status: DEPLOYED — publicly reachable beta.** Last updated: 2026-09-11 (Tasks 004 + 005 + 006 applied).
 Repository: https://github.com/tintsemaria-netizen/cyprus_taxi (branch `main`, pushed). The live release id
-is exposed (non-secret) at `GET /api/v1/health/live` → `release`, set from the deployed commit SHA. See the
+is exposed (non-secret) at `GET /api/v1/health/live` → `release` (on-host only: `curl http://127.0.0.1:8097/api/v1/health/live`; the public URL returns just the status), set from the deployed commit SHA. See the
 git log for the exact current SHA; deployment records it in `deploy/.env.production` (`APP_RELEASE`).
 
 ## Reachable URLs (live)

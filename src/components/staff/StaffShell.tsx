@@ -10,6 +10,7 @@ export interface Me {
   role: 'ADMIN' | 'DISPATCHER' | 'DRIVER';
   displayName: string;
   driverId: string | null;
+  mfa?: { eligible: boolean; enabled: boolean; setupRequired: boolean };
 }
 
 export function StaffShell({ roles, children }: { roles: Me['role'][]; children: (me: Me) => React.ReactNode }) {
@@ -27,6 +28,8 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
           else router.replace('/dispatch');
           return;
         }
+        // Enforced 2FA: a privileged account without TOTP can only open the security page.
+        if (m.mfa?.setupRequired && pathname !== '/staff/security') { router.replace('/staff/security'); return; }
         setMe(m);
         setState('ok');
       })
@@ -57,6 +60,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
                 { href: '/admin/settings', label: 'Settings' },
               ]
             : []),
+          { href: '/staff/security', label: 'Security' },
         ];
 
   return (

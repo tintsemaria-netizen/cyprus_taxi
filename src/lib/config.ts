@@ -125,6 +125,9 @@ export const config = {
     readPassword: () => process.env.CLICKHOUSE_READ_PASSWORD || '',
     exportBatch: num('ANALYTICS_EXPORT_BATCH', 500),
   },
+  // When true, ADMIN/DISPATCHER accounts without TOTP are limited to setting it up (2026-10-01 audit
+  // Stage 1.2). Off by default so every privileged user can enroll first.
+  staffMfaEnforce: process.env.STAFF_MFA_ENFORCE === 'true',
   // Max trusted proxy entries skipped from the right of X-Forwarded-For (see clientIp). Behind
   // Cloudflare → nginx exactly ONE trusted entry is appended (the CF edge nginx saw).
   trustedProxyHops: num('TRUSTED_PROXY_HOPS', 1),

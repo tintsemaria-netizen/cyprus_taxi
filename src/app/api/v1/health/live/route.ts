@@ -15,7 +15,7 @@ const DISPATCH_STALE_MS = 15_000; // dispatch/notifications heartbeat older than
 // process, so liveness comes from the WorkerHeartbeat table (cross-process), not a local timer.
 // Operational health (dispatch + notifications) is reported SEPARATELY from analytics health, so
 // a dead/absent analytics exporter never makes the booking path look down.
-export async function GET() {
+export async function GET(req: Request) {
   const dedicated = process.env.DEDICATED_WORKERS === 'true';
   const now = Date.now();
   let dispatchAlive: boolean;
@@ -45,6 +45,12 @@ export async function GET() {
   const analytics = workers['analytics'] ? { alive: workers['analytics'].ageMs < 120_000, ageMs: workers['analytics'].ageMs } : { alive: false, ageMs: null };
 
   const ok = dispatchAlive && notificationsAlive;
+  // Public requests (through nginx, which always sets X-Forwarded-For) get only the status; the
+  // detailed view (release, demo flag, worker internals) is for on-host callers — the watchdog and
+  // deploy checks hit 127.0.0.1:8097 directly (2026-10-01 audit: no internals on the public URL).
+  if (req.headers.get('x-forwarded-for')) {
+    return NextResponse.json({ status: ok ? 'live' : 'degraded' }, { status: ok ? 200 : 503 });
+  }
   return NextResponse.json({
     status: ok ? 'live' : 'degraded',
     release: process.env.APP_RELEASE || 'dev',

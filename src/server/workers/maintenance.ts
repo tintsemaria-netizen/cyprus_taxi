@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
+import { pruneRateLimits } from '@/lib/rate-limit';
 
 // Scheduled retention/cleanup (Task 016 §5/§7). Runs on the maintenance cadence, isolated from
 // dispatch. NEVER prunes a domain event that still has an un-DELIVERED sink delivery — critical
@@ -8,7 +9,7 @@ import { config } from '@/lib/config';
 const EVENT_SAFETY_DAYS = 14; // keep delivered events this long as a replay/backup safety margin
 const NOTIFICATION_KEEP_DAYS = 7;
 
-export interface MaintenanceResult { gpsDeleted: number; eventsDeleted: number; notificationsDeleted: number }
+export interface MaintenanceResult { gpsDeleted: number; eventsDeleted: number; notificationsDeleted: number; rateLimitsDeleted: number }
 
 export async function runMaintenance(now: Date = new Date()): Promise<MaintenanceResult> {
   // 1) Exact-GPS retention. Coarse aggregates live longer in ClickHouse; the raw table here
@@ -37,5 +38,8 @@ export async function runMaintenance(now: Date = new Date()): Promise<Maintenanc
   const noteCutoff = new Date(now.getTime() - NOTIFICATION_KEEP_DAYS * 86_400_000);
   const notes = await prisma.notificationOutbox.deleteMany({ where: { deliveredAt: { lt: noteCutoff } } });
 
-  return { gpsDeleted: gps.count, eventsDeleted: Number(evDeleted[0]?.count ?? 0), notificationsDeleted: notes.count };
+  // 4) Expired rate-limit windows.
+  const rateLimitsDeleted = await pruneRateLimits(now);
+
+  return { gpsDeleted: gps.count, eventsDeleted: Number(evDeleted[0]?.count ?? 0), notificationsDeleted: notes.count, rateLimitsDeleted };
 }

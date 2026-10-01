@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db';
 import { verifyPassword, createStaffSession } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { config } from '@/lib/config';
+import { apiError } from '@/lib/http';
+import { verifyStaffTotp, mfaSetupRequired } from '@/server/staff-mfa';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +35,14 @@ export async function POST(req: Request) {
   if (!user || !user.active || !ok) {
     return Errors.unauthorized();
   }
+  // Second factor for accounts that enabled TOTP. No session is issued without it.
+  if (user.totpEnabledAt) {
+    const code = typeof (raw as { totp?: unknown }).totp === 'string' ? ((raw as { totp: string }).totp).replace(/\s/g, '') : '';
+    if (!code) return apiError(401, 'MFA_REQUIRED', 'Enter the 6-digit code from your authenticator app.');
+    const rlMfa = await rateLimit('login-mfa', user.id, 5, 300);
+    if (!rlMfa.ok) return Errors.throttled(rlMfa.retryAfter);
+    if (!(await verifyStaffTotp(user, code))) return apiError(401, 'MFA_INVALID', 'That code is not valid. Use the current code from your app.');
+  }
   await createStaffSession(user);
-  return apiOk({ id: user.id, role: user.role, displayName: user.displayName });
+  return apiOk({ id: user.id, role: user.role, displayName: user.displayName, mfaSetupRequired: mfaSetupRequired(user) });
 }

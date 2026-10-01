@@ -71,3 +71,23 @@ export function bookingReference(): string {
     Array.from({ length: n }, () => alphabet[crypto.randomInt(alphabet.length)]).join('');
   return `CY-${pick(4)}-${pick(4)}`;
 }
+
+// Generic at-rest encryption for small secrets (e.g. staff TOTP seeds). AES-256-GCM with a key
+// derived from the server secret under its own domain label, so it never equals another key.
+const SECRET_PREFIX = 'sec1:';
+function secretKey(label: string): Buffer {
+  return crypto.createHmac('sha256', config.trackingReceiptSecret()).update(`at-rest-secret:${label}`).digest();
+}
+export function encryptSecret(plaintext: string, label: string): string {
+  const nonce = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', secretKey(label), nonce);
+  const ct = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  return SECRET_PREFIX + Buffer.concat([nonce, cipher.getAuthTag(), ct]).toString('base64');
+}
+export function decryptSecret(stored: string, label: string): string {
+  if (!stored.startsWith(SECRET_PREFIX)) throw new Error('bad secret format');
+  const raw = Buffer.from(stored.slice(SECRET_PREFIX.length), 'base64');
+  const decipher = crypto.createDecipheriv('aes-256-gcm', secretKey(label), raw.subarray(0, 12));
+  decipher.setAuthTag(raw.subarray(12, 28));
+  return Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString('utf8');
+}

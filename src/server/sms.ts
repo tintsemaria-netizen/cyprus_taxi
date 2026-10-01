@@ -56,10 +56,15 @@ export async function checkOtp(phone: string, code: string): Promise<boolean> {
   // dev: newest unconsumed, unexpired challenge; bounded attempts.
   const v = await prisma.phoneVerification.findFirst({ where: { phone, provider: 'dev', consumedAt: null }, orderBy: { createdAt: 'desc' } });
   if (!v || v.expiresAt < new Date() || v.attempts >= MAX_ATTEMPTS) return false;
-  if (v.codeHash !== sha256(code)) {
-    await prisma.phoneVerification.update({ where: { id: v.id }, data: { attempts: { increment: 1 } } });
-    return false;
-  }
-  await prisma.phoneVerification.update({ where: { id: v.id }, data: { consumedAt: new Date() } });
-  return true;
+  // Reserve an attempt ATOMICALLY before comparing, so a parallel burst cannot exceed
+  // MAX_ATTEMPTS guesses (the old compare-then-increment let concurrent guesses through).
+  const claimed = await prisma.phoneVerification.updateMany({
+    where: { id: v.id, consumedAt: null, attempts: { lt: MAX_ATTEMPTS } },
+    data: { attempts: { increment: 1 } },
+  });
+  if (claimed.count === 0) return false;
+  if (v.codeHash !== sha256(code)) return false;
+  // Single use: only one concurrent correct guess can consume the challenge.
+  const consumed = await prisma.phoneVerification.updateMany({ where: { id: v.id, consumedAt: null }, data: { consumedAt: new Date() } });
+  return consumed.count === 1;
 }

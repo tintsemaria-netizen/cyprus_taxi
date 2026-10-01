@@ -1,3 +1,4 @@
+import { config } from '@/lib/config';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 import { prisma } from './db';
@@ -72,6 +73,11 @@ export async function requireStaff(roles?: Role[]): Promise<StaffContext | { err
   const ctx = await getStaff();
   if (!ctx) return { error: 401 };
   if (roles && !roles.includes(ctx.user.role)) return { error: 403 };
+  // MFA enforcement (STAFF_MFA_ENFORCE): privileged accounts without TOTP may only use the
+  // enrollment endpoints (which call getStaff directly), not any guarded staff API.
+  if (config.staffMfaEnforce && (ctx.user.role === 'ADMIN' || ctx.user.role === 'DISPATCHER') && !ctx.user.totpEnabledAt) {
+    return { error: 403 };
+  }
   return ctx;
 }
 

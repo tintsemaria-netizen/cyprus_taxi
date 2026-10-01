@@ -45,6 +45,12 @@ model StaffUser {
   active         Boolean  @default(true)
   sessionVersion Int      @default(1)
   displayName    String
+  // TOTP two-factor (2026-10-01 audit Stage 1.2) for ADMIN/DISPATCHER. Secrets are AES-GCM
+  // encrypted at rest. totpLastStep blocks replay of an already-used code.
+  totpSecret        String?
+  totpPendingSecret String?
+  totpEnabledAt     DateTime?
+  totpLastStep      Int?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -742,4 +748,15 @@ model AuditEvent {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// Fixed-window rate-limit counters (2026-10-01 audit Stage 1.1). Incremented atomically with a
+// single INSERT … ON CONFLICT DO UPDATE … RETURNING so concurrent bursts are all counted; expired
+// rows are pruned by maintenance. Replaces the old non-atomic `ratelimit:*` rows in Setting.
+model RateLimitBucket {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
 }

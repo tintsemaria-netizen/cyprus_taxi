@@ -18,4 +18,14 @@ describe('push endpoint SSRF validation', () => {
     expect(isSafePushEndpoint('https://[::1]/x')).toBe(false); // IPv6 loopback
     expect(isSafePushEndpoint('not-a-url')).toBe(false);
   });
+
+  it('only allows known browser push services (no internal names, rebinding domains or odd ports)', () => {
+    expect(isSafePushEndpoint('https://wns2-par02p.notify.windows.com/w/?token=x')).toBe(true);
+    expect(isSafePushEndpoint('https://taxicy-clickhouse/x')).toBe(false); // single-label Docker name
+    expect(isSafePushEndpoint('https://attacker.example.com/x')).toBe(false); // could resolve to 10.x
+    expect(isSafePushEndpoint('https://fcm.googleapis.com.attacker.example/x')).toBe(false); // suffix trick
+    expect(isSafePushEndpoint('https://evilfcm.googleapis.com.evil/x')).toBe(false);
+    expect(isSafePushEndpoint('https://fcm.googleapis.com:8443/x')).toBe(false); // non-default port
+    expect(isSafePushEndpoint('https://user:pw@fcm.googleapis.com/x')).toBe(false);
+  });
 });
