@@ -77,6 +77,7 @@ export async function runOnce(): Promise<void> {
         const { runMaintenance } = await import('@/server/workers/maintenance');
         const r = await runMaintenance(now);
         try { const { enforceDocumentExpiries } = await import('@/server/applications'); await enforceDocumentExpiries(now); } catch (e) { console.error('[expiry] error', e); }
+        try { const { runKycRetention } = await import('@/server/kyc-retention'); await runKycRetention(now); } catch (e) { console.error('[kyc-retention] error', e); }
         await heartbeat('maintenance', state.workerId, r);
       } catch (e) { console.error('[maintenance] error', e); }
     }

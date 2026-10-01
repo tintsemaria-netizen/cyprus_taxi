@@ -2,6 +2,7 @@
 // server's English message (see tError in I18nProvider).
 const errors = {
   ACCOUNT_CONFLICT: 'This phone or email is already linked to another account.',
+  ACTIVE_RIDE: 'Finish or cancel your current ride before deleting your account.',
   ALREADY_RATED: 'You have already rated this ride.',
   BAD_CODE: 'That code is not correct.',
   BAD_CREDENTIALS: 'Incorrect email or password.',

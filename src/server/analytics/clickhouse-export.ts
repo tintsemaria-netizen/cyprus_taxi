@@ -1,8 +1,8 @@
 import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
-import { chExec, chInsert, chDateTime } from './clickhouse';
-import { ddlStatements, CH_SCHEMA_VERSION } from './schema';
+import { chExec, chInsert, chDateTime, chSelect } from './clickhouse';
+import { ddlStatements, migrationStatements, CH_SCHEMA_VERSION } from './schema';
 
 // ClickHouse exporter (Task 016 §6/§7). Claims PENDING/RETRY AnalyticsDelivery rows with a lease
 // (FOR UPDATE SKIP LOCKED — safe with N exporters), inserts the referenced domain events into
@@ -19,8 +19,16 @@ let schemaReady = false;
 // Idempotent schema bootstrap — separate from web startup (only the worker's analytics section
 // or an explicit admin action calls the exporter). CREATE ... IF NOT EXISTS, safe to repeat.
 export async function ensureClickHouseSchema(): Promise<void> {
-  for (const stmt of ddlStatements(config.analytics.db)) await chExec(stmt);
-  await chExec(`INSERT INTO ${config.analytics.db}.ch_schema_version (version) SELECT ${CH_SCHEMA_VERSION} WHERE (SELECT count() FROM ${config.analytics.db}.ch_schema_version WHERE version = ${CH_SCHEMA_VERSION}) = 0`);
+  const db = config.analytics.db;
+  for (const stmt of ddlStatements(db)) await chExec(stmt);
+  // Versioned one-time migrations (each recorded once it has run).
+  for (const m of migrationStatements(db, config.analytics.gpsTtlDays)) {
+    const done = await chSelect<{ c: string }>(`SELECT count() AS c FROM ${db}.ch_schema_version WHERE version = ${m.version}`, { asWrite: true });
+    if (Number(done[0]?.c ?? 0) > 0) continue;
+    for (const stmt of m.statements) await chExec(stmt);
+    await chExec(`INSERT INTO ${db}.ch_schema_version (version) VALUES (${m.version})`);
+  }
+  await chExec(`INSERT INTO ${db}.ch_schema_version (version) SELECT ${CH_SCHEMA_VERSION} WHERE (SELECT count() FROM ${db}.ch_schema_version WHERE version = ${CH_SCHEMA_VERSION}) = 0`);
   schemaReady = true;
 }
 

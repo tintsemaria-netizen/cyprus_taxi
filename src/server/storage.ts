@@ -47,6 +47,30 @@ export async function readDocument(storageKey: string): Promise<Buffer | null> {
   try { return await fs.readFile(full); } catch { return null; }
 }
 
+// Delete one stored file (traversal-guarded). Used when a document is replaced.
+export async function deleteDocumentFile(storageKey: string): Promise<void> {
+  const root = path.resolve(config.uploads.dir);
+  const full = path.resolve(root, storageKey);
+  if (full === root || !full.startsWith(root + path.sep)) return;
+  try { await fs.rm(full, { force: true }); } catch { /* ignore */ }
+}
+
+// List stored files as { storageKey, mtime } (for the orphan sweep).
+export async function listStoredFiles(): Promise<{ storageKey: string; mtime: Date }[]> {
+  const root = path.resolve(config.uploads.dir);
+  const out: { storageKey: string; mtime: Date }[] = [];
+  let dirs: string[] = [];
+  try { dirs = await fs.readdir(root); } catch { return out; }
+  for (const d of dirs) {
+    let files: string[] = [];
+    try { files = await fs.readdir(path.join(root, d)); } catch { continue; }
+    for (const f of files) {
+      try { const st = await fs.stat(path.join(root, d, f)); if (st.isFile()) out.push({ storageKey: path.join(d, f), mtime: st.mtime }); } catch { /* raced */ }
+    }
+  }
+  return out;
+}
+
 export async function deleteApplicationFiles(applicationId: string): Promise<void> {
   try { await fs.rm(path.join(config.uploads.dir, applicationId), { recursive: true, force: true }); } catch { /* ignore */ }
 }

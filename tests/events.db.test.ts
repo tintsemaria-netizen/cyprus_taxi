@@ -5,7 +5,7 @@ const dbUrl = process.env.DATABASE_URL || '';
 const dbName = (() => { try { return new URL(dbUrl).pathname.replace(/^\//, '').split('?')[0]; } catch { return ''; } })();
 
 import { prisma } from '@/lib/db';
-import { recordEvent } from '@/server/events';
+import { recordEvent, driverPseudo } from '@/server/events';
 import { createBooking } from '@/server/bookings';
 import { ingestLocation } from '@/server/location';
 import type { CreateBookingInput } from '@/lib/validation';
@@ -85,7 +85,7 @@ describe('GPS history — accepted samples only', () => {
     const ok = await ingestLocation(driverId, { lat: 34.7, lng: 33.0, accuracyM: 8, sampledAt: new Date(base).toISOString(), gpsSession: session, sequence: 1 });
     expect(ok.ok).toBe(true);
     expect(await prisma.gpsSample.count({ where: { driverId, gpsSession: session } })).toBe(1);
-    const ev = await prisma.domainEvent.findFirst({ where: { aggregateType: 'gps', aggregateId: `${driverId}:${session}`, aggregateVersion: 1 } });
+    const ev = await prisma.domainEvent.findFirst({ where: { aggregateType: 'gps', aggregateId: `${driverPseudo(driverId)}:${session}`, aggregateVersion: 1 } }); // pseudonymous (privacy audit)
     expect(ev).not.toBeNull();
     // Older sample (same session, lower sequence + older time) → rejected, no new history/event.
     const older = await ingestLocation(driverId, { lat: 34.71, lng: 33.01, accuracyM: 8, sampledAt: new Date(base - 5000).toISOString(), gpsSession: session, sequence: 0 });

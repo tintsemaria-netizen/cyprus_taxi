@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
-import { recordEvent, driverPseudo } from '@/server/events';
+import { recordEvent, driverPseudo, coarsenCoord } from '@/server/events';
 
 export type IngestResult =
   | { ok: true }
@@ -79,10 +79,13 @@ export async function ingestLocation(
         INSERT INTO "GpsSample" (id, "driverId", "gpsSession", sequence, lat, lng, "accuracyM", heading, speed, "sampledAt", "receivedAt", "bookingId", "createdAt")
         VALUES (${randomUUID()}, ${driverId}, ${sample.gpsSession}, ${sample.sequence}, ${sample.lat}, ${sample.lng}, ${sample.accuracyM}, ${sample.heading ?? null}, ${sample.speed ?? null}, ${sampledAt}, now(), ${bookingId}, now())
         ON CONFLICT ("driverId", "gpsSession", sequence) DO NOTHING`;
+      // Analytics copy is privacy-reduced (2026-10-01 audit): pseudonymous driver, ~500 m grid,
+      // no heading. The exact track stays only in GpsSample (short GPS_RETENTION_DAYS window).
+      const pseudo = driverPseudo(driverId);
       await recordEvent(tx, {
-        eventType: 'gps.sample', aggregateType: 'gps', aggregateId: `${driverId}:${sample.gpsSession}`, aggregateVersion: sample.sequence,
+        eventType: 'gps.sample', aggregateType: 'gps', aggregateId: `${pseudo}:${sample.gpsSession}`, aggregateVersion: sample.sequence,
         occurredAt: sampledAt, correlationId: bookingId,
-        payload: { driverPseudo: driverPseudo(driverId), gpsSession: sample.gpsSession, sequence: sample.sequence, lat: sample.lat, lng: sample.lng, accuracyM: sample.accuracyM, heading: sample.heading ?? null, speed: sample.speed ?? null, bookingId },
+        payload: { driverPseudo: pseudo, gpsSession: sample.gpsSession, sequence: sample.sequence, lat: coarsenCoord(sample.lat), lng: coarsenCoord(sample.lng), speedKmh: sample.speed != null ? Math.round(sample.speed * 3.6) : null, bookingId },
       });
       return 'ok';
     });

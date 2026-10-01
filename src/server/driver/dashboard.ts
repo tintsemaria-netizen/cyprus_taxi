@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { canWork } from '@/lib/eligibility-policy';
+import { startOfNicosiaDay } from '@/lib/timezone';
 import { getSettings } from '@/lib/settings';
 import { earningsSummary } from './earnings';
 import { listDriverTrips } from './trips';
@@ -14,7 +15,6 @@ type DriverRow = { id: string; publicName: string; onDuty: boolean; available: b
 
 export interface DashboardAlert { level: 'blocker' | 'warning' | 'info'; code: string; message: string; action?: { label: string; href: string } }
 
-function startOfUtcDay(d: Date): Date { return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); }
 
 const BLOCKER_MESSAGES: Record<string, string> = {
   PENDING: 'Your driver application is under review. You can’t take rides yet.',
@@ -46,8 +46,8 @@ export async function driverDashboard(driver: DriverRow) {
     }
   }
 
-  // Today's figures (UTC day). Pending/blocked drivers still see zeros truthfully (no fake data).
-  const today = await earningsSummary(driver.id, startOfUtcDay(now), now);
+  // Today's figures (Cyprus calendar day). Pending/blocked drivers still see zeros truthfully (no fake data).
+  const today = await earningsSummary(driver.id, startOfNicosiaDay(now), now);
   const latest = (await listDriverTrips(driver.id, { limit: 3 })).items;
   const activeAsg = await prisma.assignment.findFirst({ where: { activeDriverId: driver.id }, select: { activeBookingId: true } });
   const settings = await getSettings();

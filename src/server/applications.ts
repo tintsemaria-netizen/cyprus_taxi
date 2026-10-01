@@ -174,9 +174,7 @@ export async function approveApplication(applicationId: string, adminId: string,
   }
 }
 
-export async function purgeRejectedFiles(applicationId: string): Promise<void> {
-  await deleteApplicationFiles(applicationId);
-}
+// (Rejected/abandoned KYC files are purged on a schedule by src/server/kyc-retention.ts.)
 
 // Expiry enforcement (Task 015 §5). An APPROVED driver whose required document has expired
 // → DOCUMENTS_EXPIRED: taken off duty, unaccepted offers invalidated. NEVER cancels an

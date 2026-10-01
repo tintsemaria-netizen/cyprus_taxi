@@ -3,6 +3,7 @@ import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
   ACCOUNT_CONFLICT: 'Αυτό το τηλέφωνο ή email είναι ήδη συνδεδεμένο με άλλο λογαριασμό.',
+  ACTIVE_RIDE: 'Ολοκληρώστε ή ακυρώστε την τρέχουσα διαδρομή σας πριν διαγράψετε τον λογαριασμό.',
   ALREADY_RATED: 'Έχετε ήδη αξιολογήσει αυτή τη διαδρομή.',
   BAD_CODE: 'Ο κωδικός δεν είναι σωστός.',
   BAD_CREDENTIALS: 'Λάθος email ή κωδικός πρόσβασης.',

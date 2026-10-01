@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 // CSV statement of the driver's own trips in a window. Amounts stay in their recorded currency
 // (never mixed/converted). User-influenced strings (addresses) are neutralized against CSV formula
-// injection. Header carries currency-per-row, the UTC timezone, and generated-at.
+// injection. Header carries currency-per-row, the day convention (Cyprus days, UTC timestamps) and generated-at.
 export async function GET(req: Request) {
   const ctx = await requireDriver();
   if (!isDriverCtx(ctx)) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();
@@ -31,7 +31,7 @@ export async function GET(req: Request) {
   } while (cursor && ++guard < 40); // cap ~2000 rows
 
   const generatedAt = new Date().toISOString();
-  const body = `# IL-Y driver statement · range=${w.range} · timezone=UTC · generated=${generatedAt}\n${rows.join('\n')}\n`;
+  const body = `# IL-Y driver statement · range=${w.range} · days=Europe/Nicosia · timestamps=UTC · generated=${generatedAt}\n${rows.join('\n')}\n`;
   return new Response(body, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',

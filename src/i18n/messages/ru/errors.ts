@@ -3,6 +3,7 @@ import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
   ACCOUNT_CONFLICT: 'Этот телефон или email уже привязан к другому аккаунту.',
+  ACTIVE_RIDE: 'Завершите или отмените текущую поездку, прежде чем удалять аккаунт.',
   ALREADY_RATED: 'Вы уже оценили эту поездку.',
   BAD_CODE: 'Неверный код.',
   BAD_CREDENTIALS: 'Неверный email или пароль.',

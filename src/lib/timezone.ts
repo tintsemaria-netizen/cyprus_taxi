@@ -101,3 +101,30 @@ export function nicosiaWallTimeToUtc(local: string, preferOffsetMin?: number): W
   }
   return { ok: false, reason: 'AMBIGUOUS', options: valid.map((c) => `${offsetMinutes(c, TZ)}`).sort((a, b) => Number(b) - Number(a)) };
 }
+
+// ---- Cyprus calendar days (driver earnings/online-time reporting, 2026-10-01 audit) ----
+// "Today" for a Cyprus driver is the Europe/Nicosia day, not the UTC day: a shift after local
+// midnight (21:00–24:00 UTC in summer) belongs to the new day. Local midnight is never inside a
+// DST gap or fold in Cyprus (transitions happen at 03:00/04:00 local).
+
+// 'YYYY-MM-DD' of the Nicosia calendar day containing `instant`.
+export function nicosiaDayKey(instant: Date): string {
+  const w = wallInTz(instant.getTime(), TZ);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${w.y}-${p(w.mo)}-${p(w.d)}`;
+}
+
+// UTC instant of Nicosia local midnight for the day 'YYYY-MM-DD'.
+export function nicosiaMidnightUtc(dayKey: string): Date {
+  const r = nicosiaWallTimeToUtc(`${dayKey}T00:00`);
+  if (r.ok) return r.utc;
+  return new Date(`${dayKey}T00:00:00Z`); // unreachable for Cyprus; safe fallback
+}
+
+// UTC instant of the start of the Nicosia day containing `instant`, optionally shifted by whole days.
+export function startOfNicosiaDay(instant: Date, addDays = 0): Date {
+  const key = nicosiaDayKey(instant);
+  const [y, m, d] = key.split('-').map(Number);
+  const shifted = new Date(Date.UTC(y, m - 1, d + addDays));
+  return nicosiaMidnightUtc(shifted.toISOString().slice(0, 10));
+}

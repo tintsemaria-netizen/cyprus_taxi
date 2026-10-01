@@ -18,7 +18,7 @@ export async function goOnline(tx: Tx, driverId: string): Promise<void> {
     const s = await tx.dutySession.create({ data: { driverId, onlineAt: new Date(), activeDriverId: driverId } });
     await recordEvent(tx, {
       eventType: 'driver.online', aggregateType: 'duty', aggregateId: s.id, aggregateVersion: 1,
-      correlationId: driverId, occurredAt: s.onlineAt, payload: { driverPseudo: driverPseudo(driverId) },
+      correlationId: driverPseudo(driverId), occurredAt: s.onlineAt, payload: { driverPseudo: driverPseudo(driverId) },
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return; // concurrent open
@@ -34,7 +34,7 @@ export async function goOffline(tx: Tx, driverId: string, source: 'driver' | 'sy
   await tx.dutySession.update({ where: { id: open.id }, data: { offlineAt: now, activeDriverId: null, source } });
   await recordEvent(tx, {
     eventType: 'driver.offline', aggregateType: 'duty', aggregateId: open.id, aggregateVersion: 2,
-    correlationId: driverId, occurredAt: now,
+    correlationId: driverPseudo(driverId), occurredAt: now,
     payload: { driverPseudo: driverPseudo(driverId), onlineSec: Math.round((now.getTime() - open.onlineAt.getTime()) / 1000) },
   });
 }

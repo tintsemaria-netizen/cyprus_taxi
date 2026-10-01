@@ -21,6 +21,13 @@ export function driverPseudo(driverId: string): string {
   return createHash('sha256').update(`gps|${driverId}|${config.sessionSecret()}`).digest('hex').slice(0, 16);
 }
 
+// Analytics never needs a driver's exact position: coarsen to a ~500 m grid (0.005° ≈ 555 m of
+// latitude, ≈ 460 m of longitude in Cyprus) before a coordinate leaves the operational database.
+export const ANALYTICS_COORD_GRID = 0.005;
+export function coarsenCoord(v: number): number {
+  return Number((Math.round(v / ANALYTICS_COORD_GRID) * ANALYTICS_COORD_GRID).toFixed(3));
+}
+
 export interface DomainEventInput {
   eventType: string;
   aggregateType: string;

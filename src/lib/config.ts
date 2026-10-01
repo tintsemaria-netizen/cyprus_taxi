@@ -98,6 +98,11 @@ export const config = {
   uploads: {
     dir: process.env.PRIVATE_UPLOAD_DIR || `${process.cwd()}/private-uploads`,
   },
+  // KYC file retention (GDPR storage limitation). Approved drivers' documents are kept.
+  kyc: {
+    rejectedRetentionDays: num('KYC_REJECTED_RETENTION_DAYS', 30),
+    draftRetentionDays: num('KYC_DRAFT_RETENTION_DAYS', 90),
+  },
   // Web Push (VAPID). Public key is safe for the browser; private key is server-only.
   push: {
     vapidPublic: process.env.VAPID_PUBLIC_KEY || '',
@@ -124,6 +129,8 @@ export const config = {
     readUser: process.env.CLICKHOUSE_READ_USER || 'taxi_reader',
     readPassword: () => process.env.CLICKHOUSE_READ_PASSWORD || '',
     exportBatch: num('ANALYTICS_EXPORT_BATCH', 500),
+    // ClickHouse keeps (coarse, pseudonymous) GPS analytics events only this long (TTL).
+    gpsTtlDays: num('CH_GPS_TTL_DAYS', 90),
   },
   // When true, ADMIN/DISPATCHER accounts without TOTP are limited to setting it up (2026-10-01 audit
   // Stage 1.2). Off by default so every privileged user can enroll first.

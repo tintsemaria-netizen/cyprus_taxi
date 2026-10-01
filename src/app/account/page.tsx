@@ -5,6 +5,7 @@ import { Logo } from '@/components/Brand';
 import { PlacesInput, Selected } from '@/components/booking/PlacesInput';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 export const dynamic = 'force-dynamic';
@@ -80,6 +81,7 @@ export default function Account() {
         {t('auth.account.notifications')}
       </div>
 
+      <DataRights />
       <button onClick={logout} className="btn-ghost w-full !text-danger">{t('auth.logOut')}</button>
     </div>
   );
@@ -156,5 +158,36 @@ function PlaceEditor({ kind, icon, title, current, onChange }: { kind: 'HOME' | 
         </div>
       )}
     </div>
+  );
+}
+
+// GDPR access/portability + erasure (2026-10-01 audit).
+function DataRights() {
+  const { t, tError } = useT();
+  const [ask, setAsk] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  async function del() {
+    setBusy(true); setErr(null);
+    try {
+      await api('/passenger/me/delete', { method: 'POST', body: { confirm: 'DELETE' } });
+      alertAndLeave(t('auth.data.deleted'));
+    } catch (e) { setErr(tError(e)); setAsk(false); } finally { setBusy(false); }
+  }
+  function alertAndLeave(msg: string) {
+    try { sessionStorage.setItem('il-y-flash', msg); } catch { /* ignore */ }
+    window.location.href = '/';
+  }
+  return (
+    <section className="card p-4">
+      <h2 className="font-semibold">{t('auth.data.title')}</h2>
+      <p className="mt-1 text-sm text-muted">{t('auth.data.body')}</p>
+      {err && <p role="alert" className="mt-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <a href="/api/v1/passenger/me/export" download className="btn-ghost w-full text-center">{t('auth.data.download')}</a>
+        <button className="w-full rounded-[12px] border border-danger/40 px-4 py-2.5 text-sm text-danger hover:bg-danger/10" onClick={() => setAsk(true)}>{t('auth.data.delete')}</button>
+      </div>
+      {ask && <ConfirmSheet title={t('auth.data.confirmTitle')} body={t('auth.data.confirmBody')} confirmLabel={t('auth.data.confirm')} danger busy={busy} onConfirm={del} onCancel={() => setAsk(false)} />}
+    </section>
   );
 }

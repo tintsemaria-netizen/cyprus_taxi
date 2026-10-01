@@ -9,7 +9,24 @@
 // same partition; booking versions are reduced by query (not stored per-version), so there is no
 // cross-partition convergence problem for a booking that spans a month boundary.
 
-export const CH_SCHEMA_VERSION = 1;
+export const CH_SCHEMA_VERSION = 2;
+
+// One-time migrations, applied in order when their version is not yet recorded in ch_schema_version.
+// v2 (2026-10-01 privacy audit): GPS events expire after CH_GPS_TTL_DAYS; rows exported before
+// pseudonymisation/coarsening (raw driverId in aggregateId, exact coordinates) are deleted; raw
+// driverId correlation on duty events is cleared.
+export function migrationStatements(db: string, gpsTtlDays: number): { version: number; statements: string[] }[] {
+  return [
+    {
+      version: 2,
+      statements: [
+        `ALTER TABLE ${db}.domain_events MODIFY TTL toDateTime(occurredAt) + INTERVAL ${Math.max(1, Math.floor(gpsTtlDays))} DAY DELETE WHERE eventType = 'gps.sample'`,
+        `ALTER TABLE ${db}.domain_events DELETE WHERE eventType = 'gps.sample' AND JSONHas(payload, 'heading')`,
+        `ALTER TABLE ${db}.domain_events UPDATE correlationId = '' WHERE eventType IN ('driver.online', 'driver.offline') AND length(correlationId) = 36`,
+      ],
+    },
+  ];
+}
 
 export function ddlStatements(db: string): string[] {
   return [

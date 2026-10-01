@@ -92,5 +92,15 @@ const auth = {
     totpHint: 'Open your authenticator app and enter the current 6-digit code.',
   },
   demoBanner: 'BETA · TEST SERVICE — synthetic demo data, not an operating taxi business. Do not enter real personal data.',
+  data: {
+    title: 'Your data',
+    body: 'Download a copy of everything we hold about you, or delete your account.',
+    download: 'Download my data',
+    delete: 'Delete account',
+    confirmTitle: 'Delete your account?',
+    confirmBody: 'Your account, saved places and sign-in are deleted permanently. Past rides stay in our financial records but no longer show your name, phone, addresses or messages. This cannot be undone.',
+    confirm: 'Delete permanently',
+    deleted: 'Your account has been deleted.',
+  },
 };
 export default auth;

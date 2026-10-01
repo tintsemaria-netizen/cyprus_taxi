@@ -55,6 +55,11 @@ export default function BookingApp() {
   const [step, setStep] = useState<'form' | 'review'>('form');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState<string | null>(null);
+  // One-time notice handed over by another page (e.g. "Your account has been deleted").
+  const [flash, setFlash] = useState<string | null>(null);
+  useEffect(() => {
+    try { const f = sessionStorage.getItem('il-y-flash'); if (f) { setFlash(f); sessionStorage.removeItem('il-y-flash'); } } catch { /* storage blocked */ }
+  }, []);
   const [submitting, setSubmitting] = useState(false);
   const [picker, setPicker] = useState<'pickup' | 'dropoff' | null>(null);
   // Passenger's detected location (for centring the map + defaulting the pickup).
@@ -440,6 +445,7 @@ export default function BookingApp() {
                     <p className="label">{t('booking.form.eyebrow')}</p>
                     <h1 className="mb-4 mt-1 text-2xl font-bold">{t('booking.form.title')}</h1>
 
+                    {flash && <p role="status" className="mb-3 rounded-[12px] border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">{flash}</p>}
                     {banner && <p className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{banner}</p>}
 
                     <div className="space-y-3">

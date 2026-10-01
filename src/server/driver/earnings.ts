@@ -1,3 +1,4 @@
+import { nicosiaDayKey } from '@/lib/timezone';
 import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { onlineSecondsInWindow } from './duty';
@@ -90,7 +91,7 @@ export async function earningsDaily(driverId: string, from: Date, to: Date): Pro
   const m = new Map<string, DailyEarning>();
   for (const a of asgs) {
     const r = resolveFinal(a.booking.fare, settle.get(a.bookingId) ?? null);
-    const day = (a.endedAt ?? new Date()).toISOString().slice(0, 10);
+    const day = nicosiaDayKey(a.endedAt ?? new Date()); // Cyprus calendar day
     const key = `${day}|${r.currency}`;
     const d = m.get(key) ?? { day, currency: r.currency, recordedEarningsCents: 0, completedTrips: 0 };
     d.completedTrips += 1;

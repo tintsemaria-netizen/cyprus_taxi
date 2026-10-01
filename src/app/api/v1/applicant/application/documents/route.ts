@@ -3,7 +3,7 @@ import { apiOk, Errors } from '@/lib/http';
 import { prisma } from '@/lib/db';
 import { getApplicant } from '@/server/applicant';
 import { getOrCreateApplication, DOC_SLOTS } from '@/server/applications';
-import { saveDocument } from '@/server/storage';
+import { saveDocument, deleteDocumentFile } from '@/server/storage';
 import { scanFile } from '@/server/scan';
 
 export const dynamic = 'force-dynamic';
@@ -24,18 +24,22 @@ export async function POST(req: Request) {
   if (!buf.length) return Errors.validation({ _: 'Empty upload.' });
   if (buf.length > MAX) return Errors.validation({ _: 'File too large.' });
 
+  // Scan BEFORE writing: an infected file is never stored (2026-10-01 audit — it used to stay on disk).
+  const scanStatus = await scanFile(buf); // CLEAN | INFECTED | UNAVAILABLE
+  if (scanStatus === 'INFECTED') return Errors.validation({ file: 'This file failed a malware scan and was rejected.' });
   const docId = randomUUID();
   const stored = await saveDocument(app.id, docId, buf);
   if ('error' in stored) return Errors.validation({ file: stored.error });
-  const scanStatus = await scanFile(buf); // CLEAN | INFECTED | UNAVAILABLE
-  if (scanStatus === 'INFECTED') return Errors.validation({ file: 'This file failed a malware scan and was rejected.' });
 
-  // Replace an existing doc in this slot (delete its row; file is overwritten per-slot key
-  // only if same id, so also remove the stored bytes of the old one via full cleanup key).
+  // Replace an existing doc in this slot: new row first, then remove the old rows AND their bytes
+  // (superseded ID copies must not linger as orphans nobody can find for an erasure request).
   const prev = await prisma.applicationDocument.findMany({ where: { applicationId: app.id, slot } });
   await prisma.applicationDocument.create({
     data: { id: docId, applicationId: app.id, slot, storageKey: stored.storageKey, mime: stored.mime, sizeBytes: stored.sizeBytes, sha256: stored.sha256, scanStatus, decision: 'PENDING', revision: app.revision },
   });
-  for (const p of prev) await prisma.applicationDocument.delete({ where: { id: p.id } });
+  for (const p of prev) {
+    await prisma.applicationDocument.delete({ where: { id: p.id } });
+    await deleteDocumentFile(p.storageKey);
+  }
   return apiOk({ id: docId, slot, mime: stored.mime, scanStatus });
 }
