@@ -1,5 +1,24 @@
 # Session handoff
 
+## Batch 5 — delivery & quality (2026-10-01) — release 4746bb5, DEPLOYED via scripts/deploy.sh
+- **DEPLOY NOW = `sudo scripts/deploy.sh`** (from a clean, committed tree). Steps: backup → build
+  `taxicy-taxi-app:<sha>` (nothing restarts if the build fails) → image label must equal the commit
+  → up web+worker → health gate (release from the IMAGE via APP_RELEASE_BUILT, status live,
+  dispatch+notifications alive, both containers on the new tag) → auto-rollback to the previous
+  tag on failure. Options `--skip-backup`, `--allow-dirty`, env `DEPLOY_GATE_SECONDS`.
+  Rollback drill done on prod (gate 1 s → rolled back to the previous image, then healthy).
+  Migrations are forward-only — keep them additive so a rollback image still runs.
+- **Compose:** image tag per commit, json-file log rotation 10m×5 on all services, mem/cpu limits
+  (app 1g, worker 768m, db 2g, clickhouse 2g).
+- **CI:** `.github/workflows/ci.yml` (typecheck, lint, fresh migrate+seed on Postgres 16, vitest,
+  build, `npm audit --omit=dev --audit-level=critical`).
+- **Lint:** ESLint 9 flat config, enforced in `next build`; clean.
+- **HTTP route tests:** `tests/routes.db.test.ts` (in-memory cookie jar for next/headers).
+- **Deps:** maplibre-gl → 6.x (critical XSS fixed), next → 15.5.27. Open: PostCSS advisory bundled
+  in Next 15 (high, build-time only) — needs the Next 16 major.
+- **robots.txt** disallows private/per-ride/staff paths.
+- Suite 161 passed / 1 skipped; Playwright 15/15.
+
 ## Batch 4 — data & privacy (2026-10-01) — release 50f69a0, DEPLOYED + live-verified
 - **Analytics GPS:** `gps.sample` events now pseudonymous (`driverPseudo` aggregateId), ~500 m grid
   (`coarsenCoord`), no heading; duty events correlate by pseudonym. ClickHouse schema v2 (versioned
@@ -307,7 +326,7 @@ Beta is IMPLEMENTED, TESTED and DEPLOYED publicly at https://cyprustaxi.ackedber
 ## How to operate
 - Status: `sudo docker compose --env-file deploy/.env.production ps`
 - Logs: `sudo docker logs taxicy-app`
-- Rebuild+redeploy: `sudo docker compose --env-file deploy/.env.production up -d --build`
+- Rebuild+redeploy: `sudo scripts/deploy.sh` (health-gated, auto-rollback). Do NOT use bare `docker compose up --build` any more.
 - Migrations run automatically on container start (`prisma migrate deploy`).
 - Re-seed demo / bootstrap admin: `docker compose ... exec -e DEMO_PASSWORD=… taxi-app npm run seed`; `... exec -e ADMIN_LOGIN=admin -e ADMIN_PASSWORD=… taxi-app npm run bootstrap:admin`.
 
