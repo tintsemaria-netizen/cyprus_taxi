@@ -1,5 +1,60 @@
 # Session handoff
 
+## Session 2026-10-01 — migration DR fix + Task 020 (rating + receipt) — release f998681, DEPLOYED + live-verified
+Goal this session: drive the project to completion. Current beta release **f998681** is live at
+`cyprustaxi.ackedberryes.store` origin (`/api/v1/health/live` → release f998681, dispatch+analytics
+alive). **vitest 107 passed / 1 skipped** (skip = CH integration) on an isolated pg16 `_test` DB;
+`tsc --noEmit` clean; `npm run build` compiles. Git: `master` (push `master:main`), all committed.
+
+- **Migration DR fix (commit d3f1c65):** a FRESH `prisma migrate deploy` was broken — the
+  completion migration `20260914085416` altered `ApplicationDocument` before the KYC migration
+  `20260914110013` creates it (prod survived only because migrations were applied incrementally).
+  Guarded that ALTER with `to_regclass(...) + ADD COLUMN IF NOT EXISTS` and added
+  `20260914230500_ensure_application_document_expires_at` so fresh + existing DBs converge. A fresh
+  deploy now applies all migrations cleanly (DR / new-env / isolated-test provisioning works).
+  Confirmed empirically that `migrate deploy` ignores checksum drift on already-applied migrations,
+  so editing 085416 is safe for prod — verified live: prod applied only the 2 new migrations, the
+  edited one was skipped, no error.
+- **Task 020 — post-trip rating (commit ddfda58):** `TripRating` model (one per booking via
+  `bookingId @unique`, immutable; stars 1-5, JSON tags, optional comment) + `Driver.ratingTotal/
+  ratingCount` maintained in the SAME tx as the rating. `src/server/ratings.ts` (`rateTrip`,
+  `validateRating`, `driverRatingSummary`): locks the booking row, checks ownership + COMPLETED,
+  rates the driver who actually COMPLETED (assignment `reason='completed'`), rejects a 2nd rating
+  (409; DB unique guards the race), records a `trip.rated` event. API `GET/POST /passenger/rides/
+  [id]/rating`; `/passenger/rides` returns `ratedStars`; `/driver/dashboard` returns
+  `driver.rating`. UI: Rate-trip / given-stars on My rides (`RateTripModal`), aggregate on driver
+  Profile. Migration `20260914231500_t020_trip_rating`. Tests `tests/ratings.db.test.ts` (7).
+- **Task 020 — ride receipt (commit f998681):** `src/server/receipt.ts` `passengerReceipt(...)`
+  builds a receipt from the IMMUTABLE Fare (endpoints, driver+vehicle snapshot, itemised lines,
+  waiting, payment) — honest under regulated metering (finalCents null → estimate + note, no
+  fabricated total). API `GET /passenger/rides/[id]/receipt`; UI `/rides/[id]` + "Receipt" link.
+  No email transport exists; emailed receipts deferred (see `docs/EXTERNAL-ENABLEMENT.md`). Tests
+  `tests/receipt.db.test.ts` (3).
+- **Docs:** new `docs/EXTERNAL-ENABLEMENT.md` consolidates every honest-gated capability (real SMS,
+  clamd AV, Places New, weather, dynamic pricing, il-y.taxi DNS, off-host backups/DR, emailed
+  receipts) with exact env vars + verification. HANDOFF/IMPLEMENTATION_STATUS reconciled (they had
+  stopped at Task 017; Tasks 018/019 + this session now recorded).
+- **Live verification (2026-10-01):** deployed via `export APP_RELEASE=$(git rev-parse HEAD)` +
+  build + `up -d taxi-app taxi-worker`; entrypoint applied both new migrations. Confirmed on prod:
+  `TripRating` table + `Driver.ratingTotal/ratingCount` present; `/passenger/rides/[id]/rating` and
+  `/receipt` return 401 UNAUTHENTICATED (correctly gated); worker dispatch alive. **Proven working:**
+  rating + receipt business logic by DB tests on the same pg16 engine the prod schema now matches.
+  **NOT run (honest):** a full authenticated browser/phone click-through on prod (no browser/device
+  here; did not seed synthetic bookings into the live DB).
+
+## Tasks 018 + 019 (2026-09-14) — consumer login, sign-up, account menu, saved places, driver offer data
+(Recorded here retroactively — these shipped but predated this handoff's prior top entry.)
+- **018 (commit 9d00655):** clean consumer `/login` (email+password only) replacing the old
+  `/staff/login` target, Bolt-style passenger sign-up (`/register`), "Become a driver" + staff
+  sign-in links. Migration `20260914201355_t018_passenger_email_password` (`Passenger.email @unique`
+  + `passwordHash`; phone stays the verified identity, email is a 2nd identifier).
+- **019 (commits 6c09659, d3bdc29):** signed-in header shows an initials-avatar account menu
+  (`AccountMenu.tsx`: identity, My rides, Profile settings, Help/privacy, Log out last) replacing
+  the Login link; `/account` profile settings (editable display name; verified phone/email
+  read-only). Saved places `SavedPlace` (one HOME/WORK per passenger; migration
+  `20260914225845_t019_saved_places`) + `GET/PUT /passenger/places`; Home/Work quick-pick chips in
+  booking. Driver offer now returns the FULL fare breakdown + passenger block before accepting.
+
 ## Task 017 driver dashboard (2026-09-14) — release 53f42e4, deployed + browser-QA'd
 Four-section driver dashboard (Home/Trips/Earnings/Profile) that PRESERVES the working
 offer/GPS/nav/arrive/start-code/complete/chat/push flow. vitest **93 passed / 1 skipped**.

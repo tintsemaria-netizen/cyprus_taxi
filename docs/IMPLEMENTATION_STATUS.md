@@ -1,5 +1,34 @@
 # Implementation status
 
+**Current: release f998681 DEPLOYED + live-verified (2026-10-01). vitest 107 passed / 1 skipped
+(CH integration) on an isolated pg16 `_test` DB; `tsc --noEmit` clean; `npm run build` compiles.**
+
+**Migration DR fix (2026-10-01).** A fresh `prisma migrate deploy` from an empty database is now
+clean — previously the Task 013/014/015 completion migration altered `ApplicationDocument` before
+the KYC migration created it, so new-environment / DR / isolated-test provisioning failed in sorted
+order (prod survived via incremental application). Guarded + an idempotent ensure-column migration
+added; verified a fresh deploy applies all 15 migrations and prod applied only the 2 new ones with
+no error. See HANDOFF (commit d3f1c65).
+
+**Task 020 (post-trip rating + ride receipt) DONE + deployed — release f998681.** After a trip
+COMPLETEs the owning passenger rates the driver 1-5 (+ optional tags/comment), one immutable rating
+per booking; the driver who actually completed the trip is the one rated; the driver dashboard shows
+an aggregate rating maintained in the same transaction. Passenger ride receipt (`/rides/[id]`) is
+built from the immutable Fare and is honest under regulated metering (no fabricated total). No email
+transport exists, so emailed receipts are a documented future enablement. Live-verified: schema +
+routes present and correctly 401-gated on prod; business logic proven by `tests/ratings.db.test.ts`
+(7) + `tests/receipt.db.test.ts` (3) on the same pg16 engine. See Tasks/020 + HANDOFF.
+
+**Tasks 018 + 019 (consumer login/sign-up, account menu, saved places, full driver offer data) DONE
++ deployed.** Clean email+password `/login` + Bolt-style `/register`; signed-in header account menu
++ `/account` profile settings; saved places (Home/Work) with booking quick-picks; driver offer
+returns the full fare breakdown + passenger block before accepting. Migrations
+`20260914201355_t018_passenger_email_password`, `20260914225845_t019_saved_places`. See HANDOFF.
+
+**Consolidated external enablement:** `docs/EXTERNAL-ENABLEMENT.md` lists every honest-gated
+capability (real SMS, clamd AV, Places New, weather, dynamic pricing, il-y.taxi DNS, off-host
+backups/DR, emailed receipts) with exact env vars + how to verify each lights up. None is faked.
+
 **Task 017 (driver dashboard) DONE + deployed — release 53f42e4.** Four-section driver dashboard
 (Home/Trips/Earnings/Profile) preserving the working offer/GPS/nav/arrive/start-code/complete/chat/
 push flow, with the runtime kept above the tabs so switching sections never stops GPS/offers/the
