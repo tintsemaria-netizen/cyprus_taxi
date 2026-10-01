@@ -6,6 +6,7 @@ import { Logo } from '@/components/Brand';
 import { ChatPanel } from '@/components/ChatPanel';
 import { NotifyToggle } from '@/components/NotifyToggle';
 import { api, ApiRequestError } from '@/lib/api-client';
+import { ConfirmSheet } from '@/components/ConfirmSheet';
 
 interface TrackView {
   reference: string;
@@ -18,9 +19,10 @@ interface TrackView {
   vClass: string;
   passengerCount: number;
   fareWording: string;
-  vehicle: null | { driverName: string; make: string; model: string; color: string; plate: string; vClass: string; phone: string | null };
+  vehicle: null | { driverName: string; make: string; model: string; color: string; plate: string; vClass: string; phone: string | null; rating: { average: number; count: number } | null };
   location: null | { lat: number; lng: number; freshness: string; poorAccuracy: boolean; sampledAt: string };
   pickupEta: string | null;
+  pickupEtaMin?: number | null;
   fareCents: number | null;
   startCode: string | null;
   waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
@@ -49,6 +51,10 @@ export default function TrackApp() {
   const [showDetails, setShowDetails] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [safety, setSafety] = useState(false);
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(0);
   const [routeLine, setRouteLine] = useState<[number, number][]>([]); // [lng,lat] driver→pickup / →destination
   const [disconnected, setDisconnected] = useState(false); // hide stale live data
@@ -134,7 +140,7 @@ export default function TrackApp() {
   // EN_ROUTE, driver→destination once the trip is IN_PROGRESS. Recomputed when the driver
   // moves meaningfully (coarse key) or the leg changes; bounded by the 5s poll cadence.
   const drvLoc = disconnected ? null : view?.location ?? null;
-  const rleg = view?.status === 'IN_PROGRESS' ? 'dropoff' : view?.status === 'EN_ROUTE' ? 'pickup' : null;
+  const rleg = view?.status === 'IN_PROGRESS' ? 'dropoff' : view?.status === 'EN_ROUTE' || view?.status === 'ASSIGNED' ? 'pickup' : null;
   const routeKey = drvLoc && rleg ? `${rleg}:${drvLoc.lat.toFixed(4)},${drvLoc.lng.toFixed(4)}` : '';
   useEffect(() => {
     if (!view || !drvLoc || !rleg) { setRouteLine([]); return; }
@@ -155,15 +161,32 @@ export default function TrackApp() {
 
   async function cancel() {
     if (!view) return;
-    if (!confirm('Cancel this booking?')) return;
-    setCancelling(true);
+    setCancelling(true); setActionError(null);
     try {
       await api('/tracking/cancel', { method: 'POST', body: { expectedRevision: view.revision } });
+      setConfirmCancel(false);
       await load();
     } catch (e) {
-      if (e instanceof ApiRequestError) alert(e.body.message);
+      setConfirmCancel(false);
+      setActionError(e instanceof ApiRequestError ? e.body.message : 'Could not cancel — check your connection and try again.');
     } finally {
       setCancelling(false);
+    }
+  }
+
+  // Read-only "share my trip" link for family/friends: position, driver and car only.
+  async function share() {
+    setShareMsg(null);
+    try {
+      const r = await api<{ url: string }>('/tracking/share', { method: 'POST' });
+      const text = 'Follow my IL-Y ride live';
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        try { await navigator.share({ title: 'My IL-Y ride', text, url: r.url }); return; } catch { /* dismissed — fall back to copy */ }
+      }
+      await navigator.clipboard.writeText(r.url);
+      setShareMsg('Link copied — it shows your car and live position only, and stops when the trip ends.');
+    } catch (e) {
+      setShareMsg(e instanceof ApiRequestError ? e.body.message : 'Could not create a share link. Try again.');
     }
   }
 
@@ -183,7 +206,7 @@ export default function TrackApp() {
       await api('/tracking/research', { method: 'POST', body: { expectedRevision: view.revision } });
       await load();
     } catch (e) {
-      if (e instanceof ApiRequestError) alert(e.body.message);
+      setActionError(e instanceof ApiRequestError ? e.body.message : 'Could not search again — check your connection.');
     } finally {
       setRetrying(false);
     }
@@ -231,9 +254,10 @@ export default function TrackApp() {
   else markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label });
   if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: 'Your driver', stale: liveLocation.freshness === 'stale' });
 
+  const etaText = !disconnected && view.pickupEta && view.pickupEta.includes('min') ? view.pickupEta.replace('≈ ', '').replace(' (estimate)', '') : null;
   const headline =
-    view.status === 'EN_ROUTE' && view.vehicle
-      ? `Meet ${view.vehicle.driverName}${!disconnected && view.pickupEta && view.pickupEta.includes('min') ? ' — ' + view.pickupEta.replace('≈ ', '').replace(' (estimate)', '') : ''}`
+    (view.status === 'EN_ROUTE' || view.status === 'ASSIGNED') && view.vehicle
+      ? `Meet ${view.vehicle.driverName}${etaText ? ' — ' + etaText : ''}`
       : STATUS_LABEL[view.status] ?? view.status;
 
   return (
@@ -257,11 +281,12 @@ export default function TrackApp() {
         </div>
 
         {/* bottom sheet */}
-        <div className="pointer-events-none absolute inset-0 flex flex-col justify-end sm:block">
+        <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end sm:block">
           <div className="pointer-events-auto w-full sm:absolute sm:bottom-4 sm:left-4 sm:w-[400px]">
-            <div className="card overflow-hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-              <div className="p-4 sm:p-5">
-                <h1 className="text-xl font-bold">{headline}</h1>
+            <div className="card flex max-h-[78dvh] flex-col overflow-hidden sm:max-h-[calc(100dvh-7rem)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+              {/* Pinned: what the passenger needs at pickup (status, driver/plate, start code). */}
+              <div className="shrink-0 border-b border-edge p-4 pb-3 sm:p-5 sm:pb-3">
+                <h1 className="text-xl font-bold" role="status" aria-live="polite">{headline}</h1>
                 {view.status === 'REQUESTED' && (
                   <p className="mt-1 text-sm text-muted">Scheduled request — we’ll dispatch a driver near your pickup time.</p>
                 )}
@@ -273,13 +298,16 @@ export default function TrackApp() {
                 )}
 
                 {view.vehicle ? (
-                  <div className="mt-4 flex items-center gap-3 rounded-[12px] border border-edge bg-elevated p-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-accent/20 text-lg">🧑‍✈️</div>
+                  <div className="mt-3 flex items-center gap-3 rounded-[12px] border border-edge bg-elevated p-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/20 text-lg" aria-hidden>🧑‍✈️</div>
                     <div className="min-w-0 flex-1">
-                      <div className="font-semibold">{view.vehicle.driverName}</div>
-                      <div className="truncate text-xs text-muted">{view.vehicle.color} {view.vehicle.make} {view.vehicle.model}</div>
+                      <div className="truncate font-semibold">{view.vehicle.driverName}</div>
+                      <div className="truncate text-sm text-muted">
+                        {view.vehicle.rating && <span className="whitespace-nowrap text-accent" aria-label={`Rated ${view.vehicle.rating.average} out of 5 from ${view.vehicle.rating.count} trips`}>★ {view.vehicle.rating.average.toFixed(1)} · </span>}
+                        {view.vehicle.color} {view.vehicle.make} {view.vehicle.model}
+                      </div>
                     </div>
-                    <span className="rounded-[8px] border border-edge px-2 py-1 text-xs font-mono">{view.vehicle.plate}</span>
+                    <span className="shrink-0 rounded-[8px] border border-edge bg-page px-2.5 py-1.5 font-mono text-base font-bold tracking-wide" aria-label={`Number plate ${view.vehicle.plate}`}>{view.vehicle.plate}</span>
                   </div>
                 ) : view.status === 'SEARCHING' ? (
                   <div className="mt-4 flex items-center gap-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm text-muted">
@@ -290,11 +318,14 @@ export default function TrackApp() {
 
                 {/* start code — shown to the driver at pickup */}
                 {view.startCode && (
-                  <div className="mt-4 rounded-[12px] border border-accent/50 bg-accent/10 p-3 text-center">
-                    <div className="text-[11px] uppercase tracking-wide text-muted">Show this code to your driver</div>
-                    <div className="mt-1 font-mono text-3xl font-bold tracking-[0.4em] text-accent">{view.startCode}</div>
+                  <div className="mt-3 flex items-center justify-between gap-3 rounded-[12px] border border-accent/50 bg-accent/10 px-3 py-2">
+                    <div className="text-xs text-muted">Give this code to your driver when you get in</div>
+                    <div className="font-mono text-2xl font-bold tracking-[0.3em] text-accent" aria-label={`Start code ${view.startCode.split('').join(' ')}`}>{view.startCode}</div>
                   </div>
                 )}
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto p-4 pt-3 sm:p-5 sm:pt-3">
+                {actionError && <p role="alert" className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{actionError}</p>}
 
                 {/* pickup waiting timer (after arrival) */}
                 {view.status === 'ARRIVED' && view.waiting && (() => {
@@ -317,17 +348,22 @@ export default function TrackApp() {
                 </div>
 
                 {liveLocation && (
-                  <p className="mt-2 text-[11px] text-muted">
+                  <p className="mt-2 text-xs text-muted">
                     Location {liveLocation.freshness}{liveLocation.poorAccuracy ? ' · low accuracy' : ''} · updated {new Date(liveLocation.sampledAt).toLocaleTimeString('en-GB')}
                   </p>
                 )}
-                {disconnected && <p className="mt-2 text-[11px] text-warn">Live position paused — reconnecting…</p>}
-                {view.status === 'EN_ROUTE' && !liveLocation && !disconnected && <p className="mt-2 text-[11px] text-muted">ETA unavailable — waiting for driver GPS.</p>}
+                {disconnected && <p className="mt-2 text-xs text-warn">Live position paused — reconnecting…</p>}
+                {(view.status === 'EN_ROUTE' || view.status === 'ASSIGNED') && !liveLocation && !disconnected && <p className="mt-2 text-xs text-muted">ETA unavailable — waiting for the driver&apos;s GPS.</p>}
 
                 {/* actions */}
                 {!terminal && (
                   <div className="mt-4 space-y-2">
                     <NotifyToggle pushUrl="/tracking/push" className="pb-1" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" className="btn-ghost !min-h-[44px] text-sm" onClick={share}>↗ Share trip</button>
+                      <button type="button" className="btn-ghost !min-h-[44px] text-sm" onClick={() => setSafety(true)}>🛡 Safety</button>
+                    </div>
+                    {shareMsg && <p role="status" className="text-xs text-muted">{shareMsg}</p>}
                     {view.vehicle?.phone && (
                       <a href={`tel:${view.vehicle.phone}`} className="btn-primary w-full">📞 Call driver</a>
                     )}
@@ -355,7 +391,7 @@ export default function TrackApp() {
                       </button>
                     )}
                     {view.canCancel && (
-                      <button className="w-full rounded-[12px] border border-danger/40 px-4 py-2.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-50" onClick={cancel} disabled={cancelling}>
+                      <button className="w-full rounded-[12px] border border-danger/40 px-4 py-2.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-50" onClick={() => setConfirmCancel(true)} disabled={cancelling}>
                         {cancelling ? 'Cancelling…' : 'Cancel booking'}
                       </button>
                     )}
@@ -373,12 +409,12 @@ export default function TrackApp() {
                         {view.receipt.waitingCents > 0 && (
                           <div className="flex justify-between"><span className="text-muted">Waiting</span><span>€{(view.receipt.waitingCents / 100).toFixed(2)}</span></div>
                         )}
-                        <div className="mt-2 border-t border-edge pt-2 text-[11px] text-muted">
+                        <div className="mt-2 border-t border-edge pt-2 text-xs text-muted">
                           {view.receipt.priceType === 'REGULATED_METER_ESTIMATE'
                             ? 'Estimate only — the final regulated meter amount is settled with the driver.'
                             : 'Fare as quoted.'}
                         </div>
-                        <div className="mt-1 flex justify-between text-[11px] text-muted">
+                        <div className="mt-1 flex justify-between text-xs text-muted">
                           <span>Payment: {view.receipt.paymentMethod === 'CASH_TO_DRIVER' ? 'cash to driver' : view.receipt.paymentMethod}</span>
                           <span>{view.receipt.paymentStatus === 'PENDING' ? 'to be collected' : 'collected'}</span>
                         </div>
@@ -396,6 +432,32 @@ export default function TrackApp() {
           </div>
         </div>
       </div>
+      {confirmCancel && (
+        <ConfirmSheet
+          title="Cancel this ride?"
+          body={view.vehicle ? <>Your driver {view.vehicle.driverName} will be notified{etaText ? ` (they are ${etaText} away)` : ''}. There is no cancellation fee.</> : 'We will stop looking for a driver. There is no cancellation fee.'}
+          confirmLabel="Cancel ride"
+          danger
+          busy={cancelling}
+          onConfirm={cancel}
+          onCancel={() => setConfirmCancel(false)}
+        />
+      )}
+      {safety && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-4 sm:items-center sm:pb-0" onClick={() => setSafety(false)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="safety-title" className="card w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+            <h2 id="safety-title" className="text-lg font-bold">Safety</h2>
+            <a href="tel:112" className="mt-4 block w-full rounded-[12px] border border-danger bg-danger/15 px-4 py-3 text-center font-semibold text-danger">Call emergency services · 112</a>
+            <div className="mt-4 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
+              <div className="text-muted">Tell them</div>
+              <div className="mt-1">Trip <span className="font-mono">{view.reference}</span>{view.vehicle ? <> · {view.vehicle.color} {view.vehicle.make} {view.vehicle.model}, plate <span className="font-mono font-bold">{view.vehicle.plate}</span></> : null}</div>
+              <div className="mt-1 text-muted">Pickup: {view.pickup.label}</div>
+            </div>
+            <button className="btn-ghost mt-3 w-full" onClick={() => { setSafety(false); share(); }}>↗ Share trip with someone</button>
+            <button className="mt-2 block w-full text-center text-sm text-muted hover:text-ink" onClick={() => setSafety(false)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

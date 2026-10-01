@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Logo } from '@/components/Brand';
+import { compressImageForUpload, UPLOAD_TARGET_BYTES } from '@/lib/image-compress';
 import { api, ApiRequestError } from '@/lib/api-client';
 
 export const dynamic = 'force-dynamic';
@@ -42,7 +43,7 @@ export default function Register() {
       {app.status === 'CHANGES_REQUESTED' && app.decisionReason && (
         <p className="mb-3 rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn">Changes requested: {app.decisionReason}</p>
       )}
-      <ol className="mb-4 flex gap-1 text-[11px]">
+      <ol className="mb-4 flex gap-1 text-xs">
         {STEPS.map((s, i) => (
           <li key={s} className={`flex-1 rounded-full px-2 py-1 text-center ${i === step ? 'bg-accent text-[#10191C] font-semibold' : i < step ? 'bg-elevated text-accent' : 'bg-elevated text-muted'}`}>{s}</li>
         ))}
@@ -105,7 +106,7 @@ function PhoneGate({ onDone }: { onDone: () => void }) {
         {err && <p className="mt-4 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}
         {stage === 'phone' ? (
           <div className="mt-4 space-y-3">
-            <div><label className="label">Phone (international)</label><input className="field mt-1" placeholder="+35799123456" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" /></div>
+            <div><label className="label" htmlFor="register-f1">Phone (international)</label><input id="register-f1" className="field mt-1" placeholder="+35799123456" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" /></div>
             <button className="btn-primary w-full" disabled={busy || !phone} onClick={req}>{busy ? 'Sending…' : 'Send code'}</button>
           </div>
         ) : (
@@ -137,7 +138,8 @@ function useDraft(section: 'identity' | 'driving' | 'vehicle', app: AppData) {
   return { v, setV, save, saved };
 }
 function Field({ label, value, onChange, type = 'text' }: { label: string; value: string; onChange: (s: string) => void; type?: string }) {
-  return <div><label className="label">{label}</label><input type={type} className="field mt-1" value={value || ''} onChange={(e) => onChange(e.target.value)} onBlur={() => { /* saved by step */ }} /></div>;
+  const id = useId();
+  return <div><label className="label" htmlFor={id}>{label}</label><input id={id} type={type} className="field mt-1" value={value || ''} onChange={(e) => onChange(e.target.value)} onBlur={() => { /* saved by step */ }} /></div>;
 }
 function Upload({ slot, app, reload, label }: { slot: string; app: AppData; reload: () => void; label: string }) {
   const [busy, setBusy] = useState(false);
@@ -146,7 +148,13 @@ function Upload({ slot, app, reload, label }: { slot: string; app: AppData; relo
   async function onFile(file: File) {
     setBusy(true); setE(null);
     try {
-      const res = await fetch(`/api/v1/applicant/application/documents?slot=${slot}`, { method: 'POST', body: file, credentials: 'same-origin' });
+      const body = await compressImageForUpload(file);
+      if (body.size > UPLOAD_TARGET_BYTES) {
+        setE(file.type === 'application/pdf' ? 'This PDF is larger than 2 MB. Take a photo of the document instead.' : 'This file is too large (over 2 MB). Take a new photo instead.');
+        return;
+      }
+      const res = await fetch(`/api/v1/applicant/application/documents?slot=${slot}`, { method: 'POST', body, credentials: 'same-origin' });
+      if (res.status === 413) { setE('This file is too large. Take a new photo instead.'); return; }
       if (!res.ok) { const j = await res.json().catch(() => ({})); setE(j?.error?.message || j?.error?.fieldErrors?.file || 'Upload failed.'); return; }
       reload();
     } catch { setE('Upload failed. Retry.'); } finally { setBusy(false); }
@@ -157,13 +165,13 @@ function Upload({ slot, app, reload, label }: { slot: string; app: AppData; relo
         <span className="text-sm">{label}</span>
         {has ? <span className={`chip ${has.decision === 'ACCEPTED' ? '!text-accent' : has.decision === 'CHANGES' ? '!text-danger' : ''}`}>{has.decision === 'CHANGES' ? 'Redo' : has.decision === 'ACCEPTED' ? '✓' : 'uploaded'}</span> : <span className="text-xs text-muted">required</span>}
       </div>
-      {has?.decisionNote && <p className="mt-1 text-[11px] text-danger">{has.decisionNote}</p>}
+      {has?.decisionNote && <p className="mt-1 text-xs text-danger">{has.decisionNote}</p>}
       <label className="mt-2 block">
         <span className="btn-ghost !min-h-0 inline-block cursor-pointer !py-1.5 text-xs">{busy ? 'Uploading…' : has ? 'Replace' : 'Upload / take photo'}</span>
         <input type="file" accept="image/*,application/pdf" capture="environment" className="hidden" onChange={(ev) => ev.target.files?.[0] && onFile(ev.target.files[0])} />
       </label>
-      {has && <a href={`/api/v1/applicant/documents/${has.id}`} target="_blank" rel="noreferrer" className="ml-2 text-[11px] text-accent hover:underline">view</a>}
-      {e && <p className="mt-1 text-[11px] text-danger">{e}</p>}
+      {has && <a href={`/api/v1/applicant/documents/${has.id}`} target="_blank" rel="noreferrer" className="ml-2 text-xs text-accent hover:underline">view</a>}
+      {e && <p className="mt-1 text-xs text-danger">{e}</p>}
     </div>
   );
 }
@@ -181,7 +189,7 @@ function IdentityStep({ app, reload }: { app: AppData; reload: () => void }) {
       <Upload slot="id_front" app={app} reload={reload} label="ID card — front" />
       <Upload slot="id_back" app={app} reload={reload} label="ID card — back" />
       <Upload slot="selfie" app={app} reload={reload} label="Selfie (current portrait)" />
-      <p className="pt-1 text-[11px] text-muted">If you are not a Cyprus/EU national, add your residence / right-to-work document (conditional).</p>
+      <p className="pt-1 text-xs text-muted">If you are not a Cyprus/EU national, add your residence / right-to-work document (conditional).</p>
       <Upload slot="right_to_work" app={app} reload={reload} label="Right to work / residence (if applicable)" />
     </div>
   );
@@ -212,8 +220,8 @@ function VehicleStep({ app, reload }: { app: AppData; reload: () => void }) {
         <Field label="Year" value={v.year} onChange={(x) => setV({ ...v, year: x })} />
         <Field label="Color" value={v.color} onChange={(x) => setV({ ...v, color: x })} />
         <Field label="Passenger seats" value={v.seats} onChange={(x) => setV({ ...v, seats: x })} />
-        <div><label className="label">Service class</label>
-          <select className="field mt-1" value={v.vClass || ''} onChange={(x) => setV({ ...v, vClass: x.target.value })}>
+        <div><label className="label" htmlFor="register-f3">Service class</label>
+          <select id="register-f3" className="field mt-1" value={v.vClass || ''} onChange={(x) => setV({ ...v, vClass: x.target.value })}>
             <option value="">—</option><option value="COMFORT">COMFORT (4)</option><option value="XL">XL (6)</option>
           </select></div>
       </div>
@@ -256,7 +264,7 @@ function ReviewStep({ app, reload, setErr }: { app: AppData; reload: () => void;
       <button className="btn-primary w-full" disabled={busy} onClick={() => { if ((document.getElementById('ack') as HTMLInputElement)?.checked) submit(); else setErr('Please confirm the declaration.'); }}>
         {busy ? 'Submitting…' : 'Submit for review'}
       </button>
-      <p className="text-center text-[11px] text-muted">After submitting you can&apos;t accept rides until an administrator approves you.</p>
+      <p className="text-center text-xs text-muted">After submitting you can&apos;t accept rides until an administrator approves you.</p>
     </div>
   );
 }

@@ -53,18 +53,18 @@ export default function Account() {
 
       <form onSubmit={save} className="card space-y-3 p-4">
         <div>
-          <label className="label">Name</label>
-          <input className="field mt-1" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+          <label className="label" htmlFor="account-f1">Name</label>
+          <input id="account-f1" className="field mt-1" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
         </div>
         <div>
-          <label className="label">Phone</label>
-          <input className="field mt-1 opacity-70" value={me.phone} readOnly />
-          <p className="mt-1 text-[11px] text-muted">Verified. Changing your phone requires re-verification (not available here yet).</p>
+          <label className="label" htmlFor="account-f2">Phone</label>
+          <input id="account-f2" className="field mt-1 opacity-70" value={me.phone} readOnly />
+          <p className="mt-1 text-xs text-muted">Verified. Changing your phone requires re-verification (not available here yet).</p>
         </div>
         <div>
-          <label className="label">Email</label>
-          <input className="field mt-1 opacity-70" value={me.email ?? '—'} readOnly />
-          {!me.email && <p className="mt-1 text-[11px] text-muted">No email on this account (phone sign-in). Register with email to add one.</p>}
+          <label className="label" htmlFor="account-f3">Email</label>
+          <input id="account-f3" className="field mt-1 opacity-70" value={me.email ?? '—'} readOnly />
+          {!me.email && <p className="mt-1 text-xs text-muted">No email on this account (phone sign-in). Register with email to add one.</p>}
         </div>
         {msg && <p className="text-sm text-muted">{msg}</p>}
         <button className="btn-primary min-h-[44px] w-full" disabled={busy || !name.trim()}>{busy ? 'Saving…' : 'Save'}</button>
@@ -100,7 +100,7 @@ function SavedPlaces() {
   return (
     <section id="places" className="card space-y-3 p-4">
       <h2 className="font-medium">Saved places</h2>
-      <p className="text-[11px] text-muted">Home and Work appear as quick destinations when you book.</p>
+      <p className="text-xs text-muted">Home and Work appear as quick destinations when you book.</p>
       {!loaded ? <p className="text-sm text-muted">Loading…</p> : (
         <>
           <PlaceEditor kind="HOME" icon="🏠" title="Home" current={home} onChange={setHome} />

@@ -6,6 +6,8 @@ import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { ChatPanel } from '@/components/ChatPanel';
 import { NotifyToggle } from '@/components/NotifyToggle';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
+import { ConfirmSheet } from '@/components/ConfirmSheet';
+import { unlockOfferSound, playOfferChime, vibrateOffer, keepScreenOn } from '@/lib/driver-alerts';
 
 export const dynamic = 'force-dynamic';
 
@@ -115,6 +117,7 @@ function Driver() {
     } catch (e) { if (e instanceof ApiRequestError && (e.body.code === 'OFF_DUTY' || e.body.code === 'INACTIVE')) stopGps(); }
   }
   async function setDuty(onDuty: boolean) {
+    if (onDuty) unlockOfferSound(); // user gesture: lets the offer chime play later
     try {
       const r = await api<{ onDuty: boolean }>('/driver/availability', { method: 'PATCH', body: { onDuty, available: onDuty } });
       if (!r.onDuty) stopGps();
@@ -130,6 +133,22 @@ function Driver() {
     poll(); const t = setInterval(poll, 2000);
     return () => { alive = false; clearInterval(t); };
   }, [data?.onDuty, data?.trip]);
+
+  // Keep the screen awake while on duty (a sleeping screen suspends polling + GPS).
+  useEffect(() => {
+    if (!data?.onDuty) return;
+    return keepScreenOn();
+  }, [data?.onDuty]);
+
+  // Ring + vibrate for a new offer, repeating every 2 s until it is answered or expires.
+  const offerId = offer?.offerId ?? null;
+  useEffect(() => {
+    if (!offerId) return;
+    const ring = () => { playOfferChime(); vibrateOffer(); };
+    ring();
+    const t = setInterval(ring, 2000);
+    return () => clearInterval(t);
+  }, [offerId]);
 
   const ticking = !!offer || data?.trip?.status === 'ARRIVED';
   useEffect(() => { if (!ticking) return; setNowMs(Date.now()); const t = setInterval(() => setNowMs(Date.now()), 500); return () => clearInterval(t); }, [ticking]);
@@ -214,6 +233,7 @@ function HomeSection(props: {
   onAccept: (id: string) => void; onDecline: (id: string) => void; onTripAction: (path: string, body: Record<string, unknown>, opts?: { stopGps?: boolean }) => void; goTrips: () => void;
 }) {
   const { data, dash, gps, offer, offerSecs, offerBusy, nowMs, pos, navRoute, startCode, setStartCode } = props;
+  const [ask, setAsk] = useState<'complete' | 'release' | null>(null);
   const trip = data.trip;
   const blocker = dash?.alerts.find((a) => a.level === 'blocker');
 
@@ -256,7 +276,7 @@ function HomeSection(props: {
             {gps.active ? <button className="btn-ghost min-h-[44px]" onClick={props.onStopGps}>Stop</button> : <button className="btn-primary min-h-[44px]" onClick={props.onStartGps}>Start sharing</button>}
           </div>
           {gps.error && <p className={`mt-2 text-xs ${gps.error.startsWith('Acquiring') ? 'text-warn' : 'text-danger'}`}>{gps.error}</p>}
-          <p className="mt-2 text-[11px] text-muted">Foreground GPS only, while on duty. Real device GPS — never simulated.</p>
+          <p className="mt-2 text-xs text-muted">Foreground GPS only, while on duty. Real device GPS — never simulated.</p>
         </div>
       )}
 
@@ -278,19 +298,19 @@ function HomeSection(props: {
           <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
             <div className="font-medium">{offer.passengerName} · {offer.passengerCount} passenger{offer.passengerCount === 1 ? '' : 's'} · {offer.vClass}</div>
             {offer.note && <div className="mt-1 text-xs text-warn">Note: {offer.note}</div>}
-            <div className="mt-1 text-[11px] text-muted">Passenger phone becomes available once you accept.</div>
+            <div className="mt-1 text-xs text-muted">Passenger phone becomes available once you accept.</div>
           </div>
           {/* Full fare breakdown so the driver sees all prices before accepting. */}
           <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
             <div className="mb-1 flex items-center justify-between">
               <span className="font-medium">Fare</span>
-              <span className="text-[11px] text-muted">{offer.priceType === 'UPFRONT_DYNAMIC' ? 'Upfront (fixed price)' : 'Regulated meter — estimate'}</span>
+              <span className="text-xs text-muted">{offer.priceType === 'UPFRONT_DYNAMIC' ? 'Upfront (fixed price)' : 'Regulated meter — estimate'}</span>
             </div>
             {offer.fareBreakdown?.length ? offer.fareBreakdown.map((l, i) => (
               <div key={i} className="flex justify-between gap-3 text-xs text-muted"><span className="min-w-0 truncate">{l.label}</span><span className="shrink-0">{money(l.cents, offer.currency)}</span></div>
             )) : <div className="text-xs text-muted">No fare estimate on this order.</div>}
             <div className="mt-1 flex justify-between border-t border-edge pt-1 font-semibold"><span>{offer.priceType === 'UPFRONT_DYNAMIC' ? 'Total' : 'Estimated total'}</span><span>{offer.fareCents != null ? money(offer.fareCents, offer.currency) : '—'}</span></div>
-            {offer.priceType !== 'UPFRONT_DYNAMIC' && <div className="mt-1 text-[11px] text-muted">The final metered amount is settled with the passenger.</div>}
+            {offer.priceType !== 'UPFRONT_DYNAMIC' && <div className="mt-1 text-xs text-muted">The final metered amount is settled with the passenger.</div>}
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2">
             <button className="btn-ghost min-h-[44px] !text-danger border border-danger/40" disabled={offerBusy} onClick={() => props.onDecline(offer.offerId)}>Decline</button>
@@ -304,7 +324,7 @@ function HomeSection(props: {
         <div className="card p-4">
           <div className="flex items-center justify-between"><span className="font-mono text-accent">{trip.reference}</span><span className="chip">{trip.status.replace(/_/g, ' ')}</span></div>
           <div className="mt-3 h-56 overflow-hidden rounded-[12px] border border-edge"><AutoMapView markers={navMarkers} route={navRoute} center={pos ?? trip.pickup} zoom={13} interactive className="h-full w-full" /></div>
-          <p className="mt-1 text-[11px] text-muted">{trip.status === 'IN_PROGRESS' ? 'Route to destination' : 'Route to pickup'}{!pos && ' · start location sharing to show your position'}</p>
+          <p className="mt-1 text-xs text-muted">{trip.status === 'IN_PROGRESS' ? 'Route to destination' : 'Route to pickup'}{!pos && ' · start location sharing to show your position'}</p>
           <div className="mt-3 space-y-2 text-sm">
             <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" /><span className="text-muted">Pickup</span><span className="ml-auto text-right font-medium">{trip.pickup.label}</span></div>
             <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-ink" /><span className="text-muted">Destination</span><span className="ml-auto text-right font-medium">{trip.dropoff.label}</span></div>
@@ -317,6 +337,7 @@ function HomeSection(props: {
               <a href={`tel:${trip.passengerPhone}`} className="btn-ghost !min-h-[44px] flex-1 !py-2 text-sm">📞 Call</a>
               <a href={`https://www.google.com/maps/dir/?api=1&destination=${(trip.status === 'IN_PROGRESS' ? trip.dropoff : trip.pickup).lat},${(trip.status === 'IN_PROGRESS' ? trip.dropoff : trip.pickup).lng}&travelmode=driving`} target="_blank" rel="noreferrer" className="btn-ghost !min-h-[44px] flex-1 !py-2 text-sm">🧭 Navigate</a>
             </div>
+            <p className="mt-2 text-xs text-warn">Switching to another app pauses your live location. Come back to IL-Y regularly so the passenger can see you.</p>
           </div>
           {trip.status === 'ARRIVED' && trip.waiting && (() => {
             const elapsed = Math.max(0, Math.floor((nowMs - new Date(trip.waiting.arrivedAt).getTime()) / 1000));
@@ -333,9 +354,17 @@ function HomeSection(props: {
                 <button className="btn-primary min-h-[44px] w-full" disabled={startCode.length !== 4} onClick={() => props.onTripAction('start', { code: startCode })}>Start trip</button>
               </div>
             )}
-            {trip.status === 'IN_PROGRESS' && <button className="btn-primary min-h-[44px] w-full" onClick={() => confirm('Complete the trip?') && props.onTripAction('complete', {}, { stopGps: true })}>Complete trip</button>}
-            {['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(trip.status) && <button className="btn-primary min-h-[44px] w-full !bg-elevated !text-danger border border-danger/40" onClick={() => confirm('Release this ride? It will be offered to another driver.') && props.onTripAction('cancel', {})}>Can&apos;t take it — release</button>}
+            {trip.status === 'IN_PROGRESS' && <button className="btn-primary min-h-[44px] w-full" onClick={() => setAsk('complete')}>Complete trip</button>}
+            {['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(trip.status) && <button className="btn-primary min-h-[44px] w-full !bg-elevated !text-danger border border-danger/40" onClick={() => setAsk('release')}>Can&apos;t take it — release</button>}
           </div>
+          {ask === 'complete' && (
+            <ConfirmSheet title="Complete this trip?" body={`Confirm you have dropped ${trip.passengerName} at the destination. Collect the metered fare from the passenger.`} confirmLabel="Complete trip"
+              onConfirm={() => { setAsk(null); props.onTripAction('complete', {}, { stopGps: true }); }} onCancel={() => setAsk(null)} cancelLabel="Not yet" />
+          )}
+          {ask === 'release' && (
+            <ConfirmSheet title="Release this ride?" body="It will be offered to another driver straight away and the passenger will be told we are finding a new driver." confirmLabel="Release ride" danger
+              onConfirm={() => { setAsk(null); props.onTripAction('cancel', {}); }} onCancel={() => setAsk(null)} cancelLabel="Keep the ride" />
+          )}
         </div>
       ) : !offer && (
         <>
@@ -360,7 +389,7 @@ function HomeSection(props: {
 }
 
 function Figure({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return <div className="rounded-[12px] border border-edge bg-elevated p-3 text-center"><div className="truncate text-lg font-semibold">{value}</div><div className="text-[11px] text-muted">{label}</div><div className="text-[10px] text-muted">{sub}</div></div>;
+  return <div className="rounded-[12px] border border-edge bg-elevated p-3 text-center"><div className="truncate text-lg font-semibold">{value}</div><div className="text-xs text-muted">{label}</div><div className="text-xs text-muted">{sub}</div></div>;
 }
 function TripRow({ t, onClick }: { t: TripCard; onClick?: () => void }) {
   const badge = t.driverStatus === 'COMPLETED' ? 'text-accent' : t.driverStatus === 'RELEASED' ? 'text-muted' : 'text-warn';
@@ -368,9 +397,9 @@ function TripRow({ t, onClick }: { t: TripCard; onClick?: () => void }) {
     <button onClick={onClick} className="flex w-full items-center justify-between gap-2 rounded-[10px] border border-edge p-2 text-left text-sm">
       <div className="min-w-0">
         <div className="truncate">{t.pickupLabel} → {t.dropoffLabel}</div>
-        <div className="text-[11px] text-muted">{new Date(t.at).toLocaleString('en-GB')} · <span className={badge}>{t.driverStatus.replace(/_/g, ' ').toLowerCase()}</span></div>
+        <div className="text-xs text-muted">{new Date(t.at).toLocaleString('en-GB')} · <span className={badge}>{t.driverStatus.replace(/_/g, ' ').toLowerCase()}</span></div>
       </div>
-      <div className="shrink-0 text-right"><div className="font-medium">{t.fare.cents != null ? money(t.fare.cents, t.fare.currency) : (t.fare.label === 'Pending' ? 'Pending' : '—')}</div><div className="text-[10px] text-muted">{t.fare.label}{t.payment ? ` · ${t.payment}` : ''}</div></div>
+      <div className="shrink-0 text-right"><div className="font-medium">{t.fare.cents != null ? money(t.fare.cents, t.fare.currency) : (t.fare.label === 'Pending' ? 'Pending' : '—')}</div><div className="text-xs text-muted">{t.fare.label}{t.payment ? ` · ${t.payment}` : ''}</div></div>
     </button>
   );
 }
@@ -448,14 +477,14 @@ function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string;
             {d.releaseReason && <p className="text-xs text-muted">Released: {d.releaseReason}</p>}
             <div className="rounded-[12px] border border-edge bg-elevated p-3">
               <div className="flex items-center justify-between"><span className="text-muted">Fare</span><span className="font-medium">{d.fare.cents != null ? money(d.fare.cents, d.fare.currency) : d.fare.label}</span></div>
-              <div className="text-[11px] text-muted">{d.fare.label}{d.payment ? ` · payment ${d.payment}` : ''}</div>
-              {d.settlement?.current && <div className="mt-1 text-[11px] text-muted">Driver-reported (rev {d.settlement.current.revision}){d.settlement.current.paymentReceived ? ' · marked received' : ''}. Driver-reported — not bank/provider verified.</div>}
+              <div className="text-xs text-muted">{d.fare.label}{d.payment ? ` · payment ${d.payment}` : ''}</div>
+              {d.settlement?.current && <div className="mt-1 text-xs text-muted">Driver-reported (rev {d.settlement.current.revision}){d.settlement.current.paymentReceived ? ' · marked received' : ''}. Driver-reported — not bank/provider verified.</div>}
             </div>
             {d.canResume && <a href="/driver" className="btn-primary block w-full text-center">Return to active trip</a>}
             {d.canSettle && (
               <div className="rounded-[12px] border border-edge bg-elevated p-3">
                 <p className="font-medium">{d.settlement?.current ? 'Correct settlement' : 'Record metered amount'}</p>
-                <p className="mb-2 text-[11px] text-muted">The final regulated meter amount is settled with the passenger. Record it for your own statement.</p>
+                <p className="mb-2 text-xs text-muted">The final regulated meter amount is settled with the passenger. Record it for your own statement.</p>
                 <input inputMode="decimal" placeholder="Metered amount (e.g. 18.50)" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))} className="w-full rounded-[10px] border border-edge bg-page px-3 py-2" />
                 <label className="mt-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={received} onChange={(e) => setReceived(e.target.checked)} /> Payment received (cash)</label>
                 {d.settlement?.current && <input placeholder="Reason for correction" value={reason} onChange={(e) => setReason(e.target.value)} className="mt-2 w-full rounded-[10px] border border-edge bg-page px-3 py-2 text-xs" />}
@@ -500,7 +529,7 @@ function EarningsSection() {
               {c.collectedCents > 0 && <div className="mt-1 text-xs text-muted">Recorded collected: {money(c.collectedCents, c.currency)} (driver-reported)</div>}
             </div>
           ))}
-          <p className="text-[11px] text-muted">Recorded earnings = completed trips with a known final amount, before expenses — not net profit. Unknown metered amounts are pending, not zero. Payment is to the driver; this is not platform revenue.</p>
+          <p className="text-xs text-muted">Recorded earnings = completed trips with a known final amount, before expenses — not net profit. Unknown metered amounts are pending, not zero. Payment is to the driver; this is not platform revenue.</p>
 
           <div className="card p-4">
             <div className="mb-2 font-medium">Daily</div>
@@ -544,7 +573,7 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
       <div className="card p-4">
         <div className="mb-1 font-medium">Vehicle</div>
         {dash?.vehicle ? <div className="text-sm">{dash.vehicle.plate} · {dash.vehicle.label} · {dash.vehicle.vClass} · {dash.vehicle.seats} seats</div> : <div className="text-sm text-muted">No approved vehicle.</div>}
-        <p className="mt-1 text-[11px] text-muted">A vehicle change goes through operator review; you can’t change the operational binding yourself.</p>
+        <p className="mt-1 text-xs text-muted">A vehicle change goes through operator review; you can’t change the operational binding yourself.</p>
       </div>
 
       <div className="card p-4">
@@ -552,7 +581,7 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
         {!docs ? <p className="text-sm text-muted">Loading…</p> : !docs.available ? <p className="text-sm text-muted">{docs.note}</p> : docs.documents.length === 0 ? <p className="text-sm text-muted">No documents on file.</p> : (
           <ul className="space-y-1 text-sm">{docs.documents.map((d) => <li key={d.slot} className="flex items-center justify-between"><span>{d.slot.replace(/_/g, ' ')}</span><span className={statusColor[d.status] ?? 'text-muted'}>{d.status.replace(/_/g, ' ').toLowerCase()}{d.expiresAt ? ` · ${d.expiresAt.slice(0, 10)}` : ''}</span></li>)}</ul>
         )}
-        {docs?.documents.some((d) => d.status === 'EXPIRING' || d.status === 'EXPIRED' || d.status === 'ACTION_NEEDED') && <p className="mt-2 text-[11px] text-muted">To renew a document, contact the operator (see Help). Self-serve document renewal is not yet available.</p>}
+        {docs?.documents.some((d) => d.status === 'EXPIRING' || d.status === 'EXPIRED' || d.status === 'ACTION_NEEDED') && <p className="mt-2 text-xs text-muted">To renew a document, contact the operator (see Help). Self-serve document renewal is not yet available.</p>}
       </div>
 
       <div className="card p-4">
@@ -581,7 +610,7 @@ function BottomNav({ tab, setTab, hasOffer, hasTrip }: { tab: Tab; setTab: (t: T
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-page/95 backdrop-blur" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="mx-auto flex max-w-lg">
         {items.map((it) => (
-          <button key={it.id} onClick={() => setTab(it.id)} className={`relative flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 py-1 text-[11px] ${tab === it.id ? 'text-accent' : 'text-muted'}`}>
+          <button key={it.id} onClick={() => setTab(it.id)} className={`relative flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 py-1 text-xs ${tab === it.id ? 'text-accent' : 'text-muted'}`}>
             <span className="text-base leading-none">{it.icon}</span>
             <span>{it.label}</span>
             {it.id === 'home' && (hasOffer || hasTrip) && tab !== 'home' && <span className={`absolute right-[28%] top-1.5 h-2 w-2 rounded-full ${hasOffer ? 'bg-accent' : 'bg-warn'}`} />}

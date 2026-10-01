@@ -45,7 +45,7 @@ export async function exchangeToken(token: string): Promise<string | null> {
   const grant = await prisma.trackingGrant.findUnique({
     where: { tokenDigest: trackingDigest(token) },
   });
-  if (!grant || grant.revokedAt || grant.expiresAt < new Date()) return null;
+  if (!grant || grant.revokedAt || grant.expiresAt < new Date() || grant.scope !== 'FULL') return null;
   const jar = await cookies();
   // The cookie carries the same opaque token; server re-derives digest each call.
   jar.set(TRACK_COOKIE, token, {
@@ -66,7 +66,23 @@ export async function getTrackingBookingId(): Promise<string | null> {
   const grant = await prisma.trackingGrant.findUnique({
     where: { tokenDigest: trackingDigest(token) },
   });
-  if (!grant || grant.revokedAt || grant.expiresAt < new Date()) return null;
+  if (!grant || grant.revokedAt || grant.expiresAt < new Date() || grant.scope !== 'FULL') return null;
+  return grant.bookingId;
+}
+
+// Read-only "share my trip" link (2026-10-01 audit): live position, driver and car only — no
+// cancel, chat, phone or start code. Valid 12 h; the view itself stops showing a position once the
+// trip ends. Never exchangeable for the FULL cookie session above.
+export const SHARE_TTL_MS = 12 * 60 * 60 * 1000;
+export async function createShareGrant(bookingId: string): Promise<GrantResult> {
+  const token = generateToken(32);
+  const expiresAt = new Date(Date.now() + SHARE_TTL_MS);
+  await prisma.trackingGrant.create({ data: { bookingId, tokenDigest: trackingDigest(token), expiresAt, scope: 'VIEW' } });
+  return { token, expiresAt };
+}
+export async function resolveShareToken(token: string): Promise<string | null> {
+  const grant = await prisma.trackingGrant.findUnique({ where: { tokenDigest: trackingDigest(token) } });
+  if (!grant || grant.revokedAt || grant.expiresAt < new Date() || grant.scope !== 'VIEW') return null;
   return grant.bookingId;
 }
 

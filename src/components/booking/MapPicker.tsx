@@ -351,15 +351,15 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
 
       <div className="border-t border-edge bg-panel p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
         {geoMsg[geo] && <p className="mb-2 text-xs text-warn">{geoMsg[geo]}</p>}
-        {geo === 'ok' && coarse && <p className="mb-2 text-[11px] text-muted">Your device location is approximate (±{Math.round(accuracyM as number)} m).</p>}
+        {geo === 'ok' && coarse && <p className="mb-2 text-xs text-muted">Your device location is approximate (±{Math.round(accuracyM as number)} m).</p>}
         {/* Fixed height so resolving/label/fallback never change layout (no resize→move feedback). */}
         <div className="mb-3 h-[3.25rem]">
           <div className="label">Selected {kind === 'pickup' ? 'pickup' : 'destination'}</div>
           <div className="mt-0.5 truncate text-sm font-medium">
             {addr ?? coordLabel(center.lat, center.lng)}
-            {resolving && !addr && <span className="ml-2 text-[11px] text-muted">resolving…</span>}
+            {resolving && !addr && <span className="ml-2 text-xs text-muted">resolving…</span>}
           </div>
-          <div className="text-[11px] text-muted">{addr ? ' ' : 'No street address for this point — using map coordinates.'}</div>
+          <div className="text-xs text-muted">{addr ? ' ' : 'No street address for this point — using map coordinates.'}</div>
         </div>
         <div className="flex gap-2">
           <button className="btn-ghost flex-1" onClick={cancel}>Cancel</button>

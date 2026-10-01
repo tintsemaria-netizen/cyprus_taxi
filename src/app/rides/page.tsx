@@ -17,10 +17,16 @@ export default function Page() {
   const [needLogin, setNeedLogin] = useState(false);
   const [show, setShow] = useState(false);
   const [rating, setRating] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setLoadError(false);
     try { const r = await api<{ rides: Ride[] }>('/passenger/rides'); setRides(r.rides); setNeedLogin(false); }
-    catch (e) { if (e instanceof ApiRequestError && e.status === 401) { setNeedLogin(true); setRides([]); } }
+    catch (e) {
+      if (e instanceof ApiRequestError && e.status === 401) { setNeedLogin(true); setRides([]); }
+      else setLoadError(true);
+    }
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -29,7 +35,10 @@ export default function Page() {
       const r = await api<{ token: string }>(`/passenger/rides/${id}/track`, { method: 'POST' });
       await api('/tracking/exchange', { method: 'POST', body: { token: r.token } });
       router.push('/track');
-    } catch { /* ignore */ }
+    } catch {
+      setToast('Could not open live tracking. Check your connection and try again.');
+      setTimeout(() => setToast(null), 5000);
+    }
   }
 
   return (
@@ -43,6 +52,11 @@ export default function Page() {
         <div className="card p-6 text-center">
           <p className="text-sm text-muted">Sign in to see your ride history.</p>
           <button className="btn-primary mt-3" onClick={() => setShow(true)}>Sign in</button>
+        </div>
+      ) : loadError && rides === null ? (
+        <div className="card p-6 text-center">
+          <p className="text-sm text-muted">We couldn&apos;t load your rides. Check your connection.</p>
+          <button className="btn-primary mt-3" onClick={load}>Try again</button>
         </div>
       ) : rides === null ? (
         <p className="text-muted">Loading…</p>
@@ -72,6 +86,7 @@ export default function Page() {
           ))}
         </div>
       )}
+      {toast && <p role="alert" className="fixed inset-x-4 bottom-4 z-40 mx-auto max-w-lg rounded-[12px] border border-danger/40 bg-panel px-3 py-2 text-sm text-danger shadow-card">{toast}</p>}
       {show && <PassengerLoginModal onClose={() => setShow(false)} onDone={() => { setShow(false); load(); }} />}
       {rating && <RateTripModal rideId={rating} onClose={() => setRating(null)} onDone={(stars) => { setRides((rs) => rs ? rs.map((x) => x.id === rating ? { ...x, ratedStars: stars } : x) : rs); setRating(null); }} />}
     </div>

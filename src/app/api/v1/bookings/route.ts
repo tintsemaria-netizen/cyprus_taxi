@@ -1,4 +1,4 @@
-import { apiOk, apiError, Errors, clientIp } from '@/lib/http';
+import { apiOk, apiError, Errors, clientIp, requestBaseUrl } from '@/lib/http';
 import { createBookingSchema, zodFieldErrors } from '@/lib/validation';
 import { createBooking } from '@/server/bookings';
 import { getPassenger } from '@/server/passenger';
@@ -7,14 +7,6 @@ import { config } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
-// Build the tracking link from the domain the passenger is actually using (multi-domain
-// support), but only for a known host — never from a spoofed Host header.
-function requestBaseUrl(req: Request): string | undefined {
-  const host = (req.headers.get('x-forwarded-host') || req.headers.get('host') || '').split(',')[0].trim().toLowerCase();
-  if (!host || !config.appAllowedHosts().has(host)) return undefined;
-  const proto = (req.headers.get('x-forwarded-proto') || 'https').split(',')[0].trim();
-  return `${proto}://${host}`;
-}
 
 export async function POST(req: Request) {
   const ip = clientIp(req, config.trustedProxyHops);

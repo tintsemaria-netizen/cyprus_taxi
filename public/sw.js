@@ -4,10 +4,14 @@ self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch (_e) { data = {}; }
   const title = data.title || 'IL-Y';
+  // A ride offer lives ~20 s: keep it on screen until acted on, and vibrate (audit 2026-10-01).
+  const isOffer = data.tag === 'offer';
   const options = {
     body: data.body || '',
     tag: data.tag,
     renotify: true,
+    requireInteraction: isOffer,
+    vibrate: isOffer ? [300, 150, 300, 150, 300] : [200],
     icon: '/icons/icon-192.png',
     badge: '/icons/favicon-32.png',
     data: { url: data.url || '/' },

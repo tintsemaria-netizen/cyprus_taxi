@@ -1,5 +1,6 @@
 import { BlockList, isIP } from 'node:net';
 import { NextResponse } from 'next/server';
+import { config } from './config';
 import crypto from 'crypto';
 
 export type FieldErrors = Record<string, string>;
@@ -104,4 +105,13 @@ export function clientIp(req: Request, hops: number): string {
     return ip;
   }
   return parts[0];
+}
+
+// Public base URL from the domain the caller is actually using (multi-domain), but only for an
+// allowlisted host — never from a spoofed Host header. Falls back to APP_BASE_URL.
+export function requestBaseUrl(req: Request): string {
+  const host = (req.headers.get('x-forwarded-host') || req.headers.get('host') || '').split(',')[0].trim().toLowerCase();
+  if (!host || !config.appAllowedHosts().has(host)) return config.appBaseUrl;
+  const proto = (req.headers.get('x-forwarded-proto') || 'https').split(',')[0].trim();
+  return `${proto}://${host}`;
 }

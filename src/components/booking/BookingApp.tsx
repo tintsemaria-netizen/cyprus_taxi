@@ -56,6 +56,7 @@ export default function BookingApp() {
   const [places, setPlaces] = useState<{ home: { label: string; lat: number; lng: number } | null; work: { label: string; lat: number; lng: number } | null }>({ home: null, work: null });
   const pendingSubmit = useRef<number | undefined>(undefined);
   const pendingSubmitActive = useRef(false);
+  const pendingReview = useRef(false);
 
   // Live mirrors so the async geolocation callback never overwrites a pickup the
   // passenger has already started choosing (typed text or picked a point).
@@ -202,31 +203,43 @@ export default function BookingApp() {
 
   // Fare estimate (server-issued quote) — recomputed when the trip inputs change.
   interface QuoteBody { quoteId: string; priceType: string; totalCents: number; rangeLowCents: number; rangeHighCents: number; night: boolean; holiday: boolean; routeAvailable: boolean; airport?: boolean; lines: { code: string; label: string; cents: number }[]; }
-  const [quote, setQuote] = useState<QuoteBody | null>(null);
+  // Every class is quoted in parallel so the passenger can compare prices before choosing
+  // (2026-10-01 audit). `quote` is the selected class's quote (used for booking + review).
+  const [quotes, setQuotes] = useState<Partial<Record<'COMFORT' | 'XL', QuoteBody>>>({});
   const [quoteErr, setQuoteErr] = useState<string | null>(null);
+  const [quoting, setQuoting] = useState(false);
+  const classKeys = (cfg?.classes ?? [{ key: 'COMFORT' as const, maxPassengers: 4 }, { key: 'XL' as const, maxPassengers: 6 }]).map((c) => `${c.key}:${c.maxPassengers}`).join(',');
   useEffect(() => {
-    if (!pickup || !dropoff) { setQuote(null); setQuoteErr(null); return; }
+    if (!pickup || !dropoff) { setQuotes({}); setQuoteErr(null); return; }
     const controller = new AbortController();
     const t = setTimeout(async () => {
-      setQuoteErr(null);
-      try {
-        const q = await api<QuoteBody>('/quote', {
-          method: 'POST',
-          body: {
-            pickup: { lat: pickup.lat, lng: pickup.lng }, dropoff: { lat: dropoff.lat, lng: dropoff.lng }, vClass, passengerCount: pax, luggageCount: 0,
-            // Price a scheduled ride for its journey time (day/night/holiday + traffic).
-            ...(when === 'SCHEDULE' && scheduledAt ? { scheduledAt, scheduleOffsetMin } : {}),
-          },
-          signal: controller.signal, timeoutMs: 9000,
-        });
-        setQuote(q);
-      } catch (e) {
-        if (e instanceof ApiRequestError) setQuoteErr(e.body.message);
-        setQuote(null);
-      }
+      setQuoteErr(null); setQuoting(true);
+      const list = classKeys.split(',').map((k) => { const [key, max] = k.split(':'); return { key: key as 'COMFORT' | 'XL', max: Number(max) }; });
+      const results = await Promise.all(list.map(async (c) => {
+        try {
+          const q = await api<QuoteBody>('/quote', {
+            method: 'POST',
+            body: {
+              pickup: { lat: pickup.lat, lng: pickup.lng }, dropoff: { lat: dropoff.lat, lng: dropoff.lng }, vClass: c.key, passengerCount: Math.min(pax, c.max), luggageCount: 0,
+              // Price a scheduled ride for its journey time (day/night/holiday + traffic).
+              ...(when === 'SCHEDULE' && scheduledAt ? { scheduledAt, scheduleOffsetMin } : {}),
+            },
+            signal: controller.signal, timeoutMs: 9000,
+          });
+          return [c.key, q] as const;
+        } catch (e) {
+          if (e instanceof ApiRequestError) setQuoteErr(e.body.message);
+          return [c.key, null] as const;
+        }
+      }));
+      if (controller.signal.aborted) return;
+      const next: Partial<Record<'COMFORT' | 'XL', QuoteBody>> = {};
+      for (const [k, q] of results) if (q) next[k] = q;
+      setQuotes(next); setQuoting(false);
     }, 500);
     return () => { clearTimeout(t); controller.abort(); };
-  }, [pickup, dropoff, vClass, pax, when, scheduledAt, scheduleOffsetMin]);
+  }, [pickup, dropoff, pax, when, scheduledAt, scheduleOffsetMin, classKeys]);
+  const quote: QuoteBody | null = quotes[vClass] ?? null;
   const eur = (c: number) => `€${(c / 100).toFixed(2)}`;
 
   const maxPax = cfg?.classes.find((c) => c.key === vClass)?.maxPassengers ?? (vClass === 'XL' ? 6 : 4);
@@ -239,16 +252,23 @@ export default function BookingApp() {
     const e: Record<string, string> = {};
     if (!pickup) e.pickup = 'Choose a pickup from the list or tap the map.';
     if (!dropoff) e.dropoff = 'Choose a destination from the list or tap the map.';
-    if (!name.trim()) e.name = 'Enter a name.';
-    if (!phone.trim()) e.phone = 'Enter an international phone number.';
+    if (passenger && !name.trim()) e.name = 'Enter the name the driver should ask for.';
     if (when === 'SCHEDULE' && !scheduledAt) e.scheduledAt = 'Pick a date and time.';
     if (pax < 1 || pax > maxPax) e.pax = `1–${maxPax} passengers for this class.`;
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
+  // Resume "Request a ride" once sign-in completes (runs with the fresh `passenger`).
+  useEffect(() => {
+    if (passenger && pendingReview.current) { pendingReview.current = false; toReview(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [passenger]);
+
   function toReview() {
     if (!validate()) return;
+    // Contact details come from the signed-in account, so sign in before the review step.
+    if (!passenger) { pendingReview.current = true; setShowLogin(true); return; }
     // Keep the same idempotency key when the payload is unchanged since last time.
     const sig = payloadSignature();
     if (!idemKey.current || sig !== idemPayloadSig.current) {
@@ -283,8 +303,8 @@ export default function BookingApp() {
         passengerCount: pax,
         luggageCount: 0,
         quoteId: quote?.quoteId,
-        passengerName: name.trim(),
-        phone: phone.trim(),
+        passengerName: name.trim() || passenger?.name || 'Passenger',
+        phone: passenger?.phone ?? phone.trim(),
         note: note.trim() || undefined,
       };
       const res = await api<{ tracking: { token: string } }>('/bookings', {
@@ -353,7 +373,7 @@ export default function BookingApp() {
     <div className="relative flex h-[100dvh] flex-col overflow-hidden">
       {cfg?.demoMode && <DemoBanner />}
       {cfgError && (
-        <div className="flex items-center justify-center gap-3 bg-warn/15 border-b border-warn/30 px-3 py-1.5 text-[11px] sm:text-xs text-warn">
+        <div className="flex items-center justify-center gap-3 bg-warn/15 border-b border-warn/30 px-3 py-1.5 text-xs sm:text-xs text-warn">
           <span>Couldn&apos;t load service settings — booking may be unavailable. The map still works.</span>
           <button className="rounded border border-warn/40 px-2 py-0.5 hover:bg-warn/10" onClick={loadConfig} disabled={cfgLoading}>
             {cfgLoading ? 'Retrying…' : 'Retry'}
@@ -396,10 +416,10 @@ export default function BookingApp() {
           )}
         </div>
 
-        <div className="pointer-events-none absolute inset-0 flex flex-col justify-end sm:block">
+        <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end sm:block">
           <div className="pointer-events-auto w-full sm:absolute sm:left-4 sm:top-4 sm:h-[calc(100%-2rem)] sm:w-[380px]">
             <div className="card flex max-h-[64dvh] flex-col overflow-hidden sm:max-h-full">
-              <div className="overflow-y-auto p-4 sm:p-5" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+              <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5" style={{ paddingBottom: step === 'form' ? '1rem' : 'max(1rem, env(safe-area-inset-bottom))' }}>
                 {step === 'form' ? (
                   /* ---- FORM (inlined so inputs keep focus across renders) ---- */
                   <div>
@@ -411,7 +431,7 @@ export default function BookingApp() {
                     <div className="space-y-3">
                       <PlacesInput kind="From" value={pickup} text={pickupText} onText={(t) => { setPickupText(t); if (autoPickup) setAutoPickup(false); }} onSelect={(s) => { setPickup(s); setAutoPickup(false); }} error={errors.pickup} />
                       {autoPickup && pickup && (
-                        <p className="mt-1 text-[11px] text-accent">📍 Using your current location — change it on the map or type an address.</p>
+                        <p className="mt-1 text-xs text-accent">📍 Using your current location — change it on the map or type an address.</p>
                       )}
                       <div className="flex items-center justify-between">
                         <button type="button" className="chip hover:border-accent/50" onClick={() => setPicker('pickup')}>⌖ Set pickup on map</button>
@@ -438,7 +458,7 @@ export default function BookingApp() {
                       )}
                       {!dropoff && destinations.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1">
-                          <span className="text-[11px] text-muted">Recent:</span>
+                          <span className="text-xs text-muted">Recent:</span>
                           {destinations.map((d) => (
                             <button key={d.label} type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: d.lat, lng: d.lng, label: d.label }); setDropoffText(d.label); }}>{d.label.length > 22 ? d.label.slice(0, 21) + '…' : d.label}</button>
                           ))}
@@ -448,9 +468,48 @@ export default function BookingApp() {
                     </div>
 
                     <div className="mt-5">
+                      <p className="label mb-2" id="ride-class-label">Choose your ride</p>
+                      <div className="space-y-2" role="radiogroup" aria-labelledby="ride-class-label">
+                        {classes.map((c) => {
+                          const q = quotes[c.key as 'COMFORT' | 'XL'];
+                          const selected = vClass === c.key;
+                          return (
+                            <button
+                              key={c.key}
+                              type="button"
+                              role="radio"
+                              aria-checked={selected}
+                              onClick={() => {
+                                setVClass(c.key);
+                                if (pax > c.maxPassengers) setPax(c.maxPassengers);
+                              }}
+                              className={`flex w-full items-center justify-between gap-3 rounded-[12px] border px-4 py-3 text-left transition ${selected ? 'border-accent bg-accent/10' : 'border-edge bg-elevated hover:border-accent/40'}`}
+                            >
+                              <span className="min-w-0">
+                                <span className="block font-semibold">{c.label}</span>
+                                <span className="text-xs text-muted">👥 {CLASS_META[c.key]?.seatsLabel} · {CLASS_META[c.key]?.blurb}</span>
+                              </span>
+                              <span className="shrink-0 text-right">
+                                {pickup && dropoff ? (
+                                  q ? (
+                                    <>
+                                      <span className={`block font-semibold tabular-nums ${selected ? 'text-accent' : 'text-ink'}`}>≈ {eur(q.totalCents)}</span>
+                                      <span className="block text-xs text-muted tabular-nums">{eur(q.rangeLowCents)}–{eur(q.rangeHighCents)}</span>
+                                    </>
+                                  ) : <span className="text-xs text-muted">{quoting ? 'Pricing…' : '—'}</span>
+                                ) : <span className={selected ? 'text-accent' : 'text-muted'} aria-hidden>›</span>}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {errors.pax && <p className="mt-1 text-xs text-danger">{errors.pax}</p>}
+                    </div>
+
+                    <div className="mt-4">
                       <div className="flex gap-2 rounded-[12px] border border-edge bg-elevated p-1">
                         {(['NOW', 'SCHEDULE'] as const).map((w) => (
-                          <button key={w} type="button" onClick={() => setWhen(w)} className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium transition ${when === w ? 'bg-accent text-[#0d1608]' : 'text-muted hover:text-ink'}`}>
+                          <button key={w} type="button" aria-pressed={when === w} onClick={() => setWhen(w)} className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium transition ${when === w ? 'bg-accent text-[#0d1608]' : 'text-muted hover:text-ink'}`}>
                             {w === 'NOW' ? 'Now' : 'Schedule'}
                           </button>
                         ))}
@@ -464,81 +523,51 @@ export default function BookingApp() {
                       )}
                     </div>
 
-                    <div className="mt-5">
-                      <p className="label mb-2">Choose your ride</p>
-                      <div className="space-y-2">
-                        {classes.map((c) => (
-                          <button
-                            key={c.key}
-                            type="button"
-                            onClick={() => {
-                              setVClass(c.key);
-                              if (pax > c.maxPassengers) setPax(c.maxPassengers);
-                            }}
-                            className={`flex w-full items-center justify-between rounded-[12px] border px-4 py-3 text-left transition ${vClass === c.key ? 'border-accent bg-accent/10' : 'border-edge bg-elevated hover:border-accent/40'}`}
-                          >
-                            <span>
-                              <span className="block font-semibold">{c.label}</span>
-                              <span className="text-xs text-muted">👥 {CLASS_META[c.key]?.seatsLabel} · {CLASS_META[c.key]?.blurb}</span>
-                            </span>
-                            <span className={vClass === c.key ? 'text-accent' : 'text-muted'}>›</span>
-                          </button>
-                        ))}
-                      </div>
-                      {errors.pax && <p className="mt-1 text-xs text-danger">{errors.pax}</p>}
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="label">Passengers</label>
-                        <div className="mt-1 flex items-center gap-2">
-                          <button type="button" className="btn-ghost !min-h-0 !px-3 !py-2" onClick={() => setPax((p) => Math.max(1, p - 1))}>−</button>
-                          <span className="w-8 text-center text-lg font-semibold">{pax}</span>
-                          <button type="button" className="btn-ghost !min-h-0 !px-3 !py-2" onClick={() => setPax((p) => Math.min(maxPax, p + 1))}>+</button>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-3 space-y-3">
-                      <div>
-                        <label className="label">Name</label>
-                        <input className={`field mt-1 ${errors.name ? 'border-danger' : ''}`} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} placeholder="Your name" />
-                        {errors.name && <p className="mt-1 text-xs text-danger">{errors.name}</p>}
-                      </div>
-                      <div>
-                        <label className="label">Phone (international)</label>
-                        <input className={`field mt-1 ${errors.phone ? 'border-danger' : ''}`} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+357 …" inputMode="tel" />
-                        {errors.phone && <p className="mt-1 text-xs text-danger">{errors.phone}</p>}
-                        <p className="mt-1 text-[11px] text-muted">Collected to coordinate your ride. Not verified in beta.</p>
-                      </div>
-                      <div>
-                        <label className="label">Note (optional)</label>
-                        <textarea className="field mt-1 min-h-[44px]" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} rows={2} placeholder="Flight number, luggage, etc." />
-                      </div>
-                    </div>
-
                     {pickup && dropoff && (
-                      <div className="mt-4 rounded-[12px] border border-edge bg-elevated px-3 py-2.5 text-xs text-muted">
+                      <div className="mt-3 rounded-[12px] border border-edge bg-elevated px-3 py-2.5 text-xs text-muted">
                         {route?.min != null && (
                           <div>Estimated trip: <span className="text-ink font-medium">≈ {route.min} min · {route.km} km</span> driving.</div>
                         )}
                         {quote ? (
                           <div className="mt-1">
-                            Estimated fare: <span className="text-accent font-semibold">{eur(quote.totalCents)}</span>
-                            <span className="text-muted"> ({eur(quote.rangeLowCents)}–{eur(quote.rangeHighCents)})</span>
-                            {quote.night && <span className="ml-1">· night tariff</span>}
-                            {quote.holiday && <span className="ml-1">· holiday</span>}
-                            <div className="mt-1 text-[10px] text-muted">Regulated meter estimate — final amount is set by the taximeter. {quote.routeAvailable ? '' : 'Distance approximate (routing unavailable).'}</div>
+                            {quote.night && <span>Night tariff · </span>}
+                            {quote.holiday && <span>Holiday · </span>}
+                            <span>Regulated meter estimate — the final amount is set by the taximeter and paid to the driver.</span>
+                            {!quote.routeAvailable && <span> Distance approximate (routing unavailable).</span>}
                             {quote.airport && <AirportFareNote />}
                           </div>
                         ) : quoteErr ? (
                           <div className="mt-1 text-warn">Couldn&apos;t estimate the fare: {quoteErr}</div>
-                        ) : (
-                          <div className="mt-1">Estimating fare…</div>
-                        )}
+                        ) : null}
                       </div>
                     )}
-                    <button className="btn-primary mt-5 w-full" onClick={toReview}>Request a ride</button>
-                    <p className="mt-3 text-center text-[11px] text-muted">Metered estimate — the driver settles the final metered fare.</p>
+
+                    {passenger && (
+                      <div className="mt-4 rounded-[12px] border border-edge bg-elevated px-3 py-2.5">
+                        <label className="label" htmlFor="bk-name">Driver will ask for</label>
+                        <input id="bk-name" className={`field mt-1 ${errors.name ? 'border-danger' : ''}`} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} autoComplete="name" placeholder="Your name" />
+                        {errors.name && <p className="mt-1 text-xs text-danger">{errors.name}</p>}
+                        <p className="mt-2 text-xs text-muted">The driver can call you on your verified number <span className="text-ink">{passenger.phone}</span>.</p>
+                      </div>
+                    )}
+
+                    <details className="mt-4 rounded-[12px] border border-edge bg-elevated px-3 py-2.5" open={pax > 1 || !!note || !!errors.pax}>
+                      <summary className="cursor-pointer text-sm font-medium">Options <span className="text-xs font-normal text-muted">· {pax} passenger{pax > 1 ? 's' : ''}{note ? ' · note' : ''}</span></summary>
+                      <div className="mt-3 space-y-3">
+                        <div>
+                          <span className="label" id="bk-pax-label">Passengers</span>
+                          <div className="mt-1 flex items-center gap-2" role="group" aria-labelledby="bk-pax-label">
+                            <button type="button" aria-label="Fewer passengers" className="btn-ghost !min-h-[44px] !px-4" onClick={() => setPax((p) => Math.max(1, p - 1))}>−</button>
+                            <span className="w-8 text-center text-lg font-semibold" aria-live="polite">{pax}</span>
+                            <button type="button" aria-label="More passengers" className="btn-ghost !min-h-[44px] !px-4" onClick={() => setPax((p) => Math.min(maxPax, p + 1))}>+</button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="label" htmlFor="bk-note">Note for the driver (optional)</label>
+                          <textarea id="bk-note" className="field mt-1 min-h-[44px]" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} rows={2} placeholder="Flight number, luggage, meeting point…" />
+                        </div>
+                      </div>
+                    </details>
                   </div>
                 ) : (
                   /* ---- REVIEW ---- */
@@ -552,8 +581,8 @@ export default function BookingApp() {
                       <Row label="When" value={when === 'NOW' ? 'Now (immediate request)' : `${scheduledAt.replace('T', ' ')} · ${cfg?.timezone}`} />
                       <Row label="Class" value={vClass === 'XL' ? 'XL' : 'Comfort'} />
                       <Row label="Passengers" value={String(pax)} />
-                      <Row label="Name" value={name} />
-                      <Row label="Phone" value={phone} />
+                      <Row label="Driver asks for" value={name || passenger?.name || '—'} />
+                      <Row label="Your phone" value={passenger?.phone ?? phone} />
                       {note && <Row label="Note" value={note} />}
                       <Row label="Fare" value={quote ? `≈ ${eur(quote.totalCents)} (${eur(quote.rangeLowCents)}–${eur(quote.rangeHighCents)}) · meter estimate` : 'Set by the taximeter'} />
                     </div>
@@ -580,10 +609,21 @@ export default function BookingApp() {
                     ) : (
                       <button className="btn-primary mt-5 w-full" onClick={() => submit()} disabled={submitting}>{submitting ? 'Sending…' : 'Confirm request'}</button>
                     )}
-                    <p className="mt-2 text-center text-[11px] text-muted">{when === 'NOW' ? 'We’ll automatically offer your ride to the nearest available driver.' : 'We’ll automatically match a nearby driver shortly before pickup.'} You&apos;ll get a private tracking link. Pay the driver directly.</p>
+                    <p className="mt-2 text-center text-xs text-muted">{when === 'NOW' ? 'We’ll automatically offer your ride to the nearest available driver.' : 'We’ll automatically match a nearby driver shortly before pickup.'} You&apos;ll get a private tracking link. Pay the driver directly.</p>
                   </div>
                 )}
               </div>
+              {step === 'form' && (
+                // Sticky call to action: always visible without scrolling the form (2026-10-01 audit).
+                <div className="border-t border-edge p-3 sm:p-4" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+                  <button className="btn-primary w-full" onClick={toReview}>
+                    {pickup && dropoff
+                      ? `Request ${classes.find((c) => c.key === vClass)?.label ?? 'ride'}${quote ? ` · ≈ ${eur(quote.totalCents)}` : ''}`
+                      : 'Request a ride'}
+                  </button>
+                  {!passenger && pickup && dropoff && <p className="mt-2 text-center text-xs text-muted">You&apos;ll sign in before confirming.</p>}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -601,7 +641,7 @@ export default function BookingApp() {
 
       {showLogin && (
         <PassengerLoginModal
-          onClose={() => { setShowLogin(false); pendingSubmitActive.current = false; }}
+          onClose={() => { setShowLogin(false); pendingSubmitActive.current = false; pendingReview.current = false; }}
           onDone={(p) => {
             setShowLogin(false);
             setPassenger(p);
@@ -609,6 +649,7 @@ export default function BookingApp() {
             if (p.name) setName((cur) => cur || p.name!);
             loadPassenger();
             if (pendingSubmitActive.current) { pendingSubmitActive.current = false; submit(pendingSubmit.current); }
+
           }}
         />
       )}

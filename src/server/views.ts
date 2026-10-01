@@ -51,6 +51,7 @@ export async function trackingView(bookingId: string) {
     plate: string;
     vClass: string;
     phone: string | null;
+    rating: { average: number; count: number } | null;
   };
   let location = null as null | {
     lat: number;
@@ -60,6 +61,7 @@ export async function trackingView(bookingId: string) {
     sampledAt: string;
   };
   let pickupEta: string | null = null;
+  let pickupEtaMin: number | null = null;
 
   if (active) {
     vehicle = {
@@ -70,6 +72,7 @@ export async function trackingView(bookingId: string) {
       plate: active.vehiclePlate,
       vClass: active.vehicleClass,
       phone: active.driverPhone || null,
+      rating: await publicDriverRating(active.driverId),
     };
     const loc = await prisma.latestDriverLocation.findUnique({ where: { driverId: active.driverId } });
     if (loc) {
@@ -83,10 +86,13 @@ export async function trackingView(bookingId: string) {
           poorAccuracy: poorAccuracy(loc.accuracyM),
           sampledAt: loc.sampledAt.toISOString(),
         };
-        if (booking.status === 'EN_ROUTE' && freshness === 'fresh') {
+        // ASSIGNED too: the passenger needs "how many minutes away" right after the driver
+        // accepts, not only once the driver taps "on the way" (2026-10-01 audit).
+        if ((booking.status === 'EN_ROUTE' || booking.status === 'ASSIGNED') && freshness === 'fresh') {
           // Real driver→pickup road ETA (traffic-aware via Google), not the trip duration.
           const eta = await driverToPickupEta(booking.id, active.driverId, { lat: loc.lat, lng: loc.lng }, { lat: booking.pickupLat, lng: booking.pickupLng });
           pickupEta = `≈ ${eta.etaMin} min${eta.source === 'approx' ? ' (approx)' : ''}`;
+          pickupEtaMin = eta.etaMin;
         }
       }
     }
@@ -116,11 +122,38 @@ export async function trackingView(bookingId: string) {
     fareWording: 'Metered fare estimate — settled with the driver',
     vehicle,
     location,
-    pickupEta: pickupEta ?? (booking.status === 'EN_ROUTE' ? 'ETA unavailable' : null),
+    pickupEta: pickupEta ?? (booking.status === 'EN_ROUTE' || booking.status === 'ASSIGNED' ? 'ETA unavailable' : null),
+    pickupEtaMin,
     fareCents: booking.fareCents ?? null,
     canCancel: PASSENGER_CANCELABLE.includes(booking.status),
     canRetry: booking.status === 'NO_DRIVER',
     timeline: booking.events.map((e) => ({ type: e.type, at: e.createdAt.toISOString(), status: e.afterStatus })),
+  };
+}
+
+// A driver's rating is shown to passengers only once it rests on enough trips to mean something.
+export const PUBLIC_RATING_MIN_COUNT = 5;
+async function publicDriverRating(driverId: string): Promise<{ average: number; count: number } | null> {
+  const d = await prisma.driver.findUnique({ where: { id: driverId }, select: { ratingTotal: true, ratingCount: true } });
+  if (!d || d.ratingCount < PUBLIC_RATING_MIN_COUNT) return null;
+  return { average: Math.round((d.ratingTotal / d.ratingCount) * 10) / 10, count: d.ratingCount };
+}
+
+// ---- Read-only shared trip view ("share my trip") ----
+// Strictly a subset of trackingView: driver first name, car + plate, status, ETA, endpoints and
+// the live position while the trip is active. NEVER the start code, phones, chat or receipt.
+export async function shareView(bookingId: string) {
+  const v = await trackingView(bookingId);
+  if (!v) return null;
+  const live = ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(v.status);
+  return {
+    reference: v.reference,
+    status: v.status,
+    pickup: { label: v.pickup.label, lat: v.pickup.lat, lng: v.pickup.lng },
+    dropoff: { label: v.dropoff.label, lat: v.dropoff.lat, lng: v.dropoff.lng },
+    vehicle: v.vehicle ? { driverName: v.vehicle.driverName.split(' ')[0], make: v.vehicle.make, model: v.vehicle.model, color: v.vehicle.color, plate: v.vehicle.plate } : null,
+    location: live ? v.location : null,
+    pickupEta: live ? v.pickupEta : null,
   };
 }
 

@@ -110,7 +110,7 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUr
       <button type="button" className="flex w-full items-center justify-between px-3 py-2.5 text-left" onClick={() => setExpanded((e) => !e)}>
         <span className="flex items-center gap-2 text-sm font-medium">
           💬 Chat with {peerLabel}
-          {unread > 0 && <span className="rounded-full bg-accent px-1.5 text-[11px] font-bold text-[#10191C]">{unread > 9 ? '9+' : unread}</span>}
+          {unread > 0 && <span className="rounded-full bg-accent px-1.5 text-xs font-bold text-[#10191C]">{unread > 9 ? '9+' : unread}</span>}
         </span>
         <span className="text-xs text-muted">{expanded ? 'Hide' : 'Open'}</span>
       </button>
@@ -120,7 +120,7 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUr
           <div ref={scrollRef} className="max-h-56 space-y-2 overflow-y-auto p-3">
             {hasOlder && (
               <div className="text-center">
-                <button type="button" className="text-[11px] text-accent hover:underline disabled:opacity-50" disabled={loadingOlder} onClick={loadOlder}>
+                <button type="button" className="text-xs text-accent hover:underline disabled:opacity-50" disabled={loadingOlder} onClick={loadOlder}>
                   {loadingOlder ? 'Loading…' : 'Load earlier messages'}
                 </button>
               </div>
@@ -130,13 +130,13 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUr
               <div key={m.id} className={`flex ${m.sender === me ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] rounded-[12px] px-3 py-1.5 text-sm ${m.sender === me ? 'bg-accent text-[#10191C]' : 'bg-panel text-ink'}`}>
                   {m.body}
-                  <span className={`ml-2 align-bottom text-[9px] ${m.sender === me ? 'text-[#10191C]/60' : 'text-muted'}`}>{new Date(m.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className={`ml-2 align-bottom text-[11px] ${m.sender === me ? 'text-[#10191C]/60' : 'text-muted'}`}>{new Date(m.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
               </div>
             ))}
           </div>
           {pushUrl && pushSupported() && open && (
-            <div className="border-t border-edge px-3 py-1.5 text-[11px]">
+            <div className="border-t border-edge px-3 py-1.5 text-xs">
               {notif === 'on' ? (
                 <span className="text-muted">🔔 Notifications on</span>
               ) : notif === 'denied' ? (
@@ -148,7 +148,7 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUr
               )}
             </div>
           )}
-          {err && <p className="px-3 pb-1 text-[11px] text-danger">{err}</p>}
+          {err && <p className="px-3 pb-1 text-xs text-danger">{err}</p>}
           {open ? (
             <div className="flex items-center gap-2 border-t border-edge p-2">
               <input
@@ -162,7 +162,7 @@ export function ChatPanel({ listUrl, postUrl, me, peerLabel, pushUrl }: { listUr
               <button type="button" className="btn-primary !min-h-0 !py-2 text-sm" disabled={sending || !text.trim()} onClick={() => void send()}>Send</button>
             </div>
           ) : (
-            <p className="border-t border-edge px-3 py-2 text-center text-[11px] text-muted">Chat is closed for this ride.</p>
+            <p className="border-t border-edge px-3 py-2 text-center text-xs text-muted">Chat is closed for this ride.</p>
           )}
         </div>
       )}

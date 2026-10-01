@@ -41,15 +41,15 @@ export default function DriverLogin() {
         {err && <p className="mt-4 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}
         {stage === 'phone' ? (
           <div className="mt-4 space-y-3">
-            <div><label className="label">Phone (international)</label>
-              <input className="field mt-1" placeholder="+35799123456" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" /></div>
+            <div><label className="label" htmlFor="login-f1">Phone (international)</label>
+              <input id="login-f1" className="field mt-1" placeholder="+35799123456" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" /></div>
             <button className="btn-primary w-full" disabled={busy || !phone} onClick={requestCode}>{busy ? 'Sending…' : 'Send code'}</button>
           </div>
         ) : (
           <div className="mt-4 space-y-3">
             {dev && <p className="rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">Demo code: <b>{dev}</b></p>}
-            <div><label className="label">SMS code</label>
-              <input className="field mt-1 text-center font-mono text-lg tracking-widest" inputMode="numeric" maxLength={8} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} /></div>
+            <div><label className="label" htmlFor="login-f2">SMS code</label>
+              <input id="login-f2" className="field mt-1 text-center font-mono text-lg tracking-widest" inputMode="numeric" maxLength={8} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} /></div>
             <button className="btn-primary w-full" disabled={busy || code.length < 4} onClick={verify}>{busy ? 'Verifying…' : 'Sign in'}</button>
             <button className="w-full text-sm text-muted hover:text-ink" onClick={() => setStage('phone')}>Use a different number</button>
           </div>

@@ -670,6 +670,9 @@ model TrackingGrant {
   booking     Booking   @relation(fields: [bookingId], references: [id])
   bookingId   String
   tokenDigest String    @unique
+  // FULL = the passenger's private link (cancel, chat, start code). VIEW = a read-only "share my
+  // trip" link (live position + driver/car only) that can never be exchanged for FULL access.
+  scope       String    @default("FULL")
   expiresAt   DateTime
   revokedAt   DateTime?
   createdAt   DateTime  @default(now())

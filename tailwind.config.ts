@@ -10,6 +10,8 @@ const config: Config = {
         panel: '#1D282D',
         elevated: '#26333A',
         edge: '#33424A',
+        // Input borders: ≥3:1 against elevated + panel (WCAG 1.4.11 non-text contrast).
+        'edge-strong': '#6B8089',
         accent: '#C8FF46',
         'accent-dim': '#AEE23A',
         ink: '#F4F7F5',

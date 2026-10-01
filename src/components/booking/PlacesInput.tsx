@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { api, uuid } from '@/lib/api-client';
 
 export interface Selected {
@@ -142,10 +142,13 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error }: Prop
     else if (e.key === 'Escape') { setOpen(false); setActive(-1); }
   }
 
+  const inputId = useId();
   return (
     <div ref={boxRef} className="relative">
-      <label className="label">{kind}</label>
+      <label className="label" htmlFor={inputId}>{kind}</label>
       <input
+        id={inputId}
+        aria-label={kind === 'From' ? 'Pickup address' : 'Destination address'}
         className={`field mt-1 ${error ? 'border-danger' : value ? 'border-accent/60' : ''}`}
         placeholder={kind === 'From' ? 'Pickup location' : 'Destination'}
         value={text}
@@ -188,7 +191,7 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error }: Prop
               </button>
             ))}
           {!loading && demo && results.length > 0 && (
-            <div className="border-t border-edge px-4 py-1.5 text-[10px] text-muted">Demo places · Cyprus fixtures</div>
+            <div className="border-t border-edge px-4 py-1.5 text-xs text-muted">Demo places · Cyprus fixtures</div>
           )}
         </div>
       )}

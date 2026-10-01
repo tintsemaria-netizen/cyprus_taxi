@@ -39,12 +39,12 @@ export default function Login() {
           {error && <p className="mt-4 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
           <div className="mt-4 space-y-3">
             <div>
-              <label className="label">Email</label>
-              <input type="email" className="field mt-1" value={email} onChange={(e) => setEmail(e.target.value)} autoCapitalize="none" autoComplete="email" inputMode="email" />
+              <label className="label" htmlFor="login-f1">Email</label>
+              <input id="login-f1" type="email" className="field mt-1" value={email} onChange={(e) => setEmail(e.target.value)} autoCapitalize="none" autoComplete="email" inputMode="email" />
             </div>
             <div>
-              <label className="label">Password</label>
-              <input type="password" className="field mt-1" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+              <label className="label" htmlFor="login-f2">Password</label>
+              <input id="login-f2" type="password" className="field mt-1" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
             </div>
           </div>
           <button className="btn-primary mt-5 min-h-[44px] w-full" disabled={busy || !email || !password}>{busy ? 'Signing in…' : 'Sign in'}</button>

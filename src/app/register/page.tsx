@@ -54,10 +54,10 @@ export default function Register() {
             <p className="mt-1 text-sm text-muted">Book rides across Cyprus. No documents needed.</p>
             {error && <p className="mt-4 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
             <div className="mt-4 space-y-3">
-              <div><label className="label">Name</label><input className="field mt-1" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></div>
-              <div><label className="label">Email</label><input type="email" className="field mt-1" value={email} onChange={(e) => setEmail(e.target.value)} autoCapitalize="none" autoComplete="email" inputMode="email" /></div>
-              <div><label className="label">Password</label><input type="password" className="field mt-1" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" /><p className="mt-1 text-[11px] text-muted">At least 8 characters.</p></div>
-              <div><label className="label">Phone</label><input type="tel" className="field mt-1" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+357…" autoComplete="tel" inputMode="tel" /><p className="mt-1 text-[11px] text-muted">We’ll send a verification code by SMS.</p></div>
+              <div><label className="label" htmlFor="register-f1">Name</label><input id="register-f1" className="field mt-1" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></div>
+              <div><label className="label" htmlFor="register-f2">Email</label><input id="register-f2" type="email" className="field mt-1" value={email} onChange={(e) => setEmail(e.target.value)} autoCapitalize="none" autoComplete="email" inputMode="email" /></div>
+              <div><label className="label" htmlFor="register-f3">Password</label><input id="register-f3" type="password" className="field mt-1" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" /><p className="mt-1 text-xs text-muted">At least 8 characters.</p></div>
+              <div><label className="label" htmlFor="register-f4">Phone</label><input id="register-f4" type="tel" className="field mt-1" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+357…" autoComplete="tel" inputMode="tel" /><p className="mt-1 text-xs text-muted">We’ll send a verification code by SMS.</p></div>
             </div>
             <button className="btn-primary mt-5 min-h-[44px] w-full" disabled={busy || !name || !email || password.length < 8 || !phone}>{busy ? 'Sending…' : 'Continue'}</button>
             <a href="/login" className="mt-4 block text-center text-sm text-muted hover:text-ink">Already have an account? Sign in</a>

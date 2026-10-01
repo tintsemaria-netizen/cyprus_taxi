@@ -53,12 +53,12 @@ export default function StaffLogin() {
         {error && <p className="mt-4 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
         <div className="mt-4 space-y-3">
           <div>
-            <label className="label">Login</label>
-            <input className="field mt-1" value={login} onChange={(e) => setLogin(e.target.value)} autoCapitalize="none" autoComplete="username" />
+            <label className="label" htmlFor="login-f1">Login</label>
+            <input id="login-f1" className="field mt-1" value={login} onChange={(e) => setLogin(e.target.value)} autoCapitalize="none" autoComplete="username" />
           </div>
           <div>
-            <label className="label">Password</label>
-            <input type="password" className="field mt-1" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+            <label className="label" htmlFor="login-f2">Password</label>
+            <input id="login-f2" type="password" className="field mt-1" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
           </div>
           {needCode && (
             <div>

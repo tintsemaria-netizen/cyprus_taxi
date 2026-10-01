@@ -262,7 +262,7 @@ function AssignDialog({ bookingId, revision, isReassign, onClose, onDone }: { bo
                 <span className="block text-sm font-medium">{dr.name}</span>
                 <span className="text-xs text-muted">{dr.vehicle ? `${dr.vehicle.label} · ${dr.vehicle.plate} · ${dr.vehicle.vClass} · ${dr.vehicle.seats}p` : 'no bound vehicle'}</span>
               </span>
-              <span className={`text-[10px] ${dr.gpsFreshness === 'fresh' ? 'text-accent' : 'text-warn'}`}>GPS {dr.gpsFreshness}</span>
+              <span className={`text-xs ${dr.gpsFreshness === 'fresh' ? 'text-accent' : 'text-warn'}`}>GPS {dr.gpsFreshness}</span>
             </button>
           ))}
         </div>

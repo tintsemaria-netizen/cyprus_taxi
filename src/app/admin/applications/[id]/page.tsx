@@ -66,7 +66,7 @@ function Detail() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {d.documents.map((doc) => (
                 <div key={doc.id} className="rounded-[12px] border border-edge p-2">
-                  <div className="text-[11px] font-medium">{doc.slot}</div>
+                  <div className="text-xs font-medium">{doc.slot}</div>
                   {doc.mime.startsWith('image/') ? (
                     <a href={`/api/v1/admin/applications/${id}/documents/${doc.id}`} target="_blank" rel="noreferrer">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -75,12 +75,12 @@ function Detail() {
                   ) : (
                     <a href={`/api/v1/admin/applications/${id}/documents/${doc.id}`} target="_blank" rel="noreferrer" className="mt-1 block text-xs text-accent hover:underline">Open PDF</a>
                   )}
-                  <div className="mt-1 text-[10px] text-muted">scan: {doc.scanStatus}</div>
+                  <div className="mt-1 text-xs text-muted">scan: {doc.scanStatus}</div>
                   <div className="mt-1 flex gap-1">
-                    <button className={`flex-1 rounded px-1 py-1 text-[10px] ${doc.decision === 'ACCEPTED' ? 'bg-accent text-[#10191C]' : 'bg-elevated'}`} disabled={busy} onClick={() => decide(doc.id, 'ACCEPTED', doc.slot)}>Accept</button>
-                    <button className={`flex-1 rounded px-1 py-1 text-[10px] ${doc.decision === 'CHANGES' ? '!bg-danger/20 text-danger' : 'bg-elevated'}`} disabled={busy} onClick={() => decide(doc.id, 'CHANGES', doc.slot)}>Changes</button>
+                    <button className={`flex-1 rounded px-1 py-1 text-xs ${doc.decision === 'ACCEPTED' ? 'bg-accent text-[#10191C]' : 'bg-elevated'}`} disabled={busy} onClick={() => decide(doc.id, 'ACCEPTED', doc.slot)}>Accept</button>
+                    <button className={`flex-1 rounded px-1 py-1 text-xs ${doc.decision === 'CHANGES' ? '!bg-danger/20 text-danger' : 'bg-elevated'}`} disabled={busy} onClick={() => decide(doc.id, 'CHANGES', doc.slot)}>Changes</button>
                   </div>
-                  {doc.decisionNote && <p className="mt-1 text-[10px] text-danger">{doc.decisionNote}</p>}
+                  {doc.decisionNote && <p className="mt-1 text-xs text-danger">{doc.decisionNote}</p>}
                 </div>
               ))}
             </div>
@@ -103,11 +103,11 @@ function Detail() {
               {d.status === 'REJECTED' && <p className="text-sm text-danger">Rejected: {d.decisionReason}</p>}
               {d.status === 'CHANGES_REQUESTED' && <p className="text-sm text-warn">Awaiting applicant changes.</p>}
             </div>
-            <p className="mt-2 text-[11px] text-muted">Approval requires every required document Accepted. Concurrency-guarded by revision.</p>
+            <p className="mt-2 text-xs text-muted">Approval requires every required document Accepted. Concurrency-guarded by revision.</p>
           </section>
           <section className="card p-4">
             <h2 className="label mb-2">History</h2>
-            <ul className="space-y-1 text-[11px] text-muted">
+            <ul className="space-y-1 text-xs text-muted">
               {d.events.map((e, i) => <li key={i}>· {e.type}{e.visibility === 'INTERNAL' ? ' (internal)' : ''} — {new Date(e.at).toLocaleString('en-GB')}{e.detail ? ` · ${e.detail}` : ''}</li>)}
             </ul>
           </section>
