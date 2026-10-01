@@ -42,6 +42,13 @@ x-app-env: &app-env
   CLICKHOUSE_READ_USER: ${CLICKHOUSE_READ_USER:-taxi_reader}
   CLICKHOUSE_READ_PASSWORD: ${CLICKHOUSE_READ_PASSWORD:-}
 
+# Bounded container logs (json-file rotation) for every service on this shared host.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
 services:
   taxi-db:
     image: postgres:16-alpine
@@ -55,6 +62,9 @@ services:
       - taxicy_pgdata:/var/lib/postgresql/data
     networks:
       - taxicy_net
+    logging: *logging
+    mem_limit: 2g
+    cpus: 2.0
     # No `ports:` — database reachable only on the internal network.
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
@@ -72,7 +82,9 @@ services:
         NEXT_PUBLIC_MAP_ATTRIBUTION: ${NEXT_PUBLIC_MAP_ATTRIBUTION}
         NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
         NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: ${NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}
-    image: taxicy-taxi-app
+        APP_RELEASE: ${APP_RELEASE:-unknown}
+    # Tagged by git commit (scripts/deploy.sh sets APP_RELEASE) so a rollback is `up` with the old tag.
+    image: taxicy-taxi-app:${APP_RELEASE:-latest}
     container_name: taxicy-app
     restart: unless-stopped
     depends_on:
@@ -89,12 +101,15 @@ services:
       - '127.0.0.1:${APP_HOST_PORT}:3000'
     networks:
       - taxicy_net
+    logging: *logging
+    mem_limit: 1g
+    cpus: 1.5
 
   # Dedicated worker: same image, runs ONLY the background loop (dispatch, notifications,
   # analytics export, maintenance). Not proxied by nginx; no published port. Skips migrations
   # (the web app owns them) and waits for the schema before starting.
   taxi-worker:
-    image: taxicy-taxi-app
+    image: taxicy-taxi-app:${APP_RELEASE:-latest}
     container_name: taxicy-worker
     restart: unless-stopped
     depends_on:
@@ -108,6 +123,9 @@ services:
       - taxicy_uploads:/app/private-uploads
     networks:
       - taxicy_net
+    logging: *logging
+    mem_limit: 768m
+    cpus: 1.0
 
   # Private analytics store (Task 016 §6/§9). Pinned LTS image, persistent volume, NO public
   # ports, resource-bounded so it can never starve PostgreSQL. Least-privilege users are created
@@ -131,6 +149,7 @@ services:
       - ./deploy/clickhouse/init:/docker-entrypoint-initdb.d:ro
     networks:
       - taxicy_net
+    logging: *logging
     mem_limit: 2g
     cpus: 2.0
     ulimits:

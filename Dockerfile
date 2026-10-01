@@ -29,6 +29,11 @@ RUN npx prisma generate && npm run build
 FROM node:22-alpine AS runner
 WORKDIR /app
 RUN apk add --no-cache openssl curl
+# The git commit this image was built from is baked in (label + env), so /health/live reports the
+# code that is actually running — never just a runtime label (see scripts/deploy.sh).
+ARG APP_RELEASE=unknown
+LABEL org.opencontainers.image.revision=$APP_RELEASE
+ENV APP_RELEASE_BUILT=$APP_RELEASE
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 # Full node_modules kept so `prisma migrate deploy` and tsx seeds run at release time.

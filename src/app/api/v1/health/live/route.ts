@@ -54,7 +54,8 @@ export async function GET(req: Request) {
   }
   return NextResponse.json({
     status: ok ? 'live' : 'degraded',
-    release: process.env.APP_RELEASE || 'dev',
+    // Prefer the commit baked into the image at build time (cannot be mislabelled by a runtime env).
+    release: process.env.APP_RELEASE_BUILT && process.env.APP_RELEASE_BUILT !== 'unknown' ? process.env.APP_RELEASE_BUILT : process.env.APP_RELEASE || 'dev',
     demoMode: (process.env.DEMO_MODE || 'true').toLowerCase() === 'true',
     mode: dedicated ? 'dedicated-workers' : 'embedded-worker',
     dispatch: { alive: dispatchAlive, lastTickAgoMs },
