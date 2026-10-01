@@ -31,3 +31,4 @@ IL-Y-web-assets.zip
 
 # Private KYC document storage (Task 015) — never in Git
 private-uploads/
+deploy/watchdog-state/

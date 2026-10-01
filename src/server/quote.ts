@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { sha256 } from '@/lib/crypto';
 import { haversineMeters } from '@/lib/geo';
+import { isAirportPoint } from '@/lib/airports';
 import { computeMeterEstimate } from '@/lib/tariff';
 import { computeDynamicMultiplier, dynamicSurchargeCents } from '@/lib/pricing-dynamic';
 import { marketSnapshot } from '@/server/dispatch/market';
@@ -54,6 +55,9 @@ export interface QuoteBody {
   expiresAt: string;
   routeAvailable: boolean;
   routeSource: string; // 'traffic' | 'approx'
+  // Pickup or drop-off at LCA/PFO: official fixed airport fares apply and may differ from this
+  // meter estimate (fixed-fare engine pending the current RTD table — UI shows a disclaimer).
+  airport: boolean;
   pricedForAt: string | null; // journey time the price/tariff applies to (scheduled), else null
   dynamic?: { multiplier: number; applied: boolean; demandSupplyRatio: number | null; reasons: string[]; version: string };
 }
@@ -152,6 +156,7 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
       lines, totalCents, rangeLowCents, rangeHighCents,
       expiresAt: expiresAt.toISOString(), routeAvailable, routeSource,
       pricedForAt: input.scheduledAtUtc ? pricingAt.toISOString() : null,
+      airport: isAirportPoint(input.pickup.lat, input.pickup.lng) || isAirportPoint(input.dropoff.lat, input.dropoff.lng),
       dynamic,
     },
   };

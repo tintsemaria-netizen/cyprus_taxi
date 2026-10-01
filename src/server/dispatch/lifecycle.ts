@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { computeFreshness } from '@/lib/freshness';
 import { haversineMeters } from '@/lib/geo';
+import { isAirportPoint } from '@/lib/airports';
 import { enqueuePassenger } from '@/server/push';
 import { recordEvent, driverPseudo } from '@/server/events';
 
@@ -24,12 +25,8 @@ export function generateStartCode(): string {
 }
 
 // Airports allow a meeting-point pickup where strict GPS proximity is impractical (§6.4).
-const AIRPORTS = [
-  { lat: 34.8751, lng: 33.6249 }, // Larnaca (LCA)
-  { lat: 34.718, lng: 32.4857 }, // Paphos (PFO)
-];
 function isAirportPickup(lat: number, lng: number): boolean {
-  return AIRPORTS.some((a) => haversineMeters({ lat, lng }, a) <= 2500);
+  return isAirportPoint(lat, lng);
 }
 
 type ActorRef = { type: 'DRIVER' | 'STAFF' | 'SYSTEM'; id?: string };

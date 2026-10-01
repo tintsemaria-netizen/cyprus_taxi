@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Task 016 §9 — automated encrypted backups of the beta data platform.
 #   1. PostgreSQL logical dump (authoritative operational + finance + KYC-metadata store)
 #   2. Private uploads volume (KYC document bytes) — kept consistent with the PG metadata
@@ -7,7 +7,9 @@
 #      analytics dump. (A native `clickhouse-backup` can be added when the store grows.)
 # Everything is encrypted at rest with AES-256 (openssl, pbkdf2). Local snapshots alone are NOT
 # disaster recovery — an OFF-HOST destination must be configured (BACKUP_REMOTE) to be safe.
-set -eu
+set -euo pipefail
+# pipefail: a failing pg_dump / tar in a pipe must fail the backup instead of writing an
+# encrypted empty file that looks like a successful snapshot.
 
 OUT="${BACKUP_DIR:-/home/claudeuser/projects/cyprus_taxi/deploy/backups}"
 PASS="${BACKUP_PASSPHRASE_FILE:-/home/claudeuser/projects/cyprus_taxi/deploy/secrets/backup.pass}"
@@ -23,6 +25,11 @@ echo "[backup] $STAMP → $OUT"
 
 # 1) PostgreSQL (custom format, compressed).
 docker exec taxicy-db pg_dump -U taxi -d taxi_cyprus -Fc | enc > "$OUT/pg-$STAMP.dump.enc"
+# Sanity: a real dump of this DB is far larger than an encrypted empty stream.
+PG_BYTES=$(stat -c %s "$OUT/pg-$STAMP.dump.enc")
+if [ "$PG_BYTES" -lt "${BACKUP_MIN_PG_BYTES:-10240}" ]; then
+  echo "[backup] FATAL: pg dump only ${PG_BYTES} bytes — treating as failed"; rm -f "$OUT/pg-$STAMP.dump.enc"; exit 1
+fi
 echo "[backup]  pg-$STAMP.dump.enc ($(du -h "$OUT/pg-$STAMP.dump.enc" | cut -f1))"
 
 # 2) Private uploads (KYC bytes) from the named volume.

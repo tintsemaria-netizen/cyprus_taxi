@@ -201,7 +201,7 @@ export default function BookingApp() {
   }, [pickup, dropoff]);
 
   // Fare estimate (server-issued quote) — recomputed when the trip inputs change.
-  interface QuoteBody { quoteId: string; priceType: string; totalCents: number; rangeLowCents: number; rangeHighCents: number; night: boolean; holiday: boolean; routeAvailable: boolean; lines: { code: string; label: string; cents: number }[]; }
+  interface QuoteBody { quoteId: string; priceType: string; totalCents: number; rangeLowCents: number; rangeHighCents: number; night: boolean; holiday: boolean; routeAvailable: boolean; airport?: boolean; lines: { code: string; label: string; cents: number }[]; }
   const [quote, setQuote] = useState<QuoteBody | null>(null);
   const [quoteErr, setQuoteErr] = useState<string | null>(null);
   useEffect(() => {
@@ -458,7 +458,7 @@ export default function BookingApp() {
                       {when === 'SCHEDULE' && (
                         <div className="mt-2">
                           <input type="datetime-local" className={`field ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
-                          <p className="mt-1 text-xs text-muted">Time is <strong>{cfg?.timezone ?? 'Europe/Nicosia'}</strong> (Cyprus) regardless of your device. A scheduled ride is a request awaiting dispatcher confirmation.</p>
+                          <p className="mt-1 text-xs text-muted">Time is <strong>{cfg?.timezone ?? 'Europe/Nicosia'}</strong> (Cyprus) regardless of your device. We start matching a nearby driver automatically shortly before your pickup time.</p>
                           {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
                         </div>
                       )}
@@ -528,6 +528,7 @@ export default function BookingApp() {
                             {quote.night && <span className="ml-1">· night tariff</span>}
                             {quote.holiday && <span className="ml-1">· holiday</span>}
                             <div className="mt-1 text-[10px] text-muted">Regulated meter estimate — final amount is set by the taximeter. {quote.routeAvailable ? '' : 'Distance approximate (routing unavailable).'}</div>
+                            {quote.airport && <AirportFareNote />}
                           </div>
                         ) : quoteErr ? (
                           <div className="mt-1 text-warn">Couldn&apos;t estimate the fare: {quoteErr}</div>
@@ -554,8 +555,9 @@ export default function BookingApp() {
                       <Row label="Name" value={name} />
                       <Row label="Phone" value={phone} />
                       {note && <Row label="Note" value={note} />}
-                      <Row label="Fare" value="Confirmed by dispatcher" />
+                      <Row label="Fare" value={quote ? `≈ ${eur(quote.totalCents)} (${eur(quote.rangeLowCents)}–${eur(quote.rangeHighCents)}) · meter estimate` : 'Set by the taximeter'} />
                     </div>
+                    {quote?.airport && <AirportFareNote />}
                     {ambiguous ? (
                       <div className="mt-4 rounded-[12px] border border-warn/40 bg-warn/10 p-3">
                         <p className="text-sm text-warn">On this night the clocks change and this time occurs twice. Which one do you mean?</p>
@@ -578,7 +580,7 @@ export default function BookingApp() {
                     ) : (
                       <button className="btn-primary mt-5 w-full" onClick={() => submit()} disabled={submitting}>{submitting ? 'Sending…' : 'Confirm request'}</button>
                     )}
-                    <p className="mt-2 text-center text-[11px] text-muted">You&apos;ll get a private tracking link. No driver is reserved until a dispatcher assigns one.</p>
+                    <p className="mt-2 text-center text-[11px] text-muted">{when === 'NOW' ? 'We’ll automatically offer your ride to the nearest available driver.' : 'We’ll automatically match a nearby driver shortly before pickup.'} You&apos;ll get a private tracking link. Pay the driver directly.</p>
                   </div>
                 )}
               </div>
@@ -611,6 +613,16 @@ export default function BookingApp() {
         />
       )}
     </div>
+  );
+}
+
+// Airport trips: official fixed fares (Road Transport Department) apply and can differ from the
+// meter estimate. Shown until the fixed-fare table is implemented (2026-10-01 audit, Stage 0.7).
+function AirportFareNote() {
+  return (
+    <p className="mt-2 rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">
+      Airport trip: official fixed airport fares apply. The driver charges the official fare, which may differ from this estimate.
+    </p>
   );
 }
 
