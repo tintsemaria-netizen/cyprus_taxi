@@ -27,7 +27,7 @@ interface TripCard {
   driverStatus: string; fare: { label: string; cents: number | null; currency: string }; payment: string | null;
 }
 interface Dashboard {
-  driver: { name: string; eligibility: string; canWork: boolean };
+  driver: { name: string; eligibility: string; canWork: boolean; rating: { average: number | null; count: number } };
   status: { onDuty: boolean; available: boolean; sharingSessionOpen: boolean; hasActiveTrip: boolean; activeBookingId: string | null };
   vehicle: { plate: string; vClass: string; seats: number; label: string } | null;
   today: { recordedEarnings: { currency: string; cents: number }[]; pendingFinalTrips: number; completedTrips: number; onlineSeconds: number };
@@ -531,7 +531,12 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
     <div className="space-y-3">
       <h1 className="text-xl font-semibold">Profile</h1>
       <div className="card p-4">
-        <div className="font-semibold">{dash?.driver.name ?? 'Driver'}</div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="font-semibold">{dash?.driver.name ?? 'Driver'}</div>
+          {dash && (dash.driver.rating.count > 0
+            ? <div className="text-sm font-semibold text-accent" title={`${dash.driver.rating.count} rating${dash.driver.rating.count > 1 ? 's' : ''}`}>★ {dash.driver.rating.average?.toFixed(1)} <span className="text-xs font-normal text-muted">({dash.driver.rating.count})</span></div>
+            : <div className="text-xs text-muted">No ratings yet</div>)}
+        </div>
         <div className="text-xs text-muted">Eligibility: {dash?.driver.eligibility ?? '—'}</div>
         <div className="mt-2"><NotifyToggle pushUrl="/driver/push" /></div>
       </div>

@@ -68,11 +68,18 @@ model Driver {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
+  // Aggregate passenger rating (Task 020). ratingTotal is the SUM of stars (integer, no float
+  // drift); the displayed average is ratingTotal / ratingCount. Both are maintained in the same
+  // transaction that writes a TripRating, so they are always consistent with the rating rows.
+  ratingTotal Int @default(0)
+  ratingCount Int @default(0)
+
   bindings     DriverVehicleBinding[]
   assignments  Assignment[]
   offers       DriverOffer[]
   location     LatestDriverLocation?
   dutySessions DutySession[]
+  ratings      TripRating[]
 }
 
 // Driver on/off-duty sessions (Task 017). Server-timestamped so online-time totals are
@@ -460,11 +467,32 @@ model Booking {
   fare        Fare?
   messages    ChatMessage[]
   settlements DriverSettlement[]
+  rating      TripRating?
 
   @@index([status, createdAt])
   @@index([status, scheduledAt])
   @@index([phone])
   @@index([passengerId, createdAt])
+}
+
+// Post-trip passenger rating of the driver (Task 020). Exactly one per completed booking
+// (bookingId @unique), written once by the owning passenger. Immutable after creation — the
+// honest record of how the trip was rated at the time. Stars are 1..5; tags is a JSON array of
+// short slugs from a fixed vocabulary; comment is optional, length-capped at the API layer.
+// Creating a row also increments the driver's ratingTotal/ratingCount in the SAME transaction.
+model TripRating {
+  id          String   @id @default(uuid())
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId   String   @unique
+  driver      Driver   @relation(fields: [driverId], references: [id])
+  driverId    String
+  passengerId String // owning passenger (scalar, matches Booking.passengerId coupling)
+  stars       Int
+  tags        String? // JSON array of tag slugs
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  @@index([driverId])
 }
 
 // Passenger↔driver chat, scoped to one booking (Task: rider can message the driver).

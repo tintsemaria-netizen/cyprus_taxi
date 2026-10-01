@@ -4,6 +4,7 @@ import { getSettings } from '@/lib/settings';
 import { earningsSummary } from './earnings';
 import { listDriverTrips } from './trips';
 import { hasOpenSession } from './duty';
+import { driverRatingSummary } from '@/server/ratings';
 
 // Driver Home summary (Task 017 §3/§7). PostgreSQL is authoritative; this endpoint stays fully
 // operational if ClickHouse is down. Pending applicants / suspended / expired drivers get their
@@ -50,9 +51,11 @@ export async function driverDashboard(driver: DriverRow) {
   const latest = (await listDriverTrips(driver.id, { limit: 3 })).items;
   const activeAsg = await prisma.assignment.findFirst({ where: { activeDriverId: driver.id }, select: { activeBookingId: true } });
   const settings = await getSettings();
+  const ratingRow = await prisma.driver.findUnique({ where: { id: driver.id }, select: { ratingTotal: true, ratingCount: true } });
+  const rating = driverRatingSummary(ratingRow ?? { ratingTotal: 0, ratingCount: 0 });
 
   return {
-    driver: { name: driver.publicName.split(' ')[0] || driver.publicName, eligibility: driver.eligibility, canWork: eligible },
+    driver: { name: driver.publicName.split(' ')[0] || driver.publicName, eligibility: driver.eligibility, canWork: eligible, rating },
     status: { onDuty: driver.onDuty, available: driver.available, sharingSessionOpen: await hasOpenSession(driver.id), hasActiveTrip: !!activeAsg?.activeBookingId, activeBookingId: activeAsg?.activeBookingId ?? null },
     vehicle: binding ? { plate: binding.vehicle.plate, vClass: binding.vehicle.vClass, seats: binding.vehicle.seats, label: `${binding.vehicle.color} ${binding.vehicle.make} ${binding.vehicle.model}` } : null,
     today: {

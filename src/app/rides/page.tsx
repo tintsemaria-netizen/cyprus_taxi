@@ -4,17 +4,19 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Brand';
 import { PassengerLoginModal } from '@/components/booking/PassengerLoginModal';
+import { RateTripModal } from '@/components/booking/RateTripModal';
 import { api, ApiRequestError } from '@/lib/api-client';
 
 export const dynamic = 'force-dynamic';
 
-interface Ride { id: string; reference: string; status: string; active: boolean; at: string; pickup: string; dropoff: string; fareCents: number | null }
+interface Ride { id: string; reference: string; status: string; active: boolean; at: string; pickup: string; dropoff: string; fareCents: number | null; ratedStars: number | null }
 
 export default function Page() {
   const router = useRouter();
   const [rides, setRides] = useState<Ride[] | null>(null);
   const [needLogin, setNeedLogin] = useState(false);
   const [show, setShow] = useState(false);
+  const [rating, setRating] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try { const r = await api<{ rides: Ride[] }>('/passenger/rides'); setRides(r.rides); setNeedLogin(false); }
@@ -54,15 +56,19 @@ export default function Page() {
                 <div className="truncate text-sm font-medium">{r.pickup} → {r.dropoff}</div>
                 <div className="text-xs text-muted">{new Date(r.at).toLocaleString('en-GB')} · {r.fareCents != null ? `≈ €${(r.fareCents / 100).toFixed(2)}` : '—'}</div>
               </div>
-              <div className="text-right">
+              <div className="shrink-0 text-right">
                 <div className="chip">{r.status.replace(/_/g, ' ')}</div>
                 {r.active && <button className="mt-1 block text-xs text-accent hover:underline" onClick={() => openTracking(r.id)}>Track live ›</button>}
+                {!r.active && r.status === 'COMPLETED' && (r.ratedStars != null
+                  ? <div className="mt-1 text-xs text-accent" aria-label={`You rated ${r.ratedStars} out of 5`}>{'★'.repeat(r.ratedStars)}<span className="text-muted/40">{'★'.repeat(5 - r.ratedStars)}</span></div>
+                  : <button className="mt-1 block text-xs text-accent hover:underline" onClick={() => setRating(r.id)}>Rate trip ›</button>)}
               </div>
             </div>
           ))}
         </div>
       )}
       {show && <PassengerLoginModal onClose={() => setShow(false)} onDone={() => { setShow(false); load(); }} />}
+      {rating && <RateTripModal rideId={rating} onClose={() => setRating(null)} onDone={(stars) => { setRides((rs) => rs ? rs.map((x) => x.id === rating ? { ...x, ratedStars: stars } : x) : rs); setRating(null); }} />}
     </div>
   );
 }
