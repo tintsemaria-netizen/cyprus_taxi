@@ -30,3 +30,20 @@
 - vitest `tests/ratings.db.test.ts` (7 tests): records + aggregates, rejects double rating,
   refuses non-completed, enforces ownership (404), averages across trips, validation rules.
 - Full suite 104 passed / 1 skipped (CH integration) on an isolated `_test` DB; `tsc --noEmit` clean.
+
+## Follow-on: passenger ride receipt
+
+- **Server** (`src/server/receipt.ts`): `passengerReceipt(bookingId, passengerId)` builds a receipt
+  from the IMMUTABLE Fare — reference, completion time (the COMPLETED event), endpoints, class/pax,
+  the driver + vehicle snapshot from the completing assignment, itemised fare lines, waiting, and
+  payment method/status. Honest about regulated metering: `finalCents` stays null and the receipt
+  shows the estimate + a clear note (the metered total is paid to the driver), never a fabricated
+  total. Upfront price shows the committed final amount. Ownership-scoped; 409 `NO_RECEIPT` before
+  completion.
+- **API**: `GET /api/v1/passenger/rides/[id]/receipt`. **UI**: `/rides/[id]` receipt page +
+  "Receipt ›" link on completed rides in My rides.
+- **Email**: no email transport exists in the app (SMS/OTP is phone-only via Twilio Verify).
+  Emailed receipts are deferred as a gated future enablement (needs an SMTP/provider + env) — see
+  the external-blockers doc. The in-app receipt is the delivered surface.
+- **Evidence**: `tests/receipt.db.test.ts` (3 tests); full suite 107 passed / 1 skipped; `tsc`
+  clean; `npm run build` compiles `/rides/[id]` + the new API routes.

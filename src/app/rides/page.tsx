@@ -59,9 +59,14 @@ export default function Page() {
               <div className="shrink-0 text-right">
                 <div className="chip">{r.status.replace(/_/g, ' ')}</div>
                 {r.active && <button className="mt-1 block text-xs text-accent hover:underline" onClick={() => openTracking(r.id)}>Track live ›</button>}
-                {!r.active && r.status === 'COMPLETED' && (r.ratedStars != null
-                  ? <div className="mt-1 text-xs text-accent" aria-label={`You rated ${r.ratedStars} out of 5`}>{'★'.repeat(r.ratedStars)}<span className="text-muted/40">{'★'.repeat(5 - r.ratedStars)}</span></div>
-                  : <button className="mt-1 block text-xs text-accent hover:underline" onClick={() => setRating(r.id)}>Rate trip ›</button>)}
+                {!r.active && r.status === 'COMPLETED' && (
+                  <>
+                    {r.ratedStars != null
+                      ? <div className="mt-1 text-xs text-accent" aria-label={`You rated ${r.ratedStars} out of 5`}>{'★'.repeat(r.ratedStars)}<span className="text-muted/40">{'★'.repeat(5 - r.ratedStars)}</span></div>
+                      : <button className="mt-1 block text-xs text-accent hover:underline" onClick={() => setRating(r.id)}>Rate trip ›</button>}
+                    <a className="mt-1 block text-xs text-muted hover:text-ink" href={`/rides/${r.id}`}>Receipt ›</a>
+                  </>
+                )}
               </div>
             </div>
           ))}
