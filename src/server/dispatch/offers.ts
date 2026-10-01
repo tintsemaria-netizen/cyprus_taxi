@@ -14,6 +14,8 @@ export const OFFER_TTL_SEC = 20;
 export async function createOffer(bookingId: string, c: Candidate): Promise<{ id: string } | null> {
   try {
     const res = await prisma.$transaction(async (tx) => {
+      // Lock the booking so an offer can never be created just after a concurrent cancel commits.
+      await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
       const booking = await tx.booking.findUnique({ where: { id: bookingId } });
       if (!booking || booking.status !== 'SEARCHING') return null;
       // Belt-and-braces: skip if the driver is already reserved elsewhere.

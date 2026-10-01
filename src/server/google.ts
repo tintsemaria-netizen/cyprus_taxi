@@ -10,9 +10,9 @@ export function googleConfigured(): boolean {
   return !!config.googleServerKey();
 }
 
-async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
+async function fetchJson(url: string, init?: RequestInit, timeoutMs: number = TIMEOUT_MS): Promise<unknown> {
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const t = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, { ...init, signal: controller.signal });
     return await res.json();
@@ -135,6 +135,7 @@ export async function googleRoute(
   from: { lat: number; lng: number },
   to: { lat: number; lng: number },
   departureTime?: string,
+  opts: { timeoutMs?: number } = {},
 ): Promise<RouteResult | null> {
   const key = config.googleServerKey();
   const body: Record<string, unknown> = {
@@ -154,7 +155,7 @@ export async function googleRoute(
       'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline',
     },
     body: JSON.stringify(body),
-  })) as {
+  }, opts.timeoutMs)) as {
     routes?: { distanceMeters?: number; duration?: string; polyline?: { encodedPolyline?: string } }[];
     error?: { message?: string };
   };

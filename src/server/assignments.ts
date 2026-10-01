@@ -5,7 +5,8 @@ import { computeFreshness } from '@/lib/freshness';
 import { canWork } from '@/lib/eligibility-policy';
 import { generateStartCode } from '@/server/dispatch/lifecycle';
 import { recordEvent, driverPseudo } from '@/server/events';
-import { enqueueDriver } from '@/server/push';
+import { enqueueDriver, enqueuePassenger } from '@/server/push';
+import { startSearchTx, stopSearchTx } from '@/server/dispatch/search';
 
 export type Actor = 'STAFF' | 'DRIVER' | 'PASSENGER';
 
@@ -157,8 +158,7 @@ export async function assignBooking(params: {
     await createAssignment(tx, booking, driver, vehicle, params.actorId);
 
     // Tear down any in-flight autonomous dispatch for this booking.
-    await tx.driverOffer.updateMany({ where: { bookingId: booking.id, status: 'OFFERED' }, data: { status: 'CANCELED', respondedAt: new Date(), activeBookingId: null, activeDriverId: null } });
-    await tx.dispatchJob.deleteMany({ where: { bookingId: booking.id } });
+    await stopSearchTx(tx, booking.id);
 
     const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: 'ASSIGNED', revision: { increment: 1 } } });
     await tx.bookingEvent.create({
@@ -180,12 +180,20 @@ export async function unassignBooking(params: {
     if (!booking) throw notFound();
     if (booking.revision !== params.expectedRevision) throw conflict();
     if (!['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(booking.status)) throw conflict('Booking cannot be unassigned in its current state.');
+    const prior = await tx.assignment.findFirst({ where: { activeBookingId: booking.id }, select: { driverId: true } });
     await endActiveAssignment(tx, booking.id, params.reason || 'unassigned');
-    const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: 'REQUESTED', revision: { increment: 1 } } });
+    // An immediate ride goes straight back into autonomous search (with a DispatchJob, excluding
+    // the released driver) — as REQUESTED it would never be picked up again. A scheduled ride
+    // returns to REQUESTED and is promoted by the worker at its lead time as usual.
+    const next = booking.scheduledAt ? 'REQUESTED' : 'SEARCHING';
+    if (next === 'SEARCHING') await startSearchTx(tx, booking.id, { triedDriverIds: prior ? [prior.driverId] : [] });
+    const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: next, arrivedAt: null, revision: { increment: 1 } } });
+    await tx.waitingSession.deleteMany({ where: { bookingId: booking.id } });
     await tx.bookingEvent.create({
-      data: { bookingId: booking.id, type: 'UNASSIGNED', actorType: 'STAFF', actorId: params.actorId, beforeStatus: booking.status, afterStatus: 'REQUESTED', reason: params.reason },
+      data: { bookingId: booking.id, type: 'UNASSIGNED', actorType: 'STAFF', actorId: params.actorId, beforeStatus: booking.status, afterStatus: next, reason: params.reason },
     });
-    await recordEvent(tx, { eventType: 'booking.unassigned', aggregateType: 'booking', aggregateId: booking.id, aggregateVersion: updated.revision, correlationId: booking.id, payload: { bookingId: booking.id, status: 'REQUESTED', actorType: 'STAFF', reason: params.reason ?? null } });
+    await recordEvent(tx, { eventType: 'booking.unassigned', aggregateType: 'booking', aggregateId: booking.id, aggregateVersion: updated.revision, correlationId: booking.id, payload: { bookingId: booking.id, status: next, actorType: 'STAFF', reason: params.reason ?? null } });
+    if (next === 'SEARCHING') await enqueuePassenger(tx, booking.id, 'Finding you another driver', 'Your driver was changed — we’re matching you again.');
     return { revision: updated.revision, status: updated.status };
   });
 }
@@ -264,6 +272,10 @@ export async function changeStatus(params: {
     if (params.to === 'COMPLETED' || params.to === 'CANCELED') {
       await endActiveAssignment(tx, booking.id, params.to === 'COMPLETED' ? 'completed' : 'canceled');
     }
+    // Entering search needs a DispatchJob (else the worker never sees it); leaving it must
+    // withdraw any outstanding offer so the offered driver is released immediately.
+    if (params.to === 'SEARCHING') await startSearchTx(tx, booking.id);
+    if (params.to === 'CANCELED' || params.to === 'NO_DRIVER') await stopSearchTx(tx, booking.id);
 
     const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: params.to, revision: { increment: 1 } } });
     await tx.bookingEvent.create({

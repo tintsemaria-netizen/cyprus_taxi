@@ -1,3 +1,4 @@
+import { startSearchTx } from '@/server/dispatch/search';
 import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { getSettings } from '@/lib/settings';
@@ -158,7 +159,7 @@ export async function createBooking(
         payload: bookingEventPayload(b),
       });
       if (initialStatus === 'SEARCHING') {
-        await tx.dispatchJob.create({ data: { bookingId: b.id, deadlineAt: new Date(Date.now() + 180 * 1000) } });
+        await startSearchTx(tx, b.id);
       }
       const grant = await createGrantTx(tx, b.id, scheduledAt ?? new Date());
       const built: BookingCreatedBody = {

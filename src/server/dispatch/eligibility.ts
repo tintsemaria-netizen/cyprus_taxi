@@ -7,6 +7,7 @@ import { eligibleDriverWhere } from '@/lib/eligibility-policy';
 export const RADIUS_STAGES_KM = [3, 7, 15]; // expand search in stages (Task 012 §4.2)
 export const MAX_PICKUP_ETA_SEC = 20 * 60; // exclude candidates worse than 20 min
 export const SHORTLIST = 5; // how many nearest to road-route per cycle
+export const DISPATCH_ROUTE_TIMEOUT_MS = 2500; // per Routes call while matching (falls back to approx)
 const ETA_TIE_SEC = 60; // candidates within 60s of best ETA tie-break on idle
 
 export interface Candidate {
@@ -24,6 +25,7 @@ export async function findBestCandidate(
   booking: { pickupLat: number; pickupLng: number; vClass: 'COMFORT' | 'XL'; passengerCount: number },
   radiusKm: number,
   triedDriverIds: string[],
+  etaCache: Map<string, { etaSec: number; approx: boolean }> = new Map(),
 ): Promise<Candidate | null> {
   const pickup = { lat: booking.pickupLat, lng: booking.pickupLng };
 
@@ -60,27 +62,33 @@ export async function findBestCandidate(
   // Road-route the nearest few (straight-line distance is only a prefilter).
   prelim.sort((a, b) => a.distanceMeters - b.distanceMeters);
   const shortlist = prelim.slice(0, SHORTLIST);
-  const scored: Candidate[] = [];
-  for (const c of shortlist) {
+  // Routed in PARALLEL with a short per-call timeout: a slow/failing Google Routes falls back to a
+  // straight-line estimate in ~2.5s for the whole shortlist instead of 8s per driver in sequence.
+  const approxEta = (m: number) => Math.round((m / 1000 / 40) * 3600);
+  const etas = await Promise.all(shortlist.map(async (c) => {
+    const cached = etaCache.get(c.driverId);
+    if (cached) return cached;
     const d = drivers.find((x) => x.id === c.driverId)!;
     const from = { lat: d.location!.lat, lng: d.location!.lng };
-    let etaSec: number;
-    let approx = false;
+    let res: { etaSec: number; approx: boolean };
     if (googleConfigured()) {
       try {
-        const r = await googleRoute(from, pickup);
-        etaSec = r ? r.etaMinutes * 60 : Math.round((c.distanceMeters / 1000 / 40) * 3600);
-        if (!r) approx = true;
+        const r = await googleRoute(from, pickup, undefined, { timeoutMs: DISPATCH_ROUTE_TIMEOUT_MS });
+        res = r ? { etaSec: r.etaMinutes * 60, approx: false } : { etaSec: approxEta(c.distanceMeters), approx: true };
       } catch {
-        etaSec = Math.round((c.distanceMeters / 1000 / 40) * 3600);
-        approx = true;
+        res = { etaSec: approxEta(c.distanceMeters), approx: true };
       }
     } else {
-      etaSec = Math.round((c.distanceMeters / 1000 / 40) * 3600);
-      approx = true;
+      res = { etaSec: approxEta(c.distanceMeters), approx: true };
     }
+    etaCache.set(c.driverId, res);
+    return res;
+  }));
+  const scored: Candidate[] = [];
+  shortlist.forEach((c, i) => {
+    const { etaSec, approx } = etas[i];
     if (etaSec <= MAX_PICKUP_ETA_SEC) scored.push({ driverId: c.driverId, vehicleId: c.vehicleId, distanceMeters: c.distanceMeters, etaSec, etaApproximate: approx });
-  }
+  });
   if (!scored.length) return null;
 
   // Rank primarily by ETA; within a 60s band prefer the longest-idle driver (fairness),

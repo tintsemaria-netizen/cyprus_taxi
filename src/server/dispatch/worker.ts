@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { findBestCandidate, RADIUS_STAGES_KM } from './eligibility';
+import { startSearchTx, searchDeadline } from './search';
 import { createOffer, expireOffer } from './offers';
 import { rematchBooking } from './lifecycle';
 import { enqueuePassenger } from '@/server/push';
@@ -16,6 +17,7 @@ import { heartbeat } from '@/server/workers/heartbeat';
 
 const TICK_MS = 2000;
 const LEASE_MS = 10_000;
+const TICK_JOB_BUDGET_MS = 6000; // stop starting new jobs after this much of a tick
 const MAINTENANCE_EVERY_TICKS = Math.max(1, Math.round(300_000 / TICK_MS)); // ~5 min
 
 // Next.js compiles instrumentation.ts and route handlers into SEPARATE bundles, so a
@@ -89,8 +91,10 @@ export async function runOnce(): Promise<void> {
 // The dispatch work of a single tick: promote scheduled, rematch on GPS loss, resolve expired
 // offers, and advance SEARCHING bookings that have no live offer.
 async function runDispatchSection(now: Date): Promise<void> {
+  const started = Date.now();
   await promoteScheduled(now);
   await rematchOnGpsLoss(now);
+  await repairSearchWithoutJob(now);
 
   const expired = await prisma.driverOffer.findMany({ where: { status: 'OFFERED', expiresAt: { lt: now } }, select: { id: true } });
   for (const o of expired) await expireOffer(o.id);
@@ -101,6 +105,9 @@ async function runDispatchSection(now: Date): Promise<void> {
     take: 25,
   });
   for (const j of jobs) {
+    // Time budget: a slow tick (e.g. degraded Google routing) must not starve offer expiry,
+    // promotion and GPS-loss handling — the remaining jobs are picked up next tick.
+    if (Date.now() - started > TICK_JOB_BUDGET_MS) break;
     const active = await prisma.driverOffer.findFirst({ where: { activeBookingId: j.bookingId } });
     if (active) continue; // waiting on an outstanding offer
     // Claim a short lease so only one worker/tick processes this job.
@@ -147,15 +154,37 @@ async function processJob(jobId: string): Promise<void> {
   }
 
   // Find the best candidate, expanding the radius in stages if the closer ring is empty.
+  // ETAs are cached across stages so an inner-ring driver is road-routed at most once per job.
+  const etaCache = new Map<string, { etaSec: number; approx: boolean }>();
   let stage = job.radiusStage;
-  let candidate = await findBestCandidate(job.booking, RADIUS_STAGES_KM[Math.min(stage, RADIUS_STAGES_KM.length - 1)], job.triedDriverIds);
+  let candidate = await findBestCandidate(job.booking, RADIUS_STAGES_KM[Math.min(stage, RADIUS_STAGES_KM.length - 1)], job.triedDriverIds, etaCache);
   while (!candidate && stage < RADIUS_STAGES_KM.length - 1) {
     stage++;
-    candidate = await findBestCandidate(job.booking, RADIUS_STAGES_KM[stage], job.triedDriverIds);
+    candidate = await findBestCandidate(job.booking, RADIUS_STAGES_KM[stage], job.triedDriverIds, etaCache);
   }
   if (stage !== job.radiusStage) await prisma.dispatchJob.update({ where: { id: jobId }, data: { radiusStage: stage } });
   if (!candidate) return; // no eligible driver right now — retry next tick until the deadline
   await createOffer(job.bookingId, candidate);
+}
+
+// Invariant repair: a SEARCHING booking without a DispatchJob is never progressed by the worker
+// (it would wait forever). Any such booking — from a legacy path or a future bug — gets a fresh
+// job with a normal search deadline, and the repair is recorded on the booking's event trail.
+export async function repairSearchWithoutJob(now: Date = new Date()): Promise<number> {
+  const orphans = await prisma.booking.findMany({ where: { status: 'SEARCHING', dispatchJob: null }, select: { id: true }, take: 25 });
+  let repaired = 0;
+  for (const o of orphans) {
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${o.id} FOR UPDATE`;
+      const b = await tx.booking.findUnique({ where: { id: o.id }, select: { status: true, dispatchJob: { select: { id: true } } } });
+      if (!b || b.status !== 'SEARCHING' || b.dispatchJob) return;
+      await startSearchTx(tx, o.id, { deadlineAt: searchDeadline(now) });
+      await tx.bookingEvent.create({ data: { bookingId: o.id, type: 'SEARCH_REPAIRED', actorType: 'SYSTEM', beforeStatus: 'SEARCHING', afterStatus: 'SEARCHING', reason: 'missing dispatch job' } });
+      repaired++;
+    });
+  }
+  if (repaired) console.warn(`[dispatch] repaired ${repaired} SEARCHING booking(s) without a dispatch job`);
+  return repaired;
 }
 
 // Scheduled rides sit as REQUESTED until their lead window, then enter live dispatch.
@@ -173,8 +202,7 @@ async function promoteScheduled(now: Date): Promise<void> {
       const b = await tx.booking.findUnique({ where: { id: s.id } });
       if (!b || b.status !== 'REQUESTED' || !b.scheduledAt) return;
       const deadline = new Date(Math.max(now.getTime() + config.dispatch.searchDeadlineSeconds * 1000, b.scheduledAt.getTime()));
-      await tx.dispatchJob.deleteMany({ where: { bookingId: b.id } });
-      await tx.dispatchJob.create({ data: { bookingId: b.id, deadlineAt: deadline } });
+      await startSearchTx(tx, b.id, { deadlineAt: deadline });
       const ub = await tx.booking.update({ where: { id: b.id }, data: { status: 'SEARCHING', revision: { increment: 1 } } });
       await tx.bookingEvent.create({ data: { bookingId: b.id, type: 'SCHEDULED_PROMOTED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'SEARCHING' } });
       await recordEvent(tx, { eventType: 'booking.scheduled_promoted', aggregateType: 'booking', aggregateId: b.id, aggregateVersion: ub.revision, correlationId: b.id, payload: { bookingId: b.id, status: 'SEARCHING' } });

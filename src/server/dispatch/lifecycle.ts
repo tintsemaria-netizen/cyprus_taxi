@@ -5,6 +5,7 @@ import { config } from '@/lib/config';
 import { computeFreshness } from '@/lib/freshness';
 import { haversineMeters } from '@/lib/geo';
 import { isAirportPoint } from '@/lib/airports';
+import { startSearchTx } from './search';
 import { enqueuePassenger } from '@/server/push';
 import { recordEvent, driverPseudo } from '@/server/events';
 
@@ -237,10 +238,7 @@ export async function rematchBooking(
     await tx.driver.update({ where: { id: a.driverId }, data: { available: true } });
   }
   await tx.waitingSession.deleteMany({ where: { bookingId } });
-  await tx.dispatchJob.deleteMany({ where: { bookingId } });
-  await tx.dispatchJob.create({
-    data: { bookingId, deadlineAt: new Date(Date.now() + config.dispatch.searchDeadlineSeconds * 1000), triedDriverIds: [excludeDriverId] },
-  });
+  await startSearchTx(tx, bookingId, { triedDriverIds: [excludeDriverId] });
   const ub = await tx.booking.update({ where: { id: bookingId }, data: { status: 'SEARCHING', arrivedAt: null, revision: { increment: 1 } } });
   await tx.bookingEvent.create({ data: { bookingId, type: 'REMATCH', actorType, actorId: actorType === 'DRIVER' ? excludeDriverId : undefined, afterStatus: 'SEARCHING', reason } });
   await recordEvent(tx, { eventType: 'booking.rematch', aggregateType: 'booking', aggregateId: bookingId, aggregateVersion: ub.revision, correlationId: bookingId, payload: { bookingId, status: 'SEARCHING', actorType, excludeDriverPseudo: driverPseudo(excludeDriverId), reason } });

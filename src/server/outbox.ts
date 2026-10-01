@@ -116,8 +116,8 @@ export async function drainOutbox(now: Date = new Date(), batch = 50): Promise<{
 async function offerStillLive(r: OutboxRow): Promise<boolean> {
   const nowD = new Date();
   if (r.offerId) {
-    const o = await prisma.driverOffer.findUnique({ where: { id: r.offerId }, select: { status: true, expiresAt: true } });
-    return !!o && o.status === 'OFFERED' && o.expiresAt > nowD;
+    const o = await prisma.driverOffer.findUnique({ where: { id: r.offerId }, select: { status: true, expiresAt: true, booking: { select: { status: true } } } });
+    return !!o && o.status === 'OFFERED' && o.expiresAt > nowD && o.booking.status === 'SEARCHING';
   }
   // Legacy rows without offerId: is there ANY live offer for this driver?
   if (!r.audience.startsWith('DRIVER:')) return true;
