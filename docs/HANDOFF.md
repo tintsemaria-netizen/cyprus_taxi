@@ -1,5 +1,25 @@
 # Session handoff
 
+## Batch 3 — i18n EN / EL / RU (2026-10-01) — release 290929a, DEPLOYED + live-verified
+- **System:** `src/i18n` — locale from `lang` cookie → Accept-Language → en; `<html lang>` server-side
+  (`src/i18n/server.ts`, root layout). `useT()` → typed `t`, plural `tp` (Intl.PluralRules; RU
+  one/few/many), `fmt` (dates/money by locale), `tError` (API error codes → localized, fallback to
+  server text). Catalogs `src/i18n/messages/{en,el,ru}/<ns>.ts`; el/ru typed `Catalog<typeof en>` so
+  missing keys fail tsc; `tests/i18n.test.ts` checks key + placeholder parity. Namespaces: common,
+  errors, booking, track, auth, rides, driver, driverReg. Add a namespace = 3 files + register in
+  `messages/index.ts`. `<LanguageSwitcher compact? />` on all passenger/driver entry screens.
+- **Behaviour:** tracking ETA built from `pickupEtaMin`/`pickupEtaApprox`; labels stored on a
+  booking (map pin, current location) stay English for the driver.
+- **Not translated (intentional):** admin/dispatch consoles + /staff/security, privacy/terms (await
+  lawyer), server tariff line labels, driver dashboard alert texts, free-text server field errors.
+- **Evidence:** suite 143 passed / 1 skipped; Playwright `tests-e2e/i18n-visual.spec.ts` (el-GR,
+  ru-RU) + batch2 = 15/15 on a local prod build; screenshots `docs/qa-screenshots/i18n/`. Live:
+  Accept-Language el→el, ru→ru, de→en, cookie beats header; live booking spec 1/1.
+- **Owner TODO:** native-speaker review of Greek (and Russian) copy before public launch — catalogs
+  are plain TS files a reviewer can edit directly.
+- **Test note:** `getByRole('option')` now also matches the language `<select>` options — scope to
+  `getByRole('listbox')` in Playwright specs.
+
 ## Batch 2 — passenger + driver UX (2026-10-01) — release afa8780, DEPLOYED + live-verified
 - **Booking:** all classes quoted in parallel (price + range per class, list right under the stops);
   sticky "Request <class> · ≈ €X" CTA; contact from the account (verified phone read-only — the typed
