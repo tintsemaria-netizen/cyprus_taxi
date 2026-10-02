@@ -35,8 +35,8 @@ export default function Page() {
 }
 
 function Analytics() {
-  const [from, setFrom] = useState(isoDate(new Date(Date.now() - 30 * 86_400_000)));
-  const [to, setTo] = useState(isoDate(new Date()));
+  const [from, setFrom] = useState(() => isoDate(new Date(Date.now() - 30 * 86_400_000)));
+  const [to, setTo] = useState(() => isoDate(new Date()));
   const [test, setTest] = useState(false);
   const [data, setData] = useState<Resp | null>(null);
   const [loading, setLoading] = useState(false);

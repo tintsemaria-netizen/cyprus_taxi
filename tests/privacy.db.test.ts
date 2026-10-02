@@ -139,8 +139,9 @@ describe('passenger export + account deletion', () => {
     expect(after.note).toBeNull();
     expect(after.pickupLabel).toBe(DELETED_LABEL);
     expect(after.pickupLat).toBe(34.67);
-    const msgs = await prisma.chatMessage.findMany({ where: { bookingId: b.id }, orderBy: { createdAt: 'asc' } });
-    expect(msgs.map((m) => m.body)).toEqual(['[deleted]', 'Coming']);
+    // Compare by sender, not createdAt order (both fixtures can share a millisecond).
+    const msgs = await prisma.chatMessage.findMany({ where: { bookingId: b.id } });
+    expect(Object.fromEntries(msgs.map((m) => [m.sender, m.body]))).toEqual({ PASSENGER: '[deleted]', DRIVER: 'Coming' });
     expect(await prisma.trackingGrant.count({ where: { bookingId: b.id, revokedAt: null } })).toBe(0);
   });
 });

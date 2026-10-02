@@ -37,7 +37,7 @@ function originAllowed(req: NextRequest): boolean {
   return originHost === reqHost || (baseHost !== '' && originHost === baseHost);
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith('/api/') && !originAllowed(req)) {
     return NextResponse.json(
       { error: { code: 'BAD_ORIGIN', message: 'Cross-origin request rejected.', fieldErrors: {}, requestId: '' } },
