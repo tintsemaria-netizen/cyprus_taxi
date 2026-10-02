@@ -1,5 +1,18 @@
 # Session handoff
 
+## Next.js 16 upgrade (2026-10-02) — release 838f6c5, DEPLOYED via scripts/deploy.sh + live-verified
+- next 16.3.8 (Turbopack builds), react 19.3, vitest 5, eslint-config-next 16 (native flat config).
+  `src/middleware.ts` → `src/proxy.ts` (export `proxy`, Node runtime). `next build` no longer lints —
+  `npm run lint` in CI is the gate. Turbopack: `turbopackIgnore` hints on runtime upload paths in
+  `src/server/storage.ts`. vitest config is `vitest.config.mts` (maxWorkers:1; poolOptions removed).
+- **npm audit: 0 vulnerabilities** (runtime and dev).
+- **Follow-up (not done):** new React-Compiler react-hooks rules (`set-state-in-effect`, `refs`,
+  `immutability`, `purity`) are WARNINGS — 36 sites (mostly load-on-mount effects, GPS/offer
+  polling, imperative Google Maps markers). Refactor deliberately, with browser tests, before
+  promoting them to errors or enabling `reactCompiler`.
+- Evidence: tsc clean; lint 0 errors; vitest 161/1 skipped ×5 consecutive runs on one DB; Playwright
+  17/17 incl. CSP; live: headers, foreign-origin 403, html lang, live booking spec, logs clean.
+
 ## Batch 5 — delivery & quality (2026-10-01) — release 4746bb5, DEPLOYED via scripts/deploy.sh
 - **DEPLOY NOW = `sudo scripts/deploy.sh`** (from a clean, committed tree). Steps: backup → build
   `taxicy-taxi-app:<sha>` (nothing restarts if the build fails) → image label must equal the commit
