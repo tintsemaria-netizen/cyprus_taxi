@@ -7,7 +7,9 @@ import { ChatPanel } from '@/components/ChatPanel';
 import { NotifyToggle } from '@/components/NotifyToggle';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
+import { ScheduledRides } from '@/components/driver/ScheduledRides';
 import { unlockOfferSound, playOfferChime, vibrateOffer, keepScreenOn } from '@/lib/driver-alerts';
+import { formatFlight } from '@/lib/flight';
 import { useT, MsgKey } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
@@ -16,14 +18,14 @@ export const dynamic = 'force-dynamic';
 interface Trip {
   bookingId: string; reference: string; status: string; revision: number;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string };
-  passengerName: string; passengerPhone: string; note: string | null; passengerCount: number; vClass: string;
+  passengerName: string; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; vClass: string;
   scheduledAt: string | null; waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null; allowedNext: string[];
 }
 interface CurrentTrip { onDuty: boolean; available: boolean; trip: Trip | null }
 interface Offer {
   offerId: string; expiresAt: string; pickupEtaSec: number | null; pickupDistanceM: number | null;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string };
-  vClass: string; passengerCount: number; passengerName: string; note: string | null; scheduledAt: string | null;
+  vClass: string; passengerCount: number; passengerName: string; note: string | null; flightNumber?: string | null; scheduledAt: string | null;
   fareCents: number | null; priceType: string | null; currency: string; fareBreakdown: { label: string; cents: number }[] | null;
 }
 interface TripCard {
@@ -316,6 +318,7 @@ function HomeSection(props: {
           <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
             <div className="font-medium">{t('driver.offer.passengerLine', { name: offer.passengerName, passengers: tp('common.passengers', offer.passengerCount), vClass: offer.vClass })}</div>
             {offer.note && <div className="mt-1 text-xs text-warn">{t('driver.offer.note', { note: offer.note })}</div>}
+            {offer.flightNumber && <div className="mt-1 font-mono text-xs text-ink">✈ {t('driver.scheduled.flight', { flight: formatFlight(offer.flightNumber) })}</div>}
             <div className="mt-1 text-xs text-muted">{t('driver.offer.phoneHidden')}</div>
           </div>
           {/* Full fare breakdown so the driver sees all prices before accepting. */}
@@ -350,6 +353,7 @@ function HomeSection(props: {
           <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
             <div className="font-medium">{trip.passengerName} · {t('driver.units.paxShort', { count: trip.passengerCount })} · {trip.vClass}</div>
             {trip.note && <div className="mt-1 text-xs text-muted">{t('driver.trip.note', { note: trip.note })}</div>}
+            {trip.flightNumber && <div className="mt-1 font-mono text-xs text-ink">✈ {t('driver.scheduled.flight', { flight: formatFlight(trip.flightNumber) })}</div>}
             <div className="mt-3"><ChatPanel key={trip.bookingId} listUrl={`/driver/bookings/${trip.bookingId}/messages`} postUrl={`/driver/bookings/${trip.bookingId}/messages`} pushUrl="/driver/push" me="DRIVER" peerLabel="passenger" /></div>
             <div className="mt-3 flex gap-2">
               <a href={`tel:${trip.passengerPhone}`} className="btn-ghost !min-h-[44px] flex-1 !py-2 text-sm">{t('driver.trip.call')}</a>
@@ -426,9 +430,24 @@ function TripRow({ t, onClick }: { t: TripCard; onClick?: () => void }) {
 
 // ---- Trips ----
 type Range = 'today' | 'week' | 'month';
+function TripsModeToggle({ mode, setMode, count }: { mode: 'history' | 'prebook'; setMode: (m: 'history' | 'prebook') => void; count: number | null }) {
+  const { t } = useT();
+  return (
+    <div className="flex gap-1 rounded-[12px] border border-edge bg-elevated p-1" role="tablist">
+      {(['history', 'prebook'] as const).map((m) => (
+        <button key={m} role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium ${mode === m ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>
+          {m === 'history' ? t('driver.scheduled.tabHistory') : t('driver.scheduled.tabPrebook')}{m === 'prebook' && count ? ` · ${count}` : ''}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function TripsSection({ onOpen, activeDetail, onCloseDetail, onSettled }: { onOpen: (id: string) => void; activeDetail: string | null; onCloseDetail: () => void; onSettled: () => void }) {
   const { t, tError } = useT();
   const [range, setRange] = useState<Range>('today');
+  const [mode, setMode] = useState<'history' | 'prebook'>('history');
+  const [prebookCount, setPrebookCount] = useState<number | null>(null);
   const [items, setItems] = useState<TripCard[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -447,8 +466,18 @@ function TripsSection({ onOpen, activeDetail, onCloseDetail, onSettled }: { onOp
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setItems([]); setCursor(null); loadPage(true); }, [range]);
 
+  if (mode === 'prebook') {
+    return (
+      <div className="space-y-3">
+        <TripsModeToggle mode={mode} setMode={setMode} count={prebookCount} />
+        <ScheduledRides onCount={setPrebookCount} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
+      <TripsModeToggle mode={mode} setMode={setMode} count={prebookCount} />
       <h1 className="text-xl font-semibold">{t('driver.trips.title')}</h1>
       <div className="flex gap-1 rounded-[12px] border border-edge bg-elevated p-1">
         {(['today', 'week', 'month'] as Range[]).map((r) => <button key={r} onClick={() => setRange(r)} className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium ${range === r ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>{t(`driver.range.${r}`)}</button>)}
@@ -641,7 +670,7 @@ function BottomNav({ tab, setTab, hasOffer, hasTrip }: { tab: Tab; setTab: (t: T
       <div className="mx-auto flex max-w-lg">
         {items.map((it) => (
           <button key={it.id} onClick={() => setTab(it.id)} className={`relative flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 py-1 text-xs ${tab === it.id ? 'text-accent' : 'text-muted'}`}>
-            <span className="text-base leading-none">{it.icon}</span>
+            <span className="text-base leading-none" aria-hidden>{it.icon}</span>
             <span>{it.label}</span>
             {it.id === 'home' && (hasOffer || hasTrip) && tab !== 'home' && <span className={`absolute right-[28%] top-1.5 h-2 w-2 rounded-full ${hasOffer ? 'bg-accent' : 'bg-warn'}`} />}
           </button>

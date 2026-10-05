@@ -7,11 +7,14 @@ import { ChatPanel } from '@/components/ChatPanel';
 import { NotifyToggle } from '@/components/NotifyToggle';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
+import { formatFlight } from '@/lib/flight';
 import { useT } from '@/i18n/I18nProvider';
 import type { MsgKey } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 interface TrackView {
+  flightNumber?: string | null;
+  confirmedDriver?: null | { name: string; make: string; model: string; color: string; plate: string; rating: { average: number; count: number } | null };
   reference: string;
   status: string;
   revision: number;
@@ -299,9 +302,26 @@ export default function TrackApp() {
               {/* Pinned: what the passenger needs at pickup (status, driver/plate, start code). */}
               <div className="shrink-0 border-b border-edge p-4 pb-3 sm:p-5 sm:pb-3">
                 <h1 className="text-xl font-bold" role="status" aria-live="polite">{headline}</h1>
-                {view.status === 'REQUESTED' && (
+                {view.status === 'REQUESTED' && !view.confirmedDriver && (
                   <p className="mt-1 text-sm text-muted">{t('track.scheduledNote')}</p>
                 )}
+                {view.status === 'REQUESTED' && view.confirmedDriver && (
+                  <div className="mt-3 rounded-[12px] border border-accent/40 bg-accent/5 p-3">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-accent">✓ {t('track.prebook.confirmedTitle')}</div>
+                    <div className="mt-2 flex items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-semibold">{view.confirmedDriver.name}</div>
+                        <div className="truncate text-sm text-muted">
+                          {view.confirmedDriver.rating && <span className="whitespace-nowrap text-accent">★ {view.confirmedDriver.rating.average.toFixed(1)} · </span>}
+                          {view.confirmedDriver.color} {view.confirmedDriver.make} {view.confirmedDriver.model}
+                        </div>
+                      </div>
+                      <span className="shrink-0 rounded-[8px] border border-edge bg-page px-2.5 py-1.5 font-mono text-base font-bold tracking-wide">{view.confirmedDriver.plate}</span>
+                    </div>
+                    <p className="mt-2 text-xs text-muted">{t('track.prebook.confirmedNote')}</p>
+                  </div>
+                )}
+                {view.flightNumber && !terminal && <p className="mt-2 font-mono text-xs text-muted">✈ {t('track.prebook.flightRow', { flight: formatFlight(view.flightNumber) })}</p>}
                 {view.status === 'SEARCHING' && (
                   <p className="mt-1 text-sm text-muted">{t('track.searchingNote')}</p>
                 )}

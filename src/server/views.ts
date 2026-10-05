@@ -103,6 +103,15 @@ export async function trackingView(bookingId: string) {
   // M3: reveal the start code to the authorized passenger once a driver is assigned
   // (they show it to the driver at pickup); expose waiting state and the final receipt.
   const showCode = ['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(booking.status);
+  // A scheduled ride a driver has pre-booked: show WHO is confirmed (no phone until assignment).
+  let confirmedDriver: null | { name: string; make: string; model: string; color: string; plate: string; rating: { average: number; count: number } | null } = null;
+  if (booking.status === 'REQUESTED') {
+    const pa = await prisma.preAssignment.findUnique({ where: { activeBookingId: booking.id }, include: { driver: { select: { publicName: true } } } });
+    if (pa) {
+      const v = await prisma.vehicle.findUnique({ where: { id: pa.vehicleId }, select: { make: true, model: true, color: true, plate: true } });
+      if (v) confirmedDriver = { name: pa.driver.publicName.split(' ')[0], ...v, rating: await publicDriverRating(pa.driverId) };
+    }
+  }
   const waiting = booking.status === 'ARRIVED' ? await prisma.waitingSession.findUnique({ where: { bookingId: booking.id } }) : null;
   const fareRec = booking.status === 'COMPLETED' ? await prisma.fare.findUnique({ where: { bookingId: booking.id } }) : null;
 
@@ -119,6 +128,8 @@ export async function trackingView(bookingId: string) {
     pickup: { lat: booking.pickupLat, lng: booking.pickupLng, label: booking.pickupLabel },
     dropoff: { lat: booking.dropoffLat, lng: booking.dropoffLng, label: booking.dropoffLabel },
     passengerName: booking.passengerName,
+    flightNumber: booking.flightNumber,
+    confirmedDriver,
     vClass: booking.vClass,
     passengerCount: booking.passengerCount,
     fareWording: 'Metered fare estimate — settled with the driver',
@@ -187,6 +198,7 @@ export async function driverCurrentTrip(driverId: string) {
       passengerName: b.passengerName,
       passengerPhone: b.phone, // driver may contact passenger
       note: b.note,
+      flightNumber: b.flightNumber,
       passengerCount: b.passengerCount,
       vClass: b.vClass,
       scheduledAt: b.scheduledAt?.toISOString() ?? null,

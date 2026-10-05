@@ -170,6 +170,7 @@ export async function getDriverActiveOffer(driverId: string) {
     passengerCount: b.passengerCount,
     passengerName: b.passengerName,
     note: b.note,
+    flightNumber: b.flightNumber,
     scheduledAt: b.scheduledAt ? b.scheduledAt.toISOString() : null,
     fareCents: b.fareCents,
     priceType: b.priceType,

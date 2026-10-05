@@ -3,6 +3,7 @@ import { computeFreshness } from '@/lib/freshness';
 import { haversineMeters } from '@/lib/geo';
 import { googleConfigured, googleRoute } from '@/server/google';
 import { eligibleDriverWhere } from '@/lib/eligibility-policy';
+import { protectedDriverIds } from './preassign-core';
 
 export const RADIUS_STAGES_KM = [3, 7, 15]; // expand search in stages (Task 012 §4.2)
 export const MAX_PICKUP_ETA_SEC = 20 * 60; // exclude candidates worse than 20 min
@@ -30,15 +31,17 @@ export async function findBestCandidate(
   const pickup = { lat: booking.pickupLat, lng: booking.pickupLng };
 
   // Drivers already reserved by an active assignment or active offer are unavailable.
-  const [busyAssign, busyOffer, drivers] = await Promise.all([
+  const [busyAssign, busyOffer, protectedIds, drivers] = await Promise.all([
     prisma.assignment.findMany({ where: { activeDriverId: { not: null } }, select: { activeDriverId: true } }),
     prisma.driverOffer.findMany({ where: { activeDriverId: { not: null } }, select: { activeDriverId: true } }),
+    // Drivers about to start a ride they pre-booked must not be pulled into a new immediate one.
+    protectedDriverIds(),
     prisma.driver.findMany({
       where: { onDuty: true, available: true, active: true, ...eligibleDriverWhere },
       include: { user: true, location: true, bindings: { where: { endedAt: null }, include: { vehicle: true } } },
     }),
   ]);
-  const busy = new Set<string>([...busyAssign.map((b) => b.activeDriverId!), ...busyOffer.map((b) => b.activeDriverId!)]);
+  const busy = new Set<string>([...busyAssign.map((b) => b.activeDriverId!), ...busyOffer.map((b) => b.activeDriverId!), ...protectedIds]);
   const tried = new Set(triedDriverIds);
 
   // Spatial + hard-eligibility prefilter.

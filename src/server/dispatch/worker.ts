@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { findBestCandidate, RADIUS_STAGES_KM } from './eligibility';
 import { startSearchTx, searchDeadline } from './search';
+import { runPreassignments } from './preassign';
 import { createOffer, expireOffer } from './offers';
 import { rematchBooking } from './lifecycle';
 import { enqueuePassenger } from '@/server/push';
@@ -93,6 +94,9 @@ export async function runOnce(): Promise<void> {
 // offers, and advance SEARCHING bookings that have no live offer.
 async function runDispatchSection(now: Date): Promise<void> {
   const started = Date.now();
+  // Pre-assignments first: a commitment that lapses at the scheduled lead is promoted to normal
+  // search in the same tick.
+  await runPreassignments(now);
   await promoteScheduled(now);
   await rematchOnGpsLoss(now);
   await repairSearchWithoutJob(now);
@@ -190,10 +194,12 @@ export async function repairSearchWithoutJob(now: Date = new Date()): Promise<nu
 
 // Scheduled rides sit as REQUESTED until their lead window, then enter live dispatch.
 // The search deadline runs to pickup time (never reserving a driver for hours ahead).
-async function promoteScheduled(now: Date): Promise<void> {
+export async function promoteScheduled(now: Date): Promise<void> {
   const leadMs = config.dispatch.scheduleLeadMinutes * 60 * 1000;
   const due = await prisma.booking.findMany({
-    where: { status: 'REQUESTED', scheduledAt: { not: null, lte: new Date(now.getTime() + leadMs) } },
+    // A ride a driver has pre-booked is handled by runPreassignments (converted or lapsed), never
+    // searched in parallel.
+    where: { status: 'REQUESTED', scheduledAt: { not: null, lte: new Date(now.getTime() + leadMs) }, preAssignments: { none: { status: 'COMMITTED' } } },
     select: { id: true },
     take: 25,
   });

@@ -1,5 +1,12 @@
 # Session handoff
 
+## Task 021 — scheduled-ride pre-assignment (2026-10-05) — see Tasks/021
+- Drivers pre-book scheduled rides from a board (Trips → Pre-book); worker converts 30 min before pickup
+  or lapses at T−15 into normal search; protection from new immediate offers 75 min before; flight number
+  for airport pickups (not live-tracked). Migration `20261005090000_preassignment_flight`.
+- Suite 172/1 skipped; Playwright 20/20. Dates in the UI are now always Europe/Nicosia.
+- Open: live flight-status tracking (needs a provider); admin view of late releases (events recorded).
+
 ## Next.js 16 upgrade (2026-10-02) — release 838f6c5, DEPLOYED via scripts/deploy.sh + live-verified
 - next 16.3.8 (Turbopack builds), react 19.3, vitest 5, eslint-config-next 16 (native flat config).
   `src/middleware.ts` → `src/proxy.ts` (export `proxy`, Node runtime). `next build` no longer lints —

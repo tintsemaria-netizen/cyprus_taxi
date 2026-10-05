@@ -59,6 +59,16 @@ export const config = {
     // the app-side pre-boarding waiting penalty is not verified against RTD rules (§6.4).
     waitingRateCentsPerMin: num('DISPATCH_WAITING_RATE_CENTS_PER_MIN', 0),
     gpsLossRematchSeconds: num('DISPATCH_GPS_LOSS_REMATCH_SECONDS', 90), // prolonged pre-pickup GPS loss → expire assignment + rematch
+    // Pre-assignment of scheduled rides (driver commits in advance; converted near pickup).
+    preassign: {
+      horizonHours: num('PREASSIGN_HORIZON_HOURS', 72), // how far ahead drivers can commit
+      convertMinutes: num('PREASSIGN_CONVERT_MINUTES', 30), // convert into a real assignment this long before pickup
+      protectMinutes: num('PREASSIGN_PROTECT_MINUTES', 75), // no new immediate offers this close to a commitment
+      remindMinutes: num('PREASSIGN_REMIND_MINUTES', 60), // driver reminder push
+      lateReleaseMinutes: num('PREASSIGN_LATE_RELEASE_MINUTES', 60), // releasing later than this is flagged
+      maxPerDriver: num('PREASSIGN_MAX_PER_DRIVER', 3),
+      minGapMinutes: num('PREASSIGN_MIN_GAP_MINUTES', 90), // between one driver's commitments
+    },
   },
   minStopDistanceMeters: num('MIN_STOP_DISTANCE_METERS', 50),
   // Pricing mode (Task 012 §6.1). Real charges stay REGULATED_METER_ESTIMATE unless a

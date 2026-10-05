@@ -14,6 +14,7 @@ import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 import { INTL_TAG } from '@/i18n/config';
+import { isAirportPoint } from '@/lib/airports';
 
 interface PublicConfig {
   demoMode: boolean;
@@ -52,6 +53,7 @@ export default function BookingApp() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [note, setNote] = useState('');
+  const [flight, setFlight] = useState('');
   const [step, setStep] = useState<'form' | 'review'>('form');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState<string | null>(null);
@@ -260,16 +262,20 @@ export default function BookingApp() {
   const quote: QuoteBody | null = quotes[vClass] ?? null;
   const eur = (c: number) => fmt.money(c, 'EUR');
 
+  // Flight number only for a scheduled pickup at LCA/PFO (shared with the driver; not live-tracked).
+  const showFlight = when === 'SCHEDULE' && !!pickup && isAirportPoint(pickup.lat, pickup.lng);
+  const flightValue = showFlight ? flight.toUpperCase().replace(/[\s-]+/g, '') : '';
   const maxPax = cfg?.classes.find((c) => c.key === vClass)?.maxPassengers ?? (vClass === 'XL' ? 6 : 4);
 
   function payloadSignature(offset = scheduleOffsetMin): string {
-    return JSON.stringify({ pickup, dropoff, when, scheduledAt, scheduleOffsetMin: offset, vClass, pax, name: name.trim(), phone: phone.trim(), note: note.trim() });
+    return JSON.stringify({ pickup, dropoff, when, scheduledAt, scheduleOffsetMin: offset, vClass, pax, name: name.trim(), phone: phone.trim(), note: note.trim(), flight: flightValue });
   }
 
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (!pickup) e.pickup = t('booking.validation.pickup');
     if (!dropoff) e.dropoff = t('booking.validation.dropoff');
+    if (flightValue && !/^[A-Z0-9]{2}\d{1,4}[A-Z]?$/.test(flightValue)) e.flight = t('booking.flight.invalid');
     if (passenger && !name.trim()) e.name = t('booking.validation.name');
     if (when === 'SCHEDULE' && !scheduledAt) e.scheduledAt = t('booking.validation.scheduledAt');
     if (pax < 1 || pax > maxPax) e.pax = tp('booking.validation.paxRange', maxPax);
@@ -324,6 +330,7 @@ export default function BookingApp() {
         passengerName: name.trim() || passenger?.name || 'Passenger',
         phone: passenger?.phone ?? phone.trim(),
         note: note.trim() || undefined,
+        flightNumber: flightValue || undefined,
       };
       const res = await api<{ tracking: { token: string } }>('/bookings', {
         method: 'POST',
@@ -539,6 +546,13 @@ export default function BookingApp() {
                           <input type="datetime-local" className={`field ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
                           <p className="mt-1 text-xs text-muted">{withSlot(t('booking.form.timezoneNote'), 'tz', <strong>{cfg?.timezone ?? 'Europe/Nicosia'}</strong>)}</p>
                           {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
+                          {showFlight && (
+                            <div className="mt-3">
+                              <label className="label" htmlFor="bk-flight">{t('booking.flight.label')}</label>
+                              <input id="bk-flight" className={`field mt-1 font-mono uppercase ${errors.flight ? 'border-danger' : ''}`} value={flight} maxLength={9} autoCapitalize="characters" placeholder={t('booking.flight.placeholder')} onChange={(e) => setFlight(e.target.value)} />
+                              {errors.flight ? <p className="mt-1 text-xs text-danger">{errors.flight}</p> : <p className="mt-1 text-xs text-muted">{t('booking.flight.help')}</p>}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -599,6 +613,7 @@ export default function BookingApp() {
                       <Row label={t('booking.review.pickup')} value={pickup?.label ?? '—'} dot="accent" />
                       <Row label={t('booking.review.destination')} value={dropoff?.label ?? '—'} dot="ink" />
                       <Row label={t('booking.review.when')} value={when === 'NOW' ? t('booking.review.nowImmediate') : `${scheduledAt.replace('T', ' ')} · ${cfg?.timezone}`} />
+                      {flightValue && <Row label={t('booking.flight.reviewRow')} value={flightValue} />}
                       <Row label={t('booking.review.class')} value={t(`common.vClass.${vClass}`)} />
                       <Row label={t('booking.review.passengers')} value={String(pax)} />
                       <Row label={t('booking.review.driverAsksFor')} value={name || passenger?.name || '—'} />

@@ -86,6 +86,7 @@ model Driver {
   location     LatestDriverLocation?
   dutySessions DutySession[]
   ratings      TripRating[]
+  preAssignments PreAssignment[]
 }
 
 // Driver on/off-duty sessions (Task 017). Server-timestamped so online-time totals are
@@ -461,6 +462,7 @@ model Booking {
   startCode      String? // 4-digit trip-start code (shown to passenger; driver enters it to start) — M3
   arrivedAt      DateTime? // server time the driver marked ARRIVED at pickup — M3
   passengerId    String? // owning passenger account (Task 014); null for legacy/anonymous
+  flightNumber   String? // optional, for airport pickups (shown to the driver; not live-tracked)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -474,6 +476,7 @@ model Booking {
   messages    ChatMessage[]
   settlements DriverSettlement[]
   rating      TripRating?
+  preAssignments PreAssignment[]
 
   @@index([status, createdAt])
   @@index([status, scheduledAt])
@@ -762,4 +765,30 @@ model RateLimitBucket {
   resetAt DateTime
 
   @@index([resetAt])
+}
+
+// Pre-assignment of a SCHEDULED ride to a driver who committed to it in advance (airport transfers
+// etc.). A commitment does NOT make the driver busy now (Task 012 §4.4: never hold a free driver for
+// hours); the worker converts it into a real Assignment shortly before pickup if the driver is free,
+// otherwise it lapses and the ride falls back to normal automatic search. One live commitment per
+// booking (activeBookingId @unique, like offers/assignments); per-driver overlap and count limits are
+// enforced under the driver row lock.
+model PreAssignment {
+  id              String    @id @default(uuid())
+  booking         Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId       String // history: a released/lapsed commitment can be followed by a new one
+  driver          Driver    @relation(fields: [driverId], references: [id])
+  driverId        String
+  vehicleId       String
+  pickupAt        DateTime // booking.scheduledAt at commit time
+  status          String    @default("COMMITTED") // COMMITTED | CONVERTED | RELEASED | LAPSED
+  committedAt     DateTime  @default(now())
+  remindedAt      DateTime?
+  endedAt         DateTime?
+  endReason       String?
+  activeBookingId String?   @unique
+
+  @@index([bookingId])
+  @@index([driverId, status, pickupAt])
+  @@index([status, pickupAt])
 }

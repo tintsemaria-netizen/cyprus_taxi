@@ -127,5 +127,12 @@ const booking = {
     pin: 'Pin {coords}',
     deviceLocation: 'Your device location',
   },
+  flight: {
+    label: 'Flight number (optional)',
+    placeholder: 'e.g. A3 612',
+    help: 'We share it with your driver. Flights are not tracked automatically — if your flight is delayed, message your driver once they are confirmed.',
+    invalid: 'Use a flight number like A3 612.',
+    reviewRow: 'Flight',
+  },
 };
 export default booking;

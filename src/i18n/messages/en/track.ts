@@ -143,5 +143,10 @@ const track = {
       CANCELED: 'Trip canceled',
     },
   },
+  prebook: {
+    confirmedTitle: 'Driver confirmed',
+    confirmedNote: 'Their phone number and live position appear about 30 minutes before pickup.',
+    flightRow: 'Flight: {flight}',
+  },
 };
 export default track;

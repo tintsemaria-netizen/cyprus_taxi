@@ -161,6 +161,8 @@ describe('Task 015 — eligibility gate', () => {
     await prisma.assignment.updateMany({ where: { activeDriverId: drv.id }, data: { endedAt: new Date(), activeBookingId: null, activeDriverId: null, activeVehicleId: null } });
     // An open offer left by another test file (re-runs on the same DB) would make the driver "busy".
     await prisma.driverOffer.updateMany({ where: { activeDriverId: drv.id }, data: { status: 'CANCELED', activeDriverId: null, activeBookingId: null } });
+    // …and a live pre-booking close in time would (correctly) protect the driver from new offers.
+    await prisma.preAssignment.updateMany({ where: { driverId: drv.id, status: 'COMMITTED' }, data: { status: 'RELEASED', activeBookingId: null } });
     const now = new Date();
     await prisma.latestDriverLocation.upsert({ where: { driverId: drv.id }, update: { lat: 34.671, lng: 33.0413, accuracyM: 8, sampledAt: now, receivedAt: now, gpsSession: 'elig', sequence: 1 }, create: { driverId: drv.id, lat: 34.671, lng: 33.0413, accuracyM: 8, sampledAt: now, receivedAt: now, gpsSession: 'elig', sequence: 1 } });
     await prisma.driver.update({ where: { id: drv.id }, data: { onDuty: true, available: true, active: true, eligibility: 'PENDING' } });

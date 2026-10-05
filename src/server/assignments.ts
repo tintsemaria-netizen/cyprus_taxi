@@ -7,6 +7,7 @@ import { generateStartCode } from '@/server/dispatch/lifecycle';
 import { recordEvent, driverPseudo } from '@/server/events';
 import { enqueueDriver, enqueuePassenger } from '@/server/push';
 import { startSearchTx, stopSearchTx } from '@/server/dispatch/search';
+import { endPreAssignmentTx } from '@/server/dispatch/preassign-core';
 
 export type Actor = 'STAFF' | 'DRIVER' | 'PASSENGER';
 
@@ -157,8 +158,9 @@ export async function assignBooking(params: {
     const { driver, vehicle } = await validateCandidate(tx, booking, params.driverId, params.vehicleId, params.acknowledgeNoGps);
     await createAssignment(tx, booking, driver, vehicle, params.actorId);
 
-    // Tear down any in-flight autonomous dispatch for this booking.
+    // Tear down any in-flight autonomous dispatch / pre-booking for this booking.
     await stopSearchTx(tx, booking.id);
+    await endPreAssignmentTx(tx, booking.id, 'RELEASED', 'manually assigned by staff', { notifyDriver: 'A pre-booked ride you took was assigned to another driver by the operator.' });
 
     const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: 'ASSIGNED', revision: { increment: 1 } } });
     await tx.bookingEvent.create({
@@ -276,6 +278,7 @@ export async function changeStatus(params: {
     // withdraw any outstanding offer so the offered driver is released immediately.
     if (params.to === 'SEARCHING') await startSearchTx(tx, booking.id);
     if (params.to === 'CANCELED' || params.to === 'NO_DRIVER') await stopSearchTx(tx, booking.id);
+    if (params.to === 'CANCELED') await endPreAssignmentTx(tx, booking.id, 'RELEASED', 'booking canceled', { notifyDriver: 'A ride you pre-booked was canceled by the passenger.' });
 
     const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: params.to, revision: { increment: 1 } } });
     await tx.bookingEvent.create({

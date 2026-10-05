@@ -7,6 +7,7 @@ import { MESSAGES, Messages } from './messages';
 import type { Path, PluralPath, PluralForms } from './types';
 
 type Vars = Record<string, string | number>;
+const TZ = 'Europe/Nicosia';
 export type MsgKey = Path<Messages>;
 export type PluralKey = PluralPath<Messages>;
 
@@ -44,9 +45,10 @@ export function useT() {
   const t = useCallback((key: MsgKey, vars?: Vars) => translate(locale, key, vars), [locale]);
   const tp = useCallback((key: PluralKey, count: number, vars?: Vars) => translatePlural(locale, key, count, vars), [locale]);
   const fmt = useMemo(() => ({
-    dateTime: (d: string | Date) => new Date(d).toLocaleString(INTL_TAG[locale], { dateStyle: 'medium', timeStyle: 'short' }),
-    time: (d: string | Date) => new Date(d).toLocaleTimeString(INTL_TAG[locale], { hour: '2-digit', minute: '2-digit' }),
-    date: (d: string | Date) => new Date(d).toLocaleDateString(INTL_TAG[locale], { dateStyle: 'medium' }),
+    // Always Cyprus time: pickups happen in Cyprus, whatever timezone the visitor's phone is set to.
+    dateTime: (d: string | Date) => new Date(d).toLocaleString(INTL_TAG[locale], { dateStyle: 'medium', timeStyle: 'short', timeZone: TZ }),
+    time: (d: string | Date) => new Date(d).toLocaleTimeString(INTL_TAG[locale], { hour: '2-digit', minute: '2-digit', timeZone: TZ }),
+    date: (d: string | Date) => new Date(d).toLocaleDateString(INTL_TAG[locale], { dateStyle: 'medium', timeZone: TZ }),
     money: (cents: number, currency = 'EUR') => new Intl.NumberFormat(INTL_TAG[locale], { style: 'currency', currency }).format(cents / 100),
   }), [locale]);
   // Localized message for a failed API call: a translated error code when we have one, otherwise

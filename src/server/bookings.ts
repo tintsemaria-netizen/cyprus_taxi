@@ -77,6 +77,8 @@ export async function createBooking(
       name: input.passengerName,
       phone: input.phone,
       note: input.note || '',
+      // Only when present, so hashes of requests without a flight number stay unchanged.
+      ...(input.flightNumber ? { f: input.flightNumber } : {}),
     }),
   );
 
@@ -144,7 +146,7 @@ export async function createBooking(
           reference,
           pickupLat: input.pickup.lat, pickupLng: input.pickup.lng, pickupLabel: input.pickup.label,
           dropoffLat: input.dropoff.lat, dropoffLng: input.dropoff.lng, dropoffLabel: input.dropoff.label,
-          passengerName: input.passengerName, phone: input.phone, note: input.note || null,
+          passengerName: input.passengerName, phone: input.phone, note: input.note || null, flightNumber: input.flightNumber ?? null,
           vClass: input.vClass, passengerCount: input.passengerCount, scheduledAt, status: initialStatus,
           ...(passengerId ? { passengerId } : {}),
           ...(fare ? { quoteId: input.quoteId, fareCents: fare.fareCents, priceType: fare.priceType, fareBreakdown: fare.fareBreakdown } : {}),

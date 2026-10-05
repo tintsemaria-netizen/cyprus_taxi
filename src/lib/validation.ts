@@ -38,6 +38,12 @@ export const createBookingSchema = z.object({
   passengerName: z.string().min(1).max(100),
   phone: phoneSchema,
   note: z.string().max(1000).optional(),
+  // IATA flight designator, e.g. "A3 612", "W6 4321", "FR1234". Normalised (upper-case, no space).
+  flightNumber: z
+    .string()
+    .transform((s) => s.toUpperCase().replace(/[\s-]+/g, ''))
+    .pipe(z.string().regex(/^[A-Z0-9]{2}\d{1,4}[A-Z]?$/, 'Use a flight number like A3 612.'))
+    .optional(),
 });
 
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
