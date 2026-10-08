@@ -29,12 +29,15 @@ export async function driverDashboard(driver: DriverRow) {
   // Current vehicle (approved binding).
   const binding = await prisma.driverVehicleBinding.findFirst({
     where: { driverId: driver.id, endedAt: null },
-    select: { vehicle: { select: { plate: true, vClass: true, seats: true, make: true, model: true, color: true } } },
+    select: { vehicle: { select: { plate: true, vClass: true, seats: true, make: true, model: true, color: true, active: true } } },
   });
 
   const alerts: DashboardAlert[] = [];
   if (!eligible) {
     alerts.push({ level: 'blocker', code: driver.eligibility, message: BLOCKER_MESSAGES[driver.eligibility] ?? 'Your account can’t take rides right now.', action: driver.eligibility === 'DOCUMENTS_EXPIRED' ? { label: 'Update documents', href: '/driver#documents' } : undefined });
+  }
+  if (eligible && !binding?.vehicle.active) {
+    alerts.push({ level: 'blocker', code: 'NO_VEHICLE', message: 'No vehicle is assigned to you, so you won’t receive ride offers. Contact the operator.' });
   }
   // Document expiry warnings for approved drivers with an application (LEGACY drivers have none).
   if (driver.applicationId) {

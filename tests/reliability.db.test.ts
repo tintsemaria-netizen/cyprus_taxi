@@ -28,6 +28,7 @@ describe('admin driver reliability', () => {
   it('counts offers/trips/pre-bookings/ratings per driver and raises the documented flags', async () => {
     const a = (await prisma.driver.findFirst({ where: { publicName: 'Andreas' }, include: { bindings: { where: { endedAt: null } } } }))!;
     const maria = (await prisma.driver.findFirst({ where: { publicName: 'Maria' } }))!;
+    await prisma.driver.updateMany({ data: { onDuty: false } }); // live-state flags covered separately
     const vehicleId = a.bindings[0].vehicleId;
     // 11 answered/expired offers: 3 accepted, 4 rejected, 4 expired (+1 system-cancelled, excluded).
     const statuses = ['ACCEPTED', 'ACCEPTED', 'ACCEPTED', 'REJECTED', 'REJECTED', 'REJECTED', 'REJECTED', 'EXPIRED', 'EXPIRED', 'EXPIRED', 'EXPIRED', 'CANCELED'];
@@ -78,5 +79,27 @@ describe('admin driver reliability', () => {
     // Outside the window nothing is counted.
     const past = await driverReliability(new Date(Date.now() - 10 * 86_400_000), new Date(Date.now() - 5 * 86_400_000));
     expect(past.find((r) => r.driverId === a.id)!.offers.total).toBe(0);
+  });
+});
+
+describe('live-state flags', () => {
+  it('flags a driver who is on duty without a vehicle and with stale GPS', async () => {
+    const m = (await prisma.driver.findFirst({ where: { publicName: 'Maria' }, include: { bindings: { where: { endedAt: null } } } }))!;
+    const vehicleId = m.bindings[0].vehicleId;
+    await prisma.driverVehicleBinding.updateMany({ where: { driverId: m.id, endedAt: null }, data: { endedAt: new Date(), activeDriverId: null, activeVehicleId: null } });
+    await prisma.driver.update({ where: { id: m.id }, data: { onDuty: true } });
+    const old = new Date(Date.now() - 3 * 86_400_000);
+    await prisma.latestDriverLocation.upsert({ where: { driverId: m.id }, update: { sampledAt: old, receivedAt: old }, create: { driverId: m.id, lat: 34.7, lng: 33.0, accuracyM: 8, sampledAt: old, receivedAt: old, gpsSession: 'rel', sequence: 1 } });
+    try {
+      const row = (await driverReliability(new Date(Date.now() - 86_400_000), new Date())).find((r) => r.driverId === m.id)!;
+      expect(row.state.onDuty).toBe(true);
+      expect(row.state.vehicle).toBeNull();
+      expect(row.state.gpsAgeSec).toBeGreaterThan(86_400);
+      expect(row.flags).toEqual(expect.arrayContaining(['ONLINE_NO_VEHICLE', 'ONLINE_STALE_GPS']));
+    } finally {
+      await prisma.driver.update({ where: { id: m.id }, data: { onDuty: false } });
+      await prisma.driverVehicleBinding.create({ data: { driverId: m.id, vehicleId, activeDriverId: m.id, activeVehicleId: vehicleId } });
+      await prisma.latestDriverLocation.deleteMany({ where: { driverId: m.id } });
+    }
   });
 });

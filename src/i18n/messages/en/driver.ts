@@ -237,5 +237,8 @@ const driver = {
     fareEstimate: '≈ {amount}',
     loadFailed: 'Could not load scheduled rides.',
   },
+  alerts: {
+    noVehicle: 'No vehicle is assigned to you, so you won’t receive ride offers. Contact the operator.',
+  },
 };
 export default driver;

@@ -240,5 +240,8 @@ const driver: Catalog<typeof en> = {
     fareEstimate: '≈ {amount}',
     loadFailed: 'Не удалось загрузить запланированные поездки.',
   },
+  alerts: {
+    noVehicle: 'К вам не привязан автомобиль, поэтому заказы не поступают. Обратитесь к оператору.',
+  },
 };
 export default driver;

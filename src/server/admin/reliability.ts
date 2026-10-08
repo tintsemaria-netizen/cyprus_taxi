@@ -15,6 +15,7 @@ export const FLAG_RULES = {
   lateReleases: { atLeast: 2 },
   lowRating: { minRatings: 5, below: 4.0 },
   preCancels: { atLeast: 3 },
+  staleGpsOnline: { olderThanSec: 300 }, // on duty but no usable location → never matched
 } as const;
 
 export interface ReliabilityRow {
@@ -26,13 +27,20 @@ export interface ReliabilityRow {
   trips: { completed: number; preCancels: number; gpsReleases: number };
   prebook: { taken: number; converted: number; lateReleases: number; releases: number; lapsed: number };
   rating: { average: number | null; count: number; low: number };
+  // Live state right now (not windowed): explains "online but gets no offers".
+  state: { onDuty: boolean; vehicle: string | null; gpsAgeSec: number | null };
   flags: string[];
 }
 
 const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : null);
 
 export async function driverReliability(from: Date, to: Date): Promise<ReliabilityRow[]> {
-  const drivers = await prisma.driver.findMany({ where: { active: true }, select: { id: true, publicName: true, eligibility: true }, orderBy: { publicName: 'asc' } });
+  const drivers = await prisma.driver.findMany({
+    where: { active: true },
+    select: { id: true, publicName: true, eligibility: true, onDuty: true, location: { select: { sampledAt: true } }, bindings: { where: { endedAt: null }, select: { vehicle: { select: { plate: true, vClass: true, active: true } } } } },
+    orderBy: { publicName: 'asc' },
+  });
+  const nowMs = Date.now();
   const range = { gte: from, lt: to };
 
   const [offers, completed, gpsReleases, preCancels, preAll, ratings] = await Promise.all([
@@ -76,6 +84,11 @@ export async function driverReliability(from: Date, to: Date): Promise<Reliabili
         count: rs.length,
         low: rs.filter((r) => r.stars <= 2).length,
       },
+      state: {
+        onDuty: d.onDuty,
+        vehicle: d.bindings[0]?.vehicle.active ? `${d.bindings[0].vehicle.plate} · ${d.bindings[0].vehicle.vClass}` : null,
+        gpsAgeSec: d.location ? Math.round((nowMs - d.location.sampledAt.getTime()) / 1000) : null,
+      },
       flags: [],
     };
     const f = FLAG_RULES;
@@ -84,6 +97,8 @@ export async function driverReliability(from: Date, to: Date): Promise<Reliabili
     if (row.prebook.lateReleases >= f.lateReleases.atLeast) row.flags.push('LATE_RELEASES');
     if (row.rating.count >= f.lowRating.minRatings && (row.rating.average ?? 5) < f.lowRating.below) row.flags.push('LOW_RATING');
     if (row.trips.preCancels >= f.preCancels.atLeast) row.flags.push('PRE_PICKUP_CANCELS');
+    if (d.onDuty && !row.state.vehicle) row.flags.push('ONLINE_NO_VEHICLE');
+    if (d.onDuty && (row.state.gpsAgeSec == null || row.state.gpsAgeSec > f.staleGpsOnline.olderThanSec)) row.flags.push('ONLINE_STALE_GPS');
     rows.push(row);
   }
   // Drivers needing attention first, then by name.

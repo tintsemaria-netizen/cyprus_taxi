@@ -31,6 +31,7 @@ import * as adminReliability from '@/app/api/v1/admin/reliability/route';
 import * as dispatchBookings from '@/app/api/v1/dispatch/bookings/route';
 import * as driverOffers from '@/app/api/v1/driver/offers/route';
 import * as driverDashboard from '@/app/api/v1/driver/dashboard/route';
+import * as driverAvailability from '@/app/api/v1/driver/availability/route';
 import * as passengerRides from '@/app/api/v1/passenger/rides/route';
 import * as rideReceipt from '@/app/api/v1/passenger/rides/[id]/receipt/route';
 import * as rideRating from '@/app/api/v1/passenger/rides/[id]/rating/route';
@@ -170,5 +171,30 @@ describe('OTP never leaks the code over HTTP', () => {
     const body = await res.json();
     expect(body.devCode).toBeUndefined();
     expect(JSON.stringify(body)).not.toMatch(/\d{6}/);
+  });
+});
+
+describe('driver cannot go online without a vehicle', () => {
+  it('409 NO_VEHICLE without an active binding; 200 once a vehicle is bound', async () => {
+    const d = (await prisma.driver.findFirst({ where: { publicName: 'Maria' }, include: { bindings: { where: { endedAt: null } } } }))!;
+    const vehicleId = d.bindings[0]?.vehicleId;
+    if (!vehicleId) throw new Error('fixture Maria must have a bound vehicle');
+    await prisma.driverVehicleBinding.updateMany({ where: { driverId: d.id, endedAt: null }, data: { endedAt: new Date(), activeDriverId: null, activeVehicleId: null } });
+    try {
+      await asStaff('maria');
+      const res = await driverAvailability.PATCH(req('/driver/availability', { method: 'PATCH', body: { onDuty: true, available: true } }));
+      expect(res.status).toBe(409);
+      expect((await res.json()).error.code).toBe('NO_VEHICLE');
+      expect((await prisma.driver.findUnique({ where: { id: d.id } }))!.onDuty).toBe(false);
+      const dash = await (await driverDashboard.GET()).json();
+      expect(dash.alerts.some((a: { code: string }) => a.code === 'NO_VEHICLE')).toBe(true);
+      // Going OFF duty is always allowed.
+      expect((await driverAvailability.PATCH(req('/driver/availability', { method: 'PATCH', body: { onDuty: false } }))).status).toBe(200);
+    } finally {
+      await prisma.driverVehicleBinding.create({ data: { driverId: d.id, vehicleId, activeDriverId: d.id, activeVehicleId: vehicleId } });
+    }
+    const ok = await driverAvailability.PATCH(req('/driver/availability', { method: 'PATCH', body: { onDuty: true, available: true } }));
+    expect(ok.status).toBe(200);
+    await driverAvailability.PATCH(req('/driver/availability', { method: 'PATCH', body: { onDuty: false } }));
   });
 });

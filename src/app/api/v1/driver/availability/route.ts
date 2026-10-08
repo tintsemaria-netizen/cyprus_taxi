@@ -29,6 +29,13 @@ export async function PATCH(req: Request) {
     return apiError(403, 'NOT_ELIGIBLE', 'Your driver account is not approved for work. Complete onboarding / resolve document issues.');
   }
 
+  // Without an active bound vehicle the driver can never be matched (class/seats unknown), so going
+  // online would only mean silently receiving nothing. Refuse with a clear reason instead.
+  if (goingOnline) {
+    const binding = await prisma.driverVehicleBinding.findFirst({ where: { driverId: ctx.driver.id, endedAt: null }, select: { vehicle: { select: { active: true } } } });
+    if (!binding?.vehicle.active) return apiError(409, 'NO_VEHICLE', 'No vehicle is assigned to you, so you cannot receive ride offers. Contact the operator.');
+  }
+
   // Going off duty / unavailable must not cancel an active trip (SPEC §4).
   const active = await prisma.assignment.findFirst({ where: { activeDriverId: ctx.driver.id } });
   const data: { onDuty?: boolean; available?: boolean } = {};

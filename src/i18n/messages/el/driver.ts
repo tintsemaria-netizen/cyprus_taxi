@@ -240,5 +240,8 @@ const driver: Catalog<typeof en> = {
     fareEstimate: '≈ {amount}',
     loadFailed: 'Δεν ήταν δυνατή η φόρτωση των προγραμματισμένων διαδρομών.',
   },
+  alerts: {
+    noVehicle: 'Δεν σας έχει ανατεθεί όχημα, οπότε δεν θα λαμβάνετε προσφορές διαδρομών. Επικοινωνήστε με τον διαχειριστή.',
+  },
 };
 export default driver;

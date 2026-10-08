@@ -18,6 +18,7 @@ const errors = {
   FORBIDDEN: 'You don’t have access to this.',
   LOGIN_REQUIRED: 'Please sign in to request a ride.',
   MESSAGE_TOO_LONG: 'That message is too long.',
+  NO_VEHICLE: 'No vehicle is assigned to you, so you cannot receive ride offers. Contact the operator.',
   NOT_COMPLETED: 'You can rate a ride only after it is completed.',
   NOT_ELIGIBLE: 'Your account can’t take rides right now.',
   NOT_FOUND: 'Not found.',

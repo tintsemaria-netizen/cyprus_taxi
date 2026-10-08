@@ -271,7 +271,7 @@ function HomeSection(props: {
           <div className="mt-0.5 text-xs">{data.onDuty ? <span className="text-accent">{data.trip ? t('driver.duty.onDutyOnTrip') : t('driver.duty.onDutyReady')}</span> : <span className="text-muted">{t('driver.duty.offDuty')}</span>}</div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          {blocker ? (
+          {blocker && !data.onDuty ? (
             <span className="rounded-full bg-danger/15 px-3 py-1 text-xs text-danger">{t('driver.duty.cantGoOnline')}</span>
           ) : (
             <button className={`min-h-[44px] ${data.onDuty ? 'btn-ghost' : 'btn-primary'}`} onClick={() => props.onDuty(!data.onDuty)}>{data.onDuty ? t('driver.duty.goOffline') : t('driver.duty.goOnline')}</button>
@@ -283,7 +283,7 @@ function HomeSection(props: {
       {/* Eligibility blocker replaces the online action */}
       {blocker && (
         <div className="rounded-[12px] border border-danger/40 bg-danger/10 p-3 text-sm">
-          <p className="font-medium text-danger">{blocker.message}</p>
+          <p className="font-medium text-danger">{blocker.code === 'NO_VEHICLE' ? t('driver.alerts.noVehicle') : blocker.message}</p>
           {blocker.action && <a href={blocker.action.href} className="mt-1 inline-block text-xs underline">{blocker.action.label}</a>}
         </div>
       )}
