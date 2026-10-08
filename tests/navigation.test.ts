@@ -59,7 +59,7 @@ describe('driver navigation geometry', () => {
   it('anchors Google steps to path vertices in route order', () => {
     const raw = [
       { distanceMeters: 1110, startLocation: { latLng: { latitude: 34.67, longitude: 33.04 } }, navigationInstruction: { maneuver: 'DEPART', instructions: 'Head north' } },
-      { distanceMeters: 915, startLocation: { latLng: { latitude: 34.68001, longitude: 33.04 } }, navigationInstruction: { maneuver: 'TURN_RIGHT', instructions: 'Turn right' } },
+      { distanceMeters: 915, startLocation: { latLng: { latitude: 34.68001, longitude: 33.04 } }, navigationInstruction: { maneuver: 'TURN_RIGHT', instructions: 'Turn\u00ad right' } },
       { distanceMeters: 0, navigationInstruction: { maneuver: 'STRAIGHT' } }, // no location → skipped
     ];
     expect(anchorSteps(path, raw)).toEqual([
