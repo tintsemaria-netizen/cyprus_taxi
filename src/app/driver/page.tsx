@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StaffShell } from '@/components/staff/StaffShell';
-import AutoMapView, { MapMarker } from '@/components/AutoMapView';
-import { ChatPanel } from '@/components/ChatPanel';
 import { NotifyToggle } from '@/components/NotifyToggle';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { ScheduledRides } from '@/components/driver/ScheduledRides';
+import { DriverNavigation } from '@/components/driver/DriverNavigation';
 import { unlockOfferSound, playOfferChime, vibrateOffer, keepScreenOn } from '@/lib/driver-alerts';
 import { formatFlight } from '@/lib/flight';
 import { useT, MsgKey } from '@/i18n/I18nProvider';
@@ -82,7 +81,6 @@ function Driver() {
   const [startCode, setStartCode] = useState('');
   const [pos, setPos] = useState<{ lat: number; lng: number } | null>(null);
   const posRef = useRef<{ lat: number; lng: number } | null>(null);
-  const [navRoute, setNavRoute] = useState<[number, number][]>([]);
   const watchId = useRef<number | null>(null);
   const sendTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastPos = useRef<GeolocationPosition | null>(null);
@@ -188,56 +186,43 @@ function Driver() {
     catch (e) { if (e instanceof ApiRequestError) setBanner(tErrRef.current(e)); await load(); }
   }
 
-  const tripStatus = data?.trip?.status; const tripId = data?.trip?.bookingId;
-  useEffect(() => {
-    const trip = data?.trip; if (!trip) { setNavRoute([]); return; }
-    const target = trip.status === 'IN_PROGRESS' ? trip.dropoff : trip.pickup;
-    let alive = true;
-    const refresh = async () => {
-      const p = posRef.current; if (!p) return;
-      try { const r = await api<{ available?: boolean; path?: [number, number][] }>('/routes/estimate', { method: 'POST', body: { from: p, to: { lat: target.lat, lng: target.lng } }, timeoutMs: 9000 }); if (alive && r.available !== false && r.path) setNavRoute(r.path.map(([la, ln]) => [ln, la] as [number, number])); }
-      catch { /* keep last */ }
-    };
-    refresh(); const t = setInterval(refresh, 15000);
-    return () => { alive = false; clearInterval(t); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tripStatus, tripId]);
 
   if (!data) return <div className="p-8 text-muted">{t('common.loading')}</div>;
   const trip = data.trip;
   const offerSecs = offer ? Math.max(0, Math.ceil((new Date(offer.expiresAt).getTime() - nowMs) / 1000)) : 0;
+
+  // An accepted ride takes over the whole screen: navigation + the one action for the stage, no tabs.
+  if (trip) {
+    return (
+      <DriverNavigation trip={trip} pos={pos} gps={gps} nowMs={nowMs} startCode={startCode} setStartCode={setStartCode}
+        banner={banner} onDismissBanner={() => setBanner(null)} onStartGps={startGps} onTripAction={tripAction} />
+    );
+  }
 
   return (
     <div className="mx-auto max-w-lg p-4 pb-24 sm:p-6 sm:pb-24">
       {banner && <p className="mb-3 rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn" onClick={() => setBanner(null)}>{banner}</p>}
 
       {/* Persistent cross-section bars: an offer alert, or a return-to-active-trip bar. */}
-      {tab !== 'home' && offer && !trip && (
+      {tab !== 'home' && offer && (
         <button onClick={() => setTab('home')} className="mb-3 flex w-full items-center justify-between rounded-[12px] border-2 border-accent bg-accent/10 px-3 py-2 text-sm">
           <span className="font-semibold text-accent">{t('driver.banner.newOffer')}</span>
           <span className={offerSecs <= 5 ? 'text-danger' : 'text-muted'}>{t('driver.banner.offerCountdown', { secs: offerSecs })}</span>
         </button>
       )}
-      {tab !== 'home' && trip && (
-        <button onClick={() => setTab('home')} className="mb-3 flex w-full items-center justify-between rounded-[12px] border border-edge bg-elevated px-3 py-2 text-sm">
-          <span className="font-medium">{t('driver.banner.activeTrip', { reference: trip.reference })}</span>
-          <span className="text-accent">{t('driver.banner.returnToTrip')}</span>
-        </button>
-      )}
 
       {tab === 'home' && (
         <HomeSection
-          data={data} dash={dash} gps={gps} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy} nowMs={nowMs}
-          pos={pos} navRoute={navRoute} startCode={startCode} setStartCode={setStartCode}
+          data={data} dash={dash} gps={gps} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
           onDuty={setDuty} onStartGps={startGps} onStopGps={stopGps}
-          onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} onTripAction={tripAction} goTrips={() => setTab('trips')}
+          onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => setTab('trips')}
         />
       )}
       {tab === 'trips' && <TripsSection onOpen={setActiveDetailId} activeDetail={activeDetailId} onCloseDetail={() => setActiveDetailId(null)} onSettled={() => { loadDash(); }} />}
       {tab === 'earnings' && <EarningsSection />}
       {tab === 'profile' && <ProfileSection dash={dash} />}
 
-      <BottomNav tab={tab} setTab={setTab} hasOffer={!!offer && !trip} hasTrip={!!trip} />
+      <BottomNav tab={tab} setTab={setTab} hasOffer={!!offer} />
     </div>
   );
 }
@@ -245,21 +230,15 @@ function Driver() {
 // ---- Home ----
 function HomeSection(props: {
   data: CurrentTrip; dash: Dashboard | null; gps: { active: boolean; error: string | null; last: string | null };
-  offer: Offer | null; offerSecs: number; offerBusy: boolean; nowMs: number;
-  pos: { lat: number; lng: number } | null; navRoute: [number, number][]; startCode: string; setStartCode: (v: string) => void;
+  offer: Offer | null; offerSecs: number; offerBusy: boolean;
   onDuty: (v: boolean) => void; onStartGps: () => void; onStopGps: () => void;
-  onAccept: (id: string) => void; onDecline: (id: string) => void; onTripAction: (path: string, body: Record<string, unknown>, opts?: { stopGps?: boolean }) => void; goTrips: () => void;
+  onAccept: (id: string) => void; onDecline: (id: string) => void; goTrips: () => void;
 }) {
-  const { data, dash, gps, offer, offerSecs, offerBusy, nowMs, pos, navRoute, startCode, setStartCode } = props;
+  const { data, dash, gps, offer, offerSecs, offerBusy } = props;
   const { t, tp, fmt } = useT();
   const { money, dur, km, statusLabel } = useDriverFmt();
-  const [ask, setAsk] = useState<'complete' | 'release' | null>(null);
   const trip = data.trip;
   const blocker = dash?.alerts.find((a) => a.level === 'blocker');
-
-  const navMarkers: MapMarker[] = [];
-  if (pos) navMarkers.push({ id: 'me', lat: pos.lat, lng: pos.lng, kind: 'vehicle', label: t('driver.map.you') });
-  if (trip) { navMarkers.push({ id: 'pk', lat: trip.pickup.lat, lng: trip.pickup.lng, kind: 'pickup', label: t('driver.map.pickup') }); if (trip.status === 'IN_PROGRESS') navMarkers.push({ id: 'dp', lat: trip.dropoff.lat, lng: trip.dropoff.lng, kind: 'dropoff', label: t('driver.map.destination') }); }
 
   return (
     <div className="space-y-4">
@@ -340,55 +319,8 @@ function HomeSection(props: {
         </div>
       )}
 
-      {/* Active trip (priority over stats) */}
-      {trip ? (
-        <div className="card p-4">
-          <div className="flex items-center justify-between"><span className="font-mono text-accent">{trip.reference}</span><span className="chip">{statusLabel(trip.status)}</span></div>
-          <div className="mt-3 h-56 overflow-hidden rounded-[12px] border border-edge"><AutoMapView markers={navMarkers} route={navRoute} center={pos ?? trip.pickup} zoom={13} interactive className="h-full w-full" /></div>
-          <p className="mt-1 text-xs text-muted">{trip.status === 'IN_PROGRESS' ? t('driver.trip.routeToDestination') : t('driver.trip.routeToPickup')}{!pos && t('driver.trip.noPosHint')}</p>
-          <div className="mt-3 space-y-2 text-sm">
-            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" /><span className="text-muted">{t('driver.trip.pickup')}</span><span className="ml-auto text-right font-medium">{trip.pickup.label}</span></div>
-            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-ink" /><span className="text-muted">{t('driver.trip.destination')}</span><span className="ml-auto text-right font-medium">{trip.dropoff.label}</span></div>
-          </div>
-          <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-            <div className="font-medium">{trip.passengerName} · {t('driver.units.paxShort', { count: trip.passengerCount })} · {trip.vClass}</div>
-            {trip.note && <div className="mt-1 text-xs text-muted">{t('driver.trip.note', { note: trip.note })}</div>}
-            {trip.flightNumber && <div className="mt-1 font-mono text-xs text-ink">✈ {t('driver.scheduled.flight', { flight: formatFlight(trip.flightNumber) })}</div>}
-            <div className="mt-3"><ChatPanel key={trip.bookingId} listUrl={`/driver/bookings/${trip.bookingId}/messages`} postUrl={`/driver/bookings/${trip.bookingId}/messages`} pushUrl="/driver/push" me="DRIVER" peerLabel="passenger" /></div>
-            <div className="mt-3 flex gap-2">
-              <a href={`tel:${trip.passengerPhone}`} className="btn-ghost !min-h-[44px] flex-1 !py-2 text-sm">{t('driver.trip.call')}</a>
-              <a href={`https://www.google.com/maps/dir/?api=1&destination=${(trip.status === 'IN_PROGRESS' ? trip.dropoff : trip.pickup).lat},${(trip.status === 'IN_PROGRESS' ? trip.dropoff : trip.pickup).lng}&travelmode=driving`} target="_blank" rel="noreferrer" className="btn-ghost !min-h-[44px] flex-1 !py-2 text-sm">{t('driver.trip.navigate')}</a>
-            </div>
-            <p className="mt-2 text-xs text-warn">{t('driver.trip.navigateWarning')}</p>
-          </div>
-          {trip.status === 'ARRIVED' && trip.waiting && (() => {
-            const elapsed = Math.max(0, Math.floor((nowMs - new Date(trip.waiting.arrivedAt).getTime()) / 1000));
-            const freeLeft = Math.max(0, trip.waiting.graceSeconds - elapsed);
-            const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-            return <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">{freeLeft > 0 ? (() => { const [before, after] = t('driver.trip.freeWaitingLeft', { time: '\u0000' }).split('\u0000'); return <span>{before}<span className="font-mono text-accent">{mmss(freeLeft)}</span>{after}</span>; })() : <span className="text-warn">{trip.waiting.paidRateCentsPerMin > 0 ? t('driver.trip.freeWaitingElapsedPaid', { rate: money(trip.waiting.paidRateCentsPerMin, 'EUR') }) : t('driver.trip.freeWaitingElapsedFree')}</span>}</div>;
-          })()}
-          <div className="mt-4 grid gap-2">
-            {trip.status === 'ASSIGNED' && <button className="btn-primary min-h-[44px] w-full" onClick={() => props.onTripAction('status', { to: 'EN_ROUTE' })}>{t('driver.trip.onTheWay')}</button>}
-            {trip.status === 'EN_ROUTE' && <button className="btn-primary min-h-[44px] w-full" onClick={() => props.onTripAction('arrive', {})}>{t('driver.trip.arrived')}</button>}
-            {trip.status === 'ARRIVED' && (
-              <div className="grid gap-2">
-                <input inputMode="numeric" maxLength={4} placeholder={t('driver.trip.startCodePlaceholder')} value={startCode} onChange={(e) => setStartCode(e.target.value.replace(/\D/g, '').slice(0, 4))} className="w-full rounded-[12px] border border-edge bg-page px-3 py-2.5 text-center font-mono text-lg tracking-[0.4em]" />
-                <button className="btn-primary min-h-[44px] w-full" disabled={startCode.length !== 4} onClick={() => props.onTripAction('start', { code: startCode })}>{t('driver.trip.startTrip')}</button>
-              </div>
-            )}
-            {trip.status === 'IN_PROGRESS' && <button className="btn-primary min-h-[44px] w-full" onClick={() => setAsk('complete')}>{t('driver.trip.completeTrip')}</button>}
-            {['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(trip.status) && <button className="btn-primary min-h-[44px] w-full !bg-elevated !text-danger border border-danger/40" onClick={() => setAsk('release')}>{t('driver.trip.release')}</button>}
-          </div>
-          {ask === 'complete' && (
-            <ConfirmSheet title={t('driver.trip.completeTitle')} body={t('driver.trip.completeBody', { name: trip.passengerName })} confirmLabel={t('driver.trip.completeTrip')}
-              onConfirm={() => { setAsk(null); props.onTripAction('complete', {}, { stopGps: true }); }} onCancel={() => setAsk(null)} cancelLabel={t('driver.trip.notYet')} />
-          )}
-          {ask === 'release' && (
-            <ConfirmSheet title={t('driver.trip.releaseTitle')} body={t('driver.trip.releaseBody')} confirmLabel={t('driver.trip.releaseConfirm')} danger
-              onConfirm={() => { setAsk(null); props.onTripAction('cancel', {}); }} onCancel={() => setAsk(null)} cancelLabel={t('driver.trip.keepRide')} />
-          )}
-        </div>
-      ) : !offer && (
+      {/* Idle (no offer): today + recent trips. An active trip has its own full-screen navigation. */}
+      {!offer && (
         <>
           {/* Today's three figures */}
           <div className="grid grid-cols-3 gap-2">
@@ -659,7 +591,7 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
 }
 
 // ---- Bottom nav ----
-function BottomNav({ tab, setTab, hasOffer, hasTrip }: { tab: Tab; setTab: (t: Tab) => void; hasOffer: boolean; hasTrip: boolean }) {
+function BottomNav({ tab, setTab, hasOffer }: { tab: Tab; setTab: (t: Tab) => void; hasOffer: boolean }) {
   const { t } = useT();
   const items: { id: Tab; label: string; icon: string }[] = [
     { id: 'home', label: t('driver.nav.home'), icon: '🏠' }, { id: 'trips', label: t('driver.nav.trips'), icon: '🧾' },
@@ -672,7 +604,7 @@ function BottomNav({ tab, setTab, hasOffer, hasTrip }: { tab: Tab; setTab: (t: T
           <button key={it.id} onClick={() => setTab(it.id)} className={`relative flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 py-1 text-xs ${tab === it.id ? 'text-accent' : 'text-muted'}`}>
             <span className="text-base leading-none" aria-hidden>{it.icon}</span>
             <span>{it.label}</span>
-            {it.id === 'home' && (hasOffer || hasTrip) && tab !== 'home' && <span className={`absolute right-[28%] top-1.5 h-2 w-2 rounded-full ${hasOffer ? 'bg-accent' : 'bg-warn'}`} />}
+            {it.id === 'home' && hasOffer && tab !== 'home' && <span className="absolute right-[28%] top-1.5 h-2 w-2 rounded-full bg-accent" />}
           </button>
         ))}
       </div>

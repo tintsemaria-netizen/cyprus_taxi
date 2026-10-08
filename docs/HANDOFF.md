@@ -1,5 +1,19 @@
 # Session handoff
 
+## Driver full-screen navigation (2026-10-08)
+- Once a driver accepts, `/driver` shows ONLY `src/components/driver/DriverNavigation.tsx`: no tabs, bottom nav or stats. It has a heading-up map that follows the car, a turn-by-turn banner and a compact sheet with the stage action, call, chat, Google Maps and Details (note, flight, release).
+- Route: `POST /api/v1/driver/navigation` returns a Google Routes response with `legs.steps.navigationInstruction` in the driver's language (en/el/ru).
+  - The target comes from the driver's own active assignment: the pickup until IN_PROGRESS, then the destination. ARRIVED returns no route.
+  - The client sends its current fix and travel heading.
+  - The route is refetched when off-route by more than 60 m on 2 consecutive fixes, and every 60 s for a traffic-aware ETA.
+  - Rate limit: 20 requests per minute per driver.
+  - With no router the API returns `available:false` and the UI offers external Google Maps. There is no simulated route.
+- Pure geometry lives in `src/lib/nav.ts`: projection, next step, prompt bands and look-ahead.
+- Voice prompts use `speechSynthesis`: the departure once, then 800/250/40 m. Mute is stored in localStorage.
+- `follow` / `onFollowBreak` props were added to GoogleMapView and MapView. Dragging the map stops following and shows a "Re-centre" button.
+- Tests: `tests/navigation.test.ts` and `tests/navigation.db.test.ts`. Playwright: `tests-e2e/driver-nav.spec.ts` with fixture `seed-nav.ts`, navigation API stubbed, run against a local build on :3065.
+- Limits: this is web navigation, so the browser tab must stay open. Heading and tilt on Google need the vector map (MAP_ID). Lane guidance and speed cameras are out of scope.
+
 ## Staff dialogs + MapLibre worker fix (2026-10-08) — release 2e3ba43, DEPLOYED
 - All native confirm()/prompt() in dispatch/admin replaced by in-app dialogs (`useDialog()` +
   `ConfirmSheet` with validated input). None remain in src/.

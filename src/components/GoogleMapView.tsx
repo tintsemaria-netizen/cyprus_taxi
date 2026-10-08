@@ -21,6 +21,10 @@ interface Props {
   fleet?: { lat: number; lng: number; stale?: boolean; state?: 'available' | 'busy' }[];
   // Zoom the map to this point (e.g. the passenger's detected location), padding-aware.
   focus?: { lat: number; lng: number } | null;
+  // Navigation camera: keep this point centred, rotated to `heading` (heading-up), with tilt.
+  // While set, the auto-fit/focus framing is suspended. Dragging the map calls onFollowBreak.
+  follow?: { lat: number; lng: number; heading: number; zoom?: number; tilt?: number } | null;
+  onFollowBreak?: () => void;
 }
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
@@ -48,7 +52,7 @@ function markerEl(mk: MapMarker): HTMLElement {
   return el;
 }
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, follow, onFollowBreak }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   // Reconcile markers by id (no recreation flicker) and remember each one's logical
@@ -63,6 +67,11 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   const [ready, setReady] = useState(false);
   const clickRef = useRef(onMapClick);
   clickRef.current = onMapClick;
+  const followRef = useRef(follow);
+  followRef.current = follow;
+  const breakRef = useRef(onFollowBreak);
+  breakRef.current = onFollowBreak;
+  const camAnim = useRef<number | null>(null);
   const homeRef = useRef<{ lat: number; lng: number }>(center ?? CYPRUS_CENTER);
 
   useEffect(() => {
@@ -94,6 +103,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
           map.addListener('click', (e: any) => clickRef.current?.({ lat: e.latLng.lat(), lng: e.latLng.lng() }));
         }
         mapRef.current = map;
+        map.addListener('dragstart', () => { if (followRef.current) breakRef.current?.(); });
         // The map may be created before its (mobile/flex) container has its final size,
         // which leaves it painting only the background. Nudge a resize + recentre when
         // the container settles and on any later size change.
@@ -183,7 +193,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   const fitKey = markers.map((m) => (m.kind === 'vehicle' ? 'v' : `${m.id}:${m.lat.toFixed(4)},${m.lng.toFixed(4)}`)).join('|');
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
-    if (!map || !g || !ready) return;
+    if (!map || !g || !ready || followRef.current) return;
     const pad = fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 };
     if (markers.length >= 2) {
       const b = new g.LatLngBounds();
@@ -205,10 +215,34 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   const focusKey = focus ? `${focus.lat.toFixed(5)},${focus.lng.toFixed(5)}` : '';
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
-    if (!map || !g || !ready || !focus || markers.length >= 2) return;
+    if (!map || !g || !ready || !focus || markers.length >= 2 || followRef.current) return;
     framePoint(map, g, focus.lat, focus.lng, fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusKey, ready]);
+
+  // Navigation camera: ease centre + heading toward the latest fix (shortest way round).
+  const followKey = follow ? `${follow.lat.toFixed(6)},${follow.lng.toFixed(6)},${Math.round(follow.heading)},${follow.zoom ?? 17},${follow.tilt ?? 45}` : '';
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !follow) return;
+    if (camAnim.current) cancelAnimationFrame(camAnim.current);
+    const c0 = map.getCenter?.();
+    const from = { lat: c0 ? c0.lat() : follow.lat, lng: c0 ? c0.lng() : follow.lng, heading: map.getHeading?.() ?? 0 };
+    const dh = ((follow.heading - from.heading + 540) % 360) - 180;
+    const far = Math.abs(from.lat - follow.lat) + Math.abs(from.lng - follow.lng) > 0.02; // > ~2 km: jump
+    const zoom = follow.zoom ?? 17, tilt = follow.tilt ?? 45;
+    if (far) { map.moveCamera({ center: { lat: follow.lat, lng: follow.lng }, heading: follow.heading, zoom, tilt }); return; }
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / 800);
+      const e = t * (2 - t);
+      map.moveCamera({ center: { lat: from.lat + (follow.lat - from.lat) * e, lng: from.lng + (follow.lng - from.lng) * e }, heading: from.heading + dh * e, zoom, tilt });
+      camAnim.current = t < 1 ? requestAnimationFrame(step) : null;
+    };
+    camAnim.current = requestAnimationFrame(step);
+    return () => { if (camAnim.current) cancelAnimationFrame(camAnim.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followKey, ready]);
 
   // Live on-duty cars overlay (does not affect the fit).
   useEffect(() => {

@@ -170,6 +170,75 @@ export async function googleRoute(
   };
 }
 
+// Turn-by-turn driving route for the driver navigation screen: the same Routes API call plus
+// per-step manoeuvres/instructions in the driver's language. Each step carries `at`, the index in
+// `path` where the manoeuvre happens, so the client can track progress along one polyline.
+export interface NavStep { at: number; maneuver: string; text: string; distanceM: number }
+export interface NavRouteResult { distanceM: number; durationSec: number; path: [number, number][]; steps: NavStep[] }
+
+export async function googleNavRoute(
+  from: { lat: number; lng: number; heading?: number | null },
+  to: { lat: number; lng: number },
+  languageCode: string,
+  opts: { timeoutMs?: number } = {},
+): Promise<NavRouteResult | null> {
+  const key = config.googleServerKey();
+  const origin: Record<string, unknown> = { latLng: { latitude: from.lat, longitude: from.lng } };
+  // A heading lets Google start the route in the direction the car is already moving.
+  if (from.heading != null && Number.isFinite(from.heading)) origin.heading = Math.round(((from.heading % 360) + 360) % 360);
+  const d = (await fetchJson('https://routes.googleapis.com/directions/v2:computeRoutes', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': key,
+      'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline,routes.legs.steps.distanceMeters,routes.legs.steps.startLocation,routes.legs.steps.navigationInstruction',
+    },
+    body: JSON.stringify({
+      origin: { location: origin },
+      destination: { location: { latLng: { latitude: to.lat, longitude: to.lng } } },
+      travelMode: 'DRIVE',
+      routingPreference: 'TRAFFIC_AWARE',
+      languageCode,
+      units: 'METRIC',
+    }),
+  }, opts.timeoutMs)) as {
+    routes?: {
+      distanceMeters?: number; duration?: string; polyline?: { encodedPolyline?: string };
+      legs?: { steps?: { distanceMeters?: number; startLocation?: { latLng?: { latitude: number; longitude: number } }; navigationInstruction?: { maneuver?: string; instructions?: string } }[] }[];
+    }[];
+    error?: { message?: string };
+  };
+  if (d.error) throw new Error(`routes:${d.error.message ?? 'error'}`);
+  const r = d.routes?.[0];
+  if (!r || r.distanceMeters == null || !r.polyline?.encodedPolyline) return null;
+  const path = decodePolyline(r.polyline.encodedPolyline);
+  const raw = (r.legs ?? []).flatMap((l) => l.steps ?? []);
+  return { distanceM: r.distanceMeters, durationSec: Number((r.duration ?? '0s').replace('s', '')), path, steps: anchorSteps(path, raw) };
+}
+
+// Map each step's start point to the nearest path vertex, searching forward only (steps are in
+// route order, and a route can pass the same spot twice).
+export function anchorSteps(
+  path: [number, number][],
+  raw: { distanceMeters?: number; startLocation?: { latLng?: { latitude: number; longitude: number } }; navigationInstruction?: { maneuver?: string; instructions?: string } }[],
+): NavStep[] {
+  const out: NavStep[] = [];
+  let from = 0;
+  for (const s of raw) {
+    const ll = s.startLocation?.latLng;
+    if (!ll) continue;
+    let best = from, bestD = Infinity;
+    for (let i = from; i < path.length; i++) {
+      const dLat = path[i][0] - ll.latitude, dLng = (path[i][1] - ll.longitude) * Math.cos((ll.latitude * Math.PI) / 180);
+      const dd = dLat * dLat + dLng * dLng;
+      if (dd < bestD) { bestD = dd; best = i; }
+    }
+    from = best;
+    out.push({ at: best, maneuver: s.navigationInstruction?.maneuver ?? 'STRAIGHT', text: s.navigationInstruction?.instructions ?? '', distanceM: s.distanceMeters ?? 0 });
+  }
+  return out;
+}
+
 // Standard Google encoded-polyline decoder → [lat, lng] pairs.
 function decodePolyline(str: string): [number, number][] {
   let index = 0, lat = 0, lng = 0;

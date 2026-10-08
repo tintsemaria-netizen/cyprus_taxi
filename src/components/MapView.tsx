@@ -26,6 +26,9 @@ interface Props {
   fitPadding?: { top: number; right: number; bottom: number; left: number };
   fleet?: { lat: number; lng: number; stale?: boolean; state?: 'available' | 'busy' }[];
   focus?: { lat: number; lng: number } | null; // zoom the map to this point (e.g. the user's location)
+  // Navigation camera (see GoogleMapView): centred, heading-up, tilted; suspends auto-fit.
+  follow?: { lat: number; lng: number; heading: number; zoom?: number; tilt?: number } | null;
+  onFollowBreak?: () => void;
 }
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
@@ -50,7 +53,7 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, focus }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, focus, follow, onFollowBreak }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerObjs = useRef<maplibregl.Marker[]>([]);
@@ -58,6 +61,10 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
   const [ready, setReady] = useState(false);
   const clickRef = useRef(onMapClick);
   clickRef.current = onMapClick;
+  const followRef = useRef(follow);
+  followRef.current = follow;
+  const breakRef = useRef(onFollowBreak);
+  breakRef.current = onFollowBreak;
 
   useEffect(() => {
     let cancelled = false;
@@ -80,6 +87,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
           console.warn('map error', e?.error?.message);
         });
         map.on('load', () => { if (!cancelled) setReady(true); });
+        map.on('dragstart', () => { if (followRef.current) breakRef.current?.(); });
         if (interactive) {
           map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'bottom-right');
           map.on('click', (ev) => clickRef.current?.({ lat: ev.lngLat.lat, lng: ev.lngLat.lng }));
@@ -124,7 +132,8 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         const marker = new maplibre.Marker({ element: el }).setLngLat([mk.lng, mk.lat]).addTo(map);
         markerObjs.current.push(marker);
       }
-      // Fit to markers if more than one
+      // Fit to markers if more than one (not while the navigation camera is following).
+      if (followRef.current) return;
       if (markers.length >= 2) {
         const b = new maplibre.LngLatBounds();
         markers.forEach((m) => b.extend([m.lng, m.lat]));
@@ -141,10 +150,19 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
   const focusKey = focus ? `${focus.lat.toFixed(5)},${focus.lng.toFixed(5)}` : '';
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready || !focus) return;
+    if (!map || !ready || !focus || followRef.current) return;
     map.easeTo({ center: [focus.lng, focus.lat], zoom: 15, duration: 500 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusKey, ready]);
+
+  const followKey = follow ? `${follow.lat.toFixed(6)},${follow.lng.toFixed(6)},${Math.round(follow.heading)},${follow.zoom ?? 17},${follow.tilt ?? 45}` : '';
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !follow) return;
+    // Demo raster tiles run out past z16 in places; cap the fallback map there.
+    map.easeTo({ center: [follow.lng, follow.lat], bearing: follow.heading, zoom: Math.min(16, follow.zoom ?? 16), pitch: follow.tilt ?? 45, duration: 800 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followKey, ready]);
 
   // Sync route line
   useEffect(() => {
