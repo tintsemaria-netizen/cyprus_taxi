@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type * as maplibregl from 'maplibre-gl';
+import { loadMaplibre } from '@/lib/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { publicMapConfig } from '@/lib/config';
 
@@ -63,7 +64,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     let map: maplibregl.Map | null = null;
     (async () => {
       try {
-        const maplibre = await import('maplibre-gl');
+        const maplibre = await loadMaplibre();
         if (cancelled || !containerRef.current) return;
         map = new maplibre.Map({
           container: containerRef.current,
@@ -102,7 +103,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     const map = mapRef.current;
     if (!map || !ready) return;
     (async () => {
-      const maplibre = await import('maplibre-gl');
+      const maplibre = await loadMaplibre();
       markerObjs.current.forEach((m) => m.remove());
       markerObjs.current = [];
       for (const mk of markers) {
