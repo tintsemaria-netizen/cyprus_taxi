@@ -27,6 +27,7 @@ import type { CreateBookingInput } from '@/lib/validation';
 import * as adminDrivers from '@/app/api/v1/admin/drivers/route';
 import * as adminApplications from '@/app/api/v1/admin/applications/route';
 import * as adminSettings from '@/app/api/v1/admin/settings/route';
+import * as adminReliability from '@/app/api/v1/admin/reliability/route';
 import * as dispatchBookings from '@/app/api/v1/dispatch/bookings/route';
 import * as driverOffers from '@/app/api/v1/driver/offers/route';
 import * as driverDashboard from '@/app/api/v1/driver/dashboard/route';
@@ -82,6 +83,7 @@ describe('staff routes enforce role', () => {
       ['admin/drivers', () => adminDrivers.GET()],
       ['admin/applications', () => adminApplications.GET(req('/admin/applications'))],
       ['admin/settings', () => adminSettings.GET()],
+      ['admin/reliability', () => adminReliability.GET(req('/admin/reliability?days=30'))],
     ] as const) {
       anonymous(); expect((await call()).status, `${name} anon`).toBe(401);
       await asStaff('andreas'); expect((await call()).status, `${name} driver`).toBe(403);

@@ -1,5 +1,16 @@
 # Session handoff
 
+## Admin driver reliability (2026-10-08) — /admin/reliability (ADMIN)
+- Per-driver counts over 7/30/90 days from Postgres: offers (accepted / rejected / missed; system-withdrawn
+  excluded), completed trips, pre-pickup cancels (REMATCH by DRIVER), GPS-loss releases, pre-bookings
+  (converted / releases / late releases / lapsed), ratings (avg, count, 1–2★), online hours (duty sessions).
+- Flags = review prompts, never automatic sanctions (PWD human review): acceptance < 50% or missed > 30% with
+  ≥ 10 offers; ≥ 2 late pre-book releases; rating < 4.0 with ≥ 5; ≥ 3 pre-pickup cancels
+  (`FLAG_RULES` in `src/server/admin/reliability.ts`). Detail panel lists recent events incl. low-rating
+  comments. API `GET /admin/reliability?days=`, `GET /admin/reliability/[driverId]?days=`.
+- Tests: reliability.db (exact counts/flags/detail/window), routes.db (ADMIN-only). Suite 173/1 skipped;
+  Playwright reliability-visual 1/1; screenshots docs/qa-screenshots/reliability.
+
 ## Task 021 — scheduled-ride pre-assignment (2026-10-05) — see Tasks/021
 - Drivers pre-book scheduled rides from a board (Trips → Pre-book); worker converts 30 min before pickup
   or lapses at T−15 into normal search; protection from new immediate offers 75 min before; flight number

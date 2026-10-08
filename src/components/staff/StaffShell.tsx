@@ -56,6 +56,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
           ...(me.role === 'ADMIN'
             ? [
                 { href: '/admin/analytics', label: 'Analytics' },
+                { href: '/admin/reliability', label: 'Reliability' },
                 { href: '/admin/applications', label: 'Applications' },
                 { href: '/admin/drivers', label: 'Drivers' },
                 { href: '/admin/vehicles', label: 'Vehicles' },
