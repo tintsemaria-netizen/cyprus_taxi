@@ -234,7 +234,7 @@ export function anchorSteps(
       if (dd < bestD) { bestD = dd; best = i; }
     }
     from = best;
-    out.push({ at: best, maneuver: s.navigationInstruction?.maneuver ?? 'STRAIGHT', text: (s.navigationInstruction?.instructions ?? '').replace(/\u00ad/g, ''), // Google adds soft hyphens (bad for TTS) distanceM: s.distanceMeters ?? 0 });
+    out.push({ at: best, maneuver: s.navigationInstruction?.maneuver ?? 'STRAIGHT', text: (s.navigationInstruction?.instructions ?? '').replace(/\u00ad/g, '') /* Google adds soft hyphens (bad for TTS) */, distanceM: s.distanceMeters ?? 0 });
   }
   return out;
 }
