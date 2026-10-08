@@ -6,6 +6,7 @@ import { StaffShell } from '@/components/staff/StaffShell';
 import { StatusBadge } from '@/components/staff/StatusBadge';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { api, ApiRequestError } from '@/lib/api-client';
+import { useDialog } from '@/components/useDialog';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,7 @@ function BookingDetail() {
   const [d, setD] = useState<Detail | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [showAssign, setShowAssign] = useState(false);
+  const [dialog, ask] = useDialog();
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -72,7 +74,9 @@ function BookingDetail() {
 
   async function doUnassign() {
     if (!d) return;
-    const reason = prompt('Reason for unassigning?') || undefined;
+    const r = await ask({ title: 'Unassign the driver?', body: 'An immediate ride goes straight back into automatic search; a scheduled ride waits for its normal dispatch time. The passenger is notified.', confirmLabel: 'Unassign', danger: true, input: { label: 'Reason (audited, optional)' } });
+    if (r === null) return;
+    const reason = r || undefined;
     setBusy(true);
     try {
       await api(`/dispatch/bookings/${id}/unassign`, { method: 'POST', body: { expectedRevision: d.revision, reason } });
@@ -86,8 +90,8 @@ function BookingDetail() {
 
   async function doTerminate() {
     if (!d) return;
-    const reason = prompt('Reason to terminate this in-progress trip (required):');
-    if (!reason || reason.trim().length < 3) return;
+    const reason = await ask({ title: 'Terminate this trip?', body: 'Ends an in-progress trip as an exceptional, audited staff action.', confirmLabel: 'Terminate trip', danger: true, input: { label: 'Reason (required, audited)', multiline: true, required: true, minLength: 3 } });
+    if (reason === null) return;
     setBusy(true);
     try {
       await api(`/dispatch/bookings/${id}/terminate`, { method: 'POST', body: { expectedRevision: d.revision, reason } });
@@ -108,6 +112,7 @@ function BookingDetail() {
 
   return (
     <div className="mx-auto max-w-5xl p-4 sm:p-6">
+      {dialog}
       <a href="/dispatch" className="text-sm text-muted hover:text-ink">‹ Back to queue</a>
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <h1 className="font-mono text-xl text-accent">{d.reference}</h1>
@@ -162,11 +167,14 @@ function BookingDetail() {
                 <button
                   key={s}
                   className={`btn-ghost !min-h-0 !py-2 text-sm ${s === 'CANCELED' ? '!border-danger/40 !text-danger' : ''}`}
-                  onClick={() => {
-                    if (s === 'CANCELED') { if (confirm('Cancel this booking?')) doStatus(s, 'dispatcher canceled'); return; }
+                  onClick={async () => {
+                    if (s === 'CANCELED') {
+                      if (await ask({ title: 'Cancel this booking?', body: 'The passenger and any assigned or pre-booked driver are notified.', confirmLabel: 'Cancel booking', cancelLabel: 'Keep booking', danger: true })) doStatus(s, 'dispatcher canceled');
+                      return;
+                    }
                     if (s === 'ARRIVED' || s === 'IN_PROGRESS' || s === 'COMPLETED') {
-                      const reason = prompt(`Override — ${actionLabel(s).toLowerCase()} on the driver's behalf. Enter a reason (audited):`);
-                      if (reason && reason.trim().length >= 3) doStatus(s, reason.trim());
+                      const reason = await ask({ title: `Override: ${actionLabel(s).toLowerCase()}`, body: 'You are acting on the driver’s behalf. This is recorded in the audit log.', confirmLabel: actionLabel(s), input: { label: 'Reason (required, audited)', required: true, minLength: 3 } });
+                      if (reason !== null) doStatus(s, reason);
                       return;
                     }
                     doStatus(s);
@@ -213,6 +221,7 @@ function AssignDialog({ bookingId, revision, isReassign, onClose, onDone }: { bo
   const [sel, setSel] = useState<AvailDriver | null>(null);
   const [reason, setReason] = useState('');
   const [err, setErr] = useState<string | null>(null);
+  const [dialog, ask] = useDialog();
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -232,7 +241,7 @@ function AssignDialog({ bookingId, revision, isReassign, onClose, onDone }: { bo
     } catch (e) {
       if (e instanceof ApiRequestError) {
         if (e.body.code === 'GPS_WARNING') {
-          if (confirm('This driver has no fresh GPS. Assign anyway?')) return submit(true);
+          if (await ask({ title: 'No fresh GPS for this driver', body: 'Their live position is unknown, so the passenger will not see them approaching until GPS resumes. Assign anyway?', confirmLabel: 'Assign anyway' })) return submit(true);
         }
         setErr(e.body.message);
       } else setErr('Failed to assign.');
@@ -241,6 +250,7 @@ function AssignDialog({ bookingId, revision, isReassign, onClose, onDone }: { bo
   }
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4" onClick={onClose}>
       <div className="card w-full max-w-md p-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
@@ -274,6 +284,8 @@ function AssignDialog({ bookingId, revision, isReassign, onClose, onDone }: { bo
         </button>
       </div>
     </div>
+    {dialog}
+    </>
   );
 }
 

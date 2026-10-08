@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { StaffShell } from '@/components/staff/StaffShell';
 import { api, ApiRequestError } from '@/lib/api-client';
+import { useDialog } from '@/components/useDialog';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,7 @@ function Detail() {
   const [d, setD] = useState<Detail | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [dialog, ask] = useDialog();
   const load = useCallback(async () => { try { setD(await api<Detail>(`/admin/applications/${id}`)); } catch (e) { if (e instanceof ApiRequestError) setBanner(e.body.message); } }, [id]);
   useEffect(() => { load(); }, [load]);
 
@@ -33,12 +35,18 @@ function Detail() {
   }
   const EXPIRY_SLOTS = ['licence_front', 'licence_back', 'taxi_licence', 'insurance', 'roadworthiness', 'vehicle_reg', 'right_to_work', 'passport', 'id_front'];
   async function decide(docId: string, decision: 'ACCEPTED' | 'CHANGES', slot: string) {
-    if (decision === 'CHANGES') { const note = prompt('What needs changing? (shown to applicant)') || undefined; if (!note) return; await act(`documents/${docId}/decision`, { decision, note }); return; }
+    if (decision === 'CHANGES') {
+      const note = await ask({ title: 'Request a new document', confirmLabel: 'Send to applicant', input: { label: 'What needs changing? (shown to the applicant)', multiline: true, required: true, minLength: 3 } });
+      if (note === null) return;
+      await act(`documents/${docId}/decision`, { decision, note });
+      return;
+    }
     // Capture an expiry date on accept where the document type has one (drives DOCUMENTS_EXPIRED).
     let expiresAt: string | undefined;
     if (EXPIRY_SLOTS.includes(slot)) {
-      const d = prompt('Document expiry date (YYYY-MM-DD), or leave blank if none:') || '';
-      if (d.trim()) { const dt = new Date(d.trim()); if (!Number.isNaN(dt.getTime())) expiresAt = dt.toISOString(); }
+      const d = await ask({ title: 'Accept document', confirmLabel: 'Accept', input: { label: 'Document expiry date', type: 'date', hint: 'Leave empty if this document has no expiry.' } });
+      if (d === null) return; // cancelled → nothing is accepted
+      if (d) { const dt = new Date(d); if (!Number.isNaN(dt.getTime())) expiresAt = dt.toISOString(); }
     }
     await act(`documents/${docId}/decision`, { decision, expiresAt });
   }
@@ -48,6 +56,7 @@ function Detail() {
 
   return (
     <div className="mx-auto max-w-4xl p-4 sm:p-6">
+      {dialog}
       <a href="/admin/applications" className="text-sm text-muted hover:text-ink">‹ Applications</a>
       <div className="mt-2 flex items-center gap-3">
         <h1 className="text-xl font-bold">{d.identity.legalName || '(unnamed)'}</h1>
@@ -94,9 +103,9 @@ function Detail() {
               {d.status === 'SUBMITTED' && <button className="btn-primary" disabled={busy} onClick={() => act('start')}>Start review</button>}
               {['SUBMITTED', 'IN_REVIEW'].includes(d.status) && (
                 <>
-                  <button className="btn-primary" disabled={busy} onClick={() => { if (confirm('Approve this driver and provision their account + vehicle?')) act('approve', { expectedRevision: d.revision }); }}>Approve driver</button>
-                  <button className="btn-ghost !text-warn" disabled={busy} onClick={() => { const r = prompt('Changes required (shown to applicant):'); if (r && r.trim().length >= 3) act('request-changes', { reason: r, expectedRevision: d.revision }); }}>Request changes</button>
-                  <button className="btn-ghost !text-danger" disabled={busy} onClick={() => { const r = prompt('Rejection reason (shown to applicant):'); if (r && r.trim().length >= 3) act('reject', { reason: r, expectedRevision: d.revision }); }}>Reject</button>
+                  <button className="btn-primary" disabled={busy} onClick={async () => { if (await ask({ title: 'Approve this driver?', body: 'This provisions their driver account and vehicle (off duty). They can then sign in and go online.', confirmLabel: 'Approve driver' })) act('approve', { expectedRevision: d.revision }); }}>Approve driver</button>
+                  <button className="btn-ghost !text-warn" disabled={busy} onClick={async () => { const r = await ask({ title: 'Request changes', confirmLabel: 'Send to applicant', input: { label: 'Changes required (shown to the applicant)', multiline: true, required: true, minLength: 3 } }); if (r !== null) act('request-changes', { reason: r, expectedRevision: d.revision }); }}>Request changes</button>
+                  <button className="btn-ghost !text-danger" disabled={busy} onClick={async () => { const r = await ask({ title: 'Reject application', confirmLabel: 'Reject', danger: true, input: { label: 'Rejection reason (shown to the applicant)', multiline: true, required: true, minLength: 3 } }); if (r !== null) act('reject', { reason: r, expectedRevision: d.revision }); }}>Reject</button>
                 </>
               )}
               {d.status === 'APPROVED' && <p className="text-sm text-accent">Approved — driver provisioned (off-duty).</p>}

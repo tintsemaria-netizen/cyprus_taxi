@@ -23,6 +23,6 @@ async function main() {
   if (!a.ok) throw new Error('assign ' + a.code);
   const full = await createGrant(b.id, new Date());
   const share = await createShareGrant(b.id);
-  console.log(JSON.stringify({ track: full.token, share: share.token }));
+  console.log(JSON.stringify({ track: full.token, share: share.token, bookingId: b.id }));
 }
 main().finally(() => prisma.$disconnect());
