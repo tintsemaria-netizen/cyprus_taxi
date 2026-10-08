@@ -1,5 +1,16 @@
 # Session handoff
 
+## Staff dialogs + MapLibre worker fix (2026-10-08) — release 2e3ba43, DEPLOYED
+- All native confirm()/prompt() in dispatch/admin replaced by in-app dialogs (`useDialog()` +
+  `ConfirmSheet` with validated input). None remain in src/.
+- **Regression found & fixed:** since Next 16/Turbopack the MapLibre 6 worker could not load its
+  hashed shared chunk ("Worker failed to load"); the MapLibre fallback maps (no Google key) were broken
+  and the dispatch map drew outside its card. Fix: `scripts/copy-maplibre-worker.mjs` (prebuild/predev)
+  → `public/vendor/maplibre/<ver>/` + `setWorkerUrl` in `src/lib/maplibre.ts`. Guard:
+  `tests-e2e/maps.spec.ts` (verified failing without the fix). Prod maps use Google — unaffected.
+- **Lesson:** visual specs must assert rendering (canvas + no console errors), not only DOM text.
+- Next (stage 3): React-Compiler react-hooks warnings refactor (36 sites); flight tracking needs a provider.
+
 ## Admin driver reliability (2026-10-08) — /admin/reliability (ADMIN)
 - Per-driver counts over 7/30/90 days from Postgres: offers (accepted / rejected / missed; system-withdrawn
   excluded), completed trips, pre-pickup cancels (REMATCH by DRIVER), GPS-loss releases, pre-bookings
