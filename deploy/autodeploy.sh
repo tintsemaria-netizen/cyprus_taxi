@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # IL-Y auto-deploy: pull GitHub `main` and run scripts/deploy.sh when it has a new commit.
 #
-# Runs as root from the systemd timer deploy/systemd/taxicy-autodeploy.timer (every 2 min).
+# Runs as root from the systemd timer deploy/systemd/taxicy-autodeploy.timer (every 2 min) as an
+# installed COPY (/usr/local/sbin/taxicy-autodeploy, AUTODEPLOY_ROOT=repo): the merge below rewrites
+# files in the repo, and bash must not be reading this script from there while that happens.
+# After changing this file: sudo install -m 755 deploy/autodeploy.sh /usr/local/sbin/taxicy-autodeploy
 # Git commands run as the repo owner so .git never gets root-owned files; only deploy.sh
 # (docker) runs as root. Safety rules:
 #   - never touches a working tree with uncommitted tracked changes, a branch other than
@@ -15,7 +18,7 @@
 #   sudo deploy/autodeploy.sh        check once (what the timer runs)
 set -uo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="${AUTODEPLOY_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 STATE_DIR="${AUTODEPLOY_STATE_DIR:-/var/lib/taxicy-autodeploy}"
 BRANCH="${AUTODEPLOY_BRANCH:-main}"
 LOCAL_BRANCH="master"

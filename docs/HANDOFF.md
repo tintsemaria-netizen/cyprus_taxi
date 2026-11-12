@@ -6,7 +6,7 @@
 - It skips the run and does not touch the tree when: there are uncommitted tracked changes, the checkout is not on `master`, or local commits are missing from `origin/main`.
 - A commit that failed to deploy is not retried. It is recorded in `/var/lib/taxicy-autodeploy/failed-sha`; the next push or `sudo rm` of that file retries.
 - Telegram is notified on success and on failure (`deploy/secrets/telegram.env`).
-- Logs: `journalctl -u taxicy-autodeploy`. Unit sources are in `deploy/systemd/`, installed by copying them to `/etc/systemd/system`.
+- Logs: `journalctl -u taxicy-autodeploy`. Unit sources are in `deploy/systemd/`, installed by copying them to `/etc/systemd/system`. The service runs an installed copy `/usr/local/sbin/taxicy-autodeploy` so a merge never rewrites the running script. After editing the script, reinstall it: `sudo install -m 755 deploy/autodeploy.sh /usr/local/sbin/taxicy-autodeploy`.
 - Pause: `sudo systemctl stop taxicy-autodeploy.timer`. Resume: `start`.
 - Workflow: develop elsewhere and push to `main`. Do not edit this server checkout, or the next deploy is blocked.
 

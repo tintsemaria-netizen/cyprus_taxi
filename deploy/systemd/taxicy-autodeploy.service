@@ -5,5 +5,6 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash /home/claudeuser/projects/cyprus_taxi/deploy/autodeploy.sh
+Environment=AUTODEPLOY_ROOT=/home/claudeuser/projects/cyprus_taxi
+ExecStart=/usr/local/sbin/taxicy-autodeploy
 TimeoutStartSec=30min
