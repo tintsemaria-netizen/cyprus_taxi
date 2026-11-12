@@ -60,6 +60,12 @@ const driver: Catalog<typeof en> = {
     goOnline: 'Σε υπηρεσία',
   },
   offer: {
+    minShort: '{min} λεπ.',
+    toClient: 'μέχρι τον πελάτη',
+    whereTo: 'Προς',
+    client: 'Πελάτης',
+    sum: 'Ποσό',
+    more: 'Λεπτομέρειες τιμής',
     title: 'Νέα πρόταση διαδρομής',
     pickup: 'Παραλαβή',
     destination: 'Προορισμός',

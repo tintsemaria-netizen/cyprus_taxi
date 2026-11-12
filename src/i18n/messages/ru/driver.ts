@@ -60,6 +60,12 @@ const driver: Catalog<typeof en> = {
     goOnline: 'Выйти на линию',
   },
   offer: {
+    minShort: '{min} мин',
+    toClient: 'до клиента',
+    whereTo: 'Куда',
+    client: 'Клиент',
+    sum: 'Сумма',
+    more: 'Подробнее о цене',
     title: 'Новый заказ',
     pickup: 'Подача',
     destination: 'Назначение',

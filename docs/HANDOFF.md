@@ -1,5 +1,15 @@
 # Session handoff
 
+## New-offer view: client on the map, time + km first (2026-11-12)
+- On a new offer the driver Home map shows the pickup (client) marker together with the driver's car. The map is framed with `fitPadding` so both stay clear of the offer sheet; fleet cars are hidden while an offer is open.
+- Offer sheet order:
+  1. Big "N min · X km to the client" and the pickup address.
+  2. "To", "Client" (name, pax, class), "Fare" (total + meter/upfront), plus schedule, note and flight when present.
+  3. "Fare details" collapsible: breakdown, meter note, phone-after-accept note.
+  4. Sticky Decline/Accept.
+- `pickupDistanceM` is now the DRIVING distance when the pickup ETA was road-routed: `Candidate.roadDistanceMeters` from `googleRoute.distanceKm`. Straight-line is only the fallback.
+- Test: `tests/offer-distance.db.test.ts` mocks the router (2.4 km / 6 min) and checks the offer stores 2400 m / 360 s.
+
 ## Driver home = full-screen map + floating controls (2026-11-12)
 - Home tab (no active trip) renders `DriverHomeMap fullscreen` (fixed, z-0) behind the sticky header (z-30) and the bottom nav (z-40). Overlays are z-10, each control a single floating element:
   - Top-left: status pill (dot + on/off duty · plate). Under it: banner, blocker, warning, GPS error or "turn on GPS" hint, then the install prompt.

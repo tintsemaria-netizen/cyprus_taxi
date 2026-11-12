@@ -26,7 +26,8 @@ export async function createOffer(bookingId: string, c: Candidate): Promise<{ id
       const offer = await tx.driverOffer.create({
         data: {
           bookingId, driverId: c.driverId, vehicleId: c.vehicleId,
-          pickupEtaSec: c.etaSec, pickupDistanceM: Math.round(c.distanceMeters),
+          // Driving distance when the pickup ETA was road-routed; straight-line otherwise.
+          pickupEtaSec: c.etaSec, pickupDistanceM: Math.round(c.roadDistanceMeters ?? c.distanceMeters),
           status: 'OFFERED',
           expiresAt: new Date(Date.now() + OFFER_TTL_SEC * 1000),
           activeBookingId: bookingId, activeDriverId: c.driverId,

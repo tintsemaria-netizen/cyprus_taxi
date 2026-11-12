@@ -57,6 +57,12 @@ const driver = {
     goOnline: 'Go online',
   },
   offer: {
+    minShort: '{min} min',
+    toClient: 'to the client',
+    whereTo: 'To',
+    client: 'Client',
+    sum: 'Fare',
+    more: 'Fare details',
     title: 'New ride offer',
     pickup: 'Pickup',
     destination: 'Destination',

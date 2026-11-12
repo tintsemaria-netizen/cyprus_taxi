@@ -15,6 +15,7 @@ export interface Candidate {
   driverId: string;
   vehicleId: string;
   distanceMeters: number;
+  roadDistanceMeters?: number; // driving distance to the pickup when road-routed (shown to the driver)
   etaSec: number;
   etaApproximate: boolean;
 }
@@ -26,7 +27,7 @@ export async function findBestCandidate(
   booking: { pickupLat: number; pickupLng: number; vClass: 'COMFORT' | 'XL'; passengerCount: number },
   radiusKm: number,
   triedDriverIds: string[],
-  etaCache: Map<string, { etaSec: number; approx: boolean }> = new Map(),
+  etaCache: Map<string, { etaSec: number; approx: boolean; roadM?: number }> = new Map(),
 ): Promise<Candidate | null> {
   const pickup = { lat: booking.pickupLat, lng: booking.pickupLng };
 
@@ -73,11 +74,11 @@ export async function findBestCandidate(
     if (cached) return cached;
     const d = drivers.find((x) => x.id === c.driverId)!;
     const from = { lat: d.location!.lat, lng: d.location!.lng };
-    let res: { etaSec: number; approx: boolean };
+    let res: { etaSec: number; approx: boolean; roadM?: number };
     if (googleConfigured()) {
       try {
         const r = await googleRoute(from, pickup, undefined, { timeoutMs: DISPATCH_ROUTE_TIMEOUT_MS });
-        res = r ? { etaSec: r.etaMinutes * 60, approx: false } : { etaSec: approxEta(c.distanceMeters), approx: true };
+        res = r ? { etaSec: r.etaMinutes * 60, approx: false, roadM: Math.round(r.distanceKm * 1000) } : { etaSec: approxEta(c.distanceMeters), approx: true };
       } catch {
         res = { etaSec: approxEta(c.distanceMeters), approx: true };
       }
@@ -89,8 +90,8 @@ export async function findBestCandidate(
   }));
   const scored: Candidate[] = [];
   shortlist.forEach((c, i) => {
-    const { etaSec, approx } = etas[i];
-    if (etaSec <= MAX_PICKUP_ETA_SEC) scored.push({ driverId: c.driverId, vehicleId: c.vehicleId, distanceMeters: c.distanceMeters, etaSec, etaApproximate: approx });
+    const { etaSec, approx, roadM } = etas[i];
+    if (etaSec <= MAX_PICKUP_ETA_SEC) scored.push({ driverId: c.driverId, vehicleId: c.vehicleId, distanceMeters: c.distanceMeters, ...(roadM != null ? { roadDistanceMeters: roadM } : {}), etaSec, etaApproximate: approx });
   });
   if (!scored.length) return null;
 

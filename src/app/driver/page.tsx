@@ -253,7 +253,7 @@ function HomeSection(props: {
   onAccept: (id: string) => void; onDecline: (id: string) => void; goTrips: () => void;
 }) {
   const { data, dash, gps, offer, offerSecs, offerBusy } = props;
-  const { t, tp, fmt } = useT();
+  const { t, fmt } = useT();
   const { money, km } = useDriverFmt();
   const trip = data.trip;
   const blocker = dash?.alerts.find((a) => a.level === 'blocker');
@@ -267,7 +267,9 @@ function HomeSection(props: {
   // bottom nav (z-40) sit above; overlays are z-10 between them.
   return (
     <>
-      <DriverHomeMap pos={props.pos} fullscreen onCounts={onCounts} />
+      <DriverHomeMap pos={props.pos} fullscreen onCounts={onCounts}
+        pickup={offer && !trip ? offer.pickup : null}
+        fitPadding={offer && !trip ? { top: 130, right: 50, bottom: 420, left: 50 } : undefined} />
 
       {/* Top: status + messages */}
       <div className="pointer-events-none fixed inset-x-0 top-[64px] z-10 mx-auto flex max-w-lg flex-col items-start gap-2 px-3 pt-2">
@@ -322,37 +324,35 @@ function HomeSection(props: {
         )}
       {/* Offer takes priority */}
       {offer && !trip && (
-        <div className="card pointer-events-auto max-h-[calc(100dvh-200px)] overflow-y-auto border-2 border-accent p-4">
+        <div className="card pointer-events-auto max-h-[58dvh] overflow-y-auto border-2 border-accent p-4">
           <div className="flex items-center justify-between"><span className="font-semibold text-accent">{t('driver.offer.title')}</span><span className={`chip ${offerSecs <= 5 ? '!text-danger' : ''}`}>⏳ {t('driver.units.sec', { n: offerSecs })}</span></div>
-          <div className="mt-3 space-y-2 text-sm">
-            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" /><span className="text-muted">{t('driver.offer.pickup')}</span><span className="ml-auto text-right font-medium">{offer.pickup.label}</span></div>
-            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-ink" /><span className="text-muted">{t('driver.offer.destination')}</span><span className="ml-auto text-right font-medium">{offer.dropoff.label}</span></div>
+          {/* 1) How far the client is: time and km to the pickup (the pickup is also on the map). */}
+          <div className="mt-2 flex items-baseline gap-3">
+            <span className="text-3xl font-bold text-ink">{offer.pickupEtaSec != null ? t('driver.offer.minShort', { min: Math.max(1, Math.round(offer.pickupEtaSec / 60)) }) : '—'}</span>
+            {offer.pickupDistanceM != null && <span className="text-xl font-semibold text-muted">{km(offer.pickupDistanceM)}</span>}
+            <span className="text-sm text-muted">{t('driver.offer.toClient')}</span>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
-            {offer.pickupEtaSec != null && <span className="rounded-full bg-elevated px-2 py-1">{t('driver.offer.etaToPickup', { min: Math.max(1, Math.round(offer.pickupEtaSec / 60)) })}</span>}
-            {offer.pickupDistanceM != null && <span className="rounded-full bg-elevated px-2 py-1">{t('driver.offer.away', { dist: km(offer.pickupDistanceM) })}</span>}
-            <span className="rounded-full bg-elevated px-2 py-1">{t('driver.units.paxShort', { count: offer.passengerCount })} · {offer.vClass}</span>
-            {offer.scheduledAt && <span className="rounded-full bg-elevated px-2 py-1">🕒 {fmt.dateTime(offer.scheduledAt)}</span>}
+          <div className="mt-1 flex items-center gap-2 text-sm"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="font-medium">{offer.pickup.label}</span></div>
+          {/* 2) Main info: where to, client name, the sum. */}
+          <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
+            <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{offer.dropoff.label}</span></div>
+            <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span><span className="ml-auto text-xs text-muted">{t('driver.units.paxShort', { count: offer.passengerCount })} · {offer.vClass}</span></div>
+            <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{offer.fareCents != null ? money(offer.fareCents, offer.currency) : '—'}</span><span className="text-xs text-muted">{offer.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.upfront') : t('driver.offer.meterEstimate')}</span></div>
+            {offer.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(offer.scheduledAt)}</div>}
+            {offer.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: offer.note })}</div>}
+            {offer.flightNumber && <div className="font-mono text-xs text-ink">✈ {t('driver.scheduled.flight', { flight: formatFlight(offer.flightNumber) })}</div>}
           </div>
-          {/* Complete passenger info (phone revealed on accept). */}
-          <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-            <div className="font-medium">{t('driver.offer.passengerLine', { name: offer.passengerName, passengers: tp('common.passengers', offer.passengerCount), vClass: offer.vClass })}</div>
-            {offer.note && <div className="mt-1 text-xs text-warn">{t('driver.offer.note', { note: offer.note })}</div>}
-            {offer.flightNumber && <div className="mt-1 font-mono text-xs text-ink">✈ {t('driver.scheduled.flight', { flight: formatFlight(offer.flightNumber) })}</div>}
-            <div className="mt-1 text-xs text-muted">{t('driver.offer.phoneHidden')}</div>
-          </div>
-          {/* Full fare breakdown so the driver sees all prices before accepting. */}
-          <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-            <div className="mb-1 flex items-center justify-between">
-              <span className="font-medium">{t('driver.offer.fare')}</span>
-              <span className="text-xs text-muted">{offer.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.upfront') : t('driver.offer.meterEstimate')}</span>
+          {/* Fare breakdown on demand. */}
+          <details className="mt-2 text-xs text-muted">
+            <summary className="cursor-pointer">{t('driver.offer.more')}</summary>
+            <div className="mt-1 space-y-0.5">
+              {offer.fareBreakdown?.length ? offer.fareBreakdown.map((l, i) => (
+                <div key={i} className="flex justify-between gap-3"><span className="min-w-0 truncate">{l.label}</span><span className="shrink-0">{money(l.cents, offer.currency)}</span></div>
+              )) : <div>{t('driver.offer.noEstimate')}</div>}
+              {offer.priceType !== 'UPFRONT_DYNAMIC' && <div>{t('driver.offer.meterSettled')}</div>}
+              <div>{t('driver.offer.phoneHidden')}</div>
             </div>
-            {offer.fareBreakdown?.length ? offer.fareBreakdown.map((l, i) => (
-              <div key={i} className="flex justify-between gap-3 text-xs text-muted"><span className="min-w-0 truncate">{l.label}</span><span className="shrink-0">{money(l.cents, offer.currency)}</span></div>
-            )) : <div className="text-xs text-muted">{t('driver.offer.noEstimate')}</div>}
-            <div className="mt-1 flex justify-between border-t border-edge pt-1 font-semibold"><span>{offer.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.total') : t('driver.offer.estimatedTotal')}</span><span>{offer.fareCents != null ? money(offer.fareCents, offer.currency) : '—'}</span></div>
-            {offer.priceType !== 'UPFRONT_DYNAMIC' && <div className="mt-1 text-xs text-muted">{t('driver.offer.meterSettled')}</div>}
-          </div>
+          </details>
           {/* Kept in view while the details scroll. */}
           <div className="sticky -bottom-4 -mx-4 -mb-4 mt-4 grid grid-cols-2 gap-2 bg-panel px-4 pb-4 pt-2">
             <button className="btn-ghost min-h-[44px] !text-danger border border-danger/40" disabled={offerBusy} onClick={() => props.onDecline(offer.offerId)}>{t('driver.offer.decline')}</button>

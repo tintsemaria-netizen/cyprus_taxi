@@ -168,7 +168,7 @@ async function processJob(jobId: string): Promise<void> {
 
   // Find the best candidate, expanding the radius in stages if the closer ring is empty.
   // ETAs are cached across stages so an inner-ring driver is road-routed at most once per job.
-  const etaCache = new Map<string, { etaSec: number; approx: boolean }>();
+  const etaCache = new Map<string, { etaSec: number; approx: boolean; roadM?: number }>();
   let stage = job.radiusStage;
   let candidate = await findBestCandidate(job.booking, RADIUS_STAGES_KM[Math.min(stage, RADIUS_STAGES_KM.length - 1)], job.triedDriverIds, etaCache);
   while (!candidate && stage < RADIUS_STAGES_KM.length - 1) {
