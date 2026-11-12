@@ -20,7 +20,8 @@ import { createStaffSession } from '@/lib/auth';
 import { createBooking } from '@/server/bookings';
 import { runOnce } from '@/server/dispatch/worker';
 import { getDriverActiveOffer, rejectOffer } from '@/server/dispatch/offers';
-import { listFreeOrders, claimFreeOrder, FREE_BOARD_SEC, vehicleFits } from '@/server/dispatch/free-orders';
+import { listFreeOrders, claimFreeOrder, getFreeOrderDetail, FREE_BOARD_SEC, vehicleFits } from '@/server/dispatch/free-orders';
+import * as detailRoute from '@/app/api/v1/driver/free-orders/[id]/route';
 import * as freeRoute from '@/app/api/v1/driver/free-orders/route';
 import * as claimRoute from '@/app/api/v1/driver/free-orders/[id]/claim/route';
 import type { CreateBookingInput } from '@/lib/validation';
@@ -64,8 +65,10 @@ beforeAll(async () => {
 });
 beforeEach(async () => {
   jar.clear();
-  // Keep other suites' searches from interfering with runOnce here.
+  // Keep other suites' (or earlier runs') searches from interfering with runOnce here: the worker
+  // would re-create jobs for leftover SEARCHING rides and offer them to our drivers first.
   await prisma.dispatchJob.deleteMany({});
+  await prisma.booking.updateMany({ where: { status: { in: ['SEARCHING', 'REQUESTED'] } }, data: { status: 'CANCELED' } });
   for (const nm of ALL) await setDuty(nm, false);
 });
 
@@ -161,6 +164,30 @@ describe('free orders board', () => {
     await prisma.dispatchJob.update({ where: { bookingId: s.id }, data: { deadlineAt: at } });
     await runOnce();
     expect((await prisma.dispatchJob.findUnique({ where: { bookingId: s.id } }))?.openedAt ?? null).toBeNull();
+  });
+
+  it('details for review: only while on the board and fitting the car; breakdown + time/km, no phone', async () => {
+    const b = await openRide();
+    await prisma.booking.update({ where: { id: b.id }, data: { fareCents: 7002, priceType: 'REGULATED_METER_ESTIMATE', fareBreakdown: JSON.stringify([{ label: 'Initial hire', cents: 380 }, { label: 'Distance', cents: 6622 }]) } });
+    const maria = await setDuty('Maria', true);
+    const d = await getFreeOrderDetail(b.id, maria);
+    expect(d).not.toBeNull();
+    expect(d!.passengerName).toBe('Eleni');
+    expect(d!.fareBreakdown).toHaveLength(2);
+    expect(d!.pickupDistanceM).toBeGreaterThan(0);
+    expect(d!.pickupEtaSec).toBeGreaterThan(0);
+    expect(d).not.toHaveProperty('phone');
+    // XL ride is not reviewable by a COMFORT car; a taken ride is gone.
+    const xl = await openRide({ vClass: 'XL', passengerCount: 5 });
+    const maria2 = await setDuty('Maria', true);
+    expect(await getFreeOrderDetail(xl.id, maria2)).toBeNull();
+    const petros = await setDuty('Petros', true);
+    expect((await claimFreeOrder(xl.id, petros)).ok).toBe(true);
+    expect(await getFreeOrderDetail(xl.id, petros)).toBeNull();
+    // HTTP 404 for a gone ride
+    await as('petros');
+    const res = await detailRoute.GET(new Request('http://x'), { params: Promise.resolve({ id: xl.id }) });
+    expect(res.status).toBe(404);
   });
 
   it('HTTP: driver-only; claim returns EN_ROUTE', async () => {

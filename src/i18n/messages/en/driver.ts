@@ -205,6 +205,9 @@ const driver = {
     signOut: 'Sign out',
   },
   free: {
+    view: 'View',
+    back: '‹ Back',
+    approx: 'Approximate: road route unavailable right now.',
     title: 'Free orders',
     hint: 'Rides offered to the free drivers nearby without anyone accepting. They stay here for 2 minutes. Take one and you head to the pickup right away.',
     goOnline: 'Go online on the Home tab to take rides.',

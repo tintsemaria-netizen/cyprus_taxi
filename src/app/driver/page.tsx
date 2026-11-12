@@ -46,6 +46,14 @@ interface Dashboard {
 type Tab = 'home' | 'free' | 'trips' | 'earnings' | 'profile';
 
 // Locale-aware formatting helpers for the driver app (money, durations, distances, status labels).
+// Map padding that keeps the driver's car and the client ABOVE a bottom sheet (offer / free-order
+// details): the sheet is up to ~60% of the screen plus the bottom nav, so frame the points in the
+// band between the header overlays and the sheet's top edge.
+function sheetFitPadding() {
+  const h = typeof window !== 'undefined' ? window.innerHeight : 800;
+  return { top: 110, right: 50, bottom: Math.round(h * 0.6) + 90, left: 50 };
+}
+
 function useDriverFmt() {
   const { t, fmt } = useT();
   const money = (cents: number | null, currency = 'EUR') => {
@@ -219,7 +227,7 @@ function Driver() {
 
       {/* Persistent cross-section bars: an offer alert, or a return-to-active-trip bar. */}
       {tab !== 'home' && offer && (
-        <button onClick={() => setTab('home')} className="mb-3 flex w-full items-center justify-between rounded-[12px] border-2 border-accent bg-accent/10 px-3 py-2 text-sm">
+        <button onClick={() => setTab('home')} className="relative z-20 mb-3 flex w-full items-center justify-between rounded-[12px] border-2 border-accent bg-page px-3 py-2 text-sm">
           <span className="font-semibold text-accent">{t('driver.banner.newOffer')}</span>
           <span className={offerSecs <= 5 ? 'text-danger' : 'text-muted'}>{t('driver.banner.offerCountdown', { secs: offerSecs })}</span>
         </button>
@@ -233,7 +241,7 @@ function Driver() {
           onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => setTab('trips')}
         />
       )}
-      {tab === 'free' && <FreeOrdersSection onDuty={!!data.onDuty} onTaken={async () => { setFreeCount(0); setTab('home'); await load(); await loadDash(); }} />}
+      {tab === 'free' && <FreeOrdersSection pos={pos} onDuty={!!data.onDuty} onTaken={async () => { setFreeCount(0); setTab('home'); await load(); await loadDash(); }} />}
       {tab === 'trips' && <TripsSection onOpen={setActiveDetailId} activeDetail={activeDetailId} onCloseDetail={() => setActiveDetailId(null)} onSettled={() => { loadDash(); }} />}
       {tab === 'earnings' && <EarningsSection />}
       {tab === 'profile' && <ProfileSection dash={dash} />}
@@ -269,7 +277,7 @@ function HomeSection(props: {
     <>
       <DriverHomeMap pos={props.pos} fullscreen onCounts={onCounts}
         pickup={offer && !trip ? offer.pickup : null}
-        fitPadding={offer && !trip ? { top: 130, right: 50, bottom: 420, left: 50 } : undefined} />
+        fitPadding={offer && !trip ? sheetFitPadding() : undefined} />
 
       {/* Top: status + messages */}
       <div className="pointer-events-none fixed inset-x-0 top-[64px] z-10 mx-auto flex max-w-lg flex-col items-start gap-2 px-3 pt-2">
@@ -409,13 +417,14 @@ interface FreeOrder {
 // Free orders (2026-11-12): rides automatic dispatch offered to every eligible nearby driver without
 // anyone accepting. Listed for 2 min to any on-duty driver whose car fits (COMFORT rides: COMFORT
 // and XL cars; XL rides: XL only). Passenger name shown; phone only after taking.
-function FreeOrdersSection({ onDuty, onTaken }: { onDuty: boolean; onTaken: () => void }) {
+function FreeOrdersSection({ pos, onDuty, onTaken }: { pos: { lat: number; lng: number } | null; onDuty: boolean; onTaken: () => void }) {
   const { t, fmt, tError } = useT();
   const { money, km } = useDriverFmt();
   const [orders, setOrders] = useState<FreeOrder[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [viewId, setViewId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try { const r = await api<{ orders: FreeOrder[] }>('/driver/free-orders'); const at = Date.now(); setOrders(r.orders.map((o) => ({ ...o, localDeadline: at + o.expiresInMs }))); setNowMs(at); } catch { /* keep last */ }
@@ -430,8 +439,14 @@ function FreeOrdersSection({ onDuty, onTaken }: { onDuty: boolean; onTaken: () =
   async function take(id: string) {
     setBusyId(id); setMsg(null);
     try { await api(`/driver/free-orders/${id}/claim`, { method: 'POST' }); onTaken(); }
-    catch (e) { setMsg(e instanceof ApiRequestError ? tError(e) : t('common.somethingWrong')); void load(); }
+    catch (e) { setMsg(e instanceof ApiRequestError ? tError(e) : t('common.somethingWrong')); setViewId(null); void load(); }
     finally { setBusyId(null); }
+  }
+
+  // Review first, then decide (2026-11-12): a card opens the full details over the map.
+  if (viewId) {
+    return <FreeOrderDetailView id={viewId} pos={pos} onDuty={onDuty} busy={busyId === viewId}
+      onBack={(gone) => { setViewId(null); if (gone) { setMsg(t('errors.ORDER_GONE')); void load(); } }} onTake={() => take(viewId)} />;
   }
 
   return (
@@ -462,12 +477,86 @@ function FreeOrdersSection({ onDuty, onTaken }: { onDuty: boolean; onTaken: () =
               {o.note && <p className="mt-1 text-xs text-muted">{t('driver.offer.note', { note: o.note })}</p>}
               <div className="mt-3 flex items-center justify-between gap-3">
                 <div className="text-sm"><span className="font-semibold">{money(o.fareCents, o.currency)}</span>{o.priceType && <span className="ml-1 text-xs text-muted">{o.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.upfront') : o.priceType === 'REGULATED_METER_ESTIMATE' ? t('driver.offer.meterEstimate') : ''}</span>}</div>
-                <button className="btn-primary min-h-[44px]" disabled={!onDuty || busyId !== null} onClick={() => take(o.bookingId)}>{busyId === o.bookingId ? t('driver.free.taking') : t('driver.free.take')}</button>
+                <button className="btn-primary min-h-[44px]" onClick={() => setViewId(o.bookingId)}>{t('driver.free.view')}</button>
               </div>
             </div>
           );
         })}
     </div>
+  );
+}
+
+interface FreeOrderDetail extends FreeOrder {
+  fareBreakdown: { label: string; cents: number }[] | null; pickupEtaSec: number | null; pickupDistanceM: number | null; roadRouted: boolean;
+}
+
+// Free order review screen: map with the driver's car and the client, then time/km to the client,
+// destination, client name and fare, with the breakdown on demand. Back or Take.
+function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
+  id: string; pos: { lat: number; lng: number } | null; onDuty: boolean; busy: boolean; onBack: (gone: boolean) => void; onTake: () => void;
+}) {
+  const { t, fmt } = useT();
+  const { money, km } = useDriverFmt();
+  const [o, setO] = useState<(FreeOrderDetail & { localDeadline: number }) | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    let alive = true;
+    api<{ order: FreeOrderDetail }>(`/driver/free-orders/${id}`)
+      .then((r) => { if (alive) setO({ ...r.order, localDeadline: Date.now() + r.order.expiresInMs }); })
+      .catch(() => { if (alive) onBack(true); });
+    const tick = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => { alive = false; clearInterval(tick); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const leftSec = o ? Math.max(0, Math.ceil((o.localDeadline - nowMs) / 1000)) : null;
+  useEffect(() => { if (leftSec === 0) onBack(true); }, [leftSec, onBack]);
+
+  return (
+    <>
+      <DriverHomeMap pos={pos} fullscreen pickup={o ? o.pickup : null} fitPadding={sheetFitPadding()} />
+      <div className="pointer-events-none fixed inset-x-0 z-10 mx-auto max-w-lg px-3" style={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
+        <div className="card pointer-events-auto max-h-[60dvh] overflow-y-auto border-2 border-accent p-4">
+          {!o ? <p className="py-6 text-center text-sm text-muted">{t('common.loading')}</p> : (
+            <>
+              <div className="flex items-center justify-between"><span className="font-semibold text-accent">{t('driver.free.title')}</span><span className={`chip ${leftSec! <= 30 ? '!text-danger' : ''}`}>⏳ {t('driver.free.left', { sec: leftSec! })}</span></div>
+              <div className="mt-2 flex items-baseline gap-3">
+                <span className="text-3xl font-bold text-ink">{o.pickupEtaSec != null ? t('driver.offer.minShort', { min: Math.max(1, Math.round(o.pickupEtaSec / 60)) }) : '—'}</span>
+                {o.pickupDistanceM != null && <span className="text-xl font-semibold text-muted">{km(o.pickupDistanceM)}</span>}
+                <span className="text-sm text-muted">{t('driver.offer.toClient')}</span>
+              </div>
+              {!o.roadRouted && o.pickupEtaSec != null && <p className="text-xs text-muted">{t('driver.free.approx')}</p>}
+              {o.pickupEtaSec == null && <p className="text-xs text-muted">{t('driver.map.noGps')}</p>}
+              <div className="mt-1 flex items-center gap-2 text-sm"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="font-medium">{o.pickup.label}</span></div>
+              <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
+                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{o.dropoff.label}</span></div>
+                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{o.passengerName}</span><span className="ml-auto text-xs text-muted">{t('driver.units.paxShort', { count: o.passengerCount })} · {o.vClass}</span></div>
+                <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{o.fareCents != null ? money(o.fareCents, o.currency) : '—'}</span><span className="text-xs text-muted">{o.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.upfront') : t('driver.offer.meterEstimate')}</span></div>
+                {o.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(o.scheduledAt)}</div>}
+                {o.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: o.note })}</div>}
+                {o.flightNumber && <div className="font-mono text-xs text-ink">✈ {t('driver.scheduled.flight', { flight: formatFlight(o.flightNumber) })}</div>}
+              </div>
+              <details className="mt-2 text-xs text-muted">
+                <summary className="cursor-pointer">{t('driver.offer.more')}</summary>
+                <div className="mt-1 space-y-0.5">
+                  {o.fareBreakdown?.length ? o.fareBreakdown.map((l, i) => (
+                    <div key={i} className="flex justify-between gap-3"><span className="min-w-0 truncate">{l.label}</span><span className="shrink-0">{money(l.cents, o.currency)}</span></div>
+                  )) : <div>{t('driver.offer.noEstimate')}</div>}
+                  {o.priceType !== 'UPFRONT_DYNAMIC' && <div>{t('driver.offer.meterSettled')}</div>}
+                  <div>{t('driver.offer.phoneHidden')}</div>
+                </div>
+              </details>
+              {!onDuty && <p className="mt-2 rounded-[12px] border border-warn/40 bg-warn/10 p-2 text-xs text-warn">{t('driver.free.goOnline')}</p>}
+            </>
+          )}
+          <div className="sticky -bottom-4 -mx-4 -mb-4 mt-4 grid grid-cols-2 gap-2 bg-panel px-4 pb-4 pt-2">
+            <button className="btn-ghost min-h-[44px]" onClick={() => onBack(false)}>{t('driver.free.back')}</button>
+            <button className="btn-primary min-h-[44px]" disabled={!o || !onDuty || busy} onClick={onTake}>{busy ? t('driver.free.taking') : t('driver.free.take')}</button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 

@@ -7,6 +7,7 @@ import { createAssignment } from '@/server/assignments';
 import { enqueuePassenger } from '@/server/push';
 import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events';
 import { protectedDriverIds } from './preassign-core';
+import { googleConfigured, googleRoute } from '@/server/google';
 
 // "Free orders" board (2026-11-12). A ride lands here ONLY after automatic dispatch has offered it
 // to every eligible free driver nearby without anyone accepting (or there was nobody to offer it
@@ -86,6 +87,47 @@ export async function listFreeOrders(driverId: string, now: Date = new Date()): 
       distanceM: here ? Math.round(haversineMeters(here, { lat: b.pickupLat, lng: b.pickupLng })) : null,
     }))
     .sort((a, b) => (a.distanceM ?? Infinity) - (b.distanceM ?? Infinity));
+}
+
+export interface FreeOrderDetail extends FreeOrder {
+  fareBreakdown: { label: string; cents: number }[] | null;
+  pickupEtaSec: number | null; // by road when routed, else a straight-line estimate
+  pickupDistanceM: number | null; // driving distance when routed, else straight-line
+  roadRouted: boolean;
+}
+
+/**
+ * Full details of one board ride for the driver to review before taking it — only while it is
+ * on the board and fits the driver's car. Time/km to the client come from a road route from the
+ * driver's last fix (short timeout; straight-line estimate if routing is unavailable). Still no
+ * passenger phone: that is revealed after taking.
+ */
+export async function getFreeOrderDetail(bookingId: string, driverId: string, now: Date = new Date()): Promise<FreeOrderDetail | null> {
+  const order = (await listFreeOrders(driverId, now)).find((o) => o.bookingId === bookingId);
+  if (!order) return null;
+  const [b, loc] = await Promise.all([
+    prisma.booking.findUnique({ where: { id: bookingId }, select: { fareBreakdown: true } }),
+    prisma.latestDriverLocation.findUnique({ where: { driverId } }),
+  ]);
+  let fareBreakdown: FreeOrderDetail['fareBreakdown'] = null;
+  try {
+    const v = b?.fareBreakdown ? JSON.parse(b.fareBreakdown) : null;
+    if (Array.isArray(v)) fareBreakdown = v.filter((x) => x && typeof x.label === 'string' && typeof x.cents === 'number').map((x) => ({ label: x.label, cents: x.cents }));
+  } catch { /* malformed snapshot → no breakdown */ }
+
+  let pickupEtaSec: number | null = null;
+  let pickupDistanceM = order.distanceM;
+  let roadRouted = false;
+  if (loc) {
+    if (googleConfigured()) {
+      try {
+        const r = await googleRoute({ lat: loc.lat, lng: loc.lng }, order.pickup, undefined, { timeoutMs: 2500 });
+        if (r) { pickupEtaSec = r.etaMinutes * 60; pickupDistanceM = Math.round(r.distanceKm * 1000); roadRouted = true; }
+      } catch { /* fall back below */ }
+    }
+    if (!roadRouted && pickupDistanceM != null) pickupEtaSec = Math.round((pickupDistanceM / 1000 / 40) * 3600); // ~40 km/h
+  }
+  return { ...order, fareBreakdown, pickupEtaSec, pickupDistanceM, roadRouted };
 }
 
 /**

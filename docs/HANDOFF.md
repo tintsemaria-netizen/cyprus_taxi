@@ -1,5 +1,16 @@
 # Session handoff
 
+## Free orders: review before taking (2026-11-12)
+- The Free tab list no longer has a direct "Take" button. Each card has "View", which opens `FreeOrderDetailView`, built like a new offer:
+  - Full-screen map with the driver's car and the client (pickup), padded above the sheet by `sheetFitPadding()` (~60% of screen height + nav).
+  - Sheet: board countdown, big "N min · X km to the client" (road-routed; "approximate" note when the router is unavailable), pickup, To, Client (name, pax, class), Fare, note, flight, schedule.
+  - "Fare details" collapsible; sticky "‹ Back" / "Take ride".
+  - If the ride disappears (taken, expired, or the countdown hits 0) the view returns to the list with ORDER_GONE.
+- `GET /api/v1/driver/free-orders/[id]` (driver-only, 30/min, because each view may road-route) → `getFreeOrderDetail`. It returns only rides on the board that fit the driver's car. It adds the fare breakdown and road ETA/distance from the driver's last fix (Google, 2.5 s timeout, else straight-line at ~40 km/h). No phone.
+- The new-offer map uses the same `sheetFitPadding()`. Checked: both markers are above the sheet.
+- The "new offer" bar on other tabs is now `relative z-20`, so it shows above full-screen maps.
+- Tests: free-orders.db +1 (detail rules + HTTP 404); its beforeEach cancels leftover SEARCHING rides so runOnce is deterministic. Suite 205/1 skipped ×3.
+
 ## New-offer view: client on the map, time + km first (2026-11-12)
 - On a new offer the driver Home map shows the pickup (client) marker together with the driver's car. The map is framed with `fitPadding` so both stay clear of the offer sheet; fleet cars are hidden while an offer is open.
 - Offer sheet order:
