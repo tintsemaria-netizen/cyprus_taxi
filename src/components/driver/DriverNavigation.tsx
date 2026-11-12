@@ -18,7 +18,7 @@ import { bearingDeg, cumulative, distM, locate, maneuverIcon, nextStep, offsetPo
 export interface NavTrip {
   bookingId: string; reference: string; status: string;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string };
-  passengerName: string; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; vClass: string;
+  passengerName: string; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; luggageCount?: number; vClass: string;
   waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
 }
 interface NavRoute { distanceM: number; durationSec: number; path: [number, number][]; steps: NavStep[]; fetchedAt: number; from: LatLng }
@@ -242,7 +242,7 @@ export function DriverNavigation(props: {
         </div>
         <div className="mt-1 flex items-center gap-2 text-sm">
           <span className="font-medium">{trip.passengerName}</span>
-          <span className="text-muted">· {t('driver.units.paxShort', { count: trip.passengerCount })} · {trip.vClass}</span>
+          <span className="text-muted">· {t('driver.units.paxShort', { count: trip.passengerCount })}{trip.luggageCount ? ` · 🧳 ${trip.luggageCount}` : ''} · {trip.vClass}</span>
           <span className="ml-auto font-mono text-xs text-muted">{trip.reference}</span>
         </div>
         {waitingNode && <div className="mt-2 rounded-[12px] border border-edge bg-page p-3 text-sm">{waitingNode}</div>}

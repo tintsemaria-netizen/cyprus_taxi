@@ -19,14 +19,14 @@ export const dynamic = 'force-dynamic';
 interface Trip {
   bookingId: string; reference: string; status: string; revision: number;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string };
-  passengerName: string; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; vClass: string;
+  passengerName: string; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; luggageCount?: number; vClass: string;
   scheduledAt: string | null; waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null; allowedNext: string[];
 }
 interface CurrentTrip { onDuty: boolean; available: boolean; trip: Trip | null }
 interface Offer {
   offerId: string; expiresAt: string; expiresInMs: number; localDeadline?: number; pickupEtaSec: number | null; pickupDistanceM: number | null;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string };
-  vClass: string; passengerCount: number; passengerName: string; note: string | null; flightNumber?: string | null; scheduledAt: string | null;
+  vClass: string; passengerCount: number; luggageCount?: number; passengerName: string; note: string | null; flightNumber?: string | null; scheduledAt: string | null;
   fareCents: number | null; priceType: string | null; currency: string; fareBreakdown: { label: string; cents: number }[] | null;
 }
 interface TripCard {
@@ -344,7 +344,7 @@ function HomeSection(props: {
           {/* 2) Main info: where to, client name, the sum. */}
           <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
             <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{offer.dropoff.label}</span></div>
-            <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span><span className="ml-auto text-xs text-muted">{t('driver.units.paxShort', { count: offer.passengerCount })} · {offer.vClass}</span></div>
+            <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span><span className="ml-auto text-xs text-muted">{t('driver.units.paxShort', { count: offer.passengerCount })}{offer.luggageCount ? ` · 🧳 ${offer.luggageCount}` : ''} · {offer.vClass}</span></div>
             <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{offer.fareCents != null ? money(offer.fareCents, offer.currency) : '—'}</span><span className="text-xs text-muted">{offer.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.upfront') : t('driver.offer.meterEstimate')}</span></div>
             {offer.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(offer.scheduledAt)}</div>}
             {offer.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: offer.note })}</div>}
@@ -409,7 +409,7 @@ function TripsModeToggle({ mode, setMode, count }: { mode: 'history' | 'prebook'
 
 interface FreeOrder {
   bookingId: string; pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string };
-  vClass: string; passengerName: string; passengerCount: number; note: string | null; flightNumber: string | null; scheduledAt: string | null;
+  vClass: string; passengerName: string; passengerCount: number; luggageCount?: number; note: string | null; flightNumber: string | null; scheduledAt: string | null;
   fareCents: number | null; priceType: string | null; currency: string; waitingSince: string; expiresAt: string; expiresInMs: number; distanceM: number | null;
   localDeadline?: number;
 }
@@ -468,7 +468,7 @@ function FreeOrdersSection({ pos, onDuty, onTaken }: { pos: { lat: number; lng: 
               </div>
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
                 {o.distanceM != null && <span className="rounded-full bg-elevated px-2 py-1">{t('driver.offer.away', { dist: km(o.distanceM) })}</span>}
-                <span className="rounded-full bg-elevated px-2 py-1">{t('driver.units.paxShort', { count: o.passengerCount })} · {o.vClass}</span>
+                <span className="rounded-full bg-elevated px-2 py-1">{t('driver.units.paxShort', { count: o.passengerCount })}{o.luggageCount ? ` · 🧳 ${o.luggageCount}` : ''} · {o.vClass}</span>
                 {o.scheduledAt && <span className="rounded-full bg-elevated px-2 py-1">🕒 {fmt.dateTime(o.scheduledAt)}</span>}
                 {o.flightNumber && <span className="rounded-full bg-elevated px-2 py-1">✈ {o.flightNumber}</span>}
                 <span className={`rounded-full bg-elevated px-2 py-1 ${leftSec <= 30 ? 'text-danger' : ''}`}>{t('driver.free.left', { sec: leftSec })}</span>
@@ -531,7 +531,7 @@ function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
               <div className="mt-1 flex items-center gap-2 text-sm"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="font-medium">{o.pickup.label}</span></div>
               <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{o.dropoff.label}</span></div>
-                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{o.passengerName}</span><span className="ml-auto text-xs text-muted">{t('driver.units.paxShort', { count: o.passengerCount })} · {o.vClass}</span></div>
+                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{o.passengerName}</span><span className="ml-auto text-xs text-muted">{t('driver.units.paxShort', { count: o.passengerCount })}{o.luggageCount ? ` · 🧳 ${o.luggageCount}` : ''} · {o.vClass}</span></div>
                 <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{o.fareCents != null ? money(o.fareCents, o.currency) : '—'}</span><span className="text-xs text-muted">{o.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.upfront') : t('driver.offer.meterEstimate')}</span></div>
                 {o.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(o.scheduledAt)}</div>}
                 {o.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: o.note })}</div>}

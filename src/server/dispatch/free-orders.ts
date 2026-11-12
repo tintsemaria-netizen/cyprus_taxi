@@ -29,6 +29,7 @@ export interface FreeOrder {
   vClass: string;
   passengerName: string; // shown before taking; the phone only after taking
   passengerCount: number;
+  luggageCount: number;
   note: string | null;
   flightNumber: string | null;
   scheduledAt: string | null;
@@ -75,6 +76,7 @@ export async function listFreeOrders(driverId: string, now: Date = new Date()): 
       vClass: b.vClass,
       passengerName: b.passengerName,
       passengerCount: b.passengerCount,
+      luggageCount: b.luggageCount,
       note: b.note,
       flightNumber: b.flightNumber,
       scheduledAt: b.scheduledAt ? b.scheduledAt.toISOString() : null,

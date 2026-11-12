@@ -183,6 +183,7 @@ export async function getDriverActiveOffer(driverId: string) {
     dropoff: { lat: b.dropoffLat, lng: b.dropoffLng, label: b.dropoffLabel },
     vClass: b.vClass,
     passengerCount: b.passengerCount,
+    luggageCount: b.luggageCount,
     passengerName: b.passengerName,
     note: b.note,
     flightNumber: b.flightNumber,

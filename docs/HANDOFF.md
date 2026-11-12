@@ -1,5 +1,16 @@
 # Session handoff
 
+## Booking form: extras only for pre-bookings, bags, flight required (2026-11-13)
+- Passenger booking form: the "Additional" block (passengers + note) is gone for immediate rides. They are sent as 1 passenger, 0 bags, no note, no flight.
+- Pre-booking ("Schedule") now has a details panel under the date:
+  - Flight number, REQUIRED for every pre-booking (client-side validation `booking.flight.required`; the server still treats it as optional).
+  - Passengers stepper and bags stepper (0–10).
+  - Optional note.
+- The review step shows passengers (pre-booking only), bags (if > 0) and the note.
+- New `Booking.luggageCount INT NOT NULL DEFAULT 0` (migration `20261113000000_booking_luggage`), stored from `createBooking`. It does not affect price.
+- Bags are shown to the driver as "🧳 N" (when > 0) in the offer, the Free list and details, and the trip/navigation header. Fields come from `views.ts`, `offers.ts` and `free-orders.ts`.
+- Test: free-orders.db detail asserts luggageCount stored and exposed. Suite 205/1 skipped.
+
 ## Free orders: review before taking (2026-11-12)
 - The Free tab list no longer has a direct "Take" button. Each card has "View", which opens `FreeOrderDetailView`, built like a new offer:
   - Full-screen map with the driver's car and the client (pickup), padded above the sheet by `sheetFitPadding()` (~60% of screen height + nav).

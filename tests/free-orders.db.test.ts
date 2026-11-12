@@ -167,12 +167,14 @@ describe('free orders board', () => {
   });
 
   it('details for review: only while on the board and fitting the car; breakdown + time/km, no phone', async () => {
-    const b = await openRide();
+    const b = await openRide({ luggageCount: 3 });
+    expect((await prisma.booking.findUnique({ where: { id: b.id } }))!.luggageCount).toBe(3); // bags stored on the ride
     await prisma.booking.update({ where: { id: b.id }, data: { fareCents: 7002, priceType: 'REGULATED_METER_ESTIMATE', fareBreakdown: JSON.stringify([{ label: 'Initial hire', cents: 380 }, { label: 'Distance', cents: 6622 }]) } });
     const maria = await setDuty('Maria', true);
     const d = await getFreeOrderDetail(b.id, maria);
     expect(d).not.toBeNull();
     expect(d!.passengerName).toBe('Eleni');
+    expect(d!.luggageCount).toBe(3); // and shown to the driver
     expect(d!.fareBreakdown).toHaveLength(2);
     expect(d!.pickupDistanceM).toBeGreaterThan(0);
     expect(d!.pickupEtaSec).toBeGreaterThan(0);

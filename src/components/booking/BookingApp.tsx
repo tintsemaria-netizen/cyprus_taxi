@@ -15,7 +15,6 @@ import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 import { INTL_TAG } from '@/i18n/config';
-import { isAirportPoint } from '@/lib/airports';
 
 interface PublicConfig {
   demoMode: boolean;
@@ -55,6 +54,7 @@ export default function BookingApp() {
   const [phone, setPhone] = useState('');
   const [note, setNote] = useState('');
   const [flight, setFlight] = useState('');
+  const [bags, setBags] = useState(0);
   const [step, setStep] = useState<'form' | 'review'>('form');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState<string | null>(null);
@@ -241,7 +241,7 @@ export default function BookingApp() {
           const q = await api<QuoteBody>('/quote', {
             method: 'POST',
             body: {
-              pickup: { lat: pickup.lat, lng: pickup.lng }, dropoff: { lat: dropoff.lat, lng: dropoff.lng }, vClass: c.key, passengerCount: Math.min(pax, c.max), luggageCount: 0,
+              pickup: { lat: pickup.lat, lng: pickup.lng }, dropoff: { lat: dropoff.lat, lng: dropoff.lng }, vClass: c.key, passengerCount: Math.min(effPax, c.max), luggageCount: effBags,
               // Price a scheduled ride for its journey time (day/night/holiday + traffic).
               ...(when === 'SCHEDULE' && scheduledAt ? { scheduledAt, scheduleOffsetMin } : {}),
             },
@@ -263,25 +263,30 @@ export default function BookingApp() {
   const quote: QuoteBody | null = quotes[vClass] ?? null;
   const eur = (c: number) => fmt.money(c, 'EUR');
 
-  // Flight number only for a scheduled pickup at LCA/PFO (shared with the driver; not live-tracked).
-  const showFlight = when === 'SCHEDULE' && !!pickup && isAirportPoint(pickup.lat, pickup.lng);
+  // Pre-booking details (2026-11-13): passengers, bags, flight number and note are asked ONLY for a
+  // scheduled ride; the flight number is required there. An immediate ride is 1 passenger, no bags.
+  const showFlight = when === 'SCHEDULE';
   const flightValue = showFlight ? flight.toUpperCase().replace(/[\s-]+/g, '') : '';
+  const effPax = when === 'SCHEDULE' ? pax : 1;
+  const effBags = when === 'SCHEDULE' ? bags : 0;
+  const effNote = when === 'SCHEDULE' ? note.trim() : '';
   const maxPax = cfg?.classes.find((c) => c.key === vClass)?.maxPassengers ?? (vClass === 'XL' ? 6 : 4);
 
   function payloadSignature(offset = scheduleOffsetMin): string {
-    return JSON.stringify({ pickup, dropoff, when, scheduledAt, scheduleOffsetMin: offset, vClass, pax, name: name.trim(), phone: phone.trim(), note: note.trim(), flight: flightValue });
+    return JSON.stringify({ pickup, dropoff, when, scheduledAt, scheduleOffsetMin: offset, vClass, pax: effPax, bags: effBags, name: name.trim(), phone: phone.trim(), note: effNote, flight: flightValue });
   }
 
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (!pickup) e.pickup = t('booking.validation.pickup');
     if (!dropoff) e.dropoff = t('booking.validation.dropoff');
-    if (flightValue && !/^[A-Z0-9]{2}\d{1,4}[A-Z]?$/.test(flightValue)) e.flight = t('booking.flight.invalid');
+    if (showFlight && !flightValue) e.flight = t('booking.flight.required');
+    else if (flightValue && !/^[A-Z0-9]{2}\d{1,4}[A-Z]?$/.test(flightValue)) e.flight = t('booking.flight.invalid');
     if (passenger && !name.trim()) e.name = t('booking.validation.name');
     // Email-only accounts have no verified phone: the contact number is entered per booking.
     if (passenger && !passenger.phone && !/^\+?[\d\s()-]{7,20}$/.test(phone.trim())) e.phone = t('booking.validation.phone');
     if (when === 'SCHEDULE' && !scheduledAt) e.scheduledAt = t('booking.validation.scheduledAt');
-    if (pax < 1 || pax > maxPax) e.pax = tp('booking.validation.paxRange', maxPax);
+    if (effPax < 1 || effPax > maxPax) e.pax = tp('booking.validation.paxRange', maxPax);
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -327,12 +332,12 @@ export default function BookingApp() {
         scheduledAt: when === 'SCHEDULE' ? scheduledAt : undefined,
         scheduleOffsetMin: when === 'SCHEDULE' ? effOffset : undefined,
         vClass,
-        passengerCount: pax,
-        luggageCount: 0,
+        passengerCount: effPax,
+        luggageCount: effBags,
         quoteId: quote?.quoteId,
         passengerName: name.trim() || passenger?.name || 'Passenger',
         phone: passenger?.phone || phone.trim(),
-        note: note.trim() || undefined,
+        note: effNote || undefined,
         flightNumber: flightValue || undefined,
       };
       const res = await api<{ tracking: { token: string } }>('/bookings', {
@@ -550,13 +555,37 @@ export default function BookingApp() {
                           <input type="datetime-local" className={`field ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
                           <p className="mt-1 text-xs text-muted">{withSlot(t('booking.form.timezoneNote'), 'tz', <strong>{cfg?.timezone ?? 'Europe/Nicosia'}</strong>)}</p>
                           {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
-                          {showFlight && (
-                            <div className="mt-3">
+                          {/* Pre-booking details: flight (required), passengers, bags, note. */}
+                          <div className="mt-3 space-y-3 rounded-[12px] border border-edge bg-elevated px-3 py-2.5">
+                            <div>
                               <label className="label" htmlFor="bk-flight">{t('booking.flight.label')}</label>
                               <input id="bk-flight" className={`field mt-1 font-mono uppercase ${errors.flight ? 'border-danger' : ''}`} value={flight} maxLength={9} autoCapitalize="characters" placeholder={t('booking.flight.placeholder')} onChange={(e) => setFlight(e.target.value)} />
                               {errors.flight ? <p className="mt-1 text-xs text-danger">{errors.flight}</p> : <p className="mt-1 text-xs text-muted">{t('booking.flight.help')}</p>}
                             </div>
-                          )}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <span className="label" id="bk-pax-label">{t('booking.options.passengers')}</span>
+                                <div className="mt-1 flex items-center gap-1" role="group" aria-labelledby="bk-pax-label">
+                                  <button type="button" aria-label={t('booking.options.fewer')} className="btn-ghost !min-h-[44px] !px-3" onClick={() => setPax((p) => Math.max(1, p - 1))}>−</button>
+                                  <span className="w-7 text-center text-lg font-semibold" aria-live="polite">{pax}</span>
+                                  <button type="button" aria-label={t('booking.options.more')} className="btn-ghost !min-h-[44px] !px-3" onClick={() => setPax((p) => Math.min(maxPax, p + 1))}>+</button>
+                                </div>
+                                {errors.pax && <p className="mt-1 text-xs text-danger">{errors.pax}</p>}
+                              </div>
+                              <div>
+                                <span className="label" id="bk-bags-label">{t('booking.options.bags')}</span>
+                                <div className="mt-1 flex items-center gap-1" role="group" aria-labelledby="bk-bags-label">
+                                  <button type="button" aria-label={t('booking.options.fewerBags')} className="btn-ghost !min-h-[44px] !px-3" onClick={() => setBags((b) => Math.max(0, b - 1))}>−</button>
+                                  <span className="w-7 text-center text-lg font-semibold" aria-live="polite">{bags}</span>
+                                  <button type="button" aria-label={t('booking.options.moreBags')} className="btn-ghost !min-h-[44px] !px-3" onClick={() => setBags((b) => Math.min(10, b + 1))}>+</button>
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="label" htmlFor="bk-note">{t('booking.options.noteLabel')}</label>
+                              <textarea id="bk-note" className="field mt-1 min-h-[44px]" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} rows={2} placeholder={t('booking.options.notePlaceholder')} />
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -597,23 +626,6 @@ export default function BookingApp() {
                       </div>
                     )}
 
-                    <details className="mt-4 rounded-[12px] border border-edge bg-elevated px-3 py-2.5" open={pax > 1 || !!note || !!errors.pax}>
-                      <summary className="cursor-pointer text-sm font-medium">{t('booking.options.title')} <span className="text-xs font-normal text-muted">· {tp('common.passengers', pax)}{note ? ` · ${t('booking.options.note')}` : ''}</span></summary>
-                      <div className="mt-3 space-y-3">
-                        <div>
-                          <span className="label" id="bk-pax-label">{t('booking.options.passengers')}</span>
-                          <div className="mt-1 flex items-center gap-2" role="group" aria-labelledby="bk-pax-label">
-                            <button type="button" aria-label={t('booking.options.fewer')} className="btn-ghost !min-h-[44px] !px-4" onClick={() => setPax((p) => Math.max(1, p - 1))}>−</button>
-                            <span className="w-8 text-center text-lg font-semibold" aria-live="polite">{pax}</span>
-                            <button type="button" aria-label={t('booking.options.more')} className="btn-ghost !min-h-[44px] !px-4" onClick={() => setPax((p) => Math.min(maxPax, p + 1))}>+</button>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="label" htmlFor="bk-note">{t('booking.options.noteLabel')}</label>
-                          <textarea id="bk-note" className="field mt-1 min-h-[44px]" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} rows={2} placeholder={t('booking.options.notePlaceholder')} />
-                        </div>
-                      </div>
-                    </details>
                   </div>
                 ) : (
                   /* ---- REVIEW ---- */
@@ -627,10 +639,11 @@ export default function BookingApp() {
                       <Row label={t('booking.review.when')} value={when === 'NOW' ? t('booking.review.nowImmediate') : `${scheduledAt.replace('T', ' ')} · ${cfg?.timezone}`} />
                       {flightValue && <Row label={t('booking.flight.reviewRow')} value={flightValue} />}
                       <Row label={t('booking.review.class')} value={t(`common.vClass.${vClass}`)} />
-                      <Row label={t('booking.review.passengers')} value={String(pax)} />
+                      {when === 'SCHEDULE' && <Row label={t('booking.review.passengers')} value={String(effPax)} />}
+                      {effBags > 0 && <Row label={t('booking.options.bags')} value={String(effBags)} />}
                       <Row label={t('booking.review.driverAsksFor')} value={name || passenger?.name || '—'} />
                       <Row label={t('booking.review.yourPhone')} value={passenger?.phone || phone} />
-                      {note && <Row label={t('booking.review.note')} value={note} />}
+                      {effNote && <Row label={t('booking.review.note')} value={effNote} />}
                       <Row label={t('booking.review.fare')} value={quote ? t('booking.review.fareValue', { total: eur(quote.totalCents), low: eur(quote.rangeLowCents), high: eur(quote.rangeHighCents) }) : t('booking.review.fareByMeter')} />
                     </div>
                     {quote?.airport && <AirportFareNote />}
