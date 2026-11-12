@@ -31,5 +31,14 @@ const common: Catalog<typeof en> = {
   },
   vClass: { COMFORT: 'Comfort', XL: 'XL' },
   payment: { CASH_TO_DRIVER: 'Наличными водителю' },
+  install: {
+    title: 'Установите IL-Y на телефон',
+    titleDriver: 'Установите IL-Y Driver на телефон',
+    androidBody: 'Откроется на весь экран, как приложение, и сможет присылать уведомления о поездках.',
+    iosSteps: 'Нажмите «Поделиться» (квадрат со стрелкой) в Safari, затем «На экран „Домой“».',
+    install: 'Установить',
+    notNow: 'Не сейчас',
+    iosNotify: 'Чтобы получать уведомления на iPhone, добавьте IL-Y на экран «Домой» («Поделиться» → «На экран „Домой“») и открывайте его оттуда.',
+  },
 };
 export default common;

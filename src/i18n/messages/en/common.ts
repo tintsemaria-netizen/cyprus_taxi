@@ -28,5 +28,14 @@ const common = {
   },
   vClass: { COMFORT: 'Comfort', XL: 'XL' },
   payment: { CASH_TO_DRIVER: 'Cash to driver' },
+  install: {
+    title: 'Install IL-Y on your phone',
+    titleDriver: 'Install IL-Y Driver on your phone',
+    androidBody: 'Opens full-screen like an app and can show ride notifications.',
+    iosSteps: 'Tap Share (the square with an arrow) in Safari, then “Add to Home Screen”.',
+    install: 'Install',
+    notNow: 'Not now',
+    iosNotify: 'To get notifications on iPhone, add IL-Y to your Home Screen (Share → Add to Home Screen) and open it from there.',
+  },
 };
 export default common;

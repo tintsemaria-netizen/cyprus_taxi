@@ -88,5 +88,5 @@ export function proxy(req: NextRequest) {
 
 export const config = {
   // Apply to everything except static assets.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons/|manifest.webmanifest).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons/|manifest.webmanifest|manifest-driver.webmanifest).*)'],
 };

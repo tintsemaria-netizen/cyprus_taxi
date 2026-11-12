@@ -3,16 +3,18 @@
 import { useEffect, useState } from 'react';
 import { enablePush, pushPermission, pushSupported } from '@/lib/push-client';
 import { useT } from '@/i18n/I18nProvider';
+import { isIos, isStandalone } from '@/lib/pwa';
 
 // Notification opt-in usable anywhere (driver duty card, passenger tracking). When
 // permission is already granted it silently (re)registers the subscription for THIS
 // audience — so state reflects an actual server subscription, not just permission.
 export function NotifyToggle({ pushUrl, className }: { pushUrl: string; className?: string }) {
   const { t } = useT();
-  const [state, setState] = useState<'idle' | 'on' | 'denied' | 'busy' | 'unsupported'>('idle');
+  const [state, setState] = useState<'idle' | 'on' | 'denied' | 'busy' | 'unsupported' | 'iosInstall'>('idle');
 
   useEffect(() => {
-    if (!pushSupported()) { setState('unsupported'); return; }
+    // iPhone Safari only exposes Web Push to a home-screen app: say so instead of hiding the toggle.
+    if (!pushSupported()) { setState(isIos() && !isStandalone() ? 'iosInstall' : 'unsupported'); return; }
     const p = pushPermission();
     if (p === 'granted') { setState('busy'); enablePush(pushUrl).then((r) => setState(r.ok ? 'on' : 'idle')); }
     else if (p === 'denied') setState('denied');
@@ -21,6 +23,7 @@ export function NotifyToggle({ pushUrl, className }: { pushUrl: string; classNam
   }, [pushUrl]);
 
   if (state === 'unsupported') return null;
+  if (state === 'iosInstall') return <div className={className}><span className="text-xs text-muted">{t('common.install.iosNotify')}</span></div>;
 
   async function turnOn() {
     setState('busy');

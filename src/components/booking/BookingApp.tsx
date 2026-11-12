@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
+import { InstallPrompt } from '@/components/InstallPrompt';
 import { PlacesInput, Selected } from './PlacesInput';
 import { DemoBanner } from '@/components/DemoBanner';
 import AutoMapPicker from './AutoMapPicker';
@@ -430,6 +431,7 @@ export default function BookingApp() {
           )}
         </div>
       </header>
+      <InstallPrompt app="passenger" className="z-20 mx-3 mt-2 sm:hidden" />
 
       <div className="relative flex-1">
         <div className="absolute inset-0">

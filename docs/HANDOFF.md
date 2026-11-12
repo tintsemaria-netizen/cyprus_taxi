@@ -1,5 +1,11 @@
 # Session handoff
 
+## PWA install for testers (2026-11-12)
+- Two installable apps from one site: passenger `public/manifest.webmanifest` (id `/`, opens `/`) and driver `public/manifest-driver.webmanifest` ("IL-Y Driver", id `/driver`, opens `/driver`), set for all `/driver*` pages by `src/app/driver/layout.tsx`. `src/proxy.ts` matcher skips the driver manifest.
+- `src/components/InstallPrompt.tsx` + `src/lib/pwa.ts`: on the booking page (mobile only) and the driver Home tab. Android/Chrome shows an Install button from `beforeinstallprompt`, captured at module load. iPhone shows the Share → Add to Home Screen steps. Hidden when already installed (standalone), on desktop, and for 14 days after "Not now" (localStorage `ily.install.dismissed.<app>`).
+- `NotifyToggle`: on iPhone in a Safari tab, Web Push is unavailable, so it now explains that notifications need the home-screen app instead of rendering nothing.
+- Checked with Playwright on a local build (iPhone 14 / Pixel 7 with a synthetic `beforeinstallprompt` / desktop): banner text, dismiss persistence, prompt() call, no page errors. Not verified yet on physical phones.
+
 ## Auto-deploy from GitHub main (2026-11-12)
 - Every push to GitHub `main` is deployed automatically. The systemd timer `taxicy-autodeploy.timer` runs every 2 min, as root, and calls `deploy/autodeploy.sh`.
 - What one run does: `git fetch` (as the repo owner `claudeuser`) → fast-forward `master` to `origin/main` → `scripts/deploy.sh`, which does backup, build, health gate and rollback.

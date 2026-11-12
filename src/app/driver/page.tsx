@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StaffShell } from '@/components/staff/StaffShell';
 import { NotifyToggle } from '@/components/NotifyToggle';
+import { InstallPrompt } from '@/components/InstallPrompt';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { ScheduledRides } from '@/components/driver/ScheduledRides';
@@ -211,6 +212,7 @@ function Driver() {
         </button>
       )}
 
+      {tab === 'home' && <InstallPrompt app="driver" className="mb-3" />}
       {tab === 'home' && (
         <HomeSection
           data={data} dash={dash} gps={gps} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
