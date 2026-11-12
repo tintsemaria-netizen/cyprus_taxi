@@ -7,7 +7,7 @@ import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { createBooking } from '@/server/bookings';
 import { changeStatus } from '@/server/assignments';
-import { scheduledBoard, claimScheduled, releaseScheduled, runPreassignments } from '@/server/dispatch/preassign';
+import { scheduledBoard, claimScheduled, releaseScheduled, runPreassignments, scheduledRideDetail } from '@/server/dispatch/preassign';
 import { promoteScheduled } from '@/server/dispatch/worker';
 import { findBestCandidate } from '@/server/dispatch/eligibility';
 import { createBookingSchema } from '@/lib/validation';
@@ -66,6 +66,26 @@ describe('scheduled-ride board + commitment', () => {
     const after = await scheduledBoard(d);
     expect(after.available.find((i) => i.bookingId === b.id)).toBeUndefined();
     expect(after.mine.map((m) => m.bookingId)).toEqual([b.id]);
+  });
+
+  it('details for review: name, route and breakdown, never the phone; only for rides on this driver\'s board', async () => {
+    const d = await driver('Andreas');
+    const b = await scheduledRide(240);
+    await prisma.booking.update({ where: { id: b.id }, data: { note: 'A3 612, exit B, 2 bags', fareCents: 7002, fareBreakdown: JSON.stringify([{ label: 'Initial hire', cents: 380 }]) } });
+    const det = (await scheduledRideDetail(b.id, d))!;
+    expect(det).toBeTruthy();
+    expect(det.mine).toBe(false);
+    expect(det.passengerName).toBe('Nikos');
+    expect(det.note).toBe('A3 612, exit B, 2 bags');
+    expect(det.fareBreakdown).toEqual([{ label: 'Initial hire', cents: 380 }]);
+    expect(det.trip.distanceM).toBeGreaterThan(1000);
+    expect(det.pickup.lat).toBe(b.pickupLat);
+    expect(JSON.stringify(det)).not.toContain('+35799123456');
+    // After committing it is the driver's own ride; another driver can no longer open it.
+    expect((await claimScheduled(d, b.id)).ok).toBe(true);
+    expect((await scheduledRideDetail(b.id, d))!.mine).toBe(true);
+    const maria = await driver('Maria');
+    expect(await scheduledRideDetail(b.id, maria)).toBeNull();
   });
 
   it('two drivers racing for the same ride: exactly one wins', async () => {

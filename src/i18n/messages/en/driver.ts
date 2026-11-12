@@ -1,5 +1,7 @@
 const driver = {
   units: {
+    kmShort: 'km',
+    mShort: 'm',
     sec: '{n}s',
     min: '{n}m',
     hourMin: '{h}h {m}m',
@@ -242,6 +244,7 @@ const driver = {
     staffLogin: 'Staff / admin login',
   },
   scheduled: {
+    trip: 'Trip',
     freeUntil: 'Until {time} you’re free for other rides (pickup −{min} min).',
     activeAt: 'At {time} it becomes your active ride if you’re online and free; otherwise it goes to automatic dispatch (pickup −{min} min).',
     tabHistory: 'History',

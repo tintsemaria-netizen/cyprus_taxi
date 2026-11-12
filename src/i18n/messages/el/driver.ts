@@ -3,6 +3,8 @@ import type en from '../en/driver';
 
 const driver: Catalog<typeof en> = {
   units: {
+    kmShort: 'χλμ',
+    mShort: 'μ',
     sec: '{n} δ',
     min: '{n} λ',
     hourMin: '{h} ώ {m} λ',
@@ -245,6 +247,7 @@ const driver: Catalog<typeof en> = {
     staffLogin: 'Σύνδεση προσωπικού / διαχειριστή',
   },
   scheduled: {
+    trip: 'Διαδρομή',
     freeUntil: 'Έως τις {time} είστε ελεύθεροι για άλλες διαδρομές ({min} λεπ. πριν την παραλαβή).',
     activeAt: 'Στις {time} γίνεται η ενεργή σας διαδρομή αν είστε συνδεδεμένοι και ελεύθεροι· αλλιώς πηγαίνει στην αυτόματη ανάθεση ({min} λεπ. πριν την παραλαβή).',
     tabHistory: 'Ιστορικό',

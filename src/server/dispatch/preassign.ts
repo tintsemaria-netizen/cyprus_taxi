@@ -8,6 +8,8 @@ import { enqueueDriver, enqueuePassenger } from '@/server/push';
 import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events';
 import { stopSearchTx } from './search';
 import { endPreAssignmentTx, protectedDriverIds } from './preassign-core';
+import { haversineMeters } from '@/lib/geo';
+import { googleConfigured, googleRoute } from '@/server/google';
 export { endPreAssignmentTx, protectedDriverIds };
 
 // Pre-assignment of scheduled rides (airport transfers etc.).
@@ -206,4 +208,47 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
     await enqueueDriver(tx, pa.driverId, 'Pre-booked ride is now active', `Pickup ${timeLabel(pa.pickupAt)} at ${b.pickupLabel}. Head to the pickup in time.`, { tag: `pre-${bookingId}` });
     return 'converted';
   });
+}
+
+// Details of one pre-booking for the driver to review (2026-11-13): only a ride on this driver's
+// board (available to them, or one they have accepted). Adds the passenger's name, the fare
+// breakdown, map points and the trip route (pickup → destination; Google when configured, short
+// timeout, else straight-line). Never the passenger's phone.
+export async function scheduledRideDetail(bookingId: string, driverId: string, now: Date = new Date()) {
+  const board = await scheduledBoard(driverId, now);
+  const mine = board.mine.find((i) => i.bookingId === bookingId);
+  const item = mine ?? board.available.find((i) => i.bookingId === bookingId);
+  if (!item) return null;
+  const b = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    select: { passengerName: true, fareBreakdown: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, luggageCount: true },
+  });
+  if (!b) return null;
+  let fareBreakdown: { label: string; cents: number }[] | null = null;
+  try {
+    const v = b.fareBreakdown ? JSON.parse(b.fareBreakdown) : null;
+    if (Array.isArray(v)) fareBreakdown = v.filter((x) => x && typeof x.label === 'string' && typeof x.cents === 'number').map((x) => ({ label: x.label, cents: x.cents }));
+  } catch { /* malformed snapshot → none */ }
+  const pickup = { lat: b.pickupLat, lng: b.pickupLng, label: item.pickupLabel };
+  const dropoff = { lat: b.dropoffLat, lng: b.dropoffLng, label: item.dropoffLabel };
+  let trip: { distanceM: number; etaSec: number; path: [number, number][] | null; roadRouted: boolean } = {
+    distanceM: Math.round(haversineMeters(pickup, dropoff)), etaSec: 0, path: null, roadRouted: false,
+  };
+  trip.etaSec = Math.round((trip.distanceM / 1000 / 50) * 3600);
+  if (googleConfigured()) {
+    try {
+      const r = await googleRoute(pickup, dropoff, undefined, { timeoutMs: 2500 });
+      if (r) trip = { distanceM: Math.round(r.distanceKm * 1000), etaSec: r.etaMinutes * 60, path: r.path, roadRouted: true };
+    } catch { /* keep the estimate */ }
+  }
+  return {
+    ...item,
+    mine: !!mine,
+    conflict: mine ? false : (item as BoardItem).conflict,
+    passengerName: b.passengerName,
+    luggageCount: b.luggageCount,
+    fareBreakdown,
+    pickup, dropoff, trip,
+    blocked: mine ? null : board.blocked,
+  };
 }

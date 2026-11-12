@@ -3,6 +3,8 @@ import type en from '../en/driver';
 
 const driver: Catalog<typeof en> = {
   units: {
+    kmShort: 'км',
+    mShort: 'м',
     sec: '{n} с',
     min: '{n} мин',
     hourMin: '{h} ч {m} мин',
@@ -245,6 +247,7 @@ const driver: Catalog<typeof en> = {
     staffLogin: 'Вход для персонала / администратора',
   },
   scheduled: {
+    trip: 'Поездка',
     freeUntil: 'До {time} вы свободны для других заказов (за {min} мин до подачи).',
     activeAt: 'В {time} поездка станет вашей активной, если вы на линии и свободны, — иначе уйдёт в автоматическое распределение (за {min} мин до подачи).',
     tabHistory: 'История',

@@ -1,5 +1,14 @@
 # Session handoff
 
+## Pre-bookings: review before taking (2026-11-13)
+- Pre-booking cards (Open and Accepted) have a "View" button instead of Take/Release. It opens `ScheduledDetail` (in `ScheduledRides.tsx`):
+  - Full-screen map with pickup and destination markers and the trip route line.
+  - Sheet: pickup date/time, airport and class chips, from/to, client name, trip km and min ("≈" when not road-routed), fare (meter/upfront), passenger note, flight if any, this ride's free-until / active-at times.
+  - "Fare details" collapsible; sticky "‹ Back" plus "Take ride" (open; disabled on conflict or blocked) or "Release" (accepted, with the existing confirm sheet).
+  - After taking, the view switches to Accepted.
+- `GET /api/v1/driver/scheduled/[id]` (driver-only, 30/min) → `scheduledRideDetail` in `preassign.ts`. Only rides on this driver's board (available to them, or their own). It adds the passenger name, fare breakdown, coordinates and the trip route (`googleRoute` with a 2.5 s timeout, else straight-line at ~50 km/h). Never the phone. The board list itself still has no passenger identity.
+- Test: `preassign.db` +1 (detail fields, mine flag after claim, other driver gets null). Suite 206/1 skipped.
+
 ## Driver home: no status/plate pill (2026-11-13)
 - Removed the "On duty · waiting for orders · plate" pill from the Home map. The Go online / Go offline button shows the state. The earnings figure stays at top-right; the plate is in Profile.
 
