@@ -39,6 +39,11 @@ notify() {
 
 [ "$(id -u)" -eq 0 ] || { echo "run as root (docker access)"; exit 2; }
 mkdir -p "$STATE_DIR"
+# deploy.sh runs git as root on a repo root does not own. Its `-c safe.directory` is ignored by the
+# host's git 2.25, so root needs the exception in its global config (systemd sets no HOME).
+export HOME="${HOME:-/root}"
+git config --global --get-all safe.directory 2>/dev/null | grep -qxF "$ROOT" \
+  || git config --global --add safe.directory "$ROOT"
 exec 9>"$STATE_DIR/lock"
 flock -n 9 || { log "another run is in progress"; exit 0; }
 
