@@ -8,7 +8,7 @@
 ## Booking form: extras only for pre-bookings, bags, flight required (2026-11-13)
 - Passenger booking form: the "Additional" block (passengers + note) is gone for immediate rides. They are sent as 1 passenger, 0 bags, no note, no flight.
 - Pre-booking ("Schedule") now has a details panel under the date:
-  - Flight number, REQUIRED for every pre-booking (client-side validation `booking.flight.required`; the server still treats it as optional).
+  - (Flight number field removed again on 2026-11-13. The passenger writes the flight number and meeting point in the note; the placeholder says so. The server still accepts an optional `flightNumber` from other clients.)
   - Passengers stepper and bags stepper (0–10).
   - Optional note.
 - The review step shows passengers (pre-booking only), bags (if > 0) and the note.

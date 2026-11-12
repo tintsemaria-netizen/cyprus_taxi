@@ -53,7 +53,6 @@ export default function BookingApp() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [note, setNote] = useState('');
-  const [flight, setFlight] = useState('');
   const [bags, setBags] = useState(0);
   const [step, setStep] = useState<'form' | 'review'>('form');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -267,25 +266,22 @@ export default function BookingApp() {
   const quote: QuoteBody | null = quotes[vClass] ?? null;
   const eur = (c: number) => fmt.money(c, 'EUR');
 
-  // Pre-booking details (2026-11-13): passengers, bags, flight number and note are asked ONLY for a
-  // scheduled ride; the flight number is required there. An immediate ride is 1 passenger, no bags.
-  const showFlight = when === 'SCHEDULE';
-  const flightValue = showFlight ? flight.toUpperCase().replace(/[\s-]+/g, '') : '';
+  // Pre-booking details (2026-11-13): passengers, bags and note are asked ONLY for a scheduled
+  // ride; an immediate ride is 1 passenger, no bags. There is no separate flight-number field —
+  // the passenger writes it in the note (with the meeting point), which the driver sees.
   const effPax = when === 'SCHEDULE' ? pax : 1;
   const effBags = when === 'SCHEDULE' ? bags : 0;
   const effNote = when === 'SCHEDULE' ? note.trim() : '';
   const maxPax = cfg?.classes.find((c) => c.key === vClass)?.maxPassengers ?? (vClass === 'XL' ? 6 : 4);
 
   function payloadSignature(offset = scheduleOffsetMin): string {
-    return JSON.stringify({ pickup, dropoff, when, scheduledAt, scheduleOffsetMin: offset, vClass, pax: effPax, bags: effBags, name: name.trim(), phone: phone.trim(), note: effNote, flight: flightValue });
+    return JSON.stringify({ pickup, dropoff, when, scheduledAt, scheduleOffsetMin: offset, vClass, pax: effPax, bags: effBags, name: name.trim(), phone: phone.trim(), note: effNote });
   }
 
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (!pickup) e.pickup = t('booking.validation.pickup');
     if (!dropoff) e.dropoff = t('booking.validation.dropoff');
-    if (showFlight && !flightValue) e.flight = t('booking.flight.required');
-    else if (flightValue && !/^[A-Z0-9]{2}\d{1,4}[A-Z]?$/.test(flightValue)) e.flight = t('booking.flight.invalid');
     if (passenger && !name.trim()) e.name = t('booking.validation.name');
     // Email-only accounts have no verified phone: the contact number is entered per booking.
     if (passenger && !passenger.phone && !/^\+?[\d\s()-]{7,20}$/.test(phone.trim())) e.phone = t('booking.validation.phone');
@@ -342,7 +338,6 @@ export default function BookingApp() {
         passengerName: name.trim() || passenger?.name || 'Passenger',
         phone: passenger?.phone || phone.trim(),
         note: effNote || undefined,
-        flightNumber: flightValue || undefined,
       };
       const res = await api<{ tracking: { token: string } }>('/bookings', {
         method: 'POST',
@@ -566,13 +561,8 @@ export default function BookingApp() {
                           <input type="datetime-local" className={`field ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
                           <p className="mt-1 text-xs text-muted">{withSlot(t('booking.form.timezoneNote'), 'tz', <strong>{cfg?.timezone ?? 'Europe/Nicosia'}</strong>)}</p>
                           {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
-                          {/* Pre-booking details: flight (required), passengers, bags, note. */}
+                          {/* Pre-booking details: passengers, bags, note (flight number and meeting point go in the note). */}
                           <div className="mt-3 space-y-3 rounded-[12px] border border-edge bg-elevated px-3 py-2.5">
-                            <div>
-                              <label className="label" htmlFor="bk-flight">{t('booking.flight.label')}</label>
-                              <input id="bk-flight" className={`field mt-1 font-mono uppercase ${errors.flight ? 'border-danger' : ''}`} value={flight} maxLength={9} autoCapitalize="characters" placeholder={t('booking.flight.placeholder')} onChange={(e) => setFlight(e.target.value)} />
-                              {errors.flight ? <p className="mt-1 text-xs text-danger">{errors.flight}</p> : <p className="mt-1 text-xs text-muted">{t('booking.flight.help')}</p>}
-                            </div>
                             <div className="grid grid-cols-2 gap-3">
                               <div>
                                 <span className="label" id="bk-pax-label">{t('booking.options.passengers')}</span>
@@ -648,7 +638,6 @@ export default function BookingApp() {
                       <Row label={t('booking.review.pickup')} value={pickup?.label ?? '—'} dot="accent" />
                       <Row label={t('booking.review.destination')} value={dropoff?.label ?? '—'} dot="ink" />
                       <Row label={t('booking.review.when')} value={when === 'NOW' ? t('booking.review.nowImmediate') : `${scheduledAt.replace('T', ' ')} · ${cfg?.timezone}`} />
-                      {flightValue && <Row label={t('booking.flight.reviewRow')} value={flightValue} />}
                       <Row label={t('booking.review.class')} value={t(`common.vClass.${vClass}`)} />
                       {when === 'SCHEDULE' && <Row label={t('booking.review.passengers')} value={String(effPax)} />}
                       {effBags > 0 && <Row label={t('booking.options.bags')} value={String(effBags)} />}
