@@ -1,0 +1,9 @@
+[Unit]
+Description=IL-Y auto-deploy (pull GitHub main, run scripts/deploy.sh)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /home/claudeuser/projects/cyprus_taxi/deploy/autodeploy.sh
+TimeoutStartSec=30min

@@ -1,0 +1,10 @@
+[Unit]
+Description=IL-Y auto-deploy check every 2 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitInactiveSec=2min
+Persistent=false
+
+[Install]
+WantedBy=timers.target

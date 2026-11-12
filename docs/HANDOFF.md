@@ -1,5 +1,15 @@
 # Session handoff
 
+## Auto-deploy from GitHub main (2026-11-12)
+- Every push to GitHub `main` is deployed automatically. The systemd timer `taxicy-autodeploy.timer` runs every 2 min, as root, and calls `deploy/autodeploy.sh`.
+- What one run does: `git fetch` (as the repo owner `claudeuser`) → fast-forward `master` to `origin/main` → `scripts/deploy.sh`, which does backup, build, health gate and rollback.
+- It skips the run and does not touch the tree when: there are uncommitted tracked changes, the checkout is not on `master`, or local commits are missing from `origin/main`.
+- A commit that failed to deploy is not retried. It is recorded in `/var/lib/taxicy-autodeploy/failed-sha`; the next push or `sudo rm` of that file retries.
+- Telegram is notified on success and on failure (`deploy/secrets/telegram.env`).
+- Logs: `journalctl -u taxicy-autodeploy`. Unit sources are in `deploy/systemd/`, installed by copying them to `/etc/systemd/system`.
+- Pause: `sudo systemctl stop taxicy-autodeploy.timer`. Resume: `start`.
+- Workflow: develop elsewhere and push to `main`. Do not edit this server checkout, or the next deploy is blocked.
+
 ## Driver full-screen navigation (2026-10-08)
 - Once a driver accepts, `/driver` shows ONLY `src/components/driver/DriverNavigation.tsx`: no tabs, bottom nav or stats. It has a heading-up map that follows the car, a turn-by-turn banner and a compact sheet with the stage action, call, chat, Google Maps and Details (note, flight, release).
 - Route: `POST /api/v1/driver/navigation` returns a Google Routes response with `legs.steps.navigationInstruction` in the driver's language (en/el/ru).
