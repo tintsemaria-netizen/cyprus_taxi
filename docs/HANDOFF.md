@@ -1,5 +1,13 @@
 # Session handoff
 
+## Driver home = full-screen map + floating controls (2026-11-12)
+- Home tab (no active trip) renders `DriverHomeMap fullscreen` (fixed, z-0) behind the sticky header (z-30) and the bottom nav (z-40). Overlays are z-10, each control a single floating element:
+  - Top-left: status pill (dot + on/off duty · plate). Under it: banner, blocker, warning, GPS error or "turn on GPS" hint, then the install prompt.
+  - Right-aligned under those: "📍 GPS on / Turn on GPS" toggle and the notifications toggle. They sit in the same column, so nothing overlaps; an earlier fixed right column was covered by the install prompt.
+  - Bottom: available/busy cars count pill and a big "Go online / Go offline" button, or the "can't go online" pill.
+  - A new offer replaces the bottom controls with the offer card as a sheet (scrolls, max-h 100dvh−200px). Decline/Accept are sticky at its bottom, verified clickable.
+- Status strings in the catalog start with "●"; the pill strips it and draws its own dot.
+
 ## Driver home: today's figures moved to Earnings (2026-11-12)
 - Removed the three "today" tiles (earnings, completed, online time) from the driver Home tab.
 - The Earnings tab now opens with two tiles for the selected period (today / week / month): "Completed trips" and "Time online". They come from `summary.completedTrips` and `summary.onlineSeconds` of `/driver/earnings`. The earnings card is below them, as before.

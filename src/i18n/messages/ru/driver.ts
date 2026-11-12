@@ -106,6 +106,8 @@ const driver: Catalog<typeof en> = {
     keepRide: 'Оставить заказ',
   },
   home: {
+    gpsOn: 'GPS включён',
+    gpsOff: 'Включить GPS',
     todaysEarnings: 'Заработок за сегодня',
     pending: { one: '{count} ожидает', few: '{count} ожидают', many: '{count} ожидают', other: '{count} ожидают' },
     recorded: 'учтено',

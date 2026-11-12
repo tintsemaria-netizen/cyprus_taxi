@@ -215,7 +215,7 @@ function Driver() {
 
   return (
     <div className="mx-auto max-w-lg p-4 pb-24 sm:p-6 sm:pb-24">
-      {banner && <p className="mb-3 rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn" onClick={() => setBanner(null)}>{banner}</p>}
+      {banner && tab !== 'home' && <p className="mb-3 rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn" onClick={() => setBanner(null)}>{banner}</p>}
 
       {/* Persistent cross-section bars: an offer alert, or a return-to-active-trip bar. */}
       {tab !== 'home' && offer && (
@@ -225,9 +225,9 @@ function Driver() {
         </button>
       )}
 
-      {tab === 'home' && <InstallPrompt app="driver" className="mb-3" />}
       {tab === 'home' && (
         <HomeSection
+          banner={banner} onDismissBanner={() => setBanner(null)}
           data={data} dash={dash} gps={gps} pos={pos} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
           onDuty={setDuty} onStartGps={startGps} onStopGps={stopGps}
           onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => setTab('trips')}
@@ -245,6 +245,7 @@ function Driver() {
 
 // ---- Home ----
 function HomeSection(props: {
+  banner: string | null; onDismissBanner: () => void;
   data: CurrentTrip; dash: Dashboard | null; gps: { active: boolean; error: string | null; last: string | null };
   pos: { lat: number; lng: number } | null;
   offer: Offer | null; offerSecs: number; offerBusy: boolean;
@@ -257,50 +258,71 @@ function HomeSection(props: {
   const trip = data.trip;
   const blocker = dash?.alerts.find((a) => a.level === 'blocker');
 
-  return (
-    <div className="space-y-4">
-      <DriverHomeMap pos={props.pos} />
+  const [counts, setCounts] = useState({ free: 0, busy: 0 });
+  const onCounts = useCallback((free: number, busy: number) => setCounts({ free, busy }), []);
+  const warning = dash?.alerts.find((a) => a.level === 'warning');
+  const pill = 'pointer-events-auto rounded-full border border-edge bg-page/90 shadow-card backdrop-blur';
 
-      {/* Status / duty */}
-      <div className="card flex items-center justify-between p-4">
-        <div>
-          <div className="font-semibold">{dash?.driver.name ? t('driver.duty.greeting', { name: dash.driver.name }) : (data.onDuty ? t('driver.duty.onDuty') : t('driver.duty.offDuty'))}</div>
-          <div className="text-xs text-muted">{dash?.vehicle ? `${dash.vehicle.plate} · ${dash.vehicle.label}` : t('driver.duty.noVehicle')}</div>
-          <div className="mt-0.5 text-xs">{data.onDuty ? <span className="text-accent">{data.trip ? t('driver.duty.onDutyOnTrip') : t('driver.duty.onDutyReady')}</span> : <span className="text-muted">{t('driver.duty.offDuty')}</span>}</div>
+  // Full-screen map with single floating controls on top (2026-11-12). The header (z-30) and the
+  // bottom nav (z-40) sit above; overlays are z-10 between them.
+  return (
+    <>
+      <DriverHomeMap pos={props.pos} fullscreen onCounts={onCounts} />
+
+      {/* Top: status + messages */}
+      <div className="pointer-events-none fixed inset-x-0 top-[64px] z-10 mx-auto flex max-w-lg flex-col items-start gap-2 px-3 pt-2">
+        <div className={`${pill} flex items-center gap-2 px-3 py-1.5 text-sm`}>
+          <span className={`h-2.5 w-2.5 rounded-full ${data.onDuty ? 'bg-accent' : 'bg-muted'}`} />
+          {/* Catalog strings may start with their own "●"; the dot is drawn here. */}
+          <span className="font-medium">{(data.onDuty ? (trip ? t('driver.duty.onDutyOnTrip') : t('driver.duty.onDutyReady')) : t('driver.duty.offDuty')).replace(/^[●•]\s*/, '')}</span>
+          {dash?.vehicle && <span className="text-xs text-muted">· {dash.vehicle.plate}</span>}
         </div>
-        <div className="flex flex-col items-end gap-1">
-          {blocker && !data.onDuty ? (
-            <span className="rounded-full bg-danger/15 px-3 py-1 text-xs text-danger">{t('driver.duty.cantGoOnline')}</span>
-          ) : (
-            <button className={`min-h-[44px] ${data.onDuty ? 'btn-ghost' : 'btn-primary'}`} onClick={() => props.onDuty(!data.onDuty)}>{data.onDuty ? t('driver.duty.goOffline') : t('driver.duty.goOnline')}</button>
-          )}
-          <NotifyToggle pushUrl="/driver/push" />
-        </div>
+        {props.banner && <button className="pointer-events-auto rounded-[12px] border border-warn/40 bg-page/95 px-3 py-2 text-left text-sm text-warn" onClick={props.onDismissBanner}>{props.banner}</button>}
+        {blocker && (
+          <div className="pointer-events-auto rounded-[12px] border border-danger/40 bg-page/95 px-3 py-2 text-sm">
+            <p className="font-medium text-danger">{blocker.code === 'NO_VEHICLE' ? t('driver.alerts.noVehicle') : blocker.message}</p>
+            {blocker.action && <a href={blocker.action.href} className="mt-1 inline-block text-xs underline">{blocker.action.label}</a>}
+          </div>
+        )}
+        {!offer && warning && <div className="pointer-events-auto rounded-[12px] border border-warn/40 bg-page/95 px-3 py-2 text-sm text-warn">{warning.message}{warning.action && <a href={warning.action.href} className="ml-2 underline">{warning.action.label}</a>}</div>}
+        {data.onDuty && gps.error && <div className={`pointer-events-auto rounded-[12px] border bg-page/95 px-3 py-2 text-xs ${gps.error === 'acquiring' ? 'border-warn/40 text-warn' : 'border-danger/40 text-danger'}`}>{t(`driver.gps.${gps.error as 'denied' | 'acquiring' | 'unsupported'}`)}</div>}
+        {data.onDuty && !gps.active && !gps.error && <div className="pointer-events-auto rounded-[12px] border border-edge bg-page/95 px-3 py-2 text-xs text-muted">{t('driver.map.noGps')}</div>}
+        <InstallPrompt app="driver" className="pointer-events-auto w-full bg-page/95" />
+        {/* One button per action, right-aligned under the messages (never overlapping them). */}
+        {!offer && (
+          <div className="flex w-full flex-col items-end gap-2">
+            {data.onDuty && (
+              <button className={`${pill} flex h-12 items-center gap-1.5 px-4 text-sm font-medium ${gps.active ? '!border-accent text-accent' : 'text-ink'}`}
+                onClick={gps.active ? props.onStopGps : props.onStartGps} aria-pressed={gps.active}>
+                📍 {gps.active ? t('driver.home.gpsOn') : t('driver.home.gpsOff')}
+              </button>
+            )}
+            <div className={`${pill} flex min-h-[48px] items-center px-4`}><NotifyToggle pushUrl="/driver/push" /></div>
+          </div>
+        )}
       </div>
 
-      {/* Eligibility blocker replaces the online action */}
-      {blocker && (
-        <div className="rounded-[12px] border border-danger/40 bg-danger/10 p-3 text-sm">
-          <p className="font-medium text-danger">{blocker.code === 'NO_VEHICLE' ? t('driver.alerts.noVehicle') : blocker.message}</p>
-          {blocker.action && <a href={blocker.action.href} className="mt-1 inline-block text-xs underline">{blocker.action.label}</a>}
-        </div>
-      )}
-
-      {/* GPS sharing */}
-      {data.onDuty && (
-        <div className="card p-4">
-          <div className="flex items-center justify-between">
-            <div><div className="font-semibold">{t('driver.gps.title')}</div><div className="text-xs text-muted">{gps.active ? <span className="text-accent">{t('driver.gps.active')}{gps.last ? t('driver.gps.sentAt', { time: fmt.time(gps.last) }) : ''}</span> : t('driver.gps.off')}</div></div>
-            {gps.active ? <button className="btn-ghost min-h-[44px]" onClick={props.onStopGps}>{t('driver.gps.stop')}</button> : <button className="btn-primary min-h-[44px]" onClick={props.onStartGps}>{t('driver.gps.start')}</button>}
+      {/* Bottom: online/offline button + cars count, or the offer sheet */}
+      <div className="pointer-events-none fixed inset-x-0 z-10 mx-auto max-w-lg px-3" style={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
+        {!offer && (
+          <div className="flex flex-col items-center gap-2">
+            <div className={`${pill} px-3 py-1 text-xs text-muted`}>
+              <span className="mr-1 inline-block h-2 w-2 rounded-full bg-accent align-middle" />{t('driver.map.free', { n: counts.free })}
+              <span className="ml-3 mr-1 inline-block h-2 w-2 rounded-full bg-muted align-middle" />{t('driver.map.busy', { n: counts.busy })}
+            </div>
+            {blocker && !data.onDuty ? (
+              <span className="pointer-events-auto rounded-full bg-danger/90 px-5 py-3 text-sm font-semibold text-white">{t('driver.duty.cantGoOnline')}</span>
+            ) : (
+              <button className={`pointer-events-auto min-h-[56px] w-full rounded-full text-base font-semibold shadow-card ${data.onDuty ? 'border border-edge bg-page/95 text-ink' : 'bg-accent text-[#0d1608]'}`}
+                onClick={() => props.onDuty(!data.onDuty)}>
+                {data.onDuty ? t('driver.duty.goOffline') : t('driver.duty.goOnline')}
+              </button>
+            )}
           </div>
-          {gps.error && <p className={`mt-2 text-xs ${gps.error === 'acquiring' ? 'text-warn' : 'text-danger'}`}>{t(`driver.gps.${gps.error as 'denied' | 'acquiring' | 'unsupported'}`)}</p>}
-          <p className="mt-2 text-xs text-muted">{t('driver.gps.note')}</p>
-        </div>
-      )}
-
+        )}
       {/* Offer takes priority */}
       {offer && !trip && (
-        <div className="card border-2 border-accent p-4">
+        <div className="card pointer-events-auto max-h-[calc(100dvh-200px)] overflow-y-auto border-2 border-accent p-4">
           <div className="flex items-center justify-between"><span className="font-semibold text-accent">{t('driver.offer.title')}</span><span className={`chip ${offerSecs <= 5 ? '!text-danger' : ''}`}>⏳ {t('driver.units.sec', { n: offerSecs })}</span></div>
           <div className="mt-3 space-y-2 text-sm">
             <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" /><span className="text-muted">{t('driver.offer.pickup')}</span><span className="ml-auto text-right font-medium">{offer.pickup.label}</span></div>
@@ -331,22 +353,16 @@ function HomeSection(props: {
             <div className="mt-1 flex justify-between border-t border-edge pt-1 font-semibold"><span>{offer.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.total') : t('driver.offer.estimatedTotal')}</span><span>{offer.fareCents != null ? money(offer.fareCents, offer.currency) : '—'}</span></div>
             {offer.priceType !== 'UPFRONT_DYNAMIC' && <div className="mt-1 text-xs text-muted">{t('driver.offer.meterSettled')}</div>}
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          {/* Kept in view while the details scroll. */}
+          <div className="sticky -bottom-4 -mx-4 -mb-4 mt-4 grid grid-cols-2 gap-2 bg-panel px-4 pb-4 pt-2">
             <button className="btn-ghost min-h-[44px] !text-danger border border-danger/40" disabled={offerBusy} onClick={() => props.onDecline(offer.offerId)}>{t('driver.offer.decline')}</button>
             <button className="btn-primary min-h-[44px]" disabled={offerBusy || offerSecs === 0} onClick={() => props.onAccept(offer.offerId)}>{t('driver.offer.accept')}</button>
           </div>
         </div>
       )}
 
-      {/* Idle (no offer). Today's figures live in the Earnings tab (2026-11-12). An active trip has its own full-screen navigation. */}
-      {!offer && (
-        <>
-
-          {/* Idle: one warning. Trip history lives in the Trips tab only (2026-11-12). */}
-          {dash?.alerts.find((a) => a.level === 'warning') && (() => { const w = dash.alerts.find((a) => a.level === 'warning')!; return <div className="rounded-[12px] border border-warn/40 bg-warn/10 p-3 text-sm text-warn">{w.message}{w.action && <a href={w.action.href} className="ml-2 underline">{w.action.label}</a>}</div>; })()}
-        </>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
 

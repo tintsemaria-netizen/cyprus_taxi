@@ -103,6 +103,8 @@ const driver = {
     keepRide: 'Keep the ride',
   },
   home: {
+    gpsOn: 'GPS on',
+    gpsOff: 'Turn on GPS',
     todaysEarnings: 'Today’s earnings',
     pending: { one: '{count} pending', other: '{count} pending' },
     recorded: 'recorded',

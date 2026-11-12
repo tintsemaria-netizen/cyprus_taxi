@@ -12,7 +12,9 @@ const CYPRUS = { lat: 34.92, lng: 33.2 };
 // Driver home map: the driver's own car (from the live GPS fix, when sharing) and the other
 // on-duty cars (anonymised, available/busy), refreshed every 10 s while the page is visible.
 // Without a GPS fix the map shows the whole island (zoom 8) so cars on the coast stay in view.
-export function DriverHomeMap({ pos }: { pos: { lat: number; lng: number } | null }) {
+// `fullscreen`: the map fills the screen behind the driver Home overlays (2026-11-12); counts are
+// reported through `onCounts` so the overlay can show them as a button.
+export function DriverHomeMap({ pos, fullscreen = false, onCounts }: { pos: { lat: number; lng: number } | null; fullscreen?: boolean; onCounts?: (free: number, busy: number) => void }) {
   const { t } = useT();
   const [fleet, setFleet] = useState<FleetCar[]>([]);
 
@@ -33,6 +35,15 @@ export function DriverHomeMap({ pos }: { pos: { lat: number; lng: number } | nul
   const markers = useMemo<MapMarker[]>(() => (pos ? [{ id: 'me', kind: 'vehicle', lat: pos.lat, lng: pos.lng, label: t('driver.map.you') }] : []), [pos, t]);
   const free = fleet.filter((v) => v.state !== 'busy').length;
   const busy = fleet.length - free;
+  useEffect(() => { onCounts?.(free, busy); }, [free, busy, onCounts]);
+
+  if (fullscreen) {
+    return (
+      <div className="fixed inset-0 z-0">
+        <AutoMapView markers={markers} fleet={fleet} focus={pos} center={pos ?? CYPRUS} zoom={pos ? 14 : 8} interactive className="h-full w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="card overflow-hidden">

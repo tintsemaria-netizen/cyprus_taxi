@@ -106,6 +106,8 @@ const driver: Catalog<typeof en> = {
     keepRide: 'Την κρατώ',
   },
   home: {
+    gpsOn: 'GPS ενεργό',
+    gpsOff: 'Ενεργοποίηση GPS',
     todaysEarnings: 'Σημερινά έσοδα',
     pending: { one: '{count} εκκρεμεί', other: '{count} εκκρεμούν' },
     recorded: 'καταγεγραμμένα',
