@@ -562,12 +562,16 @@ model DispatchJob {
   deadlineAt     DateTime
   triedDriverIds String[]  @default([])
   radiusStage    Int       @default(0)
+  // Set when automatic offers to nearby drivers are exhausted: the ride is then on the drivers'
+  // free-orders board until deadlineAt (FREE_BOARD_SEC), after which it becomes NO_DRIVER.
+  openedAt       DateTime?
   leaseOwner     String?
   leaseUntil     DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   @@index([leaseUntil])
+  @@index([openedAt])
 }
 
 // An expiring offer to a single reserved driver. active* nullable-unique columns give

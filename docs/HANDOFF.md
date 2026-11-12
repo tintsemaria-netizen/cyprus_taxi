@@ -1,5 +1,22 @@
 # Session handoff
 
+## Search flow v2: offers → free-orders board 2 min → NO_DRIVER (2026-11-12)
+Supersedes the first free-orders version (board of NO_DRIVER rides for 30 min).
+- Worker `processJob`:
+  - Offers go to eligible nearby drivers one by one (10 s each).
+  - When no candidate is left (all tried, or nobody on duty), or the offering-phase deadline (180 s) passes, the job is OPENED: `DispatchJob.openedAt` is set and `deadlineAt` becomes now + `FREE_BOARD_SEC` (120). An OPENED_TO_FREE_BOARD event is recorded.
+  - The booking stays SEARCHING, so the passenger still sees "finding a driver". No more automatic offers are sent.
+  - When the board deadline passes → NO_DRIVER. The passenger re-orders with the existing retry.
+  - A scheduled ride searched ahead of its time is not opened early; it opens at its deadline.
+  - Migration `20261112190000_dispatch_open_board`: nullable column plus index.
+- Board (`src/server/dispatch/free-orders.ts`) lists open, unexpired jobs.
+  - Class rule `vehicleFits`: COMFORT rides fit COMFORT and XL cars; XL rides fit XL only; seats ≥ passengers.
+  - Shows the passenger name and `expiresInMs` (server clock). The phone only after taking.
+  - The driver who declined the offer can still see and take it from the board.
+- `claimFreeOrder` requires SEARCHING + an open, unexpired job + no live offer under the booking lock. It deletes the job, then ASSIGNED → EN_ROUTE.
+- Driver UI: card shows the name, an "N s left" countdown, and hides the card at 0.
+- Tests: free-orders.db (9) and dispatch.db, updated for the open phase plus a new deadline-opens-board case. Suite 203/1 skipped ×2. Playwright: the real worker offers to Maria, she declines, the ride appears on her Free tab with name and countdown.
+
 ## Driver "Free orders" tab (2026-11-12)
 - New driver tab "Free" (`FreeOrdersSection` in `src/app/driver/page.tsx`). The badge shows the count, polled every 10 s while on duty.
 - A ride appears ONLY after automatic dispatch offered it to the free drivers nearby and nobody accepted before the search deadline: status NO_DRIVER, changed within `FREE_ORDER_WINDOW_MIN` = 30 min. It must also fit the driver's bound vehicle (class, seats). Sorted by straight-line distance from the driver's last fix.

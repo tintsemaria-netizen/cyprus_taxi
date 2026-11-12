@@ -196,10 +196,10 @@ const driver = {
   },
   free: {
     title: 'Free orders',
-    hint: 'Rides that were offered to free drivers nearby, but nobody accepted. Take one and you head to the pickup right away.',
+    hint: 'Rides offered to the free drivers nearby without anyone accepting. They stay here for 2 minutes. Take one and you head to the pickup right away.',
     goOnline: 'Go online on the Home tab to take rides.',
     empty: 'No free orders right now.',
-    waiting: 'waiting {min} min',
+    left: '{sec} s left',
     take: 'Take ride',
     taking: 'Taking…',
   },

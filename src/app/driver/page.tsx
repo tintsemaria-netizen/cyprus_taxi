@@ -392,12 +392,14 @@ function TripsModeToggle({ mode, setMode, count }: { mode: 'history' | 'prebook'
 
 interface FreeOrder {
   bookingId: string; pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string };
-  vClass: string; passengerCount: number; note: string | null; flightNumber: string | null; scheduledAt: string | null;
-  fareCents: number | null; priceType: string | null; currency: string; waitingSince: string; distanceM: number | null;
+  vClass: string; passengerName: string; passengerCount: number; note: string | null; flightNumber: string | null; scheduledAt: string | null;
+  fareCents: number | null; priceType: string | null; currency: string; waitingSince: string; expiresAt: string; expiresInMs: number; distanceM: number | null;
+  localDeadline?: number;
 }
 
-// Free orders (2026-11-12): rides automatic dispatch offered to nearby free drivers without anyone
-// accepting (NO_DRIVER). Any on-duty driver whose car fits can take one here.
+// Free orders (2026-11-12): rides automatic dispatch offered to every eligible nearby driver without
+// anyone accepting. Listed for 2 min to any on-duty driver whose car fits (COMFORT rides: COMFORT
+// and XL cars; XL rides: XL only). Passenger name shown; phone only after taking.
 function FreeOrdersSection({ onDuty, onTaken }: { onDuty: boolean; onTaken: () => void }) {
   const { t, fmt, tError } = useT();
   const { money, km } = useDriverFmt();
@@ -407,12 +409,13 @@ function FreeOrdersSection({ onDuty, onTaken }: { onDuty: boolean; onTaken: () =
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   const load = useCallback(async () => {
-    try { const r = await api<{ orders: FreeOrder[] }>('/driver/free-orders'); setOrders(r.orders); setNowMs(Date.now()); } catch { /* keep last */ }
+    try { const r = await api<{ orders: FreeOrder[] }>('/driver/free-orders'); const at = Date.now(); setOrders(r.orders.map((o) => ({ ...o, localDeadline: at + o.expiresInMs }))); setNowMs(at); } catch { /* keep last */ }
   }, []);
   useEffect(() => {
     void load();
     const id = setInterval(() => { if (document.visibilityState === 'visible') void load(); }, 5000);
-    return () => clearInterval(id);
+    const tick = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => { clearInterval(id); clearInterval(tick); };
   }, [load]);
 
   async function take(id: string) {
@@ -431,7 +434,8 @@ function FreeOrdersSection({ onDuty, onTaken }: { onDuty: boolean; onTaken: () =
       {orders === null ? <p className="py-8 text-center text-sm text-muted">{t('common.loading')}</p>
         : orders.length === 0 ? <p className="py-8 text-center text-sm text-muted">{t('driver.free.empty')}</p>
         : orders.map((o) => {
-          const waitMin = Math.max(0, Math.round((nowMs - new Date(o.waitingSince).getTime()) / 60000));
+          const leftSec = Math.max(0, Math.ceil(((o.localDeadline ?? new Date(o.expiresAt).getTime()) - nowMs) / 1000));
+          if (leftSec === 0) return null;
           return (
             <div key={o.bookingId} className="card p-4">
               <div className="space-y-2 text-sm">
@@ -443,9 +447,10 @@ function FreeOrdersSection({ onDuty, onTaken }: { onDuty: boolean; onTaken: () =
                 <span className="rounded-full bg-elevated px-2 py-1">{t('driver.units.paxShort', { count: o.passengerCount })} · {o.vClass}</span>
                 {o.scheduledAt && <span className="rounded-full bg-elevated px-2 py-1">🕒 {fmt.dateTime(o.scheduledAt)}</span>}
                 {o.flightNumber && <span className="rounded-full bg-elevated px-2 py-1">✈ {o.flightNumber}</span>}
-                <span className="rounded-full bg-elevated px-2 py-1">{t('driver.free.waiting', { min: waitMin })}</span>
+                <span className={`rounded-full bg-elevated px-2 py-1 ${leftSec <= 30 ? 'text-danger' : ''}`}>{t('driver.free.left', { sec: leftSec })}</span>
               </div>
-              {o.note && <p className="mt-2 text-xs text-muted">{t('driver.offer.note', { note: o.note })}</p>}
+              <p className="mt-2 text-sm"><span className="font-medium">{o.passengerName}</span> <span className="text-xs text-muted">· {t('driver.offer.phoneHidden')}</span></p>
+              {o.note && <p className="mt-1 text-xs text-muted">{t('driver.offer.note', { note: o.note })}</p>}
               <div className="mt-3 flex items-center justify-between gap-3">
                 <div className="text-sm"><span className="font-semibold">{money(o.fareCents, o.currency)}</span>{o.priceType && <span className="ml-1 text-xs text-muted">{o.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.upfront') : o.priceType === 'REGULATED_METER_ESTIMATE' ? t('driver.offer.meterEstimate') : ''}</span>}</div>
                 <button className="btn-primary min-h-[44px]" disabled={!onDuty || busyId !== null} onClick={() => take(o.bookingId)}>{busyId === o.bookingId ? t('driver.free.taking') : t('driver.free.take')}</button>

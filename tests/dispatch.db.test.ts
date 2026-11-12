@@ -148,8 +148,22 @@ describe('autonomous dispatch worker', () => {
     expect(job!.triedDriverIds).toContain(near);
   });
 
-  it('no eligible driver + deadline passed → NO_DRIVER', async () => {
+  it('offering phase deadline (offers still going) also opens the board instead of NO_DRIVER', async () => {
+    await placeDriver('Andreas', 1);
+    const b = await newSearchingBooking();
+    await prisma.dispatchJob.update({ where: { bookingId: b.id }, data: { deadlineAt: new Date(Date.now() - 1000) } });
+    await runOnce();
+    expect((await prisma.dispatchJob.findUnique({ where: { bookingId: b.id } }))!.openedAt).not.toBeNull();
+    expect((await prisma.booking.findUnique({ where: { id: b.id } }))!.status).toBe('SEARCHING');
+  });
+
+  it('no eligible driver → free-orders board for 2 min → NO_DRIVER', async () => {
     const b = await newSearchingBooking(); // nobody on duty
+    await runOnce(); // nobody to offer it to → opened to all drivers, passenger still sees SEARCHING
+    const job = await prisma.dispatchJob.findUnique({ where: { bookingId: b.id } });
+    expect(job!.openedAt).not.toBeNull();
+    expect((await prisma.booking.findUnique({ where: { id: b.id } }))!.status).toBe('SEARCHING');
+    // Board window over without anyone taking it.
     await prisma.dispatchJob.update({ where: { bookingId: b.id }, data: { deadlineAt: new Date(Date.now() - 1000) } });
     await runOnce();
     const after = await prisma.booking.findUnique({ where: { id: b.id } });

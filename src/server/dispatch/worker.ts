@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { findBestCandidate, RADIUS_STAGES_KM } from './eligibility';
 import { startSearchTx, searchDeadline } from './search';
+import { FREE_BOARD_SEC } from './free-orders';
 import { runPreassignments } from './preassign';
 import { createOffer, expireOffer } from './offers';
 import { rematchBooking } from './lifecycle';
@@ -137,9 +138,16 @@ async function runDispatchSection(now: Date): Promise<void> {
 async function processJob(jobId: string): Promise<void> {
   const job = await prisma.dispatchJob.findUnique({ where: { id: jobId }, include: { booking: true } });
   if (!job || job.booking.status !== 'SEARCHING') return;
+  const now = new Date();
 
-  // Deadline reached without acceptance → give up (NO_DRIVER).
-  if (job.deadlineAt < new Date()) {
+  // Search flow (2026-11-12): offer to nearby drivers one by one → when nobody is left to offer
+  // (or the offering phase hits its deadline) the ride is OPENED on the drivers' free-orders
+  // board for FREE_BOARD_SEC → still untaken → NO_DRIVER (the passenger re-orders).
+  if (!job.openedAt && job.deadlineAt < now) { await openJob(jobId, now, 'deadline'); return; }
+  if (job.openedAt && job.deadlineAt >= now) return; // on the free-orders board; no more offers
+
+  // Board window over without anyone taking it → give up (NO_DRIVER).
+  if (job.deadlineAt < now) {
     const gaveUp = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${job.bookingId} FOR UPDATE`;
       const b = await tx.booking.findUnique({ where: { id: job.bookingId } });
@@ -168,8 +176,29 @@ async function processJob(jobId: string): Promise<void> {
     candidate = await findBestCandidate(job.booking, RADIUS_STAGES_KM[stage], job.triedDriverIds, etaCache);
   }
   if (stage !== job.radiusStage) await prisma.dispatchJob.update({ where: { id: jobId }, data: { radiusStage: stage } });
-  if (!candidate) return; // no eligible driver right now — retry next tick until the deadline
+  if (!candidate) {
+    // Every eligible nearby driver has been offered the ride (or there is none): open it to all
+    // drivers. A scheduled ride searched ahead of its time keeps retrying until its deadline.
+    if (job.booking.scheduledAt && job.booking.scheduledAt > now) return;
+    await openJob(jobId, now, 'no-candidates');
+    return;
+  }
   await createOffer(job.bookingId, candidate);
+}
+
+// Put a searching ride on the drivers' free-orders board for FREE_BOARD_SEC.
+async function openJob(jobId: string, now: Date, reason: 'no-candidates' | 'deadline'): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const job = await tx.dispatchJob.findUnique({ where: { id: jobId } });
+    if (!job || job.openedAt) return;
+    await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${job.bookingId} FOR UPDATE`;
+    const b = await tx.booking.findUnique({ where: { id: job.bookingId } });
+    if (!b || b.status !== 'SEARCHING') return;
+    // An outstanding offer (deadline case) is left to resolve; the board only opens without one.
+    if (await tx.driverOffer.findFirst({ where: { activeBookingId: job.bookingId } })) return;
+    await tx.dispatchJob.update({ where: { id: jobId }, data: { openedAt: now, deadlineAt: new Date(now.getTime() + FREE_BOARD_SEC * 1000) } });
+    await tx.bookingEvent.create({ data: { bookingId: job.bookingId, type: 'OPENED_TO_FREE_BOARD', actorType: 'SYSTEM', beforeStatus: 'SEARCHING', afterStatus: 'SEARCHING', reason } });
+  });
 }
 
 // Invariant repair: a SEARCHING booking without a DispatchJob is never progressed by the worker
