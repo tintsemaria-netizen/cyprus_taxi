@@ -112,6 +112,7 @@ const driver: Catalog<typeof en> = {
     keepRide: 'Оставить заказ',
   },
   home: {
+    earnedToday: 'заработано сегодня',
     gpsOn: 'GPS включён',
     gpsOff: 'Включить GPS',
     todaysEarnings: 'Заработок за сегодня',

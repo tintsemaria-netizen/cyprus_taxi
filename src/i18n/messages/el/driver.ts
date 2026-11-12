@@ -112,6 +112,7 @@ const driver: Catalog<typeof en> = {
     keepRide: 'Την κρατώ',
   },
   home: {
+    earnedToday: 'σήμερα',
     gpsOn: 'GPS ενεργό',
     gpsOff: 'Ενεργοποίηση GPS',
     todaysEarnings: 'Σημερινά έσοδα',

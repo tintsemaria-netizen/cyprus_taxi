@@ -1,5 +1,9 @@
 # Session handoff
 
+## Driver: trips & earnings inside Profile; earnings figure on the map (2026-11-13)
+- Bottom nav is 3 tabs: Home | Orders | Profile. Profile has a `SubTabs` switch: Profile | Trips | Earnings. The separate "Trips & earnings" tab is gone.
+- Home map: a pill at top-right shows today's recorded earnings (`dash.today.recordedEarnings`, "0,00 €" when none) and the label "earned today". Tapping it opens Profile › Earnings.
+
 ## Pre-booking cards: per-ride time rules + passenger note (2026-11-13)
 - Removed the general explanation paragraph from the top of the driver's Pre-bookings view.
 - Each pre-booking card now shows that ride's own times: "Until HH:MM you're free for other rides (pickup −75 min)" and "At HH:MM it becomes your active ride if online and free, else automatic dispatch (pickup −30 min)". The times come from `PROTECT_MIN` / `CONVERT_MIN` in Cyprus time.

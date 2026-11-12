@@ -109,6 +109,7 @@ const driver = {
     keepRide: 'Keep the ride',
   },
   home: {
+    earnedToday: 'earned today',
     gpsOn: 'GPS on',
     gpsOff: 'Turn on GPS',
     todaysEarnings: 'Today’s earnings',

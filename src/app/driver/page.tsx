@@ -43,8 +43,9 @@ interface Dashboard {
   support: { operatorName: string | null; phone: string | null; email: string | null };
 }
 
-// Bottom tabs (2026-11-13): Orders = free orders + pre-bookings; Work = trips + earnings.
-type Tab = 'home' | 'free' | 'trips' | 'profile';
+// Bottom tabs (2026-11-13): Home | Orders (free orders + pre-bookings) | Profile (profile, trips,
+// earnings). Today's earnings are also shown as a figure over the Home map.
+type Tab = 'home' | 'free' | 'profile';
 
 // Locale-aware formatting helpers for the driver app (money, durations, distances, status labels).
 // Map padding that keeps the driver's car and the client ABOVE a bottom sheet (offer / free-order
@@ -165,7 +166,7 @@ function Driver() {
 
   // Sub-views of the merged tabs.
   const [ordersView, setOrdersView] = useState<'free' | 'prebook'>('free');
-  const [workView, setWorkView] = useState<'trips' | 'earnings'>('trips');
+  const [profileView, setProfileView] = useState<'me' | 'trips' | 'earnings'>('me');
   const [prebookCount, setPrebookCount] = useState<number | null>(null);
   // Free orders count for the bottom-nav badge (rides automatic dispatch could not place).
   const [freeCount, setFreeCount] = useState(0);
@@ -243,7 +244,8 @@ function Driver() {
           banner={banner} onDismissBanner={() => setBanner(null)}
           data={data} dash={dash} gps={gps} pos={pos} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
           onDuty={setDuty} onStartGps={startGps} onStopGps={stopGps}
-          onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => setTab('trips')}
+          onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => { setTab('profile'); setProfileView('trips'); }}
+          goEarnings={() => { setTab('profile'); setProfileView('earnings'); }}
         />
       )}
       {tab === 'free' && (
@@ -254,15 +256,16 @@ function Driver() {
       )}
       {tab === 'free' && ordersView === 'free' && <FreeOrdersSection pos={pos} onDuty={!!data.onDuty} onTaken={async () => { setFreeCount(0); setTab('home'); await load(); await loadDash(); }} />}
       {tab === 'free' && ordersView === 'prebook' && <ScheduledRides onCount={setPrebookCount} />}
-      {tab === 'trips' && (
-        <SubTabs value={workView} onChange={setWorkView} items={[
+      {tab === 'profile' && (
+        <SubTabs value={profileView} onChange={setProfileView} items={[
+          { id: 'me', label: t('driver.nav.profile') },
           { id: 'trips', label: t('driver.nav.trips') },
           { id: 'earnings', label: t('driver.nav.earnings') },
         ]} />
       )}
-      {tab === 'trips' && workView === 'trips' && <TripsSection onOpen={setActiveDetailId} activeDetail={activeDetailId} onCloseDetail={() => setActiveDetailId(null)} onSettled={() => { loadDash(); }} />}
-      {tab === 'trips' && workView === 'earnings' && <EarningsSection />}
-      {tab === 'profile' && <ProfileSection dash={dash} />}
+      {tab === 'profile' && profileView === 'me' && <ProfileSection dash={dash} />}
+      {tab === 'profile' && profileView === 'trips' && <TripsSection onOpen={setActiveDetailId} activeDetail={activeDetailId} onCloseDetail={() => setActiveDetailId(null)} onSettled={() => { loadDash(); }} />}
+      {tab === 'profile' && profileView === 'earnings' && <EarningsSection />}
 
       <BottomNav tab={tab} setTab={setTab} hasOffer={!!offer} freeCount={freeCount} />
     </div>
@@ -276,7 +279,7 @@ function HomeSection(props: {
   pos: { lat: number; lng: number } | null;
   offer: Offer | null; offerSecs: number; offerBusy: boolean;
   onDuty: (v: boolean) => void; onStartGps: () => void; onStopGps: () => void;
-  onAccept: (id: string) => void; onDecline: (id: string) => void; goTrips: () => void;
+  onAccept: (id: string) => void; onDecline: (id: string) => void; goTrips: () => void; goEarnings: () => void;
 }) {
   const { data, dash, gps, offer, offerSecs, offerBusy } = props;
   const { t, fmt } = useT();
@@ -299,11 +302,20 @@ function HomeSection(props: {
 
       {/* Top: status + messages */}
       <div className="pointer-events-none fixed inset-x-0 top-[64px] z-10 mx-auto flex max-w-lg flex-col items-start gap-2 px-3 pt-2">
+        <div className="flex w-full items-start justify-between gap-2">
         <div className={`${pill} flex items-center gap-2 px-3 py-1.5 text-sm`}>
           <span className={`h-2.5 w-2.5 rounded-full ${data.onDuty ? 'bg-accent' : 'bg-muted'}`} />
           {/* Catalog strings may start with their own "●"; the dot is drawn here. */}
           <span className="font-medium">{(data.onDuty ? (trip ? t('driver.duty.onDutyOnTrip') : t('driver.duty.onDutyReady')) : t('driver.duty.offDuty')).replace(/^[●•]\s*/, '')}</span>
           {dash?.vehicle && <span className="text-xs text-muted">· {dash.vehicle.plate}</span>}
+        </div>
+        {/* Today's recorded earnings as a figure over the map; tap → Profile › Earnings. */}
+        {dash && (
+          <button className={`${pill} shrink-0 px-3 py-1.5 text-right`} onClick={props.goEarnings} aria-label={t('driver.home.earnedToday')}>
+            <span className="block text-base font-bold leading-tight text-accent">{dash.today.recordedEarnings.length ? dash.today.recordedEarnings.map((e) => money(e.cents, e.currency)).join(' + ') : money(0, 'EUR')}</span>
+            <span className="block text-[10px] leading-tight text-muted">{t('driver.home.earnedToday')}</span>
+          </button>
+        )}
         </div>
         {props.banner && <button className="pointer-events-auto rounded-[12px] border border-warn/40 bg-page/95 px-3 py-2 text-left text-sm text-warn" onClick={props.onDismissBanner}>{props.banner}</button>}
         {blocker && (
@@ -790,7 +802,7 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
 function BottomNav({ tab, setTab, hasOffer, freeCount }: { tab: Tab; setTab: (t: Tab) => void; hasOffer: boolean; freeCount: number }) {
   const { t } = useT();
   const items: { id: Tab; label: string; icon: string }[] = [
-    { id: 'home', label: t('driver.nav.home'), icon: '🏠' }, { id: 'free', label: t('driver.nav.orders'), icon: '📋' }, { id: 'trips', label: t('driver.nav.work'), icon: '🧾' },
+    { id: 'home', label: t('driver.nav.home'), icon: '🏠' }, { id: 'free', label: t('driver.nav.orders'), icon: '📋' },
     { id: 'profile', label: t('driver.nav.profile'), icon: '👤' },
   ];
   return (
