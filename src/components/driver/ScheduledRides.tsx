@@ -26,6 +26,8 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number) => void }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [ask, setAsk] = useState<Item | null>(null);
+  // Two lists (2026-11-13): open pre-bookings to take, and the ones this driver has accepted.
+  const [view, setView] = useState<'available' | 'mine'>('available');
 
   const load = useCallback(async () => {
     try { const b = await api<Board>('/driver/scheduled'); setBoard(b); setErr(null); onCount?.(b.available.filter((i) => !i.conflict).length); }
@@ -80,17 +82,27 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number) => void }) {
       {err && <p role="alert" className="rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}
       {!board ? <p className="text-sm text-muted">{t('common.loading')}</p> : (
         <>
-          <h2 className="pt-1 text-sm font-semibold">{t('driver.scheduled.mine')}</h2>
-          {board.mine.length === 0 ? <p className="text-sm text-muted">{t('driver.scheduled.noneMine')}</p> : board.mine.map((i) => row(i,
-            <button className="btn-ghost !min-h-[44px] w-full !text-danger border border-danger/40" disabled={busy === i.bookingId} onClick={() => setAsk(i)}>{t('driver.scheduled.release')}</button>))}
+          <div className="flex gap-1 rounded-[12px] border border-edge bg-elevated p-1" role="tablist">
+            {(['available', 'mine'] as const).map((v) => {
+              const n = v === 'available' ? board.available.filter((i) => !i.conflict).length : board.mine.length;
+              return (
+                <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)} className={`relative flex-1 rounded-[9px] px-3 py-2 text-sm font-medium ${view === v ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>
+                  {v === 'available' ? t('driver.scheduled.available') : t('driver.scheduled.mine')}
+                  {n > 0 && <span className={`ml-1.5 inline-block min-w-[18px] rounded-full px-1 text-center text-[10px] font-bold leading-[18px] ${v === 'available' ? 'bg-danger text-white' : 'bg-page text-ink'}`}>{n}</span>}
+                </button>
+              );
+            })}
+          </div>
 
-          <h2 className="pt-2 text-sm font-semibold">{t('driver.scheduled.available')}</h2>
-          {board.blocked ? (
+          {view === 'mine' && (board.mine.length === 0 ? <p className="text-sm text-muted">{t('driver.scheduled.noneMine')}</p> : board.mine.map((i) => row(i,
+            <button className="btn-ghost !min-h-[44px] w-full !text-danger border border-danger/40" disabled={busy === i.bookingId} onClick={() => setAsk(i)}>{t('driver.scheduled.release')}</button>)))}
+
+          {view === 'available' && (board.blocked ? (
             <p className="rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn">{board.blocked === 'NO_VEHICLE' ? t('driver.scheduled.blockedNoVehicle') : t('driver.scheduled.blockedNotEligible')}</p>
           ) : board.available.length === 0 ? <p className="text-sm text-muted">{t('driver.scheduled.noneAvailable')}</p> : board.available.map((i) => row(i,
             i.conflict
               ? <p className="text-xs text-warn">{t('driver.scheduled.conflict')}</p>
-              : <button className="btn-primary !min-h-[44px] w-full" disabled={busy === i.bookingId} onClick={() => take(i)}>{busy === i.bookingId ? t('driver.scheduled.taking') : t('driver.scheduled.take')}</button>))}
+              : <button className="btn-primary !min-h-[44px] w-full" disabled={busy === i.bookingId} onClick={() => take(i)}>{busy === i.bookingId ? t('driver.scheduled.taking') : t('driver.scheduled.take')}</button>)))}
         </>
       )}
       {ask && (

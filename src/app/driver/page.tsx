@@ -43,9 +43,9 @@ interface Dashboard {
   support: { operatorName: string | null; phone: string | null; email: string | null };
 }
 
-// Bottom tabs (2026-11-13): Home | Orders (free orders + pre-bookings) | Profile (profile, trips,
-// earnings). Today's earnings are also shown as a figure over the Home map.
-type Tab = 'home' | 'free' | 'profile';
+// Bottom tabs (2026-11-13): Home | Free orders | Pre-bookings | Profile (profile, trips, earnings).
+// Free orders and pre-bookings carry a small red count badge. Today's earnings show on the Home map.
+type Tab = 'home' | 'free' | 'prebook' | 'profile';
 
 // Locale-aware formatting helpers for the driver app (money, durations, distances, status labels).
 // Map padding that keeps the driver's car and the client ABOVE a bottom sheet (offer / free-order
@@ -165,9 +165,8 @@ function Driver() {
   }, [data?.onDuty, data?.trip]);
 
   // Sub-views of the merged tabs.
-  const [ordersView, setOrdersView] = useState<'free' | 'prebook'>('free');
   const [profileView, setProfileView] = useState<'me' | 'trips' | 'earnings'>('me');
-  const [prebookCount, setPrebookCount] = useState<number | null>(null);
+  const [prebookCount, setPrebookCount] = useState(0);
   // Free orders count for the bottom-nav badge (rides automatic dispatch could not place).
   const [freeCount, setFreeCount] = useState(0);
   useEffect(() => {
@@ -177,6 +176,17 @@ function Driver() {
     poll(); const t = setInterval(poll, 10_000);
     return () => { alive = false; clearInterval(t); };
   }, [data?.onDuty, data?.trip]);
+
+  // Pre-booking count for the badge: open scheduled rides this driver could take (polled, 30 s).
+  useEffect(() => {
+    let alive = true;
+    const poll = async () => {
+      if (document.visibilityState !== 'visible') return;
+      try { const r = await api<{ available: { conflict?: boolean }[] }>('/driver/scheduled'); if (alive) setPrebookCount(r.available.filter((i) => !i.conflict).length); } catch { /* transient */ }
+    };
+    poll(); const iv = setInterval(poll, 30_000);
+    return () => { alive = false; clearInterval(iv); };
+  }, []);
 
   // Keep the screen awake while on duty (a sleeping screen suspends polling + GPS).
   useEffect(() => {
@@ -248,14 +258,8 @@ function Driver() {
           goEarnings={() => { setTab('profile'); setProfileView('earnings'); }}
         />
       )}
-      {tab === 'free' && (
-        <SubTabs value={ordersView} onChange={setOrdersView} items={[
-          { id: 'free', label: t('driver.nav.free'), count: freeCount },
-          { id: 'prebook', label: t('driver.scheduled.tabPrebook'), count: prebookCount },
-        ]} />
-      )}
-      {tab === 'free' && ordersView === 'free' && <FreeOrdersSection pos={pos} onDuty={!!data.onDuty} onTaken={async () => { setFreeCount(0); setTab('home'); await load(); await loadDash(); }} />}
-      {tab === 'free' && ordersView === 'prebook' && <ScheduledRides onCount={setPrebookCount} />}
+      {tab === 'free' && <FreeOrdersSection pos={pos} onDuty={!!data.onDuty} onTaken={async () => { setFreeCount(0); setTab('home'); await load(); await loadDash(); }} />}
+      {tab === 'prebook' && <ScheduledRides onCount={setPrebookCount} />}
       {tab === 'profile' && (
         <SubTabs value={profileView} onChange={setProfileView} items={[
           { id: 'me', label: t('driver.nav.profile') },
@@ -267,7 +271,7 @@ function Driver() {
       {tab === 'profile' && profileView === 'trips' && <TripsSection onOpen={setActiveDetailId} activeDetail={activeDetailId} onCloseDetail={() => setActiveDetailId(null)} onSettled={() => { loadDash(); }} />}
       {tab === 'profile' && profileView === 'earnings' && <EarningsSection />}
 
-      <BottomNav tab={tab} setTab={setTab} hasOffer={!!offer} freeCount={freeCount} />
+      <BottomNav tab={tab} setTab={setTab} hasOffer={!!offer} freeCount={freeCount} prebookCount={prebookCount} />
     </div>
   );
 }
@@ -799,10 +803,10 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
 }
 
 // ---- Bottom nav ----
-function BottomNav({ tab, setTab, hasOffer, freeCount }: { tab: Tab; setTab: (t: Tab) => void; hasOffer: boolean; freeCount: number }) {
+function BottomNav({ tab, setTab, hasOffer, freeCount, prebookCount }: { tab: Tab; setTab: (t: Tab) => void; hasOffer: boolean; freeCount: number; prebookCount: number }) {
   const { t } = useT();
   const items: { id: Tab; label: string; icon: string }[] = [
-    { id: 'home', label: t('driver.nav.home'), icon: '🏠' }, { id: 'free', label: t('driver.nav.orders'), icon: '📋' },
+    { id: 'home', label: t('driver.nav.home'), icon: '🏠' }, { id: 'free', label: t('driver.nav.free'), icon: '📋' }, { id: 'prebook', label: t('driver.scheduled.tabPrebook'), icon: '🗓' },
     { id: 'profile', label: t('driver.nav.profile'), icon: '👤' },
   ];
   return (
@@ -813,7 +817,9 @@ function BottomNav({ tab, setTab, hasOffer, freeCount }: { tab: Tab; setTab: (t:
             <span className="text-base leading-none" aria-hidden>{it.icon}</span>
             <span>{it.label}</span>
             {it.id === 'home' && hasOffer && tab !== 'home' && <span className="absolute right-[28%] top-1.5 h-2 w-2 rounded-full bg-accent" />}
-            {it.id === 'free' && freeCount > 0 && <span className="absolute right-[22%] top-1 min-w-[18px] rounded-full bg-accent px-1 text-[10px] font-semibold leading-[18px] text-[#0d1608]">{freeCount}</span>}
+            {/* Small red count: new free orders / open pre-bookings. */}
+            {it.id === 'free' && freeCount > 0 && <span className="absolute right-[20%] top-1 min-w-[18px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[18px] text-white">{freeCount}</span>}
+            {it.id === 'prebook' && prebookCount > 0 && <span className="absolute right-[20%] top-1 min-w-[18px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[18px] text-white">{prebookCount}</span>}
           </button>
         ))}
       </div>

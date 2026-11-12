@@ -1,5 +1,10 @@
 # Session handoff
 
+## Driver: separate Free / Pre-bookings tabs, red count badges (2026-11-13)
+- Bottom nav is 4 tabs: Home | Free | Pre-bookings | Profile. The merged "Orders" tab was split again.
+- Small red count badges (`bg-danger`) on Free (free orders, polled every 10 s while on duty and without a trip) and on Pre-bookings (open scheduled rides without a conflict, polled every 30 s from `/driver/scheduled`).
+- `ScheduledRides` has its own switch: "Open pre-bookings" (with a red count) and "Accepted" (the driver's own commitments, with a neutral count). It defaults to Open.
+
 ## Driver: trips & earnings inside Profile; earnings figure on the map (2026-11-13)
 - Bottom nav is 3 tabs: Home | Orders | Profile. Profile has a `SubTabs` switch: Profile | Trips | Earnings. The separate "Trips & earnings" tab is gone.
 - Home map: a pill at top-right shows today's recorded earnings (`dash.today.recordedEarnings`, "0,00 €" when none) and the label "earned today". Tapping it opens Profile › Earnings.
