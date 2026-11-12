@@ -9,11 +9,12 @@ import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 export const dynamic = 'force-dynamic';
 
-// Bolt-style passenger sign-up (Task 018): name + email + password + phone, phone verified by SMS
-// OTP. No KYC. On the beta SMS isn't configured, so a clearly-labelled test code is shown.
+// Bolt-style passenger sign-up (Task 018): name + email + password, phone OPTIONAL. With a phone,
+// it is verified by SMS OTP; without one (or when SMS is unavailable) the account is created at
+// once and the contact number is given per booking. No KYC.
 export default function Register() {
   const router = useRouter();
-  const [step, setStep] = useState<'form' | 'code'>('form');
+  const [step, setStep] = useState<'form' | 'code' | 'done'>('form');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,7 +28,12 @@ export default function Register() {
   async function requestCode(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setError(null);
     try {
-      const r = await api<{ sent: boolean; provider: string; devCode?: string }>('/passenger/register', { method: 'POST', body: { name, email, password, phone } });
+      const r = await api<{ sent: boolean; provider?: string; devCode?: string; created?: boolean; phoneSkipped?: boolean }>('/passenger/register', { method: 'POST', body: { name, email, password, phone: phone.trim() || undefined } });
+      if (r.created) {
+        // Account exists and is signed in. Only stop to explain when the phone could not be verified.
+        if (r.phoneSkipped) { setStep('done'); setBusy(false); } else router.push('/');
+        return;
+      }
       setDevCode(r.devCode ?? null); setStep('code');
     } catch (err) {
       if (err instanceof ApiRequestError) setError(err.body.code === 'EMAIL_TAKEN' ? t('auth.register.emailTaken') : (Object.values(err.body.fieldErrors ?? {})[0] as string) ?? tError(err));
@@ -60,11 +66,18 @@ export default function Register() {
               <div><label className="label" htmlFor="register-f1">{t('auth.name')}</label><input id="register-f1" className="field mt-1" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></div>
               <div><label className="label" htmlFor="register-f2">{t('auth.email')}</label><input id="register-f2" type="email" className="field mt-1" value={email} onChange={(e) => setEmail(e.target.value)} autoCapitalize="none" autoComplete="email" inputMode="email" /></div>
               <div><label className="label" htmlFor="register-f3">{t('auth.password')}</label><input id="register-f3" type="password" className="field mt-1" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" /><p className="mt-1 text-xs text-muted">{t('auth.register.passwordHint')}</p></div>
-              <div><label className="label" htmlFor="register-f4">{t('auth.phone')}</label><input id="register-f4" type="tel" className="field mt-1" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+357…" autoComplete="tel" inputMode="tel" /><p className="mt-1 text-xs text-muted">{t('auth.register.phoneHint')}</p></div>
+              <div><label className="label" htmlFor="register-f4">{t('auth.phoneOptional')}</label><input id="register-f4" type="tel" className="field mt-1" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+357…" autoComplete="tel" inputMode="tel" /><p className="mt-1 text-xs text-muted">{t('auth.register.phoneHint')}</p></div>
             </div>
-            <button className="btn-primary mt-5 min-h-[44px] w-full" disabled={busy || !name || !email || password.length < 8 || !phone}>{busy ? t('auth.sending') : t('auth.register.continue')}</button>
+            <button className="btn-primary mt-5 min-h-[44px] w-full" disabled={busy || !name || !email || password.length < 8}>{busy ? t('auth.sending') : t('auth.register.continue')}</button>
             <a href="/login" className="mt-4 block text-center text-sm text-muted hover:text-ink">{t('auth.register.haveAccount')}</a>
           </form>
+        ) : step === 'done' ? (
+          <div className="card p-6">
+            <div className="flex items-center justify-between gap-2"><a href="/" className="inline-block"><Logo /></a><LanguageSwitcher /></div>
+            <h1 className="mt-6 text-xl font-bold">{t('auth.register.doneTitle')}</h1>
+            <p className="mt-2 text-sm text-muted">{t('auth.register.doneBody')}</p>
+            <button type="button" className="btn-primary mt-5 min-h-[44px] w-full" onClick={() => router.push('/')}>{t('auth.register.doneContinue')}</button>
+          </div>
         ) : (
           <form onSubmit={verify} className="card p-6">
             <div className="flex items-center justify-between gap-2"><a href="/" className="inline-block"><Logo /></a><LanguageSwitcher /></div>

@@ -349,7 +349,8 @@ model GpsSample {
 // Passenger account (Task 014). Verified phone; owns booking history / saved destinations.
 model Passenger {
   id              String    @id @default(uuid())
-  phone           String    @unique
+  // Null for email-only accounts (sign-up without SMS). Only an SMS-verified number is stored.
+  phone           String?   @unique
   phoneVerifiedAt DateTime?
   name            String?
   // Bolt-style consumer account (Task 018): email + password sign-in. Phone stays the verified

@@ -75,7 +75,7 @@ export async function deletePassengerAccount(passengerId: string): Promise<Delet
       await tx.notificationOutbox.deleteMany({ where: { audience: { in: ids.map((id) => `PASSENGER:${id}`) }, deliveredAt: null } });
     }
     await tx.tripRating.updateMany({ where: { passengerId }, data: { passengerId: 'deleted', comment: null } });
-    await tx.phoneVerification.deleteMany({ where: { phone: p.phone } });
+    if (p.phone) await tx.phoneVerification.deleteMany({ where: { phone: p.phone } });
     await tx.passengerSession.deleteMany({ where: { passengerId } });
     await tx.passenger.delete({ where: { id: passengerId } }); // saved places cascade
     return { ok: true, ridesAnonymised: ids.length };

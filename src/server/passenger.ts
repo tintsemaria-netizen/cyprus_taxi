@@ -26,6 +26,18 @@ export async function upsertPassengerCredentials(phone: string, opts: { email: s
   return prisma.passenger.create({ data: { phone, ...data } });
 }
 
+// Email + password sign-up without a phone (phone is optional while SMS is unavailable). An
+// unverified number is never stored on the account: phone OTP sign-in finds accounts by phone,
+// so a typed-in number could otherwise hand someone else's account to the number's owner.
+export async function createEmailPassenger(opts: { email: string; passwordHash: string; name: string }): Promise<Passenger> {
+  try {
+    return await prisma.passenger.create({ data: { email: opts.email, passwordHash: opts.passwordHash, name: opts.name } });
+  } catch (e) {
+    if ((e as { code?: string }).code === 'P2002') throw new Error('email-taken');
+    throw e;
+  }
+}
+
 export async function passengerByEmail(email: string): Promise<Passenger | null> {
   return prisma.passenger.findUnique({ where: { email } });
 }

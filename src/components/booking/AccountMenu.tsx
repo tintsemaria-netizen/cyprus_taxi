@@ -5,7 +5,7 @@ import { api } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
-export interface PassengerInfo { phone: string; name?: string | null; email?: string | null }
+export interface PassengerInfo { phone: string | null; name?: string | null; email?: string | null }
 
 // Signed-in account control (Task 019). A circular initials avatar in the header top-right that
 // opens an account menu — desktop dropdown, mobile bottom sheet — with the identity, My rides,
@@ -20,8 +20,8 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
   const menuId = useId();
   const { t } = useT();
 
-  const label = passenger.name?.trim() || passenger.email || passenger.phone;
-  const secondary = passenger.email || passenger.phone;
+  const label = passenger.name?.trim() || passenger.email || passenger.phone || '';
+  const secondary = passenger.email || passenger.phone || '';
   const initials = deriveInitials(passenger);
 
   // Close on outside-click and Esc; restore focus to the trigger.

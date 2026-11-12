@@ -69,7 +69,7 @@ export default function BookingApp() {
   const [myLoc, setMyLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [autoPickup, setAutoPickup] = useState(false); // pickup was auto-set from geolocation
   // Task 014: passenger account + mandatory login before booking + destination history.
-  const [passenger, setPassenger] = useState<{ phone: string; name?: string; email?: string | null } | null>(null);
+  const [passenger, setPassenger] = useState<{ phone: string | null; name?: string; email?: string | null } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [destinations, setDestinations] = useState<{ label: string; lat: number; lng: number }[]>([]);
   const [places, setPlaces] = useState<{ home: { label: string; lat: number; lng: number } | null; work: { label: string; lat: number; lng: number } | null }>({ home: null, work: null });
@@ -106,10 +106,10 @@ export default function BookingApp() {
 
   // Restore passenger session (if any) → prefill contact + load destination history.
   const loadPassenger = useCallback(() => {
-    api<{ phone: string; name?: string; email?: string | null }>('/passenger/me')
+    api<{ phone: string | null; name?: string; email?: string | null }>('/passenger/me')
       .then((p) => {
         setPassenger(p);
-        setPhone((cur) => cur || p.phone);
+        setPhone((cur) => cur || p.phone || '');
         if (p.name) setName((cur) => cur || p.name!);
         api<{ destinations: { label: string; lat: number; lng: number }[] }>('/passenger/destinations').then((d) => setDestinations(d.destinations)).catch(() => {});
         api<{ home: { label: string; lat: number; lng: number } | null; work: { label: string; lat: number; lng: number } | null }>('/passenger/places').then(setPlaces).catch(() => {});
@@ -278,6 +278,8 @@ export default function BookingApp() {
     if (!dropoff) e.dropoff = t('booking.validation.dropoff');
     if (flightValue && !/^[A-Z0-9]{2}\d{1,4}[A-Z]?$/.test(flightValue)) e.flight = t('booking.flight.invalid');
     if (passenger && !name.trim()) e.name = t('booking.validation.name');
+    // Email-only accounts have no verified phone: the contact number is entered per booking.
+    if (passenger && !passenger.phone && !/^\+?[\d\s()-]{7,20}$/.test(phone.trim())) e.phone = t('booking.validation.phone');
     if (when === 'SCHEDULE' && !scheduledAt) e.scheduledAt = t('booking.validation.scheduledAt');
     if (pax < 1 || pax > maxPax) e.pax = tp('booking.validation.paxRange', maxPax);
     setErrors(e);
@@ -329,7 +331,7 @@ export default function BookingApp() {
         luggageCount: 0,
         quoteId: quote?.quoteId,
         passengerName: name.trim() || passenger?.name || 'Passenger',
-        phone: passenger?.phone ?? phone.trim(),
+        phone: passenger?.phone || phone.trim(),
         note: note.trim() || undefined,
         flightNumber: flightValue || undefined,
       };
@@ -583,7 +585,15 @@ export default function BookingApp() {
                         <label className="label" htmlFor="bk-name">{t('booking.contact.driverAsksFor')}</label>
                         <input id="bk-name" className={`field mt-1 ${errors.name ? 'border-danger' : ''}`} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} autoComplete="name" placeholder={t('booking.contact.namePlaceholder')} />
                         {errors.name && <p className="mt-1 text-xs text-danger">{errors.name}</p>}
-                        <p className="mt-2 text-xs text-muted">{withSlot(t('booking.contact.callYou'), 'phone', <span className="text-ink">{passenger.phone}</span>)}</p>
+                        {passenger.phone ? (
+                          <p className="mt-2 text-xs text-muted">{withSlot(t('booking.contact.callYou'), 'phone', <span className="text-ink">{passenger.phone}</span>)}</p>
+                        ) : (
+                          <>
+                            <label className="label mt-3 block" htmlFor="bk-phone">{t('booking.contact.phoneLabel')}</label>
+                            <input id="bk-phone" type="tel" className={`field mt-1 ${errors.phone ? 'border-danger' : ''}`} value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={25} autoComplete="tel" inputMode="tel" placeholder="+357…" />
+                            {errors.phone ? <p className="mt-1 text-xs text-danger">{errors.phone}</p> : <p className="mt-1 text-xs text-muted">{t('booking.contact.phoneHint')}</p>}
+                          </>
+                        )}
                       </div>
                     )}
 
@@ -619,7 +629,7 @@ export default function BookingApp() {
                       <Row label={t('booking.review.class')} value={t(`common.vClass.${vClass}`)} />
                       <Row label={t('booking.review.passengers')} value={String(pax)} />
                       <Row label={t('booking.review.driverAsksFor')} value={name || passenger?.name || '—'} />
-                      <Row label={t('booking.review.yourPhone')} value={passenger?.phone ?? phone} />
+                      <Row label={t('booking.review.yourPhone')} value={passenger?.phone || phone} />
                       {note && <Row label={t('booking.review.note')} value={note} />}
                       <Row label={t('booking.review.fare')} value={quote ? t('booking.review.fareValue', { total: eur(quote.totalCents), low: eur(quote.rangeLowCents), high: eur(quote.rangeHighCents) }) : t('booking.review.fareByMeter')} />
                     </div>
@@ -684,7 +694,7 @@ export default function BookingApp() {
           onDone={(p) => {
             setShowLogin(false);
             setPassenger(p);
-            setPhone((cur) => cur || p.phone);
+            setPhone((cur) => cur || p.phone || '');
             if (p.name) setName((cur) => cur || p.name!);
             loadPassenger();
             if (pendingSubmitActive.current) { pendingSubmitActive.current = false; submit(pendingSubmit.current); }

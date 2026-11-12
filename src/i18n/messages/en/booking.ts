@@ -40,6 +40,8 @@ const booking = {
     driverAsksFor: 'Driver will ask for',
     namePlaceholder: 'Your name',
     callYou: 'The driver can call you on your verified number {phone}.',
+    phoneLabel: 'Phone for the driver',
+    phoneHint: 'The driver will call this number if needed.',
   },
   options: {
     title: 'Options',
@@ -51,6 +53,7 @@ const booking = {
     notePlaceholder: 'Flight number, luggage, meeting point…',
   },
   validation: {
+    phone: 'Enter a phone number so the driver can reach you.',
     pickup: 'Choose a pickup from the list or tap the map.',
     dropoff: 'Choose a destination from the list or tap the map.',
     name: 'Enter the name the driver should ask for.',

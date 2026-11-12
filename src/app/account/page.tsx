@@ -10,7 +10,7 @@ import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 export const dynamic = 'force-dynamic';
 
-interface Me { phone: string; name?: string | null; email?: string | null }
+interface Me { phone: string | null; name?: string | null; email?: string | null }
 
 // Passenger profile settings (Task 019). Read-mostly: shows the verified phone + email; the display
 // name is editable (phone/email changes need re-verification and are not offered here yet).
@@ -63,8 +63,8 @@ export default function Account() {
         </div>
         <div>
           <label className="label" htmlFor="account-f2">{t('auth.phone')}</label>
-          <input id="account-f2" className="field mt-1 opacity-70" value={me.phone} readOnly />
-          <p className="mt-1 text-xs text-muted">{t('auth.account.phoneVerified')}</p>
+          <input id="account-f2" className="field mt-1 opacity-70" value={me.phone ?? '—'} readOnly />
+          <p className="mt-1 text-xs text-muted">{me.phone ? t('auth.account.phoneVerified') : t('auth.account.noPhone')}</p>
         </div>
         <div>
           <label className="label" htmlFor="account-f3">{t('auth.email')}</label>

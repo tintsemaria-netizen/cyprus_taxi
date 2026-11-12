@@ -32,8 +32,10 @@ export async function POST(req: Request) {
   const parsed = createBookingSchema.safeParse(raw);
   if (!parsed.success) return Errors.validation(zodFieldErrors(parsed.error));
 
-  // The account phone overrides any client-supplied phone; link the booking to the account.
-  const result = await createBooking({ ...parsed.data, phone: passenger.phone as (typeof parsed.data)['phone'] }, idempotencyKey, requestBaseUrl(req), passenger.id);
+  // A verified account phone overrides any client-supplied phone. Email-only accounts (no phone)
+  // give the contact number per booking; it is validated by the schema. Link to the account.
+  const phone = (passenger.phone ?? parsed.data.phone) as (typeof parsed.data)['phone'];
+  const result = await createBooking({ ...parsed.data, phone }, idempotencyKey, requestBaseUrl(req), passenger.id);
   if (!result.ok) return apiError(result.status, result.code, result.message, result.fieldErrors, result.extra);
   return apiOk(result.body, 201);
 }

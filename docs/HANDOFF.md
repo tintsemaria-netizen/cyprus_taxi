@@ -1,5 +1,18 @@
 # Session handoff
 
+## Passenger phone optional at sign-up (2026-11-12)
+- Why: SMS isn't configured on prod, so `/register` failed with SMS_UNAVAILABLE and nobody could sign up.
+- `Passenger.phone` is now nullable (migration `20261112170000_passenger_phone_optional`, DROP NOT NULL only). The unique index still applies to non-null phones.
+- `POST /passenger/register`: name, email and password are required, phone is optional.
+  - No phone: the account is created and signed in immediately (`created: true`).
+  - Phone given and SMS works: the OTP flow is unchanged.
+  - Phone given but SMS unavailable: a new account is created WITHOUT the phone (`phoneSkipped: true`). The register page then shows "Account created".
+  - Security: an unverified number is never stored. Phone-OTP login finds accounts by phone, so a typed-in number could otherwise hand the account to whoever owns that number.
+- Booking: an account without a phone enters the contact number in the booking form (`#bk-phone`). `POST /bookings` uses `passenger.phone ?? body.phone`.
+- Account page shows "no phone". Account deletion handles a null phone.
+- Tests: `tests/passenger-register.db.test.ts` (4). Full suite 191 passed / 1 skipped.
+- When Twilio is configured: consider an "add/verify phone" action on /account.
+
 ## PWA install for testers (2026-11-12)
 - Two installable apps from one site: passenger `public/manifest.webmanifest` (id `/`, opens `/`) and driver `public/manifest-driver.webmanifest` ("IL-Y Driver", id `/driver`, opens `/driver`), set for all `/driver*` pages by `src/app/driver/layout.tsx`. `src/proxy.ts` matcher skips the driver manifest.
 - `src/components/InstallPrompt.tsx` + `src/lib/pwa.ts`: on the booking page (mobile only) and the driver Home tab. Android/Chrome shows an Install button from `beforeinstallprompt`, captured at module load. iPhone shows the Share → Add to Home Screen steps. Hidden when already installed (standalone), on desktop, and for 14 days after "Not now" (localStorage `ily.install.dismissed.<app>`).

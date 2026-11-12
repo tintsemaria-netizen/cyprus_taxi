@@ -6,7 +6,7 @@ import { useT } from '@/i18n/I18nProvider';
 
 // Task 014: mandatory passenger sign-in before requesting a ride. Email + password is the default
 // (it works without SMS); the phone-code tab is used when SMS verification is available.
-export function PassengerLoginModal({ onDone, onClose }: { onDone: (p: { phone: string; name?: string }) => void; onClose: () => void }) {
+export function PassengerLoginModal({ onDone, onClose }: { onDone: (p: { phone: string | null; name?: string }) => void; onClose: () => void }) {
   const [mode, setMode] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,7 +28,7 @@ export function PassengerLoginModal({ onDone, onClose }: { onDone: (p: { phone: 
   }, [onClose, mode]);
 
   async function finish() {
-    const me = await api<{ phone: string; name?: string }>('/passenger/me');
+    const me = await api<{ phone: string | null; name?: string }>('/passenger/me');
     onDone({ phone: me.phone, name: me.name });
   }
 
