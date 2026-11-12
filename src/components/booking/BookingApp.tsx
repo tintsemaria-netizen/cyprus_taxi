@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
+import { Logo } from '@/components/Brand';
 import { PlacesInput, Selected } from './PlacesInput';
 import { DemoBanner } from '@/components/DemoBanner';
 import AutoMapPicker from './AutoMapPicker';
@@ -404,7 +405,8 @@ export default function BookingApp() {
           </button>
         </div>
       )}
-      <header className="z-20 flex items-center justify-end border-b border-edge bg-page/90 px-4 py-2 backdrop-blur sm:px-6">
+      <header className="z-20 flex items-center justify-between border-b border-edge bg-page/90 px-4 py-2 backdrop-blur sm:px-6">
+        <Logo className="h-10" />
         <div className="flex items-center gap-2">
           {/* Segmented nav styled exactly like the Now / Schedule control. When signed in the
               trailing "Login" tab is dropped in favour of the account avatar (below). */}
