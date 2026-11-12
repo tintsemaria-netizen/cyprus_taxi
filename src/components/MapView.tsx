@@ -5,6 +5,7 @@ import type * as maplibregl from 'maplibre-gl';
 import { loadMaplibre } from '@/lib/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { publicMapConfig } from '@/lib/config';
+import { vehicleMarkerEl } from './carMarker';
 
 export interface MapMarker {
   id: string;
@@ -115,20 +116,20 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       markerObjs.current.forEach((m) => m.remove());
       markerObjs.current = [];
       for (const mk of markers) {
-        const el = document.createElement('div');
-        el.style.width = mk.kind === 'vehicle' ? '30px' : '18px';
-        el.style.height = mk.kind === 'vehicle' ? '30px' : '18px';
-        el.style.borderRadius = mk.kind === 'vehicle' ? '8px' : '50%';
-        el.style.background = COLORS[mk.kind];
-        el.style.border = '2px solid #0d1608';
-        el.style.boxShadow = '0 0 0 3px rgba(200,255,82,0.25)';
-        el.style.opacity = mk.stale ? '0.5' : '1';
-        el.title = mk.label || mk.kind;
-        if (mk.kind === 'vehicle') el.textContent = '🚕';
-        el.style.display = 'flex';
-        el.style.alignItems = 'center';
-        el.style.justifyContent = 'center';
-        el.style.fontSize = '14px';
+        let el: HTMLElement;
+        if (mk.kind === 'vehicle') {
+          el = vehicleMarkerEl({ stale: mk.stale, title: mk.label || 'Your driver' });
+        } else {
+          el = document.createElement('div');
+          el.style.width = '18px';
+          el.style.height = '18px';
+          el.style.borderRadius = '50%';
+          el.style.background = COLORS[mk.kind];
+          el.style.border = '2px solid #0d1608';
+          el.style.boxShadow = '0 0 0 3px rgba(200,255,82,0.25)';
+          el.style.opacity = mk.stale ? '0.5' : '1';
+          el.title = mk.label || mk.kind;
+        }
         const marker = new maplibre.Marker({ element: el }).setLngLat([mk.lng, mk.lat]).addTo(map);
         markerObjs.current.push(marker);
       }

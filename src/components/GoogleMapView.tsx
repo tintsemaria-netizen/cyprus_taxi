@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { CYPRUS_BOUNDS } from '@/lib/config';
 import type { MapMarker } from './MapView';
+import { vehicleMarkerEl, setVehicleHeading, bearing } from './carMarker';
 
 interface Props {
   markers?: MapMarker[];
@@ -44,11 +45,12 @@ function framePoint(map: any, g: any, lat: number, lng: number, pad: any, maxZoo
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46' };
 
 function markerEl(mk: MapMarker): HTMLElement {
+  if (mk.kind === 'vehicle') {
+    return vehicleMarkerEl({ stale: mk.stale, title: mk.label || 'Your driver' });
+  }
   const el = document.createElement('div');
-  const vehicle = mk.kind === 'vehicle';
-  el.style.cssText = `width:${vehicle ? 30 : 18}px;height:${vehicle ? 30 : 18}px;border-radius:${vehicle ? 8 : 50}px;background:${COLORS[mk.kind]};border:2px solid #0d1608;box-shadow:0 0 0 3px rgba(200,255,70,0.25);opacity:${mk.stale ? 0.5 : 1};display:flex;align-items:center;justify-content:center;font-size:14px`;
+  el.style.cssText = `width:18px;height:18px;border-radius:50px;background:${COLORS[mk.kind]};border:2px solid #0d1608;box-shadow:0 0 0 3px rgba(200,255,70,0.25);opacity:${mk.stale ? 0.5 : 1};display:flex;align-items:center;justify-content:center;font-size:14px`;
   el.title = mk.label || mk.kind;
-  if (vehicle) el.textContent = '🚕';
   return el;
 }
 
@@ -168,6 +170,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       if (prev) { cancelAnimationFrame(prev); animMap.current.delete(mk.id); }
       if (mk.kind === 'vehicle' && moved) {
         const to = { lat: mk.lat, lng: mk.lng };
+        // Point the car in its direction of travel.
+        if (marker.content) setVehicleHeading(marker.content as HTMLElement, bearing(from, to));
         const start = performance.now();
         const dur = 900; // slightly under the ~5s sample cadence
         const m = marker;
@@ -251,12 +255,12 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     fleetObjs.current.forEach((m) => (m.map = null));
     fleetObjs.current = [];
     for (const v of fleet) {
-      const busy = v.state === 'busy';
-      const bg = busy ? '#5b6b62' : '#C8FF46'; // available = lime, busy = muted grey-green
-      const el = document.createElement('div');
-      el.style.cssText = `width:26px;height:26px;border-radius:7px;background:${bg};border:2px solid #0d1608;box-shadow:0 0 0 3px rgba(200,255,70,${busy ? 0.08 : 0.2});opacity:${v.stale ? 0.5 : 1};display:flex;align-items:center;justify-content:center;font-size:13px`;
-      el.textContent = '🚕';
-      el.title = busy ? 'On a trip' : 'Available';
+      const el = vehicleMarkerEl({
+        state: v.state === 'busy' ? 'busy' : 'available',
+        stale: v.stale,
+        size: 28,
+        title: v.state === 'busy' ? 'On a trip' : 'Available',
+      });
       fleetObjs.current.push(new g.marker.AdvancedMarkerElement({ map, position: { lat: v.lat, lng: v.lng }, content: el }));
     }
   }, [fleet, ready]);
