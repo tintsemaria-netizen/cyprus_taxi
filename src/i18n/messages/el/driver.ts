@@ -220,6 +220,8 @@ const driver: Catalog<typeof en> = {
     taking: 'Ανάληψη…',
   },
   nav: {
+    orders: 'Παραγγελίες',
+    work: 'Διαδρομές & έσοδα',
     home: 'Αρχική',
     free: 'Ελεύθερες',
     trips: 'Διαδρομές',

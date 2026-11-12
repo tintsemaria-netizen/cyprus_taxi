@@ -1,5 +1,10 @@
 # Session handoff
 
+## Driver tabs merged (2026-11-13)
+- Bottom nav is now 4 tabs: Home | Orders (`tab 'free'`) | Trips & earnings (`tab 'trips'`) | Profile.
+- Orders has a `SubTabs` switch: "Free · N" (FreeOrdersSection) and "Pre-bookings · N" (ScheduledRides; moved out of the Trips tab). The badge still shows the free-orders count.
+- Trips & earnings has a switch: "Trips" (history only; the old History/Pre-book toggle was removed) and "Earnings".
+
 ## Pre-booking = note only (2026-11-13, later the same night)
 - Removed the passengers and bags steppers from the pre-booking form. Every ride is sent as 1 passenger and 0 bags; the car class covers size.
 - The only pre-booking extra is the note. Its placeholder is "Flight number, meeting point, number of bags…".

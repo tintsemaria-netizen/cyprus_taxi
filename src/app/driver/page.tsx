@@ -43,7 +43,8 @@ interface Dashboard {
   support: { operatorName: string | null; phone: string | null; email: string | null };
 }
 
-type Tab = 'home' | 'free' | 'trips' | 'earnings' | 'profile';
+// Bottom tabs (2026-11-13): Orders = free orders + pre-bookings; Work = trips + earnings.
+type Tab = 'home' | 'free' | 'trips' | 'profile';
 
 // Locale-aware formatting helpers for the driver app (money, durations, distances, status labels).
 // Map padding that keeps the driver's car and the client ABOVE a bottom sheet (offer / free-order
@@ -162,6 +163,10 @@ function Driver() {
     return () => { alive = false; clearInterval(t); };
   }, [data?.onDuty, data?.trip]);
 
+  // Sub-views of the merged tabs.
+  const [ordersView, setOrdersView] = useState<'free' | 'prebook'>('free');
+  const [workView, setWorkView] = useState<'trips' | 'earnings'>('trips');
+  const [prebookCount, setPrebookCount] = useState<number | null>(null);
   // Free orders count for the bottom-nav badge (rides automatic dispatch could not place).
   const [freeCount, setFreeCount] = useState(0);
   useEffect(() => {
@@ -241,9 +246,22 @@ function Driver() {
           onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => setTab('trips')}
         />
       )}
-      {tab === 'free' && <FreeOrdersSection pos={pos} onDuty={!!data.onDuty} onTaken={async () => { setFreeCount(0); setTab('home'); await load(); await loadDash(); }} />}
-      {tab === 'trips' && <TripsSection onOpen={setActiveDetailId} activeDetail={activeDetailId} onCloseDetail={() => setActiveDetailId(null)} onSettled={() => { loadDash(); }} />}
-      {tab === 'earnings' && <EarningsSection />}
+      {tab === 'free' && (
+        <SubTabs value={ordersView} onChange={setOrdersView} items={[
+          { id: 'free', label: t('driver.nav.free'), count: freeCount },
+          { id: 'prebook', label: t('driver.scheduled.tabPrebook'), count: prebookCount },
+        ]} />
+      )}
+      {tab === 'free' && ordersView === 'free' && <FreeOrdersSection pos={pos} onDuty={!!data.onDuty} onTaken={async () => { setFreeCount(0); setTab('home'); await load(); await loadDash(); }} />}
+      {tab === 'free' && ordersView === 'prebook' && <ScheduledRides onCount={setPrebookCount} />}
+      {tab === 'trips' && (
+        <SubTabs value={workView} onChange={setWorkView} items={[
+          { id: 'trips', label: t('driver.nav.trips') },
+          { id: 'earnings', label: t('driver.nav.earnings') },
+        ]} />
+      )}
+      {tab === 'trips' && workView === 'trips' && <TripsSection onOpen={setActiveDetailId} activeDetail={activeDetailId} onCloseDetail={() => setActiveDetailId(null)} onSettled={() => { loadDash(); }} />}
+      {tab === 'trips' && workView === 'earnings' && <EarningsSection />}
       {tab === 'profile' && <ProfileSection dash={dash} />}
 
       <BottomNav tab={tab} setTab={setTab} hasOffer={!!offer} freeCount={freeCount} />
@@ -394,13 +412,13 @@ function TripRow({ t, onClick }: { t: TripCard; onClick?: () => void }) {
 
 // ---- Trips ----
 type Range = 'today' | 'week' | 'month';
-function TripsModeToggle({ mode, setMode, count }: { mode: 'history' | 'prebook'; setMode: (m: 'history' | 'prebook') => void; count: number | null }) {
-  const { t } = useT();
+// Segmented switch for the merged bottom tabs.
+function SubTabs<T extends string>({ value, onChange, items }: { value: T; onChange: (v: T) => void; items: { id: T; label: string; count?: number | null }[] }) {
   return (
-    <div className="flex gap-1 rounded-[12px] border border-edge bg-elevated p-1" role="tablist">
-      {(['history', 'prebook'] as const).map((m) => (
-        <button key={m} role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium ${mode === m ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>
-          {m === 'history' ? t('driver.scheduled.tabHistory') : t('driver.scheduled.tabPrebook')}{m === 'prebook' && count ? ` · ${count}` : ''}
+    <div className="mb-3 flex gap-1 rounded-[12px] border border-edge bg-elevated p-1" role="tablist">
+      {items.map((it) => (
+        <button key={it.id} role="tab" aria-selected={value === it.id} onClick={() => onChange(it.id)} className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium ${value === it.id ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>
+          {it.label}{it.count ? ` · ${it.count}` : ''}
         </button>
       ))}
     </div>
@@ -563,8 +581,6 @@ function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
 function TripsSection({ onOpen, activeDetail, onCloseDetail, onSettled }: { onOpen: (id: string) => void; activeDetail: string | null; onCloseDetail: () => void; onSettled: () => void }) {
   const { t, tError } = useT();
   const [range, setRange] = useState<Range>('today');
-  const [mode, setMode] = useState<'history' | 'prebook'>('history');
-  const [prebookCount, setPrebookCount] = useState<number | null>(null);
   const [items, setItems] = useState<TripCard[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -583,18 +599,8 @@ function TripsSection({ onOpen, activeDetail, onCloseDetail, onSettled }: { onOp
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setItems([]); setCursor(null); loadPage(true); }, [range]);
 
-  if (mode === 'prebook') {
-    return (
-      <div className="space-y-3">
-        <TripsModeToggle mode={mode} setMode={setMode} count={prebookCount} />
-        <ScheduledRides onCount={setPrebookCount} />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-3">
-      <TripsModeToggle mode={mode} setMode={setMode} count={prebookCount} />
       <h1 className="text-xl font-semibold">{t('driver.trips.title')}</h1>
       <div className="flex gap-1 rounded-[12px] border border-edge bg-elevated p-1">
         {(['today', 'week', 'month'] as Range[]).map((r) => <button key={r} onClick={() => setRange(r)} className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium ${range === r ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>{t(`driver.range.${r}`)}</button>)}
@@ -784,8 +790,8 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
 function BottomNav({ tab, setTab, hasOffer, freeCount }: { tab: Tab; setTab: (t: Tab) => void; hasOffer: boolean; freeCount: number }) {
   const { t } = useT();
   const items: { id: Tab; label: string; icon: string }[] = [
-    { id: 'home', label: t('driver.nav.home'), icon: '🏠' }, { id: 'free', label: t('driver.nav.free'), icon: '📋' }, { id: 'trips', label: t('driver.nav.trips'), icon: '🧾' },
-    { id: 'earnings', label: t('driver.nav.earnings'), icon: '€' }, { id: 'profile', label: t('driver.nav.profile'), icon: '👤' },
+    { id: 'home', label: t('driver.nav.home'), icon: '🏠' }, { id: 'free', label: t('driver.nav.orders'), icon: '📋' }, { id: 'trips', label: t('driver.nav.work'), icon: '🧾' },
+    { id: 'profile', label: t('driver.nav.profile'), icon: '👤' },
   ];
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-page/95 backdrop-blur" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>

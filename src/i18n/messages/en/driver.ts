@@ -217,6 +217,8 @@ const driver = {
     taking: 'Taking…',
   },
   nav: {
+    orders: 'Orders',
+    work: 'Trips & earnings',
     home: 'Home',
     free: 'Free',
     trips: 'Trips',

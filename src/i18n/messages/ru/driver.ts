@@ -220,6 +220,8 @@ const driver: Catalog<typeof en> = {
     taking: 'Берём…',
   },
   nav: {
+    orders: 'Заказы',
+    work: 'Поездки и заработок',
     home: 'Главная',
     free: 'Свободные',
     trips: 'Поездки',
