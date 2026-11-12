@@ -194,8 +194,18 @@ const driver = {
     noSupport: 'Support contact isn’t configured yet. Ask the operator to set it in admin settings.',
     signOut: 'Sign out',
   },
+  free: {
+    title: 'Free orders',
+    hint: 'Rides that were offered to free drivers nearby, but nobody accepted. Take one and you head to the pickup right away.',
+    goOnline: 'Go online on the Home tab to take rides.',
+    empty: 'No free orders right now.',
+    waiting: 'waiting {min} min',
+    take: 'Take ride',
+    taking: 'Taking…',
+  },
   nav: {
     home: 'Home',
+    free: 'Free',
     trips: 'Trips',
     earnings: 'Earnings',
     profile: 'Profile',

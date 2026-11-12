@@ -1,6 +1,10 @@
 // Translations for API error codes shown to passengers/drivers. Unknown codes fall back to the
 // server's English message (see tError in I18nProvider).
 const errors = {
+  ORDER_GONE: 'This ride was just taken or is no longer available.',
+  DRIVER_BUSY: 'You already have an active trip or offer.',
+  DRIVER_PROTECTED: 'You have a pre-booked ride soon, so you can’t take other rides now.',
+  VEHICLE_INELIGIBLE: 'Your vehicle doesn’t fit this ride (class or seats).',
   ACCOUNT_CONFLICT: 'This phone or email is already linked to another account.',
   ACTIVE_RIDE: 'Finish or cancel your current ride before deleting your account.',
   ALREADY_RATED: 'You have already rated this ride.',

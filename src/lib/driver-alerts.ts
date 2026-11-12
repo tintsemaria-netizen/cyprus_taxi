@@ -1,6 +1,6 @@
 'use client';
 
-// Driver-side attention helpers (2026-10-01 audit): an offer lives only 20 s, so a silent card on
+// Driver-side attention helpers (2026-10-01 audit): an offer lives only 10 s, so a silent card on
 // a car-mounted phone is easy to miss, and a sleeping screen suspends the page — which stops both
 // offer polling and the foreground GPS dispatch depends on.
 

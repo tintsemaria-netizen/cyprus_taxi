@@ -1,5 +1,15 @@
 # Session handoff
 
+## Driver "Free orders" tab (2026-11-12)
+- New driver tab "Free" (`FreeOrdersSection` in `src/app/driver/page.tsx`). The badge shows the count, polled every 10 s while on duty.
+- A ride appears ONLY after automatic dispatch offered it to the free drivers nearby and nobody accepted before the search deadline: status NO_DRIVER, changed within `FREE_ORDER_WINDOW_MIN` = 30 min. It must also fit the driver's bound vehicle (class, seats). Sorted by straight-line distance from the driver's last fix.
+- The list carries no passenger name or phone; those are revealed after taking, as with offers.
+- `GET /api/v1/driver/free-orders` and `POST /api/v1/driver/free-orders/[id]/claim` (driver-only, claim 20/min). Logic in `src/server/dispatch/free-orders.ts`.
+- `claimFreeOrder` locks the booking row and re-checks it is still NO_DRIVER and inside the window. It then re-checks the driver: on duty, can work, not busy, no open offer, not protected for a pre-booked ride. It also re-checks the vehicle.
+- On success it creates the assignment, sets ASSIGNED → EN_ROUTE (same as an accepted offer), audits FREE_ORDER_CLAIMED + STATUS_EN_ROUTE, and notifies the passenger.
+- If the passenger retries the search or cancels first, the claim is refused (ORDER_GONE). Two drivers racing: exactly one wins.
+- Tests: `tests/free-orders.db.test.ts` (5). Suite 198/1 skipped, two consecutive runs. Playwright: tab, badge and take → EN_ROUTE.
+
 ## Driver home: no trip list (2026-11-12)
 - Removed the "Last trips" card from the driver Home tab. Trip history is in the Trips tab only (today / week / month, details, pre-book).
 - Driver home map without a GPS fix: zoom 8 (whole island) instead of 9, so coastal cars (e.g. Limassol) are in view on the small map.

@@ -2,6 +2,10 @@ import type { Catalog } from '../../types';
 import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
+  ORDER_GONE: 'Этот заказ уже взяли или он больше недоступен.',
+  DRIVER_BUSY: 'У вас уже есть активная поездка или предложение.',
+  DRIVER_PROTECTED: 'Скоро ваш предзаказ, поэтому сейчас нельзя брать другие заказы.',
+  VEHICLE_INELIGIBLE: 'Ваш автомобиль не подходит для этого заказа (класс или места).',
   ACCOUNT_CONFLICT: 'Этот телефон или email уже привязан к другому аккаунту.',
   ACTIVE_RIDE: 'Завершите или отмените текущую поездку, прежде чем удалять аккаунт.',
   ALREADY_RATED: 'Вы уже оценили эту поездку.',
