@@ -4,7 +4,7 @@ self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch (_e) { data = {}; }
   const title = data.title || 'IL-Y';
-  // A ride offer lives ~20 s: keep it on screen until acted on, and vibrate (audit 2026-10-01).
+  // A ride offer lives ~10 s: keep it on screen until acted on, and vibrate (audit 2026-10-01).
   const isOffer = data.tag === 'offer';
   const options = {
     body: data.body || '',

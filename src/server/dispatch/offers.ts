@@ -7,7 +7,9 @@ import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events'
 import type { Candidate } from './eligibility';
 import { canWork } from '@/lib/eligibility-policy';
 
-export const OFFER_TTL_SEC = 20;
+// How long one driver has to accept before the request moves on to the next eligible driver.
+// 10 s since 2026-11-12 (was 20 s).
+export const OFFER_TTL_SEC = 10;
 
 // Create an expiring offer to a reserved driver. The DB active* unique columns enforce
 // one active offer per booking and per driver; a collision (race) returns null.
@@ -162,6 +164,9 @@ export async function getDriverActiveOffer(driverId: string) {
   return {
     offerId: o.id,
     expiresAt: o.expiresAt.toISOString(),
+    // Remaining time by the SERVER clock. The driver app counts down from this, not from
+    // expiresAt, so a phone whose clock runs fast/slow still shows the real time left.
+    expiresInMs: Math.max(0, o.expiresAt.getTime() - Date.now()),
     pickupEtaSec: o.pickupEtaSec,
     pickupDistanceM: o.pickupDistanceM,
     pickup: { lat: b.pickupLat, lng: b.pickupLng, label: b.pickupLabel },

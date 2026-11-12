@@ -47,5 +47,8 @@ describe('driver offer — complete order data', () => {
     expect(view!.dropoff.lat).toBeCloseTo(lca.lat, 3); // full dropoff coords, not just a label
     expect(view!.fareBreakdown).toHaveLength(2);
     expect(view!.fareBreakdown![1]).toMatchObject({ label: 'Distance 67.3 km', cents: 7403 });
+    // Remaining time is computed on the server clock (drivers' device clocks may be skewed).
+    expect(view!.expiresInMs).toBeGreaterThan(15_000);
+    expect(view!.expiresInMs).toBeLessThanOrEqual(20_000);
   });
 });

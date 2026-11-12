@@ -23,7 +23,7 @@ interface Trip {
 }
 interface CurrentTrip { onDuty: boolean; available: boolean; trip: Trip | null }
 interface Offer {
-  offerId: string; expiresAt: string; pickupEtaSec: number | null; pickupDistanceM: number | null;
+  offerId: string; expiresAt: string; expiresInMs: number; localDeadline?: number; pickupEtaSec: number | null; pickupDistanceM: number | null;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string };
   vClass: string; passengerCount: number; passengerName: string; note: string | null; flightNumber?: string | null; scheduledAt: string | null;
   fareCents: number | null; priceType: string | null; currency: string; fareBreakdown: { label: string; cents: number }[] | null;
@@ -146,7 +146,9 @@ function Driver() {
   useEffect(() => {
     if (!data?.onDuty || data.trip) { setOffer(null); return; }
     let alive = true;
-    const poll = async () => { try { const r = await api<{ offer: Offer | null }>('/driver/offers'); if (alive) setOffer(r.offer); } catch { /* transient */ } };
+    // Convert the server-relative remaining time into a deadline on THIS device's clock, so the
+    // countdown (and the Accept button) is right even when the device clock is skewed.
+    const poll = async () => { try { const r = await api<{ offer: Offer | null }>('/driver/offers'); if (alive) setOffer(r.offer ? { ...r.offer, localDeadline: Date.now() + r.offer.expiresInMs } : null); } catch { /* transient */ } };
     poll(); const t = setInterval(poll, 2000);
     return () => { alive = false; clearInterval(t); };
   }, [data?.onDuty, data?.trip]);
@@ -190,7 +192,7 @@ function Driver() {
 
   if (!data) return <div className="p-8 text-muted">{t('common.loading')}</div>;
   const trip = data.trip;
-  const offerSecs = offer ? Math.max(0, Math.ceil((new Date(offer.expiresAt).getTime() - nowMs) / 1000)) : 0;
+  const offerSecs = offer ? Math.max(0, Math.ceil(((offer.localDeadline ?? new Date(offer.expiresAt).getTime()) - nowMs) / 1000)) : 0;
 
   // An accepted ride takes over the whole screen: navigation + the one action for the stage, no tabs.
   if (trip) {

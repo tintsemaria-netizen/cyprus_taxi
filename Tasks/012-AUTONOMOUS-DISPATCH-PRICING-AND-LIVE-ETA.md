@@ -105,7 +105,7 @@ Beta policy, configurable and clearly labelled as our own initial engineering ch
 - Evaluate up to 10 eligible candidates per request initially using traffic-aware road durations.
 - Rank primarily by pickup ETA. For candidates within 60 seconds of the best ETA, use longest eligible idle time, then a deterministic tie-break. Track fairness rather than inventing ratings/history for new drivers.
 - Exclude candidates above a configurable pickup ETA ceiling (initial test default 20 minutes).
-- Offer sequentially to one reserved candidate for 20 seconds. Rejection/expiry releases the reservation and offers to the next eligible driver; avoid repeatedly offering the same request to a driver who declined.
+- Offer sequentially to one reserved candidate for 10 seconds (changed from 20 s on 2026-11-12). Rejection/expiry releases the reservation and offers to the next eligible driver; avoid repeatedly offering the same request to a driver who declined.
 - End the initial search after 180 seconds without acceptance. Show NO_DRIVER with retry/schedule options and no success claim or automatic charge. Retry is an explicit passenger action with a fresh bounded search.
 
 Adjust these defaults if measured beta evidence supports it and document the change. Do not claim they are Yandex/Bolt/Uber settings. If later parallel offers or full batch optimization are added, retain single-winner database guarantees and cancel all losing offers.

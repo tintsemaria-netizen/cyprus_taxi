@@ -1,5 +1,12 @@
 # Session handoff
 
+## Driver offer: 10 s window + clock-skew fix (2026-11-12)
+- Bug: drivers saw an offer with "0 s" and a disabled Accept button. The countdown used the device clock against the server `expiresAt`, so a device clock running ahead by about 20 s or more killed the offer on screen while it was still valid on the server.
+- Fix: `getDriverActiveOffer` returns `expiresInMs`, the time left by the server clock. The driver app turns it into a local deadline on every 2 s poll. The server still decides expiry in `acceptOffer`.
+- `OFFER_TTL_SEC` changed 20 → 10. On no answer the worker (2 s tick) expires the offer, records the driver in `triedDriverIds`, and offers the next eligible driver. This was already the behaviour; covered in `dispatch.db`.
+- In practice the driver gets about 8–10 s: the offer reaches the screen by polling every 2 s or by push. If that proves too short, change `OFFER_TTL_SEC`.
+- Tests: dispatch.db asserts a 10 s window; offer-detail.db asserts `expiresInMs`. Playwright check with a device clock 60 s fast: the countdown is correct and Accept is enabled.
+
 ## Passenger phone optional at sign-up (2026-11-12)
 - Why: SMS isn't configured on prod, so `/register` failed with SMS_UNAVAILABLE and nobody could sign up.
 - `Passenger.phone` is now nullable (migration `20261112170000_passenger_phone_optional`, DROP NOT NULL only). The unique index still applies to non-null phones.
