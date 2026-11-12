@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
@@ -16,6 +17,7 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
   const { t } = useT();
@@ -27,7 +29,11 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
   // Close on outside-click and Esc; restore focus to the trigger.
   useEffect(() => {
     if (!open) return;
-    function onDoc(e: MouseEvent) { if (rootRef.current && !rootRef.current.contains(e.target as Node)) close(); }
+    function onDoc(e: MouseEvent) {
+      const t = e.target as Node;
+      if (rootRef.current?.contains(t) || menuRef.current?.contains(t)) return; // menu may be portaled
+      close();
+    }
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') { e.preventDefault(); close(); } }
     document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onKey);
@@ -59,14 +65,19 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
       </button>
 
       {open && (
-        <>
+        // Portaled to <body>: the header uses backdrop-blur, and a backdrop-filter ancestor becomes
+        // the containing block for position:fixed — the mobile bottom sheet then anchored to the
+        // header's bottom edge and opened off-screen above it. On desktop the dropdown is
+        // positioned from the trigger's rect instead of relative to the header.
+        <MenuPortal anchor={btnRef}>
           {/* Mobile scrim (sheet). Desktop dropdown ignores it. */}
           <div className="fixed inset-0 z-40 bg-black/40 sm:hidden" onClick={close} aria-hidden />
           <div
+            ref={menuRef}
             id={menuId}
             role="menu"
             aria-label={t('auth.menu.label')}
-            className="fixed inset-x-0 bottom-0 z-50 rounded-t-[16px] border border-edge bg-elevated p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:absolute sm:inset-auto sm:right-0 sm:top-12 sm:w-64 sm:rounded-[14px] sm:pb-2 sm:shadow-xl"
+            className="fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-[16px] border border-edge bg-elevated p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:inset-x-auto sm:bottom-auto sm:right-[var(--menu-right)] sm:top-[var(--menu-top)] sm:w-64 sm:rounded-[14px] sm:pb-2 sm:shadow-xl"
           >
             {/* Identity header → profile settings */}
             <a href="/account" role="menuitem" className="flex items-center gap-3 rounded-[10px] px-3 py-3 hover:bg-page" onClick={() => setOpen(false)}>
@@ -90,9 +101,29 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
               {busy ? t('auth.signingOut') : t('auth.logOut')}
             </button>
           </div>
-        </>
+        </MenuPortal>
       )}
     </div>
+  );
+}
+
+// Renders children into <body> and exposes the trigger's position as CSS variables
+// (--menu-top / --menu-right) for the desktop dropdown.
+function MenuPortal({ anchor, children }: { anchor: React.RefObject<HTMLButtonElement | null>; children: React.ReactNode }) {
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  useEffect(() => {
+    function place() {
+      const r = anchor.current?.getBoundingClientRect();
+      if (r) setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+    }
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [anchor]);
+  if (!pos) return null;
+  return createPortal(
+    <div style={{ '--menu-top': `${pos.top}px`, '--menu-right': `${pos.right}px` } as React.CSSProperties}>{children}</div>,
+    document.body,
   );
 }
 
