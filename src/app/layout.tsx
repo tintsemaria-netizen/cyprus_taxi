@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { I18nProvider } from '@/i18n/I18nProvider';
 import { getRequestLocale } from '@/i18n/server';
+import { PortraitLock } from '@/components/PortraitLock';
 
 export const metadata: Metadata = {
   title: 'IL-Y — book a ride',
@@ -38,7 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale}>
       <body className="min-h-full bg-page text-ink antialiased">
-        <I18nProvider locale={locale}>{children}</I18nProvider>
+        <I18nProvider locale={locale}>{children}<PortraitLock /></I18nProvider>
       </body>
     </html>
   );

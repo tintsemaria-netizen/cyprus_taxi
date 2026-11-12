@@ -57,3 +57,11 @@ body {
     @apply text-xs font-medium uppercase tracking-wide text-muted;
   }
 }
+
+/* Portrait-only phones (2026-11-12). Web pages can't lock orientation on iPhone, so a phone held
+   sideways (landscape AND short viewport — tablets/desktops are never matched) gets a full-screen
+   "rotate to portrait" cover instead of the app. See src/components/PortraitLock.tsx. */
+.portrait-lock { display: none; }
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  .portrait-lock { display: flex; }
+}

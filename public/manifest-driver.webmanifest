@@ -6,6 +6,7 @@
   "start_url": "/driver",
   "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#10191C",
   "theme_color": "#10191C",
   "icons": [

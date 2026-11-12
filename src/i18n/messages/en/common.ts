@@ -37,5 +37,9 @@ const common = {
     notNow: 'Not now',
     iosNotify: 'To get notifications on iPhone, add IL-Y to your Home Screen (Share → Add to Home Screen) and open it from there.',
   },
+  rotate: {
+    title: 'Turn your phone upright',
+    body: 'IL-Y works in portrait mode. Hold your phone vertically to continue.',
+  },
 };
 export default common;

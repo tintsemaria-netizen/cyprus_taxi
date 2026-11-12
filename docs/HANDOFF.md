@@ -1,5 +1,14 @@
 # Session handoff
 
+## Portrait-only passenger and driver apps (2026-11-12)
+- Both manifests set `"orientation": "portrait"`, which installed Android apps honour.
+- `src/components/PortraitLock.tsx` (in the root layout) calls `screen.orientation.lock('portrait')` best-effort. It also renders a full-screen "Turn your phone upright" cover.
+- The cover appears through CSS only (`.portrait-lock` in globals.css): landscape AND height ≤ 500px AND coarse pointer. That matches phones held sideways, never tablets or desktops.
+- iPhone has no web orientation lock, so the cover is the mechanism there.
+- Excluded: /dispatch, /admin, /staff.
+- Checked with Playwright: iPhone and Pixel landscape show the cover; portrait, iPad landscape, desktop and /staff/login do not.
+- Caveat: drivers with landscape phone mounts must mount the phone vertically.
+
 ## Accept = on the way (2026-11-12)
 - `acceptOffer` now moves the booking ASSIGNED → EN_ROUTE in the same transaction. Both steps are audited: OFFER_ACCEPTED, then STATUS_EN_ROUTE (actor DRIVER, reason "auto on accept"), plus a `booking.en_route` event. After accepting, the driver sees "Arrived" next. The "On my way" button no longer appears in this flow.
 - The button remains only for rides that reach ASSIGNED another way: staff manual assignment, or scheduled pre-assignment conversion (T−30 min, when the driver may not be leaving yet).
