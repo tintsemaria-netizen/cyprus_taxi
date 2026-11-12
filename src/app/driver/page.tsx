@@ -327,7 +327,7 @@ function HomeSection(props: {
         </div>
       )}
 
-      {/* Idle (no offer): today + recent trips. An active trip has its own full-screen navigation. */}
+      {/* Idle (no offer): today's figures. An active trip has its own full-screen navigation. */}
       {!offer && (
         <>
           {/* Today's three figures */}
@@ -338,11 +338,7 @@ function HomeSection(props: {
           </div>
           {dash && dash.today.pendingFinalTrips === 0 && dash.today.completedTrips === 0 && <p className="text-center text-xs text-muted">{t('driver.home.earningsNote')}</p>}
 
-          {/* Idle: last trips + one warning + help */}
-          <div className="card p-4">
-            <div className="mb-2 flex items-center justify-between"><span className="font-semibold">{t('driver.home.lastTrips')}</span><button onClick={props.goTrips} className="text-xs text-accent">{t('driver.home.seeAll')}</button></div>
-            {dash?.latestTrips.length ? <div className="space-y-2">{dash.latestTrips.map((t) => <TripRow key={t.bookingId} t={t} />)}</div> : <p className="py-4 text-center text-sm text-muted">{t('driver.home.noTrips')}</p>}
-          </div>
+          {/* Idle: one warning. Trip history lives in the Trips tab only (2026-11-12). */}
           {dash?.alerts.find((a) => a.level === 'warning') && (() => { const w = dash.alerts.find((a) => a.level === 'warning')!; return <div className="rounded-[12px] border border-warn/40 bg-warn/10 p-3 text-sm text-warn">{w.message}{w.action && <a href={w.action.href} className="ml-2 underline">{w.action.label}</a>}</div>; })()}
         </>
       )}

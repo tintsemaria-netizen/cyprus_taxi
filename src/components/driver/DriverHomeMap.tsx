@@ -11,6 +11,7 @@ const CYPRUS = { lat: 34.92, lng: 33.2 };
 
 // Driver home map: the driver's own car (from the live GPS fix, when sharing) and the other
 // on-duty cars (anonymised, available/busy), refreshed every 10 s while the page is visible.
+// Without a GPS fix the map shows the whole island (zoom 8) so cars on the coast stay in view.
 export function DriverHomeMap({ pos }: { pos: { lat: number; lng: number } | null }) {
   const { t } = useT();
   const [fleet, setFleet] = useState<FleetCar[]>([]);
@@ -36,7 +37,7 @@ export function DriverHomeMap({ pos }: { pos: { lat: number; lng: number } | nul
   return (
     <div className="card overflow-hidden">
       <div className="relative h-60">
-        <AutoMapView markers={markers} fleet={fleet} focus={pos} center={pos ?? CYPRUS} zoom={pos ? 13 : 9} interactive className="h-full w-full" />
+        <AutoMapView markers={markers} fleet={fleet} focus={pos} center={pos ?? CYPRUS} zoom={pos ? 13 : 8} interactive className="h-full w-full" />
         {!pos && (
           <div className="pointer-events-none absolute inset-x-2 top-2 rounded-[10px] bg-page/85 px-3 py-1.5 text-xs text-muted">{t('driver.map.noGps')}</div>
         )}

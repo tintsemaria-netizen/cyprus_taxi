@@ -1,5 +1,9 @@
 # Session handoff
 
+## Driver home: no trip list (2026-11-12)
+- Removed the "Last trips" card from the driver Home tab. Trip history is in the Trips tab only (today / week / month, details, pre-book).
+- Driver home map without a GPS fix: zoom 8 (whole island) instead of 9, so coastal cars (e.g. Limassol) are in view on the small map.
+
 ## Driver home map with other cars (2026-11-12)
 - Driver Home tab (when not on a trip) starts with `DriverHomeMap` (`src/components/driver/DriverHomeMap.tsx`).
   - Shows the driver's own car from the live GPS fix, when sharing is on.
