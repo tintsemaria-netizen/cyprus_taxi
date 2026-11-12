@@ -1,5 +1,10 @@
 # Session handoff
 
+## Pre-booking = note only (2026-11-13, later the same night)
+- Removed the passengers and bags steppers from the pre-booking form. Every ride is sent as 1 passenger and 0 bags; the car class covers size.
+- The only pre-booking extra is the note. Its placeholder is "Flight number, meeting point, number of bags…".
+- `Booking.luggageCount` and the driver "🧳 N" display remain; they now only show for API/other clients that send bags.
+
 ## Passenger maps: no background map until a route is chosen (2026-11-13)
 - Booking page: no background map (and no fleet polling) until BOTH pickup and destination are set (`showMap`). Before that the background is a branded gradient with the logo. Once both stops are set, the map appears with the chosen route and the nearby cars, as before. The "set on map" picker still opens its own map.
 - Tracking page: the route line now also shows the ride the passenger chose (pickup→destination) while there is no moving driver: REQUESTED / SEARCHING (incl. the free-orders board) / NO_DRIVER, ARRIVED, or a driver without a fix. Then driver→pickup (ASSIGNED/EN_ROUTE) and driver→destination (IN_PROGRESS), as before.

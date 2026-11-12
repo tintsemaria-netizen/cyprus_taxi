@@ -53,7 +53,7 @@ const booking = {
     fewer: 'Fewer passengers',
     more: 'More passengers',
     noteLabel: 'Note for the driver (optional)',
-    notePlaceholder: 'Flight number, meeting point…',
+    notePlaceholder: 'Flight number, meeting point, number of bags…',
   },
   validation: {
     phone: 'Enter a phone number so the driver can reach you.',

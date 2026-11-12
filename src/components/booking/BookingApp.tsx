@@ -53,7 +53,6 @@ export default function BookingApp() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [note, setNote] = useState('');
-  const [bags, setBags] = useState(0);
   const [step, setStep] = useState<'form' | 'review'>('form');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState<string | null>(null);
@@ -266,11 +265,10 @@ export default function BookingApp() {
   const quote: QuoteBody | null = quotes[vClass] ?? null;
   const eur = (c: number) => fmt.money(c, 'EUR');
 
-  // Pre-booking details (2026-11-13): passengers, bags and note are asked ONLY for a scheduled
-  // ride; an immediate ride is 1 passenger, no bags. There is no separate flight-number field —
-  // the passenger writes it in the note (with the meeting point), which the driver sees.
-  const effPax = when === 'SCHEDULE' ? pax : 1;
-  const effBags = when === 'SCHEDULE' ? bags : 0;
+  // Pre-booking (2026-11-13): only a note for the driver — flight number, meeting point, bags.
+  // No passenger/bag steppers: every ride is sent as 1 passenger, 0 bags (the car class covers size).
+  const effPax = 1;
+  const effBags = 0;
   const effNote = when === 'SCHEDULE' ? note.trim() : '';
   const maxPax = cfg?.classes.find((c) => c.key === vClass)?.maxPassengers ?? (vClass === 'XL' ? 6 : 4);
 
@@ -561,27 +559,8 @@ export default function BookingApp() {
                           <input type="datetime-local" className={`field ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
                           <p className="mt-1 text-xs text-muted">{withSlot(t('booking.form.timezoneNote'), 'tz', <strong>{cfg?.timezone ?? 'Europe/Nicosia'}</strong>)}</p>
                           {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
-                          {/* Pre-booking details: passengers, bags, note (flight number and meeting point go in the note). */}
+                          {/* Pre-booking note: flight number, meeting point and bags are written here for the driver. */}
                           <div className="mt-3 space-y-3 rounded-[12px] border border-edge bg-elevated px-3 py-2.5">
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <span className="label" id="bk-pax-label">{t('booking.options.passengers')}</span>
-                                <div className="mt-1 flex items-center gap-1" role="group" aria-labelledby="bk-pax-label">
-                                  <button type="button" aria-label={t('booking.options.fewer')} className="btn-ghost !min-h-[44px] !px-3" onClick={() => setPax((p) => Math.max(1, p - 1))}>−</button>
-                                  <span className="w-7 text-center text-lg font-semibold" aria-live="polite">{pax}</span>
-                                  <button type="button" aria-label={t('booking.options.more')} className="btn-ghost !min-h-[44px] !px-3" onClick={() => setPax((p) => Math.min(maxPax, p + 1))}>+</button>
-                                </div>
-                                {errors.pax && <p className="mt-1 text-xs text-danger">{errors.pax}</p>}
-                              </div>
-                              <div>
-                                <span className="label" id="bk-bags-label">{t('booking.options.bags')}</span>
-                                <div className="mt-1 flex items-center gap-1" role="group" aria-labelledby="bk-bags-label">
-                                  <button type="button" aria-label={t('booking.options.fewerBags')} className="btn-ghost !min-h-[44px] !px-3" onClick={() => setBags((b) => Math.max(0, b - 1))}>−</button>
-                                  <span className="w-7 text-center text-lg font-semibold" aria-live="polite">{bags}</span>
-                                  <button type="button" aria-label={t('booking.options.moreBags')} className="btn-ghost !min-h-[44px] !px-3" onClick={() => setBags((b) => Math.min(10, b + 1))}>+</button>
-                                </div>
-                              </div>
-                            </div>
                             <div>
                               <label className="label" htmlFor="bk-note">{t('booking.options.noteLabel')}</label>
                               <textarea id="bk-note" className="field mt-1 min-h-[44px]" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} rows={2} placeholder={t('booking.options.notePlaceholder')} />
@@ -639,8 +618,6 @@ export default function BookingApp() {
                       <Row label={t('booking.review.destination')} value={dropoff?.label ?? '—'} dot="ink" />
                       <Row label={t('booking.review.when')} value={when === 'NOW' ? t('booking.review.nowImmediate') : `${scheduledAt.replace('T', ' ')} · ${cfg?.timezone}`} />
                       <Row label={t('booking.review.class')} value={t(`common.vClass.${vClass}`)} />
-                      {when === 'SCHEDULE' && <Row label={t('booking.review.passengers')} value={String(effPax)} />}
-                      {effBags > 0 && <Row label={t('booking.options.bags')} value={String(effBags)} />}
                       <Row label={t('booking.review.driverAsksFor')} value={name || passenger?.name || '—'} />
                       <Row label={t('booking.review.yourPhone')} value={passenger?.phone || phone} />
                       {effNote && <Row label={t('booking.review.note')} value={effNote} />}
