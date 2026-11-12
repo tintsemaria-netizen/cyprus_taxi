@@ -150,6 +150,8 @@ const driver = {
   },
   earnings: {
     title: 'Earnings',
+    completedTrips: 'Completed trips',
+    onlineTime: 'Time online',
     loadFailed: 'Couldn’t load earnings: {error}',
     empty: 'No completed trips in this range.',
     summary: 'recorded earnings ({currency}) · {completed} completed',

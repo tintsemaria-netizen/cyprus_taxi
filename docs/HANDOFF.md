@@ -1,5 +1,9 @@
 # Session handoff
 
+## Driver home: today's figures moved to Earnings (2026-11-12)
+- Removed the three "today" tiles (earnings, completed, online time) from the driver Home tab.
+- The Earnings tab now opens with two tiles for the selected period (today / week / month): "Completed trips" and "Time online". They come from `summary.completedTrips` and `summary.onlineSeconds` of `/driver/earnings`. The earnings card is below them, as before.
+
 ## Search flow v2: offers → free-orders board 2 min → NO_DRIVER (2026-11-12)
 Supersedes the first free-orders version (board of NO_DRIVER rides for 30 min).
 - Worker `processJob`:

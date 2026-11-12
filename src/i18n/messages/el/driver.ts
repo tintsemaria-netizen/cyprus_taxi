@@ -153,6 +153,8 @@ const driver: Catalog<typeof en> = {
   },
   earnings: {
     title: 'Έσοδα',
+    completedTrips: 'Ολοκληρωμένες διαδρομές',
+    onlineTime: 'Χρόνος σε υπηρεσία',
     loadFailed: 'Δεν ήταν δυνατή η φόρτωση των εσόδων: {error}',
     empty: 'Καμία ολοκληρωμένη διαδρομή σε αυτό το διάστημα.',
     summary: 'καταγεγραμμένα έσοδα ({currency}) · ολοκληρωμένες: {completed}',

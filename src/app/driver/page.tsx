@@ -253,7 +253,7 @@ function HomeSection(props: {
 }) {
   const { data, dash, gps, offer, offerSecs, offerBusy } = props;
   const { t, tp, fmt } = useT();
-  const { money, dur, km, statusLabel } = useDriverFmt();
+  const { money, km } = useDriverFmt();
   const trip = data.trip;
   const blocker = dash?.alerts.find((a) => a.level === 'blocker');
 
@@ -338,16 +338,9 @@ function HomeSection(props: {
         </div>
       )}
 
-      {/* Idle (no offer): today's figures. An active trip has its own full-screen navigation. */}
+      {/* Idle (no offer). Today's figures live in the Earnings tab (2026-11-12). An active trip has its own full-screen navigation. */}
       {!offer && (
         <>
-          {/* Today's three figures */}
-          <div className="grid grid-cols-3 gap-2">
-            <Figure label={t('driver.home.todaysEarnings')} value={dash ? (dash.today.recordedEarnings.length ? dash.today.recordedEarnings.map((e) => money(e.cents, e.currency)).join(' · ') : money(0)) : '—'} sub={dash && dash.today.pendingFinalTrips > 0 ? tp('driver.home.pending', dash.today.pendingFinalTrips) : t('driver.home.recorded')} />
-            <Figure label={t('driver.home.completed')} value={dash ? String(dash.today.completedTrips) : '—'} sub={tp('driver.home.tripsToday', dash?.today.completedTrips ?? 0)} />
-            <Figure label={t('driver.home.online')} value={dash ? dur(dash.today.onlineSeconds) : '—'} sub={t('driver.home.today')} />
-          </div>
-          {dash && dash.today.pendingFinalTrips === 0 && dash.today.completedTrips === 0 && <p className="text-center text-xs text-muted">{t('driver.home.earningsNote')}</p>}
 
           {/* Idle: one warning. Trip history lives in the Trips tab only (2026-11-12). */}
           {dash?.alerts.find((a) => a.level === 'warning') && (() => { const w = dash.alerts.find((a) => a.level === 'warning')!; return <div className="rounded-[12px] border border-warn/40 bg-warn/10 p-3 text-sm text-warn">{w.message}{w.action && <a href={w.action.href} className="ml-2 underline">{w.action.label}</a>}</div>; })()}
@@ -574,7 +567,7 @@ function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string;
 // ---- Earnings ----
 function EarningsSection() {
   const { t, tp, tError } = useT();
-  const { money } = useDriverFmt();
+  const { money, dur } = useDriverFmt();
   const [range, setRange] = useState<Range>('week');
   const [data, setData] = useState<{ summary: { byCurrency: { currency: string; completedTrips: number; recordedEarningsCents: number; knownFinalTrips: number; pendingFinalTrips: number; collectedCents: number }[]; completedTrips: number; pendingFinalTrips: number; onlineSeconds: number }; daily: { day: string; recordedEarningsCents: number; completedTrips: number; currency: string }[] } | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -597,6 +590,11 @@ function EarningsSection() {
       {loading && !data && <p className="text-muted">{t('common.loading')}</p>}
       {data && (
         <>
+          {/* Work figures for the selected period (moved here from the Home tab). */}
+          <div className="grid grid-cols-2 gap-2">
+            <Figure label={t('driver.earnings.completedTrips')} value={String(data.summary.completedTrips)} sub={t(`driver.range.${range}`)} />
+            <Figure label={t('driver.earnings.onlineTime')} value={dur(data.summary.onlineSeconds)} sub={t(`driver.range.${range}`)} />
+          </div>
           {data.summary.byCurrency.length === 0 ? <p className="py-6 text-center text-sm text-muted">{t('driver.earnings.empty')}</p> : data.summary.byCurrency.map((c) => (
             <div key={c.currency} className="card p-4">
               <div className="text-3xl font-semibold">{money(c.recordedEarningsCents, c.currency)}</div>

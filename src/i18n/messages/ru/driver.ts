@@ -153,6 +153,8 @@ const driver: Catalog<typeof en> = {
   },
   earnings: {
     title: 'Заработок',
+    completedTrips: 'Выполнено заказов',
+    onlineTime: 'Время на линии',
     loadFailed: 'Не удалось загрузить заработок: {error}',
     empty: 'За этот период завершённых поездок нет.',
     summary: 'учтённый заработок ({currency}) · завершено: {completed}',
