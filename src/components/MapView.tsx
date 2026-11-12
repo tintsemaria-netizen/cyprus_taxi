@@ -54,10 +54,11 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, focus, follow, onFollowBreak }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, follow, onFollowBreak }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerObjs = useRef<maplibregl.Marker[]>([]);
+  const fleetObjs = useRef<maplibregl.Marker[]>([]);
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
   const clickRef = useRef(onMapClick);
@@ -146,6 +147,24 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     // fitPadding is layout-only: re-fitting when it changes identity would fight the user's panning.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [markers, ready]);
+
+  // Live on-duty cars overlay (does not affect the fit) — same as GoogleMapView.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    let cancelled = false;
+    (async () => {
+      const maplibre = await loadMaplibre();
+      if (cancelled) return;
+      fleetObjs.current.forEach((m) => m.remove());
+      fleetObjs.current = [];
+      for (const v of fleet) {
+        const el = vehicleMarkerEl({ state: v.state === 'busy' ? 'busy' : 'available', stale: v.stale, size: 28, title: v.state === 'busy' ? 'On a trip' : 'Available' });
+        fleetObjs.current.push(new maplibre.Marker({ element: el }).setLngLat([v.lng, v.lat]).addTo(map));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [fleet, ready]);
 
   // Zoom to a focus point (e.g. the passenger's detected location), once per change.
   const focusKey = focus ? `${focus.lat.toFixed(5)},${focus.lng.toFixed(5)}` : '';

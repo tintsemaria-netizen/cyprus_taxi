@@ -8,6 +8,7 @@ import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { ScheduledRides } from '@/components/driver/ScheduledRides';
 import { DriverNavigation } from '@/components/driver/DriverNavigation';
+import { DriverHomeMap } from '@/components/driver/DriverHomeMap';
 import { unlockOfferSound, playOfferChime, vibrateOffer, keepScreenOn } from '@/lib/driver-alerts';
 import { formatFlight } from '@/lib/flight';
 import { useT, MsgKey } from '@/i18n/I18nProvider';
@@ -217,7 +218,7 @@ function Driver() {
       {tab === 'home' && <InstallPrompt app="driver" className="mb-3" />}
       {tab === 'home' && (
         <HomeSection
-          data={data} dash={dash} gps={gps} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
+          data={data} dash={dash} gps={gps} pos={pos} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
           onDuty={setDuty} onStartGps={startGps} onStopGps={stopGps}
           onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => setTab('trips')}
         />
@@ -234,6 +235,7 @@ function Driver() {
 // ---- Home ----
 function HomeSection(props: {
   data: CurrentTrip; dash: Dashboard | null; gps: { active: boolean; error: string | null; last: string | null };
+  pos: { lat: number; lng: number } | null;
   offer: Offer | null; offerSecs: number; offerBusy: boolean;
   onDuty: (v: boolean) => void; onStartGps: () => void; onStopGps: () => void;
   onAccept: (id: string) => void; onDecline: (id: string) => void; goTrips: () => void;
@@ -246,6 +248,8 @@ function HomeSection(props: {
 
   return (
     <div className="space-y-4">
+      <DriverHomeMap pos={props.pos} />
+
       {/* Status / duty */}
       <div className="card flex items-center justify-between p-4">
         <div>

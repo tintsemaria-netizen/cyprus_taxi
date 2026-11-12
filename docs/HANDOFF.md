@@ -1,5 +1,14 @@
 # Session handoff
 
+## Driver home map with other cars (2026-11-12)
+- Driver Home tab (when not on a trip) starts with `DriverHomeMap` (`src/components/driver/DriverHomeMap.tsx`).
+  - Shows the driver's own car from the live GPS fix, when sharing is on.
+  - Shows the other on-duty cars, available (lime) or busy (grey), with counts below the map.
+  - Without GPS it shows a hint to turn sharing on.
+- `GET /api/v1/driver/fleet` (driver-only, 30/min): the same anonymised view as `/public/fleet` (lat, lng, stale, state; no ids, names or plates), minus the requesting driver (`publicFleet({ excludeDriverId })`). Polled every 10 s while visible.
+- The MapLibre fallback (no Google key) now also draws the `fleet` overlay, as GoogleMapView already did.
+- Tests: `tests/driver-fleet.db.test.ts`: own car excluded, no identifying fields, driver-only. Suite 193/1 skipped.
+
 ## Portrait-only passenger and driver apps (2026-11-12)
 - Both manifests set `"orientation": "portrait"`, which installed Android apps honour.
 - `src/components/PortraitLock.tsx` (in the root layout) calls `screen.orientation.lock('portrait')` best-effort. It also renders a full-screen "Turn your phone upright" cover.

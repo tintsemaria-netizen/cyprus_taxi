@@ -333,9 +333,10 @@ export async function availableDrivers() {
 // Passenger-facing "cars nearby" feed. ANONYMIZED: only position + freshness — no
 // driver id/name/plate and no booking, so it never reveals driver identity or which
 // trip a car is on. On-duty active drivers with a non-disconnected fix only.
-export async function publicFleet() {
+// `excludeDriverId`: the driver app's own map leaves the viewer's car out (it is drawn separately).
+export async function publicFleet(opts: { excludeDriverId?: string } = {}) {
   const [drivers, busy] = await Promise.all([
-    prisma.driver.findMany({ where: { onDuty: true, active: true, ...eligibleDriverWhere }, include: { location: true, user: true } }),
+    prisma.driver.findMany({ where: { onDuty: true, active: true, ...eligibleDriverWhere, ...(opts.excludeDriverId ? { id: { not: opts.excludeDriverId } } : {}) }, include: { location: true, user: true } }),
     prisma.assignment.findMany({ where: { activeDriverId: { not: null } }, select: { activeDriverId: true } }),
   ]);
   const busyIds = new Set(busy.map((b) => b.activeDriverId));

@@ -38,6 +38,9 @@ const driver = {
     note: 'Foreground GPS only, while on duty. Real device GPS — never simulated.',
   },
   map: {
+    noGps: 'Turn on GPS sharing to see your position.',
+    free: '{n} available',
+    busy: '{n} on a trip',
     you: 'You',
     pickup: 'Pickup',
     destination: 'Destination',
