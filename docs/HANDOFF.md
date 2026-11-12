@@ -1,5 +1,8 @@
 # Session handoff
 
+## Driver home: no status/plate pill (2026-11-13)
+- Removed the "On duty · waiting for orders · plate" pill from the Home map. The Go online / Go offline button shows the state. The earnings figure stays at top-right; the plate is in Profile.
+
 ## Driver: separate Free / Pre-bookings tabs, red count badges (2026-11-13)
 - Bottom nav is 4 tabs: Home | Free | Pre-bookings | Profile. The merged "Orders" tab was split again.
 - Small red count badges (`bg-danger`) on Free (free orders, polled every 10 s while on duty and without a trip) and on Pre-bookings (open scheduled rides without a conflict, polled every 30 s from `/driver/scheduled`).

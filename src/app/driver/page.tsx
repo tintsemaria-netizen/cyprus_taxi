@@ -306,13 +306,8 @@ function HomeSection(props: {
 
       {/* Top: status + messages */}
       <div className="pointer-events-none fixed inset-x-0 top-[64px] z-10 mx-auto flex max-w-lg flex-col items-start gap-2 px-3 pt-2">
-        <div className="flex w-full items-start justify-between gap-2">
-        <div className={`${pill} flex items-center gap-2 px-3 py-1.5 text-sm`}>
-          <span className={`h-2.5 w-2.5 rounded-full ${data.onDuty ? 'bg-accent' : 'bg-muted'}`} />
-          {/* Catalog strings may start with their own "●"; the dot is drawn here. */}
-          <span className="font-medium">{(data.onDuty ? (trip ? t('driver.duty.onDutyOnTrip') : t('driver.duty.onDutyReady')) : t('driver.duty.offDuty')).replace(/^[●•]\s*/, '')}</span>
-          {dash?.vehicle && <span className="text-xs text-muted">· {dash.vehicle.plate}</span>}
-        </div>
+        {/* No status pill (2026-11-13): the Go online / offline button already shows the state. */}
+        <div className="flex w-full items-start justify-end gap-2">
         {/* Today's recorded earnings as a figure over the map; tap → Profile › Earnings. */}
         {dash && (
           <button className={`${pill} shrink-0 px-3 py-1.5 text-right`} onClick={props.goEarnings} aria-label={t('driver.home.earnedToday')}>
