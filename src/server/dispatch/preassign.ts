@@ -41,6 +41,7 @@ export interface BoardItem {
   bookingId: string; reference: string; pickupAt: string; pickupLabel: string; dropoffLabel: string;
   vClass: string; passengerCount: number; fareCents: number | null; priceType: string | null;
   flightNumber: string | null; airport: boolean; conflict: boolean;
+  note: string | null; // the passenger writes flight, meeting point and bags here
 }
 
 // The driver's view: rides they can still commit to, and their own live commitments.
@@ -75,13 +76,13 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
     },
     orderBy: { scheduledAt: 'asc' },
     take: 50,
-    select: { id: true, reference: true, scheduledAt: true, pickupLabel: true, dropoffLabel: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, vClass: true, passengerCount: true, fareCents: true, priceType: true, flightNumber: true },
+    select: { id: true, reference: true, scheduledAt: true, pickupLabel: true, dropoffLabel: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, vClass: true, passengerCount: true, fareCents: true, priceType: true, flightNumber: true, note: true },
   });
   const gap = p.minGapMinutes * MIN;
   const available: BoardItem[] = rows.map((b) => ({
     bookingId: b.id, reference: b.reference, pickupAt: b.scheduledAt!.toISOString(),
     pickupLabel: b.pickupLabel, dropoffLabel: b.dropoffLabel, vClass: b.vClass, passengerCount: b.passengerCount,
-    fareCents: b.fareCents, priceType: b.priceType, flightNumber: b.flightNumber,
+    fareCents: b.fareCents, priceType: b.priceType, flightNumber: b.flightNumber, note: b.note,
     airport: isAirportPoint(b.pickupLat, b.pickupLng) || isAirportPoint(b.dropoffLat, b.dropoffLng),
     conflict: mineRows.length >= p.maxPerDriver || mineRows.some((m) => Math.abs(m.pickupAt.getTime() - b.scheduledAt!.getTime()) < gap),
   }));

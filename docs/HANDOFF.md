@@ -1,5 +1,10 @@
 # Session handoff
 
+## Pre-booking cards: per-ride time rules + passenger note (2026-11-13)
+- Removed the general explanation paragraph from the top of the driver's Pre-bookings view.
+- Each pre-booking card now shows that ride's own times: "Until HH:MM you're free for other rides (pickup −75 min)" and "At HH:MM it becomes your active ride if online and free, else automatic dispatch (pickup −30 min)". The times come from `PROTECT_MIN` / `CONVERT_MIN` in Cyprus time.
+- Cards now also show the passenger's note ("💬 …"). Passengers write the flight number, meeting point and bags there. `BoardItem.note` was added for available rides; own rides already had it.
+
 ## Driver tabs merged (2026-11-13)
 - Bottom nav is now 4 tabs: Home | Orders (`tab 'free'`) | Trips & earnings (`tab 'trips'`) | Profile.
 - Orders has a `SubTabs` switch: "Free · N" (FreeOrdersSection) and "Pre-bookings · N" (ScheduledRides; moved out of the Trips tab). The badge still shows the free-orders count.

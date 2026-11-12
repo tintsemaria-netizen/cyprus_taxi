@@ -11,6 +11,7 @@ interface Item {
   bookingId: string; reference: string; pickupAt: string; pickupLabel: string; dropoffLabel: string;
   vClass: string; passengerCount: number; fareCents: number | null; priceType: string | null;
   flightNumber: string | null; airport: boolean; conflict?: boolean; canReleaseFreely?: boolean;
+  note?: string | null;
 }
 interface Board { available: Item[]; mine: Item[]; blocked: string | null }
 
@@ -63,13 +64,18 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number) => void }) {
         {i.flightNumber && <span className="font-mono text-ink">{t('driver.scheduled.flight', { flight: formatFlight(i.flightNumber) })}</span>}
         {i.fareCents != null && <span>{t('driver.scheduled.fareEstimate', { amount: fmt.money(i.fareCents) })}</span>}
       </div>
+      {i.note && <p className="mt-2 rounded-[10px] border border-warn/30 bg-warn/5 px-2.5 py-1.5 text-xs text-warn">💬 {i.note}</p>}
+      {/* This ride's own time rules (2026-11-13: moved here from the page header). */}
+      <div className="mt-2 space-y-0.5 rounded-[10px] border border-edge bg-page px-2.5 py-2 text-xs text-muted">
+        <div>🕒 {t('driver.scheduled.freeUntil', { time: fmt.time(new Date(new Date(i.pickupAt).getTime() - PROTECT_MIN * 60_000)), min: PROTECT_MIN })}</div>
+        <div>🚖 {t('driver.scheduled.activeAt', { time: fmt.time(new Date(new Date(i.pickupAt).getTime() - CONVERT_MIN * 60_000)), min: CONVERT_MIN })}</div>
+      </div>
       <div className="mt-3">{action}</div>
     </div>
   );
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted">{t('driver.scheduled.explain', { protect: PROTECT_MIN, convert: CONVERT_MIN })}</p>
       {msg && <p role="status" className="rounded-[12px] border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">{msg}</p>}
       {err && <p role="alert" className="rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}
       {!board ? <p className="text-sm text-muted">{t('common.loading')}</p> : (

@@ -241,6 +241,8 @@ const driver = {
     staffLogin: 'Staff / admin login',
   },
   scheduled: {
+    freeUntil: 'Until {time} you’re free for other rides (pickup −{min} min).',
+    activeAt: 'At {time} it becomes your active ride if you’re online and free; otherwise it goes to automatic dispatch (pickup −{min} min).',
     tabHistory: 'History',
     tabPrebook: 'Pre-book',
     title: 'Pre-booked rides',
