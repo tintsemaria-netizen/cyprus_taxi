@@ -119,10 +119,19 @@ export async function acceptOffer(offerId: string, driverId: string): Promise<Of
         correlationId: booking.id,
         payload: { ...bookingEventPayload({ ...booking, status: 'ASSIGNED' }), driverPseudo: driverPseudo(driverId) },
       });
+      // Accepting IS heading to the pickup (2026-11-12): no separate "On my way" tap. The ride
+      // passes through ASSIGNED (audit trail above) and lands in EN_ROUTE in the same transaction.
+      const enRoute = await tx.booking.update({ where: { id: booking.id }, data: { status: 'EN_ROUTE', revision: { increment: 1 } } });
+      await tx.bookingEvent.create({ data: { bookingId: booking.id, type: 'STATUS_EN_ROUTE', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'ASSIGNED', afterStatus: 'EN_ROUTE', reason: 'auto on accept' } });
+      await recordEvent(tx, {
+        eventType: 'booking.en_route', aggregateType: 'booking', aggregateId: booking.id,
+        aggregateVersion: enRoute.revision, correlationId: booking.id,
+        payload: { bookingId: booking.id, status: 'EN_ROUTE', actorType: 'DRIVER', reason: 'auto on accept' },
+      });
       await tx.dispatchJob.deleteMany({ where: { bookingId: booking.id } });
       await enqueuePassenger(tx, booking.id, 'Driver assigned', 'A driver is on the way — track them live.');
       acceptedBookingId = booking.id;
-      return { ok: true, status: updated.status, revision: updated.revision };
+      return { ok: true, status: enRoute.status, revision: enRoute.revision };
     });
     void acceptedBookingId; // retained for potential callers/telemetry
     return result;

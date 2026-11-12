@@ -180,6 +180,9 @@ describe('driver cannot go online without a vehicle', () => {
     const vehicleId = d.bindings[0]?.vehicleId;
     if (!vehicleId) throw new Error('fixture Maria must have a bound vehicle');
     await prisma.driverVehicleBinding.updateMany({ where: { driverId: d.id, endedAt: null }, data: { endedAt: new Date(), activeDriverId: null, activeVehicleId: null } });
+    // Start off duty: other suites may leave the shared seed driver on duty, and this test asserts
+    // that the refused PATCH does not put her on duty.
+    await prisma.driver.update({ where: { id: d.id }, data: { onDuty: false, available: false } });
     try {
       await asStaff('maria');
       const res = await driverAvailability.PATCH(req('/driver/availability', { method: 'PATCH', body: { onDuty: true, available: true } }));

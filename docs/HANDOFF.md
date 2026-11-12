@@ -1,5 +1,11 @@
 # Session handoff
 
+## Accept = on the way (2026-11-12)
+- `acceptOffer` now moves the booking ASSIGNED → EN_ROUTE in the same transaction. Both steps are audited: OFFER_ACCEPTED, then STATUS_EN_ROUTE (actor DRIVER, reason "auto on accept"), plus a `booking.en_route` event. After accepting, the driver sees "Arrived" next. The "On my way" button no longer appears in this flow.
+- The button remains only for rides that reach ASSIGNED another way: staff manual assignment, or scheduled pre-assignment conversion (T−30 min, when the driver may not be leaving yet).
+- Tests: dispatch.db and lifecycle-guards expect EN_ROUTE after accept.
+- Flaky `routes.db` "NO_VEHICLE" test fixed: it now starts with Maria off duty (other suites could leave her on duty). Three consecutive full runs on a fresh DB: 191/1 skipped.
+
 ## Driver offer: 10 s window + clock-skew fix (2026-11-12)
 - Bug: drivers saw an offer with "0 s" and a disabled Accept button. The countdown used the device clock against the server `expiresAt`, so a device clock running ahead by about 20 s or more killed the offer on screen while it was still valid on the server.
 - Fix: `getDriverActiveOffer` returns `expiresInMs`, the time left by the server clock. The driver app turns it into a local deadline on every 2 s poll. The server still decides expiry in `acceptOffer`.

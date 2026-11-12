@@ -96,7 +96,7 @@ describe('P0 — offer decisions serialize on the booking row', () => {
     const offer = await prisma.driverOffer.findUnique({ where: { id: offerId } });
     const activeCount = await prisma.assignment.count({ where: { activeBookingId: b.id } });
     if (acc.ok) {
-      expect(booking!.status).toBe('ASSIGNED');
+      expect(booking!.status).toBe('EN_ROUTE');
       expect(offer!.status).toBe('ACCEPTED');
       expect(activeCount).toBe(1);
     } else {
@@ -125,7 +125,7 @@ describe('P0 — offer decisions serialize on the booking row', () => {
     const [acc] = await Promise.all([acceptOffer(offerId, driverId), expireOffer(offerId)]);
     const offer = await prisma.driverOffer.findUnique({ where: { id: offerId } });
     const booking = await prisma.booking.findUnique({ where: { id: b.id } });
-    if (acc.ok) { expect(offer!.status).toBe('ACCEPTED'); expect(booking!.status).toBe('ASSIGNED'); }
+    if (acc.ok) { expect(offer!.status).toBe('ACCEPTED'); expect(booking!.status).toBe('EN_ROUTE'); }
     else { expect(offer!.status).toBe('EXPIRED'); expect(booking!.status).toBe('SEARCHING'); }
   });
 
@@ -140,7 +140,7 @@ describe('P0 — offer decisions serialize on the booking row', () => {
     const booking = await prisma.booking.findUnique({ where: { id: b.id } });
     const activeCount = await prisma.assignment.count({ where: { activeBookingId: b.id } });
     if (booking!.status === 'CANCELED') expect(activeCount).toBe(0); // no driver left reserved
-    else { expect(booking!.status).toBe('ASSIGNED'); expect(activeCount).toBe(1); }
+    else { expect(booking!.status).toBe('EN_ROUTE'); expect(activeCount).toBe(1); }
     // A driver is never left active on a canceled booking.
     expect(!(booking!.status === 'CANCELED' && activeCount > 0)).toBe(true);
   });

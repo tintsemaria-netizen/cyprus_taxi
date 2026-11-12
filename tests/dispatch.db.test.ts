@@ -89,7 +89,11 @@ describe('autonomous dispatch worker', () => {
     const res = await acceptOffer(offer!.offerId, driverId);
     expect(res.ok).toBe(true);
     const after = await prisma.booking.findUnique({ where: { id: b.id } });
-    expect(after!.status).toBe('ASSIGNED');
+    // Accepting means the driver is heading to the pickup: no separate "On my way" step.
+    expect(after!.status).toBe('EN_ROUTE');
+    expect(res.ok && res.status).toBe('EN_ROUTE');
+    const trail = await prisma.bookingEvent.findMany({ where: { bookingId: b.id }, orderBy: { createdAt: 'asc' }, select: { type: true, afterStatus: true } });
+    expect(trail.map((e) => e.afterStatus).filter(Boolean).slice(-2)).toEqual(['ASSIGNED', 'EN_ROUTE']);
     // Dispatch job cleared, an active assignment exists for this driver.
     expect(await prisma.dispatchJob.findUnique({ where: { bookingId: b.id } })).toBeNull();
     expect(await prisma.assignment.findFirst({ where: { activeDriverId: driverId, activeBookingId: b.id } })).not.toBeNull();
