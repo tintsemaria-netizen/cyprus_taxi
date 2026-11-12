@@ -1,5 +1,10 @@
 # Session handoff
 
+## Passenger maps: no background map until a route is chosen (2026-11-13)
+- Booking page: no background map (and no fleet polling) until BOTH pickup and destination are set (`showMap`). Before that the background is a branded gradient with the logo. Once both stops are set, the map appears with the chosen route and the nearby cars, as before. The "set on map" picker still opens its own map.
+- Tracking page: the route line now also shows the ride the passenger chose (pickup→destination) while there is no moving driver: REQUESTED / SEARCHING (incl. the free-orders board) / NO_DRIVER, ARRIVED, or a driver without a fix. Then driver→pickup (ASSIGNED/EN_ROUTE) and driver→destination (IN_PROGRESS), as before.
+- Locally `/routes/estimate` (demo, no Google) returns no path, so the line only draws on prod. Checked that the request is made.
+
 ## Booking form: extras only for pre-bookings, bags, flight required (2026-11-13)
 - Passenger booking form: the "Additional" block (passengers + note) is gone for immediate rides. They are sent as 1 passenger, 0 bags, no note, no flight.
 - Pre-booking ("Schedule") now has a details panel under the date:

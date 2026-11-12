@@ -166,9 +166,13 @@ export default function BookingApp() {
     window.addEventListener('orientationchange', upd);
     return () => { window.removeEventListener('resize', upd); window.removeEventListener('orientationchange', upd); };
   }, []);
-  // Live on-duty cars shown on the booking map (anonymized positions), polled.
+  // The booking page has NO background map until the passenger has chosen both stops
+  // (2026-11-13): then the map appears with their route. Live tracking has its own map.
+  const showMap = !!(pickup && dropoff);
+  // Live on-duty cars shown on the booking map (anonymized positions), polled while it is shown.
   const [fleet, setFleet] = useState<{ lat: number; lng: number; stale?: boolean; state?: 'available' | 'busy' }[]>([]);
   useEffect(() => {
+    if (!showMap) return;
     let alive = true;
     const load = () => {
       if (document.visibilityState !== 'visible') return;
@@ -179,7 +183,7 @@ export default function BookingApp() {
     load();
     const t = setInterval(load, 12000);
     return () => { alive = false; clearInterval(t); };
-  }, []);
+  }, [showMap]);
 
   const fitPadding = useMemo(
     () => (vp.w < 640
@@ -446,6 +450,13 @@ export default function BookingApp() {
               open (frees the WebGL context and avoids two simultaneous map instances). */}
           {picker ? (
             <div className="h-full w-full bg-[#0e1518]" />
+          ) : !showMap ? (
+            // Plain branded background until both stops are chosen.
+            <div className="flex h-full w-full items-start justify-center bg-[radial-gradient(120%_80%_at_50%_0%,rgba(190,242,100,0.10),transparent_60%),linear-gradient(180deg,#121a1d,#0e1518)] pt-10 sm:items-center sm:pl-[400px] sm:pt-0">
+              <div className="flex flex-col items-center px-6 text-center opacity-90">
+                <Logo className="h-14 sm:h-20" />
+              </div>
+            </div>
           ) : (
             <AutoMapView markers={markers} route={route?.line} fleet={fleet} focus={myLoc} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} className="h-full w-full" />
           )}

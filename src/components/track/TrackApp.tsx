@@ -144,20 +144,26 @@ export default function TrackApp() {
     };
   }, [load]);
 
-  // Draw the live driving route the passenger's driver is following: driver→pickup while
-  // EN_ROUTE, driver→destination once the trip is IN_PROGRESS. Recomputed when the driver
-  // moves meaningfully (coarse key) or the leg changes; bounded by the 5s poll cadence.
+  // Route on the passenger's map (2026-11-13): while there is no moving driver yet (searching,
+  // board, no driver) or the driver is at the pickup, show the ride the passenger chose
+  // (pickup→destination). Once a driver is on the way: driver→pickup (ASSIGNED/EN_ROUTE), then
+  // driver→destination (IN_PROGRESS). Recomputed when the driver moves meaningfully (coarse key)
+  // or the leg changes; bounded by the 5s poll cadence.
   const drvLoc = disconnected ? null : view?.location ?? null;
   const rleg = view?.status === 'IN_PROGRESS' ? 'dropoff' : view?.status === 'EN_ROUTE' || view?.status === 'ASSIGNED' ? 'pickup' : null;
-  const routeKey = drvLoc && rleg ? `${rleg}:${drvLoc.lat.toFixed(4)},${drvLoc.lng.toFixed(4)}` : '';
+  const planned = !!view && ['REQUESTED', 'SEARCHING', 'NO_DRIVER', 'ARRIVED', 'ASSIGNED', 'EN_ROUTE', 'IN_PROGRESS'].includes(view.status);
+  const routeKey = drvLoc && rleg
+    ? `${rleg}:${drvLoc.lat.toFixed(4)},${drvLoc.lng.toFixed(4)}`
+    : planned ? `plan:${view!.pickup.lat},${view!.pickup.lng}>${view!.dropoff.lat},${view!.dropoff.lng}` : '';
   useEffect(() => {
-    if (!view || !drvLoc || !rleg) { setRouteLine([]); return; }
-    const to = rleg === 'dropoff' ? view.dropoff : view.pickup;
+    if (!view || !routeKey) { setRouteLine([]); return; }
+    const from = drvLoc && rleg ? drvLoc : view.pickup;
+    const to = drvLoc && rleg ? (rleg === 'dropoff' ? view.dropoff : view.pickup) : view.dropoff;
     let alive = true;
     (async () => {
       try {
         const r = await api<{ available?: boolean; path?: [number, number][] }>('/routes/estimate', {
-          method: 'POST', body: { from: { lat: drvLoc.lat, lng: drvLoc.lng }, to: { lat: to.lat, lng: to.lng } }, timeoutMs: 9000,
+          method: 'POST', body: { from: { lat: from.lat, lng: from.lng }, to: { lat: to.lat, lng: to.lng } }, timeoutMs: 9000,
         });
         if (alive && r.available !== false && r.path) setRouteLine(r.path.map(([la, ln]) => [ln, la] as [number, number]));
         else if (alive) setRouteLine([]);
