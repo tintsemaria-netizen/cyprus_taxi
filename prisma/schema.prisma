@@ -453,6 +453,7 @@ model Booking {
   vClass         VehicleClass
   passengerCount Int
   luggageCount   Int       @default(0) // bags; asked on pre-bookings, shown to the driver
+  passengerRemindedAt DateTime? // pre-booking: "ride in ~1 hour" reminder queued
   requestedAt    DateTime      @default(now())
   scheduledAt    DateTime?
   status         BookingStatus @default(REQUESTED)

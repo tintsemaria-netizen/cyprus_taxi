@@ -70,9 +70,18 @@ export interface PushPayload { title: string; body: string; url: string; tag?: s
 
 // Actually POST to every device subscription for an audience. Returns delivered/failed
 // counts so the outbox can decide whether to retry. Prunes gone (404/410) subscriptions.
+// A signed-in passenger subscribes their device to their ACCOUNT (PASSENGER_ACCOUNT:<id>), so one
+// device gets notifications for all their rides (several pre-bookings). A ride notification
+// (PASSENGER:<bookingId>) therefore also goes to the booking owner's account devices.
+export async function audiencesFor(audience: string): Promise<string[]> {
+  if (!audience.startsWith('PASSENGER:')) return [audience];
+  const b = await prisma.booking.findUnique({ where: { id: audience.slice('PASSENGER:'.length) }, select: { passengerId: true } });
+  return b?.passengerId ? [audience, `PASSENGER_ACCOUNT:${b.passengerId}`] : [audience];
+}
+
 export async function deliverToAudience(audience: string, payload: PushPayload): Promise<{ sent: number; failed: number }> {
   if (!ensureVapid()) return { sent: 0, failed: 0 };
-  const subs = await prisma.pushSubscription.findMany({ where: { audience } });
+  const subs = await prisma.pushSubscription.findMany({ where: { audience: { in: await audiencesFor(audience) } } });
   let sent = 0, failed = 0;
   await Promise.all(
     subs.map(async (s) => {

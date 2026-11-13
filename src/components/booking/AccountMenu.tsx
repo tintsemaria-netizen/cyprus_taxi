@@ -89,6 +89,7 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
             </a>
             <div className="my-1 border-t border-edge" />
             <MenuLink href="/rides" onSelect={() => setOpen(false)}>{t('auth.myRides')}</MenuLink>
+            <MenuLink href="/prebookings" onSelect={() => setOpen(false)}>{t('rides.prebookings.menu')}</MenuLink>
             <MenuLink href="/account#places" onSelect={() => setOpen(false)}>{t('auth.menu.savedPlaces')}</MenuLink>
             <MenuLink href="/account" onSelect={() => setOpen(false)}>{t('auth.menu.profile')}</MenuLink>
             <MenuLink href="/privacy" onSelect={() => setOpen(false)}>{t('auth.menu.help')}</MenuLink>

@@ -1,5 +1,21 @@
 # Session handoff
 
+## Passenger "My pre-bookings" + 1-hour reminder (2026-11-13)
+- New page `/prebookings` ("My pre-bookings"; account menu item under "My rides"):
+  - Upcoming scheduled rides, soonest first: time, from/to, note, "Driver: <name>" once a driver pre-booked it.
+  - Rides within the hour are highlighted. "Open" mints a tracking grant and opens /track.
+  - Account-wide notifications toggle; "Order another" link.
+  - API `GET /api/v1/passenger/prebookings` (own rides, active statuses, `soon` = pickup within 60 min).
+- Home reminder: for a signed-in passenger, the booking form shows an accent card "Your pre-booked ride soon · Pickup at HH:MM · from → to · Open" when a pre-booking is within the hour (polled every 60 s).
+- Push reminder: `runPassengerReminders` (`src/server/dispatch/passenger-reminders.ts`) runs each worker tick after `runPreassignments`. For rides with pickup in (now, now+60 min], an active status and `passengerRemindedAt` null, it claims the column (conditional update) and enqueues one push (dedupe `passenger-remind:<id>`, url /prebookings). Migration `20261113010000_booking_passenger_reminder`.
+- Account-wide passenger push:
+  - `POST /api/v1/passenger/push` saves `PASSENGER_ACCOUNT:<passengerId>`.
+  - `/tracking/push` saves the account audience when the tracked ride belongs to the signed-in passenger; others stay per-ride.
+  - `deliverToAudience` uses `audiencesFor()`, so `PASSENGER:<bookingId>` also reaches the owner's account devices. This fixes "subscribing for ride B stopped pushes for ride A", since an endpoint holds one audience.
+- The "Pre-booking placed" screen has the notifications toggle (account audience).
+- Push texts are English, like the other passenger pushes.
+- Tests: `tests/passenger-prebookings.db.test.ts` (3): list order and soon flag, reminder exactly once only within the hour and not for cancelled, account audience. Suite 209/1 skipped ×2. Playwright: home card, menu item, /prebookings.
+
 ## Passenger can keep ordering after a pre-booking (2026-11-13)
 - The server never limited a passenger to one booking. Checked: pre-booking, then NOW, then another pre-booking, all 201.
 - The UI used to jump to /track right after a pre-booking. Now `BookingApp` shows a "Pre-booking placed" step: pickup time (Cyprus), a short note, "Order another ride" (`orderAnother()` resets the form and the idempotency key), "My rides" and "Open pre-booking" (/track). Immediate rides still go to /track.

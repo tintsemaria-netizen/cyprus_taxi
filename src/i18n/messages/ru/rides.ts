@@ -56,5 +56,17 @@ const rides: Catalog<typeof en> = {
       hard_to_find: 'Трудно найти',
     },
   },
+  prebookings: {
+    title: 'Мои предзаказы',
+    subtitle: 'Предстоящие запланированные поездки. Примерно за час до подачи напомним здесь и уведомлением.',
+    empty: 'Предстоящих предзаказов нет.',
+    soon: 'в течение часа',
+    driver: 'Водитель: {name}',
+    noDriverYet: 'Водитель ещё не назначен',
+    open: 'Открыть',
+    reminderTitle: 'Скоро ваш предзаказ',
+    reminderBody: 'Подача в {time}',
+    menu: 'Мои предзаказы',
+  },
 };
 export default rides;

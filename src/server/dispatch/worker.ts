@@ -9,6 +9,7 @@ import { rematchBooking } from './lifecycle';
 import { enqueuePassenger } from '@/server/push';
 import { recordEvent } from '@/server/events';
 import { heartbeat } from '@/server/workers/heartbeat';
+import { runPassengerReminders } from './passenger-reminders';
 
 // Supervised worker loop (Task 012 §4, restructured for Task 016 §4). Postgres-backed jobs with
 // a lease so multiple instances/ticks are safe; recovers on restart because state lives in the DB.
@@ -98,6 +99,7 @@ async function runDispatchSection(now: Date): Promise<void> {
   // Pre-assignments first: a commitment that lapses at the scheduled lead is promoted to normal
   // search in the same tick.
   await runPreassignments(now);
+  await runPassengerReminders(now); // passenger "ride in ~1 hour" push for pre-bookings
   await promoteScheduled(now);
   await rematchOnGpsLoss(now);
   await repairSearchWithoutJob(now);

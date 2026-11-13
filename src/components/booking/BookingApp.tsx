@@ -15,6 +15,7 @@ import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 import { INTL_TAG } from '@/i18n/config';
+import { NotifyToggle } from '@/components/NotifyToggle';
 
 interface PublicConfig {
   demoMode: boolean;
@@ -56,6 +57,9 @@ export default function BookingApp() {
   const [step, setStep] = useState<'form' | 'review' | 'scheduled'>('form');
   // After a pre-booking (2026-11-13) the passenger stays here and can order again right away.
   const [doneAt, setDoneAt] = useState<string | null>(null);
+  // Pre-booking reminder on the home page (2026-11-13): the signed-in passenger's next scheduled
+  // ride when its pickup is within the hour (the same moment a push reminder is sent).
+  const [soonRide, setSoonRide] = useState<{ id: string; at: string; pickup: string; dropoff: string } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState<string | null>(null);
   // One-time notice handed over by another page (e.g. "Your account has been deleted").
@@ -278,6 +282,24 @@ export default function BookingApp() {
     return JSON.stringify({ pickup, dropoff, when, scheduledAt, scheduleOffsetMin: offset, vClass, pax: effPax, bags: effBags, name: name.trim(), phone: phone.trim(), note: effNote });
   }
 
+  useEffect(() => {
+    if (!passenger) { setSoonRide(null); return; }
+    let alive = true;
+    const load = () => api<{ prebookings: { id: string; at: string; pickup: string; dropoff: string; soon: boolean }[] }>('/passenger/prebookings')
+      .then((r) => { if (alive) setSoonRide(r.prebookings.find((b) => b.soon) ?? null); })
+      .catch(() => { /* keep last */ });
+    load(); const iv = setInterval(load, 60_000);
+    return () => { alive = false; clearInterval(iv); };
+  }, [passenger]);
+
+  async function openRide(id: string) {
+    try {
+      const r = await api<{ token: string }>(`/passenger/rides/${id}/track`, { method: 'POST' });
+      await api('/tracking/exchange', { method: 'POST', body: { token: r.token } });
+      router.push('/track');
+    } catch { router.push('/prebookings'); }
+  }
+
   // Fresh form for the next order (keeps the signed-in passenger).
   function orderAnother() {
     setPickup(null); setPickupText(''); setDropoff(null); setDropoffText('');
@@ -476,6 +498,13 @@ export default function BookingApp() {
                 {step === 'form' ? (
                   /* ---- FORM (inlined so inputs keep focus across renders) ---- */
                   <div>
+                    {soonRide && (
+                      <button type="button" onClick={() => openRide(soonRide.id)} className="mb-3 block w-full rounded-[12px] border-2 border-accent bg-accent/10 px-3 py-2.5 text-left">
+                        <div className="flex items-center justify-between gap-2 text-sm font-semibold text-accent"><span>⏰ {t('rides.prebookings.reminderTitle')}</span><span>{t('rides.prebookings.open')} ›</span></div>
+                        <div className="mt-0.5 text-sm text-ink">{t('rides.prebookings.reminderBody', { time: fmt.time(soonRide.at) })}</div>
+                        <div className="truncate text-xs text-muted">{soonRide.pickup} → {soonRide.dropoff}</div>
+                      </button>
+                    )}
                     <p className="label">{t('booking.form.eyebrow')}</p>
                     <h1 className="mb-4 mt-1 text-2xl font-bold">{t('booking.form.title')}</h1>
 
@@ -629,6 +658,7 @@ export default function BookingApp() {
                       <h2 className="mt-3 text-xl font-bold">{t('booking.prebooked.title')}</h2>
                       <p className="mt-1 text-sm text-muted">{t('booking.prebooked.when', { when: (doneAt ?? '').replace('T', ' ') })}</p>
                       <p className="mt-2 text-sm text-muted">{t('booking.prebooked.body')}</p>
+                      <div className="mt-3 flex justify-center"><NotifyToggle pushUrl="/passenger/push" /></div>
                       <div className="mt-5 space-y-2">
                         <button className="btn-primary w-full" onClick={orderAnother}>{t('booking.prebooked.another')}</button>
                         <div className="grid grid-cols-2 gap-2">

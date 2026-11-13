@@ -53,5 +53,17 @@ const rides = {
       hard_to_find: 'Hard to find',
     },
   },
+  prebookings: {
+    title: 'My pre-bookings',
+    subtitle: 'Your upcoming scheduled rides. About an hour before pickup we remind you here and with a notification.',
+    empty: 'You have no upcoming pre-bookings.',
+    soon: 'within the hour',
+    driver: 'Driver: {name}',
+    noDriverYet: 'Driver not assigned yet',
+    open: 'Open',
+    reminderTitle: 'Your pre-booked ride soon',
+    reminderBody: 'Pickup at {time}',
+    menu: 'My pre-bookings',
+  },
 };
 export default rides;
