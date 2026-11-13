@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import { PasswordInput } from '@/components/PasswordInput';
 
 // Task 014: mandatory passenger sign-in before requesting a ride. Email + password is the default
 // (it works without SMS); the phone-code tab is used when SMS verification is available.
@@ -76,7 +77,7 @@ export function PassengerLoginModal({ onDone, onClose }: { onDone: (p: { phone: 
         {mode === 'email' ? (
           <form className="mt-4 space-y-3" onSubmit={emailLogin}>
             <div><label className="label" htmlFor="plm-email">{t('auth.email')}</label><input id="plm-email" type="email" className="field mt-1" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div><label className="label" htmlFor="plm-pw">{t('auth.password')}</label><input id="plm-pw" type="password" className="field mt-1" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+            <div><label className="label" htmlFor="plm-pw">{t('auth.password')}</label><PasswordInput id="plm-pw" className="field mt-1" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
             <button className="btn-primary w-full" disabled={busy || !email || !password}>{busy ? t('auth.signingIn') : t('auth.signIn')}</button>
             <a href="/register" className="block text-center text-sm text-accent hover:underline">{t('auth.createAccount')}</a>
           </form>

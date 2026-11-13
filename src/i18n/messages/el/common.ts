@@ -44,5 +44,7 @@ const common: Catalog<typeof en> = {
     title: 'Γυρίστε το κινητό κάθετα',
     body: 'Το IL-Y λειτουργεί σε κατακόρυφη προβολή. Κρατήστε το κινητό κάθετα για να συνεχίσετε.',
   },
+  showPassword: 'Εμφάνιση κωδικού',
+  hidePassword: 'Απόκρυψη κωδικού',
 };
 export default common;

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { StaffShell } from '@/components/staff/StaffShell';
 import { api, ApiRequestError } from '@/lib/api-client';
+import { PasswordInput } from '@/components/PasswordInput';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,7 +80,7 @@ function Security() {
         {mfa?.enabled && !mfa.setupRequired && (
           <div className="mt-4 space-y-3 border-t border-edge pt-3">
             <div className="text-sm font-medium">Turn off</div>
-            <div><label className="label" htmlFor="pw">Password</label><input id="pw" type="password" className="field mt-1" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+            <div><label className="label" htmlFor="pw">Password</label><PasswordInput id="pw" className="field mt-1" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
             <div><label className="label" htmlFor="code2">Current code</label><input id="code2" className="field mt-1 text-center font-mono tracking-widest" inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} /></div>
             <button className="btn-ghost w-full" disabled={busy || !password || code.length !== 6} onClick={disable}>Turn off two-factor</button>
           </div>

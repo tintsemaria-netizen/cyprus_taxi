@@ -1,5 +1,9 @@
 # Session handoff
 
+## Show/hide password everywhere (2026-11-13)
+- `src/components/PasswordInput.tsx`: a drop-in for `<input type="password">` with an eye button that toggles show/hide. It has aria-label/aria-pressed and en/ru/el strings `common.showPassword` / `common.hidePassword`; margin classes move to the wrapper.
+- Used on all password fields: passenger /login, /register, the passenger login modal on the booking page, /staff/login, /staff/security. Driver login uses an SMS code, so it has no password field.
+
 ## Pre-bookings: review before taking (2026-11-13)
 - Pre-booking cards (Open and Accepted) have a "View" button instead of Take/Release. It opens `ScheduledDetail` (in `ScheduledRides.tsx`):
   - Full-screen map with pickup and destination markers and the trip route line.

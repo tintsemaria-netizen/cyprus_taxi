@@ -6,6 +6,7 @@ import { Logo } from '@/components/Brand';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
+import { PasswordInput } from '@/components/PasswordInput';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +48,7 @@ export default function Login() {
             </div>
             <div>
               <label className="label" htmlFor="login-f2">{t('auth.password')}</label>
-              <input id="login-f2" type="password" className="field mt-1" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+              <PasswordInput id="login-f2" className="field mt-1" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
             </div>
           </div>
           <button className="btn-primary mt-5 min-h-[44px] w-full" disabled={busy || !email || !password}>{busy ? t('auth.signingIn') : t('auth.signIn')}</button>

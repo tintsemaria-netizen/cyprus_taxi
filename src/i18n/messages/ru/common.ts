@@ -44,5 +44,7 @@ const common: Catalog<typeof en> = {
     title: 'Поверните телефон вертикально',
     body: 'IL-Y работает в вертикальном режиме. Держите телефон вертикально, чтобы продолжить.',
   },
+  showPassword: 'Показать пароль',
+  hidePassword: 'Скрыть пароль',
 };
 export default common;

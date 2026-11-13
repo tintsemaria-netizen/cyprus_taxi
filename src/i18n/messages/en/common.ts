@@ -41,5 +41,7 @@ const common = {
     title: 'Turn your phone upright',
     body: 'IL-Y works in portrait mode. Hold your phone vertically to continue.',
   },
+  showPassword: 'Show password',
+  hidePassword: 'Hide password',
 };
 export default common;

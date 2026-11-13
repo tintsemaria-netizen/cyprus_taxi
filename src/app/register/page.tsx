@@ -6,6 +6,7 @@ import { Logo } from '@/components/Brand';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
+import { PasswordInput } from '@/components/PasswordInput';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,7 +66,7 @@ export default function Register() {
             <div className="mt-4 space-y-3">
               <div><label className="label" htmlFor="register-f1">{t('auth.name')}</label><input id="register-f1" className="field mt-1" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></div>
               <div><label className="label" htmlFor="register-f2">{t('auth.email')}</label><input id="register-f2" type="email" className="field mt-1" value={email} onChange={(e) => setEmail(e.target.value)} autoCapitalize="none" autoComplete="email" inputMode="email" /></div>
-              <div><label className="label" htmlFor="register-f3">{t('auth.password')}</label><input id="register-f3" type="password" className="field mt-1" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" /><p className="mt-1 text-xs text-muted">{t('auth.register.passwordHint')}</p></div>
+              <div><label className="label" htmlFor="register-f3">{t('auth.password')}</label><PasswordInput id="register-f3" className="field mt-1" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" /><p className="mt-1 text-xs text-muted">{t('auth.register.passwordHint')}</p></div>
               <div><label className="label" htmlFor="register-f4">{t('auth.phoneOptional')}</label><input id="register-f4" type="tel" className="field mt-1" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+357…" autoComplete="tel" inputMode="tel" /><p className="mt-1 text-xs text-muted">{t('auth.register.phoneHint')}</p></div>
             </div>
             <button className="btn-primary mt-5 min-h-[44px] w-full" disabled={busy || !name || !email || password.length < 8}>{busy ? t('auth.sending') : t('auth.register.continue')}</button>
