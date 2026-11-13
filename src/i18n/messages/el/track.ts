@@ -151,5 +151,6 @@ const track: Catalog<typeof en> = {
     confirmedNote: 'Το τηλέφωνο και η ζωντανή θέση του οδηγού εμφανίζονται περίπου 30 λεπτά πριν την παραλαβή.',
     flightRow: 'Πτήση: {flight}',
   },
+  newRide: 'Νέα κράτηση',
 };
 export default track;

@@ -141,5 +141,13 @@ const booking = {
     invalid: 'Use a flight number like A3 612.',
     reviewRow: 'Flight',
   },
+  prebooked: {
+    title: 'Pre-booking placed',
+    when: 'Pickup: {when} (Cyprus time)',
+    body: 'We’ll find a driver before the pickup time. You can order more rides now.',
+    another: 'Order another ride',
+    myRides: 'My rides',
+    open: 'Open pre-booking',
+  },
 };
 export default booking;

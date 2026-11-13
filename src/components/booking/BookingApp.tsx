@@ -53,7 +53,9 @@ export default function BookingApp() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [note, setNote] = useState('');
-  const [step, setStep] = useState<'form' | 'review'>('form');
+  const [step, setStep] = useState<'form' | 'review' | 'scheduled'>('form');
+  // After a pre-booking (2026-11-13) the passenger stays here and can order again right away.
+  const [doneAt, setDoneAt] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState<string | null>(null);
   // One-time notice handed over by another page (e.g. "Your account has been deleted").
@@ -276,6 +278,13 @@ export default function BookingApp() {
     return JSON.stringify({ pickup, dropoff, when, scheduledAt, scheduleOffsetMin: offset, vClass, pax: effPax, bags: effBags, name: name.trim(), phone: phone.trim(), note: effNote });
   }
 
+  // Fresh form for the next order (keeps the signed-in passenger).
+  function orderAnother() {
+    setPickup(null); setPickupText(''); setDropoff(null); setDropoffText('');
+    setNote(''); setWhen('NOW'); setScheduledAt(''); setScheduleOffsetMin(undefined);
+    setErrors({}); setBanner(null); idemKey.current = ''; setDoneAt(null); setStep('form');
+  }
+
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (!pickup) e.pickup = t('booking.validation.pickup');
@@ -343,6 +352,11 @@ export default function BookingApp() {
         headers: { 'Idempotency-Key': idemKey.current },
       });
       await api('/tracking/exchange', { method: 'POST', body: { token: res.tracking.token } });
+      if (when === 'SCHEDULE') {
+        // Pre-booking: confirm here instead of jumping to tracking, so another ride can be ordered.
+        setDoneAt(scheduledAt); setStep('scheduled'); setSubmitting(false);
+        return;
+      }
       router.push('/track');
     } catch (err) {
       if (err instanceof ApiRequestError) {
@@ -608,7 +622,22 @@ export default function BookingApp() {
 
                   </div>
                 ) : (
-                  /* ---- REVIEW ---- */
+                  /* ---- REVIEW / PRE-BOOKING DONE ---- */
+                  step === 'scheduled' ? (
+                    <div className="text-center">
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent/15 text-2xl text-accent">✓</div>
+                      <h2 className="mt-3 text-xl font-bold">{t('booking.prebooked.title')}</h2>
+                      <p className="mt-1 text-sm text-muted">{t('booking.prebooked.when', { when: (doneAt ?? '').replace('T', ' ') })}</p>
+                      <p className="mt-2 text-sm text-muted">{t('booking.prebooked.body')}</p>
+                      <div className="mt-5 space-y-2">
+                        <button className="btn-primary w-full" onClick={orderAnother}>{t('booking.prebooked.another')}</button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <a href="/rides" className="btn-ghost w-full">{t('booking.prebooked.myRides')}</a>
+                          <a href="/track" className="btn-ghost w-full">{t('booking.prebooked.open')}</a>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
                   <div>
                     <button className="mb-3 text-sm text-muted hover:text-ink" onClick={() => setStep('form')}>{t('booking.review.edit')}</button>
                     <h2 className="text-xl font-bold">{t('booking.review.title')}</h2>
@@ -648,6 +677,7 @@ export default function BookingApp() {
                     )}
                     <p className="mt-2 text-center text-xs text-muted">{when === 'NOW' ? t('booking.review.autoMatchNow') : t('booking.review.autoMatchScheduled')} {t('booking.review.trackingAndPay')}</p>
                   </div>
+                  )
                 )}
               </div>
               {step === 'form' && (

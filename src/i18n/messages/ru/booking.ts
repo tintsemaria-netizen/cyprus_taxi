@@ -149,5 +149,13 @@ const booking: Catalog<typeof en> = {
     invalid: 'Укажите номер рейса, например A3 612.',
     reviewRow: 'Рейс',
   },
+  prebooked: {
+    title: 'Предзаказ оформлен',
+    when: 'Подача: {when} (время Кипра)',
+    body: 'Мы подберём водителя до времени подачи. Можно сразу оформить ещё заказы.',
+    another: 'Заказать ещё',
+    myRides: 'Мои поездки',
+    open: 'Открыть предзаказ',
+  },
 };
 export default booking;

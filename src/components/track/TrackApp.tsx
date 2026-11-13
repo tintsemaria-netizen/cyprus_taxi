@@ -311,6 +311,8 @@ export default function TrackApp() {
                 {view.status === 'REQUESTED' && !view.confirmedDriver && (
                   <p className="mt-1 text-sm text-muted">{t('track.scheduledNote')}</p>
                 )}
+                {/* A pre-booking doesn't block further orders (2026-11-13). */}
+                {view.status === 'REQUESTED' && <a href="/" className="btn-ghost mt-3 w-full">＋ {t('track.newRide')}</a>}
                 {view.status === 'REQUESTED' && view.confirmedDriver && (
                   <div className="mt-3 rounded-[12px] border border-accent/40 bg-accent/5 p-3">
                     <div className="text-xs font-semibold uppercase tracking-wide text-accent">✓ {t('track.prebook.confirmedTitle')}</div>

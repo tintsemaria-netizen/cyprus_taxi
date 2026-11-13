@@ -1,5 +1,12 @@
 # Session handoff
 
+## Passenger can keep ordering after a pre-booking (2026-11-13)
+- The server never limited a passenger to one booking. Checked: pre-booking, then NOW, then another pre-booking, all 201.
+- The UI used to jump to /track right after a pre-booking. Now `BookingApp` shows a "Pre-booking placed" step: pickup time (Cyprus), a short note, "Order another ride" (`orderAnother()` resets the form and the idempotency key), "My rides" and "Open pre-booking" (/track). Immediate rides still go to /track.
+- /track for a pre-booking (REQUESTED) has a "＋ New order" button.
+- Playwright: full UI pre-booking → done screen → order another (empty form) → /track shows New order.
+- Pre-bookings will later be paid by card (no payment code yet; nothing promised in the UI).
+
 ## Show/hide password everywhere (2026-11-13)
 - `src/components/PasswordInput.tsx`: a drop-in for `<input type="password">` with an eye button that toggles show/hide. It has aria-label/aria-pressed and en/ru/el strings `common.showPassword` / `common.hidePassword`; margin classes move to the wrapper.
 - Used on all password fields: passenger /login, /register, the passenger login modal on the booking page, /staff/login, /staff/security. Driver login uses an SMS code, so it has no password field.

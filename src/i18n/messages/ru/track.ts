@@ -156,5 +156,6 @@ const track: Catalog<typeof en> = {
     confirmedNote: 'Телефон и местоположение водителя появятся примерно за 30 минут до подачи.',
     flightRow: 'Рейс: {flight}',
   },
+  newRide: 'Новый заказ',
 };
 export default track;
