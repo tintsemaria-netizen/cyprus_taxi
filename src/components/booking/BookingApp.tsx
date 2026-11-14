@@ -55,6 +55,9 @@ export default function BookingApp() {
   const [phone, setPhone] = useState('');
   const [note, setNote] = useState('');
   const [step, setStep] = useState<'form' | 'review' | 'scheduled'>('form');
+  // The booking panel floats over the map and can be collapsed to a slim bar (2026-11-14).
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => { setCollapsed(false); }, [step]);
   // After a pre-booking (2026-11-13) the passenger stays here and can order again right away.
   const [doneAt, setDoneAt] = useState<string | null>(null);
   // Pre-booking reminder on the home page (2026-11-13): the signed-in passenger's next scheduled
@@ -170,13 +173,10 @@ export default function BookingApp() {
     window.addEventListener('orientationchange', upd);
     return () => { window.removeEventListener('resize', upd); window.removeEventListener('orientationchange', upd); };
   }, []);
-  // The booking page has NO background map until the passenger has chosen both stops
-  // (2026-11-13): then the map appears with their route. Live tracking has its own map.
-  const showMap = !!(pickup && dropoff);
+  // The map is always the page background (2026-11-14); the booking panel floats over it.
   // Live on-duty cars shown on the booking map (anonymized positions), polled while it is shown.
   const [fleet, setFleet] = useState<{ lat: number; lng: number; stale?: boolean; state?: 'available' | 'busy' }[]>([]);
   useEffect(() => {
-    if (!showMap) return;
     let alive = true;
     const load = () => {
       if (document.visibilityState !== 'visible') return;
@@ -187,15 +187,15 @@ export default function BookingApp() {
     load();
     const t = setInterval(load, 12000);
     return () => { alive = false; clearInterval(t); };
-  }, [showMap]);
+  }, []);
 
   const fitPadding = useMemo(
     () => (vp.w < 640
       // Mobile: the booking sheet covers most of the screen, so fit the island into
       // the small visible band at the top (large bottom padding).
-      ? { top: 16, right: 24, bottom: Math.round(vp.h * 0.62), left: 24 }
-      : { top: 40, right: 60, bottom: 40, left: 420 }),
-    [vp],
+      ? { top: 16, right: 24, bottom: collapsed ? 110 : Math.round(vp.h * 0.62), left: 24 }
+      : collapsed ? { top: 110, right: 60, bottom: 40, left: 40 } : { top: 40, right: 60, bottom: 40, left: 420 }),
+    [vp, collapsed],
   );
 
   const markers = useMemo<MapMarker[]>(() => {
@@ -479,21 +479,36 @@ export default function BookingApp() {
               open (frees the WebGL context and avoids two simultaneous map instances). */}
           {picker ? (
             <div className="h-full w-full bg-[#0e1518]" />
-          ) : !showMap ? (
-            // Plain branded background until both stops are chosen.
-            <div className="flex h-full w-full items-start justify-center bg-[radial-gradient(120%_80%_at_50%_0%,rgba(190,242,100,0.10),transparent_60%),linear-gradient(180deg,#121a1d,#0e1518)] pt-10 sm:items-center sm:pl-[400px] sm:pt-0">
-              <div className="flex flex-col items-center px-6 text-center opacity-90">
-                <Logo className="h-14 sm:h-20" />
-              </div>
-            </div>
           ) : (
             <AutoMapView markers={markers} route={route?.line} fleet={fleet} focus={myLoc} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} className="h-full w-full" />
           )}
         </div>
 
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end sm:block">
-          <div className="pointer-events-auto w-full sm:absolute sm:left-4 sm:top-4 sm:h-[calc(100%-2rem)] sm:w-[380px]">
-            <div className="card flex max-h-[64dvh] flex-col overflow-hidden sm:max-h-full">
+          <div className="w-full sm:absolute sm:left-4 sm:top-4 sm:h-[calc(100%-2rem)] sm:w-[380px]">
+            <div className="card pointer-events-auto flex max-h-[64dvh] flex-col overflow-hidden sm:max-h-full">
+              {/* Drag-handle style toggle: tap to collapse the panel and see the map. */}
+              <button
+                type="button"
+                onClick={() => setCollapsed((c) => !c)}
+                aria-expanded={!collapsed}
+                aria-label={collapsed ? t('booking.sheet.expand') : t('booking.sheet.collapse')}
+                className="flex w-full shrink-0 flex-col items-center gap-1 px-4 pb-1 pt-2 text-muted hover:text-ink"
+              >
+                <span className="h-1 w-10 rounded-full bg-edge-strong" />
+                {collapsed ? (
+                  <span className="flex w-full items-center justify-between gap-3 py-1.5 text-left" style={{ paddingBottom: 'max(0.375rem, env(safe-area-inset-bottom))' }}>
+                    <span className="min-w-0">
+                      <span className="block text-base font-bold text-ink">{t('booking.form.title')}</span>
+                      {pickup && dropoff && <span className="block truncate text-xs">{pickup.label} → {dropoff.label}</span>}
+                    </span>
+                    <span className="shrink-0 text-sm font-medium text-accent">{t('booking.sheet.expand')} ▲</span>
+                  </span>
+                ) : (
+                  <span className="text-xs">{t('booking.sheet.collapse')} ▼</span>
+                )}
+              </button>
+              {!collapsed && (<>
               <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5" style={{ paddingBottom: step === 'form' ? '1rem' : 'max(1rem, env(safe-area-inset-bottom))' }}>
                 {step === 'form' ? (
                   /* ---- FORM (inlined so inputs keep focus across renders) ---- */
@@ -723,6 +738,7 @@ export default function BookingApp() {
                   {!passenger && pickup && dropoff && <p className="mt-2 text-center text-xs text-muted">{t('booking.cta.signInFirst')}</p>}
                 </div>
               )}
+              </>)}
             </div>
           </div>
         </div>

@@ -92,6 +92,7 @@ const booking: Catalog<typeof en> = {
     bookingFailed: 'Δεν ήταν δυνατή η δημιουργία της κράτησης.',
     networkSafe: 'Πρόβλημα δικτύου — τα στοιχεία σας δεν χάθηκαν. Ελέγξτε τη σύνδεση και δοκιμάστε ξανά.',
   },
+  sheet: { collapse: 'Σύμπτυξη', expand: 'Ανάπτυξη' },
   cta: {
     request: 'Κλείστε διαδρομή',
     requestClass: 'Κράτηση {vClass}',

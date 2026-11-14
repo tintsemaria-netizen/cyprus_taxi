@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-14 — Passenger home: map is the background again, collapsible booking panel
+- `BookingApp`: the map (with the live fleet) is always shown behind the booking form. The plain logo background from 2026-11-13 is removed.
+- The panel has a handle button at the top: «Свернуть ▼» / a collapsed bar «Куда едем? … Развернуть ▲» (keys `booking.sheet.*` in en/ru/el). The panel re-expands on any step change.
+- `fitPadding` follows the collapsed state, so the route stays visible.
+- Checked with Playwright (iPhone 13 and desktop, local build): collapse and expand work, no page errors. The config-error banner in local screenshots comes from the local environment.
+
 ## 2026-11-14 — Admin/dispatch consoles localized (RU)
 - New i18n namespace `staff` (`src/i18n/messages/{en,ru}/staff.ts`; `el` reuses English for now).
 - Translated: StaffShell nav and role, StatusBadge (`statusLabel()` helper), dispatch queue and booking detail, admin drivers/vehicles/settings/applications (+detail)/reliability/analytics, staff/security, useDialog default Cancel, and ConfirmSheet validation.
