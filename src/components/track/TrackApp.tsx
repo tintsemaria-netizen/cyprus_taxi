@@ -6,6 +6,8 @@ import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
 import { ChatPanel } from '@/components/ChatPanel';
 import { NotifyToggle } from '@/components/NotifyToggle';
+import { useLiveLocation } from '@/components/useLiveLocation';
+import { ShareLocationToggle } from './ShareLocationToggle';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { formatFlight } from '@/lib/flight';
@@ -204,6 +206,12 @@ export default function TrackApp() {
     }
   }
 
+  // Passenger's own live position (person marker) and opt-in sharing with the driver before
+  // pickup (2026-11-15). Asking the browser only happens once sharing is switched on.
+  const prePickup = view?.status === 'ASSIGNED' || view?.status === 'EN_ROUTE' || view?.status === 'ARRIVED';
+  const [wantLoc, setWantLoc] = useState(false);
+  const myLive = useLiveLocation(view?.status !== 'IN_PROGRESS', wantLoc);
+
   // Tick the pickup-waiting timer once per second while the driver is waiting.
   const arrived = view?.status === 'ARRIVED';
   useEffect(() => {
@@ -266,6 +274,7 @@ export default function TrackApp() {
   // Before pickup, anchor on the pickup; during the trip, anchor on the destination.
   if (view.status === 'IN_PROGRESS') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
   else markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label });
+  if (myLive && view.status !== 'IN_PROGRESS') markers.push({ id: 'me', lat: myLive.lat, lng: myLive.lng, kind: 'person', label: t('booking.youAreHere') });
   if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: t('track.yourDriver'), stale: liveLocation.freshness === 'stale' });
 
   const etaMinText = view.pickupEtaMin != null ? tp('common.minutes', view.pickupEtaMin) : null;
@@ -396,6 +405,7 @@ export default function TrackApp() {
                 {!terminal && (
                   <div className="mt-4 space-y-2">
                     <NotifyToggle pushUrl="/tracking/push" className="pb-1" />
+                    <ShareLocationToggle active={prePickup} loc={myLive} onWantLocation={setWantLoc} />
                     <div className="grid grid-cols-2 gap-2">
                       <button type="button" className="btn-ghost !min-h-[44px] text-sm" onClick={share}>{t('track.shareTrip')}</button>
                       <button type="button" className="btn-ghost !min-h-[44px] text-sm" onClick={() => setSafety(true)}>{t('track.safety')}</button>

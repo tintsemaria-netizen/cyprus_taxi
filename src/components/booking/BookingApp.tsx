@@ -11,6 +11,7 @@ import AutoMapPicker from './AutoMapPicker';
 import { PassengerLoginModal } from './PassengerLoginModal';
 import { AccountMenu } from './AccountMenu';
 import { recordVisit } from '@/lib/navTrail';
+import { useLiveLocation } from '@/components/useLiveLocation';
 import { nicosiaInputValue } from '@/lib/timezone';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
@@ -288,12 +289,17 @@ export default function BookingApp() {
   // Phones open with the sheet collapsed so the map is visible; tablets/desktop keep the panel open.
   useEffect(() => { if (window.innerWidth < 640) setCollapsed(true); }, []);
 
+  // Live "you are here" person marker (2026-11-15). Starts once the browser has location
+  // permission (the first-load detection above asks for it).
+  const live = useLiveLocation(true, false);
+  const meNow = live ?? myLoc;
   const markers = useMemo<MapMarker[]>(() => {
     const m: MapMarker[] = [];
     if (pickup) m.push({ id: 'p', lat: pickup.lat, lng: pickup.lng, kind: 'pickup', label: pickup.label });
     if (dropoff) m.push({ id: 'd', lat: dropoff.lat, lng: dropoff.lng, kind: 'dropoff', label: dropoff.label });
+    if (meNow) m.push({ id: 'me', lat: meNow.lat, lng: meNow.lng, kind: 'person', label: t('booking.youAreHere') });
     return m;
-  }, [pickup, dropoff]);
+  }, [pickup, dropoff, meNow, t]);
 
   // Real driving route (distance + trip duration + geometry) between the two stops.
   // Debounced, aborted on change, stale-guarded — NOT recomputed on every render.

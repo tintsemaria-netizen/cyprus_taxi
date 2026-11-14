@@ -97,6 +97,7 @@ const booking: Catalog<typeof en> = {
     bookingFailed: 'Не удалось создать заказ.',
     networkSafe: 'Проблема с сетью — ваши данные сохранены. Проверьте подключение и повторите.',
   },
+  youAreHere: 'Вы здесь',
   sheet: { collapse: 'Свернуть', expand: 'Развернуть' },
   cta: {
     request: 'Заказать поездку',

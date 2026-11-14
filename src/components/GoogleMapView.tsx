@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { CYPRUS_BOUNDS } from '@/lib/config';
 import type { MapMarker } from './MapView';
-import { vehicleMarkerEl, setVehicleHeading, bearing } from './carMarker';
+import { fitKeyOf } from './mapFit';
+import { vehicleMarkerEl, setVehicleHeading, bearing, personMarkerEl } from './carMarker';
 import { useIdleReturn } from './useIdleReturn';
 
 interface Props {
@@ -63,6 +64,7 @@ function markerEl(mk: MapMarker): HTMLElement {
     el.dataset.sig = `${mk.busy ? 1 : 0}|${mk.tag ?? ''}`;
     return centerOnPoint(el);
   }
+  if (mk.kind === 'person') return centerOnPoint(personMarkerEl({ title: mk.label, stale: mk.stale }));
   const el = document.createElement('div');
   el.style.cssText = `width:18px;height:18px;border-radius:50px;background:${COLORS[mk.kind]};border:2px solid #0d1608;box-shadow:0 0 0 3px rgba(200,255,70,0.25);opacity:${mk.stale ? 0.5 : 1};display:flex;align-items:center;justify-content:center;font-size:14px`;
   el.title = mk.label || mk.kind;
@@ -180,7 +182,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     for (const mk of markers) {
       let marker = markerMap.current.get(mk.id);
       if (!marker) {
-        marker = new g.marker.AdvancedMarkerElement({ map, position: { lat: mk.lat, lng: mk.lng }, content: markerEl(mk), title: mk.label, ...(mk.self ? { zIndex: 1000 } : {}) });
+        marker = new g.marker.AdvancedMarkerElement({ map, position: { lat: mk.lat, lng: mk.lng }, content: markerEl(mk), title: mk.label, ...(mk.self ? { zIndex: 1000 } : mk.kind === 'person' ? { zIndex: 900 } : {}) });
         markerMap.current.set(mk.id, marker);
         posMap.current.set(mk.id, { lat: mk.lat, lng: mk.lng });
         continue;
@@ -219,7 +221,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   // Frame the view. Keyed on a signature that IGNORES vehicle movement, so a moving
   // driver dot animates freely without the map re-fitting/zooming every GPS tick — it
   // only re-frames when the stops (pickup/dropoff) or the marker set change.
-  const fitKey = markers.map((m) => (m.kind === 'vehicle' ? 'v' : `${m.id}:${m.lat.toFixed(4)},${m.lng.toFixed(4)}`)).join('|');
+  const fitKey = fitKeyOf(markers);
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
     if (!map || !g || !ready || followRef.current || idle.active.current) return;

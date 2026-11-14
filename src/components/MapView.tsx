@@ -5,14 +5,15 @@ import type * as maplibregl from 'maplibre-gl';
 import { loadMaplibre } from '@/lib/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { publicMapConfig } from '@/lib/config';
-import { vehicleMarkerEl } from './carMarker';
+import { vehicleMarkerEl, personMarkerEl } from './carMarker';
 import { useIdleReturn } from './useIdleReturn';
+import { fitKeyOf } from './mapFit';
 
 export interface MapMarker {
   id: string;
   lat: number;
   lng: number;
-  kind: 'pickup' | 'dropoff' | 'vehicle';
+  kind: 'pickup' | 'dropoff' | 'vehicle' | 'person';
   label?: string;
   stale?: boolean;
   /** Visible label under a vehicle marker (e.g. plate number on staff maps). */
@@ -71,6 +72,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
   // with idleReturnMs, hands the camera back after that many ms without gestures.
   const idleReturnRef = useRef(onIdleReturn);
   idleReturnRef.current = onIdleReturn;
+  const lastFit = useRef('');
   const idle = useIdleReturn(containerRef, idleReturnMs, {
     onStart: () => { if (followRef.current) breakRef.current?.(); },
     onReturn: () => idleReturnRef.current?.(),
@@ -139,6 +141,8 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         let el: HTMLElement;
         if (mk.kind === 'vehicle') {
           el = vehicleMarkerEl({ state: mk.self ? 'self' : mk.busy ? 'busy' : 'available', stale: mk.stale, title: mk.label || 'Your driver', tag: mk.tag });
+        } else if (mk.kind === 'person') {
+          el = personMarkerEl({ title: mk.label, stale: mk.stale });
         } else {
           el = document.createElement('div');
           el.style.width = '18px';
@@ -154,8 +158,12 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         if (mk.self) marker.getElement().style.zIndex = '1000';
         markerObjs.current.push(marker);
       }
-      // Fit to markers if more than one (not while the navigation camera is following).
+      // Fit to markers if more than one (not while the navigation camera is following). Moving
+      // markers (cars, the live person) do not re-fit — only a change of the fixed points does.
       if (followRef.current || idle.active.current) return;
+      const key = `${fitKeyOf(markers)}#${idle.returnTick}`;
+      if (key === lastFit.current) return;
+      lastFit.current = key;
       if (markers.length >= 2) {
         const b = new maplibre.LngLatBounds();
         markers.forEach((m) => b.extend([m.lng, m.lat]));

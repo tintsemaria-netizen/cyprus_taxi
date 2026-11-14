@@ -1,3 +1,4 @@
+import { passengerLocationForDriver } from '@/server/passenger-location';
 import { prisma } from '@/lib/db';
 import { computeFreshness, poorAccuracy } from '@/lib/freshness';
 import { demoEstimate } from '@/lib/places';
@@ -195,6 +196,7 @@ export async function driverCurrentTrip(driverId: string) {
       status: b.status,
       revision: b.revision,
       pickup: { lat: b.pickupLat, lng: b.pickupLng, label: b.pickupLabel },
+      passengerLocation: passengerLocationForDriver(b),
       dropoff: { lat: b.dropoffLat, lng: b.dropoffLng, label: b.dropoffLabel },
       passengerName: b.passengerName,
       passengerPhone: b.phone, // driver may contact passenger

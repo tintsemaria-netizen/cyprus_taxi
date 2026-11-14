@@ -454,6 +454,11 @@ model Booking {
   passengerCount Int
   luggageCount   Int       @default(0) // bags; asked on pre-bookings, shown to the driver
   passengerRemindedAt DateTime? // pre-booking: "ride in ~1 hour" reminder queued
+  // Opt-in live passenger position for the driver, before pickup only (2026-11-15).
+  passengerLat          Float?
+  passengerLng          Float?
+  passengerLocAccuracyM Float?
+  passengerLocAt        DateTime?
   requestedAt    DateTime      @default(now())
   scheduledAt    DateTime?
   status         BookingStatus @default(REQUESTED)

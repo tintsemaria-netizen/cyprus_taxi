@@ -294,6 +294,8 @@ const driver = {
     gpsOffTitle: 'Turn on location sharing to navigate. The passenger sees your car from it too.',
     mute: 'Mute voice guidance',
     unmute: 'Turn voice guidance on',
+    paxAtPickup: 'Passenger shares location: at the pickup point',
+    paxFromPickup: 'Passenger shares location: {m} from the pickup point',
     recenter: 'Re-centre',
     details: 'Details',
     hideDetails: 'Hide',

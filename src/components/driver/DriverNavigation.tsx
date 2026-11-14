@@ -20,6 +20,8 @@ export interface NavTrip {
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string };
   passengerName: string; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; luggageCount?: number; vClass: string;
   waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
+  /** Passenger's live position, only if they chose to share it, only before pickup (2026-11-15). */
+  passengerLocation?: { lat: number; lng: number; accuracyM: number; ageSec: number } | null;
 }
 interface NavRoute { distanceM: number; durationSec: number; path: [number, number][]; steps: NavStep[]; fetchedAt: number; from: LatLng }
 type NavResp = { available: boolean; reason?: string; distanceM?: number; durationSec?: number; path?: [number, number][]; steps?: NavStep[] };
@@ -163,6 +165,9 @@ export function DriverNavigation(props: {
   markers.push(leg === 'dropoff'
     ? { id: 'dp', lat: trip.dropoff.lat, lng: trip.dropoff.lng, kind: 'dropoff', label: t('driver.map.destination') }
     : { id: 'pk', lat: trip.pickup.lat, lng: trip.pickup.lng, kind: 'pickup', label: t('driver.map.pickup') });
+  const paxLoc = leg === 'pickup' ? trip.passengerLocation ?? null : null;
+  if (paxLoc) markers.push({ id: 'pax', lat: paxLoc.lat, lng: paxLoc.lng, kind: 'person', label: trip.passengerName });
+  const paxFromPickupM = paxLoc ? Math.round(metersBetween(paxLoc, trip.pickup)) : null;
   const routeLine = useMemo(() => (route ? route.path.slice(Math.max(0, (progress?.seg ?? 0))).map(([la, ln]) => [ln, la] as [number, number]) : []), [route, progress?.seg]);
   const externalHref = `https://www.google.com/maps/dir/?api=1&destination=${target.lat},${target.lng}&travelmode=driving`;
 
@@ -240,6 +245,12 @@ export function DriverNavigation(props: {
           <span className="text-muted">{leg === 'pickup' ? t('driver.navigation.toPickup') : t('driver.navigation.toDestination')}</span>{' '}
           <span className="font-medium">{target.label}</span>
         </div>
+        {paxLoc && paxFromPickupM != null && (
+          <div className="mt-1 flex items-center gap-1.5 text-sm text-[#7FB6FF]">
+            <span aria-hidden="true">🧍</span>
+            {paxFromPickupM <= 30 ? t('driver.navigation.paxAtPickup') : t('driver.navigation.paxFromPickup', { m: paxFromPickupM < 1000 ? `${paxFromPickupM} ${t('driver.home.gpsM')}` : `${(paxFromPickupM / 1000).toFixed(1)} km` })}
+          </div>
+        )}
         <div className="mt-1 flex items-center gap-2 text-sm">
           <span className="font-medium">{trip.passengerName}</span>
           <span className="text-muted">· {t('driver.units.paxShort', { count: trip.passengerCount })}{trip.luggageCount ? ` · 🧳 ${trip.luggageCount}` : ''} · {trip.vClass}</span>
@@ -290,4 +301,11 @@ export function DriverNavigation(props: {
       )}
     </div>
   );
+}
+
+function metersBetween(a: LatLng, b: LatLng): number {
+  const R = 6371000, r = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
 }

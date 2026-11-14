@@ -10,6 +10,7 @@ import { enqueuePassenger } from '@/server/push';
 import { recordEvent } from '@/server/events';
 import { heartbeat } from '@/server/workers/heartbeat';
 import { runPassengerReminders } from './passenger-reminders';
+import { purgePassengerLocations } from '@/server/passenger-location';
 
 // Supervised worker loop (Task 012 §4, restructured for Task 016 §4). Postgres-backed jobs with
 // a lease so multiple instances/ticks are safe; recovers on restart because state lives in the DB.
@@ -100,6 +101,7 @@ async function runDispatchSection(now: Date): Promise<void> {
   // search in the same tick.
   await runPreassignments(now);
   await runPassengerReminders(now); // passenger "ride in ~1 hour" push for pre-bookings
+  await purgePassengerLocations(now); // shared passenger location: kept only until pickup
   await promoteScheduled(now);
   await rematchOnGpsLoss(now);
   await repairSearchWithoutJob(now);

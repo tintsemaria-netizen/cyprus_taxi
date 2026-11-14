@@ -99,3 +99,24 @@ export function bearing(from: { lat: number; lng: number }, to: { lat: number; l
   const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
   return (Math.atan2(y, x) * 180) / Math.PI;
 }
+
+/**
+ * "You are here" person marker (2026-11-15): a blue disc with a simple standing-figure pictogram
+ * and a soft halo. Used for the passenger's live position on their own map and, when the
+ * passenger chooses to share it, on the driver's map before pickup. Centred on its point.
+ */
+export function personMarkerEl(opts: { title?: string; size?: number; stale?: boolean } = {}): HTMLElement {
+  const { title, size = 34, stale = false } = opts;
+  const el = document.createElement('div');
+  el.style.cssText =
+    `width:${size}px;height:${size}px;opacity:${stale ? 0.55 : 1};` +
+    'filter:drop-shadow(0 2px 3px rgba(0,0,0,0.45));z-index:900;transition:opacity .2s ease';
+  el.innerHTML = `<svg viewBox="0 0 34 34" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <circle cx="17" cy="17" r="16" fill="rgba(76,154,255,0.22)"/>
+    <circle cx="17" cy="17" r="12" fill="#4C9AFF" stroke="#ffffff" stroke-width="2.4"/>
+    <circle cx="17" cy="11.6" r="2.6" fill="#ffffff"/>
+    <path d="M13.2 22.6v-4.3q0-3.2 3.8-3.2t3.8 3.2v4.3h-1.9v3.4h-3.8v-3.4z" fill="#ffffff"/>
+  </svg>`;
+  if (title) el.title = title;
+  return el;
+}

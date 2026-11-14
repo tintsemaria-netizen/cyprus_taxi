@@ -89,6 +89,7 @@ const booking = {
     bookingFailed: 'Could not create the booking.',
     networkSafe: 'Network problem — your details are safe. Check connection and retry.',
   },
+  youAreHere: 'You are here',
   sheet: { collapse: 'Collapse', expand: 'Expand' },
   cta: {
     request: 'Request a ride',

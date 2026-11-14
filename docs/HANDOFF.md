@@ -1,5 +1,23 @@
 # Session handoff
 
+## 2026-11-15 — Passenger «you are here» marker + opt-in location sharing with the driver
+- Map: new `MapMarker.kind 'person'` (`personMarkerEl` in carMarker.ts: a blue disc with a figure, centred) on both MapView and GoogleMapView. `fitKeyOf` (`src/components/mapFit.ts`) ignores moving markers (vehicle, person), so they never re-fit the map; MapLibre now fits only when the fixed points change.
+- `src/components/useLiveLocation.ts`: watchPosition while the page is visible; only if permission is already granted unless `prompt`.
+  - Home: a person marker «Вы здесь».
+  - Track: a person marker before IN_PROGRESS.
+- Opt-in sharing (only the FULL tracking session; never a share link): `ShareLocationToggle` on the track screen, «Показать водителю, где я», shown only for ASSIGNED / EN_ROUTE / ARRIVED.
+  - Sends every 10 s to `POST /api/v1/tracking/location`; DELETE when switched off or after pickup.
+  - Not automatic, because the booker may order for someone else.
+- DB: migration `20261115010000_booking_passenger_location` adds Booking.passengerLat/Lng/LocAccuracyM/LocAt.
+- `src/server/passenger-location.ts`:
+  - saves only pre-pickup;
+  - `passengerLocationForDriver` returns only pre-pickup fixes younger than 60 s;
+  - the worker `purgePassengerLocations` wipes positions after pickup, at ride end, or after 5 min.
+- Driver: `driverCurrentTrip` includes `passengerLocation`. DriverNavigation shows a person marker plus «🧍 Клиент делится местоположением: в N м от точки подачи» (or «на точке подачи» if ≤30 m).
+- Privacy page: paragraph added.
+- Tests: `tests/passenger-location.db.test.ts`.
+- Playwright end-to-end (local): the passenger 120 m from pickup turns sharing on → the driver sees the marker and «в 123 м от точки подачи» → switched off → the driver line disappears. No errors.
+
 ## 2026-11-14 — FIX: cars drawn on the neighbouring street (Google map anchor)
 - Google `AdvancedMarkerElement` anchors content at the bottom-centre. Our cars and dots are centred, so every Google marker was drawn half its height north of its real position. After the ×2 car size, the 84 px own car sat 42 px off: correct when zoomed in, the next street at normal zoom.
 - `centerOnPoint()` in GoogleMapView (`translateY(50%)`) is applied to vehicle, pickup/dropoff and fleet markers; the picker's blue device dot gets the same.

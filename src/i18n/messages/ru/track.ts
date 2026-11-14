@@ -2,6 +2,7 @@ import type { Catalog } from '../../types';
 import type en from '../en/track';
 
 const track: Catalog<typeof en> = {
+  shareLoc: { off: 'Показать водителю, где я', on: 'Водитель видит, где вы', hint: 'Только до посадки. Включайте, если забирают именно вас.', waiting: 'Определяем ваше местоположение…' },
   loadingRide: 'Загружаем вашу поездку…',
   reconnecting: 'Переподключение…',
   noRideTitle: 'Активной поездки нет',
