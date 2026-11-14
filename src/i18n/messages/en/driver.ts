@@ -112,6 +112,8 @@ const driver = {
   },
   home: {
     earnedToday: 'earned today',
+    gpsM: 'm',
+    gpsWeak: 'weak signal',
     gpsOn: 'GPS on',
     gpsOff: 'Turn on GPS',
     todaysEarnings: 'Today’s earnings',

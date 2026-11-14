@@ -8,6 +8,7 @@ import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { ScheduledRides } from '@/components/driver/ScheduledRides';
 import { DriverNavigation } from '@/components/driver/DriverNavigation';
+import { filterFix, initialFilterState, accuracyLevel, type FilterState } from '@/lib/gpsFilter';
 import { DriverHomeMap } from '@/components/driver/DriverHomeMap';
 import { unlockOfferSound, playOfferChime, vibrateOffer, keepScreenOn } from '@/lib/driver-alerts';
 import { formatFlight } from '@/lib/flight';
@@ -87,7 +88,7 @@ function Driver() {
   const [data, setData] = useState<CurrentTrip | null>(null);
   const [dash, setDash] = useState<Dashboard | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
-  const [gps, setGps] = useState<{ active: boolean; error: string | null; last: string | null }>({ active: false, error: null, last: null });
+  const [gps, setGps] = useState<{ active: boolean; error: string | null; last: string | null; accuracyM?: number | null }>({ active: false, error: null, last: null });
   const [offer, setOffer] = useState<Offer | null>(null);
   const [nowMs, setNowMs] = useState<number>(0);
   const [offerBusy, setOfferBusy] = useState(false);
@@ -99,6 +100,10 @@ function Driver() {
   const lastPos = useRef<GeolocationPosition | null>(null);
   const session = useRef<string>('');
   const seq = useRef<number>(0);
+  // GPS quality (2026-11-14): filter bad fixes, never stay stuck in the coarse Wi-Fi/cell mode.
+  const filterRef = useRef<FilterState>(initialFilterState());
+  const highModeRef = useRef(true);
+  const retryTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
     try { setData(await api<CurrentTrip>('/driver/current-trip')); }
@@ -118,16 +123,26 @@ function Driver() {
   function stopGps() {
     if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current);
     if (sendTimer.current) clearInterval(sendTimer.current);
+    if (retryTimer.current) clearInterval(retryTimer.current);
+    retryTimer.current = null;
     watchId.current = null; sendTimer.current = null; lastPos.current = null; posRef.current = null;
     setPos(null); setGps((g) => ({ ...g, active: false }));
   }
   function beginWatch(highAccuracy: boolean) {
     if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current);
     watchId.current = navigator.geolocation.watchPosition(
-      (p) => { lastPos.current = p; const c = { lat: p.coords.latitude, lng: p.coords.longitude }; posRef.current = c; setPos(c); setGps((g) => ({ ...g, error: null })); },
+      (p) => {
+        const acc = p.coords.accuracy ?? 9999;
+        if (highAccuracy) highModeRef.current = true;
+        setGps((g) => ({ ...g, error: null, accuracyM: Math.round(acc) }));
+        const r = filterFix(filterRef.current, { lat: p.coords.latitude, lng: p.coords.longitude, accuracyM: acc, t: p.timestamp || Date.now() });
+        filterRef.current = r.state;
+        if (r.verdict !== 'accept') return; // neighbouring-street jump or a poor fix while a good one is recent
+        lastPos.current = p; const c = { lat: p.coords.latitude, lng: p.coords.longitude }; posRef.current = c; setPos(c);
+      },
       (err) => {
         if (err.code === err.PERMISSION_DENIED) { setGps((g) => ({ ...g, active: false, error: 'denied' })); stopGps(); return; }
-        if (highAccuracy) { beginWatch(false); return; }
+        if (highAccuracy) { highModeRef.current = false; beginWatch(false); return; }
         setGps((g) => ({ ...g, error: lastPos.current ? null : 'acquiring' }));
       },
       highAccuracy ? { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 } : { enableHighAccuracy: false, maximumAge: 60000, timeout: 30000 },
@@ -135,8 +150,12 @@ function Driver() {
   }
   function startGps() {
     if (!('geolocation' in navigator)) { setGps({ active: false, error: 'unsupported', last: null }); return; }
-    session.current = uuid(); seq.current = 0; setGps({ active: true, error: null, last: null });
+    session.current = uuid(); seq.current = 0; setGps({ active: true, error: null, last: null, accuracyM: null });
+    filterRef.current = initialFilterState(); highModeRef.current = true;
     beginWatch(true); sendTimer.current = setInterval(sendSample, 5000);
+    // In the coarse fallback, try precise GPS again every 30 s instead of staying coarse forever.
+    if (retryTimer.current) clearInterval(retryTimer.current);
+    retryTimer.current = setInterval(() => { if (!highModeRef.current && watchId.current !== null) beginWatch(true); }, 30_000);
   }
   async function sendSample() {
     const p = lastPos.current; if (!p) return; seq.current += 1;
@@ -280,7 +299,7 @@ function Driver() {
 // ---- Home ----
 function HomeSection(props: {
   banner: string | null; onDismissBanner: () => void;
-  data: CurrentTrip; dash: Dashboard | null; gps: { active: boolean; error: string | null; last: string | null };
+  data: CurrentTrip; dash: Dashboard | null; gps: { active: boolean; error: string | null; last: string | null; accuracyM?: number | null };
   pos: { lat: number; lng: number } | null;
   offer: Offer | null; offerSecs: number; offerBusy: boolean;
   onDuty: (v: boolean) => void; onStartGps: () => void; onStopGps: () => void;
@@ -335,6 +354,11 @@ function HomeSection(props: {
               <button className={`${pill} flex h-12 items-center gap-1.5 px-4 text-sm font-medium ${gps.active ? '!border-accent text-accent' : 'text-ink'}`}
                 onClick={gps.active ? props.onStopGps : props.onStartGps} aria-pressed={gps.active}>
                 📍 {gps.active ? t('driver.home.gpsOn') : t('driver.home.gpsOff')}
+                {gps.active && gps.accuracyM != null && (
+                  <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-semibold ${accuracyLevel(gps.accuracyM) === 'good' ? 'bg-accent/20 text-accent' : accuracyLevel(gps.accuracyM) === 'fair' ? 'bg-warn/20 text-warn' : 'bg-danger/20 text-danger'}`}>
+                    ±{gps.accuracyM > 999 ? '999+' : gps.accuracyM} {t('driver.home.gpsM')}{accuracyLevel(gps.accuracyM) === 'poor' ? ` · ${t('driver.home.gpsWeak')}` : ''}
+                  </span>
+                )}
               </button>
             )}
             <div className={`${pill} flex min-h-[48px] items-center px-4`}><NotifyToggle pushUrl="/driver/push" /></div>

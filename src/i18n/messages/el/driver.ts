@@ -115,6 +115,8 @@ const driver: Catalog<typeof en> = {
   },
   home: {
     earnedToday: 'σήμερα',
+    gpsM: 'μ',
+    gpsWeak: 'αδύναμο σήμα',
     gpsOn: 'GPS ενεργό',
     gpsOff: 'Ενεργοποίηση GPS',
     todaysEarnings: 'Σημερινά έσοδα',

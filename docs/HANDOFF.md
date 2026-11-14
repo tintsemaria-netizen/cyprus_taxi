@@ -1,5 +1,16 @@
 # Session handoff
 
+## 2026-11-14 — Driver GPS quality: filter, coarse-mode retry, accuracy badge
+- `src/lib/gpsFilter.ts` (pure, unit-tested in `tests/gps-filter.test.ts`). It decides which raw fix becomes the driver's position, i.e. what is sent to `/driver/location` and drawn:
+  - a poor fix (>50 m) is ignored while a good fix is younger than 30 s; otherwise a rough fix is still used;
+  - a jump of >60 m at >50 m/s is ignored unless 3 in a row agree.
+- `driver/page.tsx`:
+  - The watch callback runs the filter.
+  - The coarse fallback (`enableHighAccuracy: false` after a high-accuracy error) used to be permanent; now it retries precise GPS every 30 s (`retryTimer`, `highModeRef`).
+  - The GPS pill shows a raw-accuracy badge «±N м»: green ≤20, amber ≤50, red >50 + «слабый сигнал». i18n `driver.home.gpsM` and `gpsWeak`.
+- Not done: snapping to the road outside navigation (Google Roads API, paid). Navigation already snaps to the route within 30 m.
+- Playwright (local, driver andreas): good ±8 м → a 300 m-away ±180 fix showed the red badge, and the samples sent stayed at the good position → ±9 м. No errors.
+
 ## 2026-11-14 — Driver navigation: map movable while driving
 - The follow camera (DriverNavigation) used to be broken only by Google/MapLibre `dragstart`. A pinch or wheel zoom never broke it, and every GPS fix re-applied zoom 17 and the heading, so while moving the map could not be zoomed or moved.
 - `useIdleReturn` now takes `{onStart, onReturn}`. Any pointerdown or wheel on the map calls `onFollowBreak` immediately, and the follow effect is skipped while a gesture is active.
