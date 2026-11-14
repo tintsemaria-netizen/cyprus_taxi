@@ -6,6 +6,7 @@ import { ChatPanel } from '@/components/ChatPanel';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { api } from '@/lib/api-client';
 import { formatFlight } from '@/lib/flight';
+import { meterWaitingCents, meterWaitingRatePerHourCents } from '@/lib/tariff';
 import { useT } from '@/i18n/I18nProvider';
 import { INTL_TAG } from '@/i18n/config';
 import { bearingDeg, cumulative, distM, locate, maneuverIcon, nextStep, offsetPoint, promptBand, roundNavDistance, type LatLng, type NavStep } from '@/lib/nav';
@@ -23,7 +24,7 @@ export interface NavTrip {
   /** Passenger's live position, only if they chose to share it, only before pickup (2026-11-15). */
   passengerLocation?: { lat: number; lng: number; accuracyM: number; ageSec: number } | null;
   /** One optional intermediate stop (2026-11-15). */
-  stop?: { lat: number; lng: number; label: string; arrivedAt: string | null; waitStartedAt: string | null; departedAt: string | null; waitCents: number | null; rateCentsPerMin: number } | null;
+  stop?: { lat: number; lng: number; label: string; arrivedAt: string | null; waitStartedAt: string | null; departedAt: string | null; waitCents: number | null; tariff?: string } | null;
 }
 interface NavRoute { distanceM: number; durationSec: number; path: [number, number][]; steps: NavStep[]; fetchedAt: number; from: LatLng }
 type NavResp = { available: boolean; reason?: string; distanceM?: number; durationSec?: number; path?: [number, number][]; steps?: NavStep[] };
@@ -181,8 +182,13 @@ export function DriverNavigation(props: {
   if (atStop && stop) {
     if (stop.waitStartedAt) {
       const secs = Math.max(0, Math.floor((nowMs - new Date(stop.waitStartedAt).getTime()) / 1000));
-      const cents = Math.round((secs / 60) * stop.rateCentsPerMin);
-      stopNode = <div className="flex items-center justify-between gap-2"><span className="text-warn">⏱ {t('driver.stop.paidWaiting')}</span><span className="font-mono text-lg text-warn">{Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')}{stop.rateCentsPerMin > 0 ? ` · ${fmt.money(cents)}` : ''}</span></div>;
+      const cents = meterWaitingCents(new Date(stop.waitStartedAt), new Date(nowMs));
+      stopNode = (
+        <div>
+          <div className="flex items-center justify-between gap-2"><span className="text-warn">⏱ {t('driver.stop.paidWaiting')}</span><span className="font-mono text-lg text-warn">{Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')} · {fmt.money(cents)}</span></div>
+          <div className="mt-0.5 text-xs text-muted">{t('driver.stop.rateNote', { rate: fmt.money(meterWaitingRatePerHourCents(new Date(nowMs))) })}</div>
+        </div>
+      );
     } else {
       stopNode = <span className="text-muted">{t('driver.stop.atStopHint')}</span>;
     }

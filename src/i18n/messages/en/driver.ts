@@ -274,7 +274,7 @@ const driver = {
     fareEstimate: '≈ {amount}',
     loadFailed: 'Could not load scheduled rides.',
   },
-  stop: { paidWaiting: 'Paid waiting', atStopHint: 'Passenger at the stop. Start paid waiting if they ask you to wait.', atStop: 'At the stop', via: 'Via stop:', arrived: 'Arrived at the stop', startWaiting: 'Start paid waiting', continue: 'Continue to the destination' },
+  stop: { rateNote: 'Taximeter waiting rate: {rate}/h, added to the fare', paidWaiting: 'Paid waiting', atStopHint: 'Passenger at the stop. Start paid waiting if they ask you to wait.', atStop: 'At the stop', via: 'Via stop:', arrived: 'Arrived at the stop', startWaiting: 'Start paid waiting', continue: 'Continue to the destination' },
   navigation: {
     toPickup: 'To pickup:',
     toDestination: 'To destination:',

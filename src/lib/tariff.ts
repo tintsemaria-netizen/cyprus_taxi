@@ -7,6 +7,8 @@ export const TARIFF_VERSION = 'cy-urban-2026-09-13';
 const TARIFF = {
   day: { initialCents: 380, perKmCents: 95 }, // 06:01–20:30
   night: { initialCents: 480, perKmCents: 110 }, // 20:31–06:00
+  // Waiting, urban taximeter: €17.00/h day, €19.00/h night (same source as above).
+  waitingPerHourCents: { day: 1700, night: 1900 },
   luggagePieceCents: 140,
   holidaySurchargeCents: 200,
   // Passenger surcharge on the fare (regulated): 5 pax +20%, 6 pax +40%.
@@ -109,3 +111,28 @@ export function computeMeterEstimate(params: {
 }
 
 export const fmtEur = (cents: number) => `€${(cents / 100).toFixed(2)}`;
+
+/**
+ * Paid waiting priced like the urban taximeter (2026-11-15, owner decision for the stop waiting):
+ * €17.00/h in the day window, €19.00/h at night, accrued per second and split exactly at the
+ * 20:30/20:31 and 06:00/06:01 boundaries (Europe/Nicosia). Integer cents, rounded once at the end.
+ */
+export function meterWaitingCents(start: Date, end: Date): number {
+  let t = start.getTime();
+  const stop = end.getTime();
+  if (!(stop > t)) return 0;
+  let centsExact = 0;
+  // Walk minute boundaries: the tariff window can only change on a whole local minute.
+  while (t < stop) {
+    const nextMinute = Math.min(stop, Math.floor(t / 60_000) * 60_000 + 60_000);
+    const rate = isNightTariff(new Date(t)) ? TARIFF.waitingPerHourCents.night : TARIFF.waitingPerHourCents.day;
+    centsExact += ((nextMinute - t) / 3_600_000) * rate;
+    t = nextMinute;
+  }
+  return Math.round(centsExact);
+}
+
+/** Current per-hour waiting rate in cents (for display). */
+export function meterWaitingRatePerHourCents(at: Date): number {
+  return isNightTariff(at) ? TARIFF.waitingPerHourCents.night : TARIFF.waitingPerHourCents.day;
+}

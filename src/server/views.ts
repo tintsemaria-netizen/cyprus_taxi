@@ -187,7 +187,7 @@ export function stopView(b: { stopLat: number | null; stopLng: number | null; st
     waitStartedAt: b.stopWaitStartedAt?.toISOString() ?? null,
     departedAt: b.stopDepartedAt?.toISOString() ?? null,
     waitCents: b.stopWaitCents,
-    rateCentsPerMin: config.dispatch.waitingRateCentsPerMin,
+    tariff: 'meter', // priced by meterWaitingCents (€17/h day, €19/h night)
   };
 }
 

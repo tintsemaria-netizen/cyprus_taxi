@@ -1,3 +1,4 @@
+import { meterWaitingCents } from '@/lib/tariff';
 import { randomInt } from 'crypto';
 import { Prisma, Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
@@ -176,10 +177,11 @@ export async function completeTrip(bookingId: string, driverId: string, expected
 // ---- Intermediate stop (2026-11-15) ----
 // While IN_PROGRESS with a stop: ARRIVED_AT_STOP → (optional) paid WAITING meter → CONTINUE to the
 // destination. Sub-state lives in Booking.stop* timestamps; the status stays IN_PROGRESS.
-// Stop waiting is a plain meter at the waiting rate (no grace), started by the driver.
+// Stop waiting is the taximeter waiting tariff (no grace), started by the driver.
 
-export function stopWaitCentsFor(startedAt: Date, endedAt: Date, rateCentsPerMin = config.dispatch.waitingRateCentsPerMin): number {
-  return Math.round((Math.max(0, (endedAt.getTime() - startedAt.getTime()) / 1000) / 60) * rateCentsPerMin);
+// Priced like the urban taximeter's waiting (€17/h day, €19/h night), added on top of the fare.
+export function stopWaitCentsFor(startedAt: Date, endedAt: Date): number {
+  return meterWaitingCents(startedAt, endedAt);
 }
 
 /** Stops the stop-waiting meter if it is running and returns the stop waiting charge in cents. */

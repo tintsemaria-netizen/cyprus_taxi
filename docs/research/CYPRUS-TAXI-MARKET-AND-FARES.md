@@ -79,6 +79,12 @@ explicit "airport fixed fare not yet configured" note; no invented airport zone 
   demand without a documented non-overlap cap.
 - Waiting: passenger pre-pickup waiting is **not billable** in the beta. Post-arrival paid
   waiting stays **disabled** for regulated mode pending RTD verification.
+- **Stop waiting (2026-11-15, owner decision):** when the driver explicitly starts paid waiting at
+  an intermediate stop, it is priced with the urban taximeter waiting tariff above (€17.00/h day,
+  €19.00/h night, per second, split at the 20:30/20:31 and 06:00/06:01 boundaries) and added to the
+  fare's `waitingCents`. Implemented in `meterWaitingCents()` (src/lib/tariff.ts, version
+  `cy-urban-2026-09-13`). Same confidence caveat as the rest of this table (Visit Cyprus, not the
+  RTD instrument).
 
 ## 6. Unresolved questions (tracked)
 1. Current RTD effective tariff instrument + exact effective date.

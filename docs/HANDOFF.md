@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-15 — Stop waiting priced like the taximeter
+- Owner decision: paid waiting at the stop is calculated the same way as the taximeter's waiting and added on top of the fare.
+- `meterWaitingCents(start, end)` in `src/lib/tariff.ts`: urban waiting tariff €17.00/h day (06:01–20:30) and €19.00/h night (20:31–06:00), Europe/Nicosia. Accrued per second, split at the minute boundaries, rounded once.
+- Used by `stopWaitCentsFor` (lifecycle). The driver meter shows the live amount and «По тарифу таксометра: N € в час».
+- `DISPATCH_WAITING_RATE_CENTS_PER_MIN` is no longer used for the stop; it still governs pickup waiting, which stays 0/disabled by default.
+- Research doc updated. Tests: `tests/tariff-waiting.test.ts` (day/night hour, 20:30 boundary, per-second).
+
 ## 2026-11-15 — Removed the «Используем ваше текущее местоположение…» hint under «Откуда»
 - Owner request. The auto-filled pickup still works; only the hint line is gone.
 
