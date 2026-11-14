@@ -10,6 +10,7 @@ import { DemoBanner } from '@/components/DemoBanner';
 import AutoMapPicker from './AutoMapPicker';
 import { PassengerLoginModal } from './PassengerLoginModal';
 import { AccountMenu } from './AccountMenu';
+import { recordVisit } from '@/lib/navTrail';
 import { nicosiaInputValue } from '@/lib/timezone';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
@@ -112,6 +113,13 @@ export default function BookingApp() {
   }, []);
 
   useEffect(() => { loadConfig(); }, [loadConfig]);
+  // Home is the first step of the in-app back trail (src/lib/navTrail.ts).
+  useEffect(() => {
+    recordVisit();
+    const onShow = () => recordVisit();
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
+  }, []);
 
   // Restore passenger session (if any) → prefill contact + load destination history.
   const loadPassenger = useCallback(() => {

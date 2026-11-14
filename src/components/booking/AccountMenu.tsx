@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { api } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
+import { markLeftViaMenu, consumeMenuReopen } from '@/lib/navTrail';
 
 export interface PassengerInfo { phone: string | null; name?: string | null; email?: string | null }
 
@@ -21,6 +22,14 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
   const { t } = useT();
+
+  // Coming back (‹) to the page the menu was used on reopens the menu — that was the previous step.
+  useEffect(() => {
+    const check = () => { if (consumeMenuReopen()) setOpen(true); };
+    check();
+    window.addEventListener('pageshow', check);
+    return () => window.removeEventListener('pageshow', check);
+  }, []);
 
   const label = passenger.name?.trim() || passenger.email || passenger.phone || '';
   const secondary = passenger.email || passenger.phone || '';
@@ -80,7 +89,7 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
             className="fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-[16px] border border-edge bg-elevated p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:inset-x-auto sm:bottom-auto sm:right-[var(--menu-right)] sm:top-[var(--menu-top)] sm:w-64 sm:rounded-[14px] sm:pb-2 sm:shadow-xl"
           >
             {/* Identity header → profile settings */}
-            <a href="/account" role="menuitem" className="flex items-center gap-3 rounded-[10px] px-3 py-3 hover:bg-page" onClick={() => setOpen(false)}>
+            <a href="/account" role="menuitem" className="flex items-center gap-3 rounded-[10px] px-3 py-3 hover:bg-page" onClick={() => { markLeftViaMenu(); setOpen(false); }}>
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-[#0d1608]">{initials}</span>
               <span className="min-w-0">
                 <span className="block truncate text-sm font-medium">{label}</span>
@@ -88,11 +97,11 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
               </span>
             </a>
             <div className="my-1 border-t border-edge" />
-            <MenuLink href="/rides" onSelect={() => setOpen(false)}>{t('auth.myRides')}</MenuLink>
-            <MenuLink href="/prebookings" onSelect={() => setOpen(false)}>{t('rides.prebookings.menu')}</MenuLink>
-            <MenuLink href="/account#places" onSelect={() => setOpen(false)}>{t('auth.menu.savedPlaces')}</MenuLink>
-            <MenuLink href="/account" onSelect={() => setOpen(false)}>{t('auth.menu.profile')}</MenuLink>
-            <MenuLink href="/privacy" onSelect={() => setOpen(false)}>{t('auth.menu.help')}</MenuLink>
+            <MenuLink href="/rides" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.myRides')}</MenuLink>
+            <MenuLink href="/prebookings" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('rides.prebookings.menu')}</MenuLink>
+            <MenuLink href="/account#places" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.savedPlaces')}</MenuLink>
+            <MenuLink href="/account" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.profile')}</MenuLink>
+            <MenuLink href="/privacy" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.help')}</MenuLink>
             <div className="flex items-center justify-between gap-3 px-3 py-2">
               <span className="text-sm text-muted">{t('common.language')}</span>
               <LanguageSwitcher />

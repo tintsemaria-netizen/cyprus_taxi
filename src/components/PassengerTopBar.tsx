@@ -6,6 +6,7 @@ import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 import { useT } from '@/i18n/I18nProvider';
 import { api } from '@/lib/api-client';
 import { AccountMenu, type PassengerInfo } from '@/components/booking/AccountMenu';
+import { recordVisit, goBack as trailBack } from '@/lib/navTrail';
 
 // Shared top bar for every passenger page except the home booking screen (2026-11-14):
 // a back arrow, the logo (→ home), the language switcher and the account avatar (initial),
@@ -15,14 +16,16 @@ export function PassengerTopBar({ back = '/', sticky = true }: { back?: string |
   const [passenger, setPassenger] = useState<PassengerInfo | null | undefined>(undefined);
   useEffect(() => {
     api<PassengerInfo>('/passenger/me').then(setPassenger).catch(() => setPassenger(null));
+    recordVisit();
+    const onShow = () => recordVisit();
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
   }, []);
 
   function goBack(e: React.MouseEvent) {
-    // Prefer real history when we came from inside the app; otherwise go to the fallback page.
-    if (typeof window !== 'undefined' && window.history.length > 1 && document.referrer.startsWith(window.location.origin)) {
-      e.preventDefault();
-      window.history.back();
-    }
+    // Exactly one step back inside the app (see src/lib/navTrail.ts).
+    e.preventDefault();
+    trailBack(typeof back === 'string' ? back : '/');
   }
 
   return (

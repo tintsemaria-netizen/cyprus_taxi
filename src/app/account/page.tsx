@@ -22,6 +22,15 @@ export default function Account() {
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { t, tError } = useT();
+  // Which settings category is expanded. /account#places (from the menu) opens that one.
+  const [openCat, setOpenCat] = useState<string | null>(null);
+  useEffect(() => {
+    const fromHash = () => { const h = window.location.hash.replace('#', ''); if (h) setOpenCat(h); };
+    fromHash();
+    window.addEventListener('hashchange', fromHash);
+    return () => window.removeEventListener('hashchange', fromHash);
+  }, []);
+  const toggleCat = (id: string) => setOpenCat((c) => (c === id ? null : id));
 
   useEffect(() => {
     api<Me>('/passenger/me')
@@ -56,7 +65,10 @@ export default function Account() {
     <div className="mx-auto max-w-md space-y-4 p-4 sm:p-6">
       <h1 className="text-2xl font-semibold">{t('auth.account.title')}</h1>
 
-      <form onSubmit={save} className="card space-y-3 p-4">
+      {/* Settings grouped into collapsible categories (2026-11-14). */}
+      <div className="card divide-y divide-edge overflow-hidden !p-0">
+      <Category id="personal" icon="👤" title={t('auth.cat.personal')} sub={me.name || me.email || me.phone || ''} open={openCat} onToggle={toggleCat}>
+      <form onSubmit={save} className="space-y-3">
         <div>
           <label className="label" htmlFor="account-f1">{t('auth.name')}</label>
           <input id="account-f1" className="field mt-1" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
@@ -74,16 +86,24 @@ export default function Account() {
         {msg && <p className="text-sm text-muted">{msg}</p>}
         <button className="btn-primary min-h-[44px] w-full" disabled={busy || !name.trim()}>{busy ? t('auth.saving') : t('auth.account.save')}</button>
       </form>
+      </Category>
 
-      <ChangePassword hasPassword={!!me.hasPassword} />
+      <Category id="security" icon="🔒" title={t('auth.cat.security')} sub={me.hasPassword ? t('auth.pw.title') : t('auth.pw.setTitle')} open={openCat} onToggle={toggleCat}>
+        <ChangePassword hasPassword={!!me.hasPassword} />
+      </Category>
 
-      <SavedPlaces />
+      <Category id="places" icon="📍" title={t('auth.places.title')} sub={t('auth.cat.placesSub')} open={openCat} onToggle={toggleCat}>
+        <SavedPlaces />
+      </Category>
 
-      <div className="card p-4 text-sm text-muted">
-        {t('auth.account.notifications')}
+      <Category id="notifications" icon="🔔" title={t('auth.cat.notifications')} open={openCat} onToggle={toggleCat}>
+        <p className="text-sm text-muted">{t('auth.account.notifications')}</p>
+      </Category>
+
+      <Category id="data" icon="🛡️" title={t('auth.data.title')} open={openCat} onToggle={toggleCat}>
+        <DataRights />
+      </Category>
       </div>
-
-      <DataRights />
       <button onClick={logout} className="btn-ghost w-full !text-danger">{t('auth.logOut')}</button>
     </div>
     </div>
@@ -108,8 +128,7 @@ function SavedPlaces() {
   }, []);
 
   return (
-    <section id="places" className="card space-y-3 p-4">
-      <h2 className="font-medium">{t('auth.places.title')}</h2>
+    <section className="space-y-3">
       <p className="text-xs text-muted">{t('auth.places.subtitle')}</p>
       {!loaded ? <p className="text-sm text-muted">{t('common.loading')}</p> : (
         <>
@@ -182,9 +201,8 @@ function DataRights() {
     window.location.href = '/';
   }
   return (
-    <section className="card p-4">
-      <h2 className="font-semibold">{t('auth.data.title')}</h2>
-      <p className="mt-1 text-sm text-muted">{t('auth.data.body')}</p>
+    <section>
+      <p className="text-sm text-muted">{t('auth.data.body')}</p>
       {err && <p role="alert" className="mt-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <a href="/api/v1/passenger/me/export" download className="btn-ghost w-full text-center">{t('auth.data.download')}</a>
@@ -213,8 +231,7 @@ function ChangePassword({ hasPassword }: { hasPassword: boolean }) {
     finally { setBusy(false); }
   }
   return (
-    <form onSubmit={submit} className="card space-y-3 p-4">
-      <h2 className="font-medium">{has ? t('auth.pw.title') : t('auth.pw.setTitle')}</h2>
+    <form onSubmit={submit} className="space-y-3">
       {has && (
         <div>
           <label className="label" htmlFor="pw-current">{t('auth.pw.current')}</label>
@@ -229,5 +246,23 @@ function ChangePassword({ hasPassword }: { hasPassword: boolean }) {
       {msg && <p className="text-sm text-muted">{msg}</p>}
       <button className="btn-primary min-h-[44px] w-full" disabled={busy || next.length < 8 || (has && !current)}>{busy ? t('auth.saving') : t('auth.pw.save')}</button>
     </form>
+  );
+}
+
+// One collapsible settings category: icon, title, short summary and a chevron; one open at a time.
+function Category({ id, icon, title, sub, open, onToggle, children }: { id: string; icon: string; title: string; sub?: string; open: string | null; onToggle: (id: string) => void; children: React.ReactNode }) {
+  const isOpen = open === id;
+  return (
+    <section id={id}>
+      <button type="button" onClick={() => onToggle(id)} aria-expanded={isOpen} className="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-elevated">
+        <span className="text-xl" aria-hidden="true">{icon}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-medium">{title}</span>
+          {sub && <span className="block truncate text-xs text-muted">{sub}</span>}
+        </span>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`shrink-0 text-muted transition-transform ${isOpen ? 'rotate-90' : ''}`}><path d="M9 5l7 7-7 7" /></svg>
+      </button>
+      {isOpen && <div className="px-4 pb-4 pt-1">{children}</div>}
+    </section>
   );
 }

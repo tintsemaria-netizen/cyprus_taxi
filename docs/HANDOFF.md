@@ -1,5 +1,17 @@
 # Session handoff
 
+## 2026-11-14 — Passenger back arrow = one step back; profile settings grouped into categories
+- `src/lib/navTrail.ts` keeps a per-tab trail of passenger URLs in sessionStorage. It is recorded by PassengerTopBar and the home BookingApp (on mount + pageshow).
+  - ‹ pops the trail and calls `history.back()`. A deep link or new tab goes to the fallback.
+  - If the page was left through the account menu (`markLeftViaMenu`), coming back reopens the menu (`consumeMenuReopen`).
+- /account is now collapsible categories (one open at a time): Личные данные, Пароль и вход, Сохранённые места, Уведомления, Ваши данные. Выйти stays separate. `#places` (and other ids) open that category, including on hashchange. New i18n keys `auth.cat.*` (en/ru/el).
+- Playwright (iPhone 13, local build):
+  - home → menu → settings → ‹ gives home with the menu open;
+  - home → rides → settings → ‹ gives rides with the menu open; ‹ again gives home;
+  - a deep link ‹ gives home;
+  - categories expand; `#places` opens places;
+  - no errors.
+
 ## 2026-11-14 — Cars ×2; driver's own car darker and on top
 - Car marker sizes doubled: single vehicle 42→84 px; fleet 36→72 px (MapView + GoogleMapView).
 - New `VehicleState 'self'`: slate-teal body (#4E6A72) with a lime roof light and a soft lime glow, darker than the pearl fleet cars.
