@@ -232,6 +232,51 @@ export default function BookingApp() {
     }
     setDragH(null);
   }
+  // Swipe on the sheet body too (2026-11-14), not only the handle: collapsed → any vertical swipe
+  // moves the sheet; expanded → a downward pull while the form is scrolled to the top collapses it,
+  // otherwise the form scrolls normally. Native listeners: preventDefault needs passive: false.
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!isMobile || !el) return;
+    let s: { y: number; h: number; max: number; mode: 'drag' | 'scroll' | null } | null = null;
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) { s = null; return; }
+      s = { y: e.touches[0].clientY, h: sheetRef.current?.getBoundingClientRect().height ?? PEEK_PX, max: sheetBoxRef.current?.getBoundingClientRect().height ?? window.innerHeight, mode: null };
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!s) return;
+      const dy = e.touches[0].clientY - s.y;
+      if (s.mode === null) {
+        if (Math.abs(dy) < 8) return;
+        s.mode = collapsed || (dy > 0 && el.scrollTop <= 0) ? 'drag' : 'scroll';
+        s.y = e.touches[0].clientY - Math.sign(dy) * 8;
+      }
+      if (s.mode !== 'drag') return;
+      e.preventDefault();
+      const d = e.touches[0].clientY - s.y;
+      setDragH(Math.min(s.max, Math.max(PEEK_PX * 0.7, s.h - d)));
+    };
+    const onEnd = (e: TouchEvent) => {
+      const cur = s;
+      s = null;
+      if (!cur || cur.mode !== 'drag') return;
+      const y = e.changedTouches[0]?.clientY ?? cur.y;
+      const h = cur.h - (y - cur.y);
+      setCollapsed(y < cur.y ? h < PEEK_PX + 40 : h < cur.max - 40);
+      setDragH(null);
+    };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd);
+    el.addEventListener('touchcancel', onEnd);
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+      el.removeEventListener('touchcancel', onEnd);
+    };
+  }, [isMobile, collapsed, step]);
   // Phones open with the sheet collapsed so the map is visible; tablets/desktop keep the panel open.
   useEffect(() => { if (window.innerWidth < 640) setCollapsed(true); }, []);
 
@@ -568,7 +613,7 @@ export default function BookingApp() {
               </button>
               )}
               {(isMobile || !collapsed) && (<>
-              <div className={`min-h-0 flex-1 p-4 sm:p-5 ${isMobile && collapsed ? 'overflow-hidden' : 'overflow-y-auto'}`} style={{ paddingBottom: step === 'form' ? '1rem' : 'max(1rem, env(safe-area-inset-bottom))' }}>
+              <div ref={contentRef} className={`min-h-0 flex-1 overscroll-contain p-4 sm:p-5 ${isMobile && collapsed ? 'overflow-hidden' : 'overflow-y-auto'}`} style={{ paddingBottom: step === 'form' ? '1rem' : 'max(1rem, env(safe-area-inset-bottom))' }}>
                 {step === 'form' ? (
                   /* ---- FORM (inlined so inputs keep focus across renders) ---- */
                   <div>

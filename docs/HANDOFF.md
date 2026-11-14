@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-14 — Bottom sheet: swipe on the form body too
+- Native touch listeners (`passive: false`) are attached to the sheet body (`contentRef`).
+- Collapsed: any vertical swipe moves the sheet.
+- Expanded: a downward pull while the form is at scrollTop 0 collapses it; otherwise the form scrolls normally. Taps on inputs are unaffected.
+- The handle still works.
+- Checked with Playwright CDP touch on iPhone 13: a swipe up on the title expands (170→452). A pull down while scrolled only scrolls to the top; the next pull collapses (452→170). Tapping an input expands. No errors.
+
 ## 2026-11-14 — Passenger home: draggable bottom sheet (mobile)
 - On phones (<640px) the booking panel is a bottom sheet with two snap points, both changed by dragging the handle (pointer events, `touch-none`):
   - full height of the area under the header;
