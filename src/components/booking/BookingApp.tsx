@@ -75,7 +75,46 @@ export default function BookingApp() {
     try { const f = sessionStorage.getItem('il-y-flash'); if (f) { setFlash(f); sessionStorage.removeItem('il-y-flash'); } } catch { /* storage blocked */ }
   }, []);
   const [submitting, setSubmitting] = useState(false);
-  const [picker, setPicker] = useState<'pickup' | 'dropoff' | null>(null);
+  const [picker, setPicker] = useState<'pickup' | 'dropoff' | 'stop' | null>(null);
+  // One optional stop + the address list UX (2026-11-15).
+  const [stop, setStop] = useState<Selected | null>(null);
+  const [stopText, setStopText] = useState('');
+  const [hasStop, setHasStop] = useState(false);
+  const [addrOpen, setAddrOpen] = useState(false); // «Откуда» shown once «Куда» is touched
+  useEffect(() => { if (dropoff || stop || hasStop) setAddrOpen(true); }, [dropoff, stop, hasStop]);
+  type Slot = 'p' | 's' | 'd';
+  const slots: Slot[] = hasStop ? ['p', 's', 'd'] : ['p', 'd'];
+  function slotGet(s: Slot) {
+    if (s === 'p') return { sel: pickup, text: pickupText, setSel: setPickup, setText: setPickupText };
+    if (s === 's') return { sel: stop, text: stopText, setSel: setStop, setText: setStopText };
+    return { sel: dropoff, text: dropoffText, setSel: setDropoff, setText: setDropoffText };
+  }
+  // Drag a row by its ≡ handle to reorder the route: the values move, the roles stay by position
+  // (first = from, middle = stop, last = to).
+  const rowEls = useRef<(HTMLDivElement | null)[]>([]);
+  const [rowDrag, setRowDrag] = useState<{ index: number; startY: number; dy: number; mids: number[] } | null>(null);
+  function onDragStart(e: React.PointerEvent, index: number) {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const mids = slots.map((_, i) => { const r = rowEls.current[i]?.getBoundingClientRect(); return r ? r.top + r.height / 2 : 0; });
+    setRowDrag({ index, startY: e.clientY, dy: 0, mids });
+  }
+  function onDragMove(e: React.PointerEvent) {
+    setRowDrag((d) => (d ? { ...d, dy: e.clientY - d.startY } : d));
+  }
+  function onDragEnd() {
+    const d = rowDrag;
+    setRowDrag(null);
+    if (!d || Math.abs(d.dy) < 8) return;
+    const y = d.mids[d.index] + d.dy;
+    let to = 0;
+    d.mids.forEach((m, i) => { if (Math.abs(m - y) < Math.abs(d.mids[to] - y)) to = i; });
+    if (to === d.index) return;
+    const vals = slots.map((s) => { const v = slotGet(s); return { sel: v.sel, text: v.text }; });
+    const [moved] = vals.splice(d.index, 1);
+    vals.splice(to, 0, moved);
+    slots.forEach((s, i) => { const v = slotGet(s); v.setSel(vals[i].sel); v.setText(vals[i].text); });
+    setAutoPickup(false);
+  }
   // Passenger's detected location (for centring the map + defaulting the pickup).
   const [myLoc, setMyLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [autoPickup, setAutoPickup] = useState(false); // pickup was auto-set from geolocation
@@ -296,11 +335,14 @@ export default function BookingApp() {
   const markers = useMemo<MapMarker[]>(() => {
     const m: MapMarker[] = [];
     if (pickup) m.push({ id: 'p', lat: pickup.lat, lng: pickup.lng, kind: 'pickup', label: pickup.label });
+    if (stop && hasStop) m.push({ id: 's', lat: stop.lat, lng: stop.lng, kind: 'stop', label: stop.label });
     if (dropoff) m.push({ id: 'd', lat: dropoff.lat, lng: dropoff.lng, kind: 'dropoff', label: dropoff.label });
     if (meNow) m.push({ id: 'me', lat: meNow.lat, lng: meNow.lng, kind: 'person', label: t('booking.youAreHere') });
     return m;
-  }, [pickup, dropoff, meNow, t]);
+  }, [pickup, dropoff, stop, hasStop, meNow, t]);
 
+  // The stop counts only once it has been chosen (an empty stop row is ignored).
+  const viaStop = hasStop && stop ? stop : null;
   // Real driving route (distance + trip duration + geometry) between the two stops.
   // Debounced, aborted on change, stale-guarded — NOT recomputed on every render.
   const [route, setRoute] = useState<{ line: [number, number][]; km: number | null; min: number | null; unavailable?: boolean } | null>(null);
@@ -311,7 +353,7 @@ export default function BookingApp() {
       try {
         const r = await api<{ available?: boolean; path?: [number, number][]; distanceKm?: number; etaMinutes?: number; reason?: string }>(
           '/routes/estimate',
-          { method: 'POST', body: { from: { lat: pickup.lat, lng: pickup.lng }, to: { lat: dropoff.lat, lng: dropoff.lng } }, signal: controller.signal, timeoutMs: 9000 },
+          { method: 'POST', body: { from: { lat: pickup.lat, lng: pickup.lng }, to: { lat: dropoff.lat, lng: dropoff.lng }, ...(viaStop ? { via: { lat: viaStop.lat, lng: viaStop.lng } } : {}) }, signal: controller.signal, timeoutMs: 9000 },
         );
         if (r.available === false) { setRoute({ line: [], km: null, min: null, unavailable: true }); return; }
         setRoute({
@@ -324,7 +366,7 @@ export default function BookingApp() {
       }
     }, 400);
     return () => { clearTimeout(t); controller.abort(); };
-  }, [pickup, dropoff]);
+  }, [pickup, dropoff, viaStop]);
 
   // Fare estimate (server-issued quote) — recomputed when the trip inputs change.
   interface QuoteBody { quoteId: string; priceType: string; totalCents: number; rangeLowCents: number; rangeHighCents: number; night: boolean; holiday: boolean; routeAvailable: boolean; airport?: boolean; lines: { code: string; label: string; cents: number }[]; }
@@ -345,7 +387,7 @@ export default function BookingApp() {
           const q = await api<QuoteBody>('/quote', {
             method: 'POST',
             body: {
-              pickup: { lat: pickup.lat, lng: pickup.lng }, dropoff: { lat: dropoff.lat, lng: dropoff.lng }, vClass: c.key, passengerCount: Math.min(effPax, c.max), luggageCount: effBags,
+              pickup: { lat: pickup.lat, lng: pickup.lng }, dropoff: { lat: dropoff.lat, lng: dropoff.lng }, ...(viaStop ? { stop: { lat: viaStop.lat, lng: viaStop.lng } } : {}), vClass: c.key, passengerCount: Math.min(effPax, c.max), luggageCount: effBags,
               // Price a scheduled ride for its journey time (day/night/holiday + traffic).
               ...(when === 'SCHEDULE' && scheduledAt ? { scheduledAt, scheduleOffsetMin } : {}),
             },
@@ -363,7 +405,7 @@ export default function BookingApp() {
       setQuotes(next); setQuoting(false);
     }, 500);
     return () => { clearTimeout(t); controller.abort(); };
-  }, [pickup, dropoff, pax, when, scheduledAt, scheduleOffsetMin, classKeys, tError]);
+  }, [pickup, dropoff, viaStop, pax, when, scheduledAt, scheduleOffsetMin, classKeys, tError]);
   const quote: QuoteBody | null = quotes[vClass] ?? null;
   const eur = (c: number) => fmt.money(c, 'EUR');
 
@@ -452,6 +494,7 @@ export default function BookingApp() {
       const payload = {
         pickup: { lat: pickup.lat, lng: pickup.lng, label: pickup.label },
         dropoff: { lat: dropoff.lat, lng: dropoff.lng, label: dropoff.label },
+        ...(viaStop ? { stop: { lat: viaStop.lat, lng: viaStop.lng, label: viaStop.label } } : {}),
         when,
         // Send the raw wall-clock string; the server interprets it as Europe/Nicosia.
         scheduledAt: when === 'SCHEDULE' ? scheduledAt : undefined,
@@ -515,6 +558,9 @@ export default function BookingApp() {
     } else if (picker === 'dropoff') {
       setDropoff(sel);
       setDropoffText(sel.label);
+    } else if (picker === 'stop') {
+      setStop(sel);
+      setStopText(sel.label);
     }
     setPicker(null);
   }
@@ -617,7 +663,7 @@ export default function BookingApp() {
                   <span className="flex w-full items-center justify-between gap-3 py-1.5 text-left">
                     <span className="min-w-0">
                       <span className="block text-base font-bold text-ink">{t('booking.form.title')}</span>
-                      {pickup && dropoff && <span className="block truncate text-xs">{pickup.label} → {dropoff.label}</span>}
+                      {pickup && dropoff && <span className="block truncate text-xs">{pickup.label} → {viaStop ? `${viaStop.label} → ` : ''}{dropoff.label}</span>}
                     </span>
                     <span className="shrink-0 text-sm font-medium text-accent">{t('booking.sheet.expand')} ▲</span>
                   </span>
@@ -644,43 +690,61 @@ export default function BookingApp() {
                     {flash && <p role="status" className="mb-3 rounded-[12px] border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">{flash}</p>}
                     {banner && <p className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{banner}</p>}
 
-                    <div className="space-y-3">
-                      <PlacesInput kind="From" value={pickup} text={pickupText} onText={(t) => { setPickupText(t); if (autoPickup) setAutoPickup(false); }} onSelect={(s) => { setPickup(s); setAutoPickup(false); }} error={errors.pickup} />
-                      {autoPickup && pickup && (
-                        <p className="mt-1 text-xs text-accent">📍 {t('booking.form.usingLocation')}</p>
+                    {/* Addresses (2026-11-15): only «Куда» at first; touching it reveals «Откуда» (auto-filled
+                        from the device) above it. Each field has «На карте» on the right; one optional stop;
+                        the rows can be dragged up/down to change the order of the route. */}
+                    <div className="space-y-2">
+                      {(addrOpen ? slots : (['d'] as Slot[])).map((slot, i, arr) => {
+                        const kind: 'From' | 'Stop' | 'To' = !addrOpen ? 'To' : i === 0 ? 'From' : i === arr.length - 1 ? 'To' : 'Stop';
+                        const v = slotGet(slot);
+                        const dragging = rowDrag?.index === i;
+                        return (
+                          <div key={slot} ref={(el) => { rowEls.current[i] = el; }} className={`flex items-end gap-1.5 ${dragging ? 'relative z-20 opacity-90' : ''}`}
+                            style={dragging && rowDrag ? { transform: `translateY(${rowDrag.dy}px)` } : undefined}>
+                            {addrOpen && (
+                              <button type="button" aria-label={t('booking.form.dragToReorder')}
+                                onPointerDown={(e) => onDragStart(e, i)} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}
+                                className="mb-1 flex h-10 w-7 shrink-0 cursor-grab touch-none select-none items-center justify-center rounded-[8px] text-lg text-muted hover:bg-elevated">≡</button>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <PlacesInput
+                                kind={kind}
+                                value={v.sel}
+                                text={v.text}
+                                onText={(x) => { v.setText(x); if (slot === 'p' && autoPickup) setAutoPickup(false); }}
+                                onSelect={(sel) => { v.setSel(sel); if (slot === 'p') setAutoPickup(false); }}
+                                onFocusInput={() => setAddrOpen(true)}
+                                error={slot === 'p' ? errors.pickup : slot === 'd' ? errors.dropoff : errors.stop}
+                                trailing={<button type="button" className="rounded-[8px] px-2 py-1 text-xs font-semibold text-accent hover:bg-accent/10" onClick={() => { setAddrOpen(true); setPicker(slot === 'p' ? 'pickup' : slot === 's' ? 'stop' : 'dropoff'); }}>⌖ {t('booking.form.onMap')}</button>}
+                              />
+                            </div>
+                            {slot === 's' && (
+                              <button type="button" aria-label={t('booking.form.removeStop')} onClick={() => { setHasStop(false); setStop(null); setStopText(''); }}
+                                className="mb-1 flex h-10 w-8 shrink-0 items-center justify-center rounded-[8px] text-lg text-muted hover:bg-elevated hover:text-danger">×</button>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {addrOpen && autoPickup && pickup && (
+                        <p className="text-xs text-accent">📍 {t('booking.form.usingLocation')}</p>
                       )}
-                      <div className="flex items-center justify-between">
-                        <button type="button" className="chip hover:border-accent/50" onClick={() => setPicker('pickup')}>⌖ {t('booking.form.setPickupOnMap')}</button>
-                        <button
-                          type="button"
-                          className="chip hover:border-accent/50"
-                          onClick={() => {
-                            setPickup(dropoff);
-                            setDropoff(pickup);
-                            setPickupText(dropoffText);
-                            setDropoffText(pickupText);
-                          }}
-                          aria-label={t('booking.form.swapAria')}
-                        >
-                          ⇅ {t('booking.form.swap')}
-                        </button>
-                      </div>
-                      <PlacesInput kind="To" value={dropoff} text={dropoffText} onText={setDropoffText} onSelect={setDropoff} error={errors.dropoff} />
+                      {addrOpen && !hasStop && (
+                        <button type="button" className="chip hover:border-accent/50" onClick={() => setHasStop(true)}>＋ {t('booking.form.addStop')}</button>
+                      )}
                       {!dropoff && (places.home || places.work) && (
                         <div className="mt-1 flex flex-wrap gap-1">
-                          {places.home && <button type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: places.home!.lat, lng: places.home!.lng, label: places.home!.label }); setDropoffText(places.home!.label); }}>🏠 {t('booking.form.home')}</button>}
-                          {places.work && <button type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: places.work!.lat, lng: places.work!.lng, label: places.work!.label }); setDropoffText(places.work!.label); }}>💼 {t('booking.form.work')}</button>}
+                          {places.home && <button type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: places.home!.lat, lng: places.home!.lng, label: places.home!.label }); setDropoffText(places.home!.label); setAddrOpen(true); }}>🏠 {t('booking.form.home')}</button>}
+                          {places.work && <button type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: places.work!.lat, lng: places.work!.lng, label: places.work!.label }); setDropoffText(places.work!.label); setAddrOpen(true); }}>💼 {t('booking.form.work')}</button>}
                         </div>
                       )}
                       {!dropoff && destinations.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1">
                           <span className="text-xs text-muted">{t('booking.form.recent')}</span>
                           {destinations.map((d) => (
-                            <button key={d.label} type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: d.lat, lng: d.lng, label: d.label }); setDropoffText(d.label); }}>{d.label.length > 22 ? d.label.slice(0, 21) + '…' : d.label}</button>
+                            <button key={d.label} type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: d.lat, lng: d.lng, label: d.label }); setDropoffText(d.label); setAddrOpen(true); }}>{d.label.length > 22 ? d.label.slice(0, 21) + '…' : d.label}</button>
                           ))}
                         </div>
                       )}
-                      <button type="button" className="chip hover:border-accent/50" onClick={() => setPicker('dropoff')}>⌖ {t('booking.form.setDestinationOnMap')}</button>
                     </div>
 
                     <div className="mt-5">
@@ -807,6 +871,7 @@ export default function BookingApp() {
                     {banner && <p className="my-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{banner}</p>}
                     <div className="mt-4 space-y-3 text-sm">
                       <Row label={t('booking.review.pickup')} value={pickup?.label ?? '—'} dot="accent" />
+                      {viaStop && <Row label={t('booking.places.stop')} value={viaStop.label} />}
                       <Row label={t('booking.review.destination')} value={dropoff?.label ?? '—'} dot="ink" />
                       <Row label={t('booking.review.when')} value={when === 'NOW' ? t('booking.review.nowImmediate') : `${scheduledAt.replace('T', ' ')} · ${cfg?.timezone}`} />
                       <Row label={t('booking.review.class')} value={t(`common.vClass.${vClass}`)} />

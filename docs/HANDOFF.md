@@ -1,5 +1,29 @@
 # Session handoff
 
+## 2026-11-15 — Booking form rework + one intermediate stop (end-to-end)
+- **Passenger form** (`BookingApp`):
+  - Only «Куда» is shown at first. Touching it (or choosing a destination) reveals «Откуда» above it, auto-filled from the device.
+  - Each address field has «⌖ На карте» inside on the right (`PlacesInput.trailing`).
+  - «＋ Добавить остановку» adds one stop field; × removes it.
+  - Every row has a ≡ handle: drag it up/down to reorder the route. Values move; roles follow position (first = from, middle = stop, last = to).
+  - The map pickers support `kind 'stop'`.
+  - Route preview (`/routes/estimate` `via`), quote (`stop`) and booking (`stop`) all go through the stop. The review shows the stop.
+- **Server:**
+  - Migration `20261115020000_booking_stop` adds Booking.stopLat/Lng/Label, stopArrivedAt, stopWaitStartedAt, stopDepartedAt, stopWaitCents.
+  - `createBookingSchema.stop` is optional; the stop must be inside the service area; the idempotency hash includes it only when present.
+  - Quote: `QuoteInput.stop`; the hash adds `s` only when present; `googleRoute(..., { via })` uses Routes API `intermediates`; the fallback distance goes through the stop.
+- **Driver:**
+  - `POST /api/v1/driver/bookings/[id]/stop {action: arrived|wait|continue}` → `driverStopAction` (lifecycle.ts). Allowed only IN_PROGRESS; the status stays IN_PROGRESS.
+  - Stop waiting is a meter at `DISPATCH_WAITING_RATE_CENTS_PER_MIN` (no grace). `stopWaitCents` is added to `Fare.waitingCents` at completion (`closeStopWaiting`).
+  - DriverNavigation legs are pickup → stop → dropoff (server `/driver/navigation` targets the stop too). Buttons: «Прибыл на остановку» → «Включить платное ожидание» (live meter) + «Продолжить к конечной точке» → «Завершить поездку». «Через остановку» is shown on the pickup leg; offers and free orders show the stop.
+- **Passenger tracking:** a stop row plus «Водитель на остановке» / «идёт платное ожидание»; stop marker (yellow). Admin booking detail: Stop row with the waiting amount. Receipt shows the stop.
+- **Also:** map containers have `isolation: isolate` so marker z-indexes never cover panels.
+- **Waiting rate:** `DISPATCH_WAITING_RATE_CENTS_PER_MIN` defaults to 0. Prod value unknown — the owner was asked for the rate.
+- **Tests:** `tests/booking-stop.db.test.ts`; suite 221 passed / 1 skipped.
+- **Playwright:**
+  - form: only «Куда» → tap shows «Откуда» → add stop → drag reorder works → the quote and booking carry the stop;
+  - driver UI: on the way → arrived → start (code) → «К остановке» → arrived at stop → paid waiting meter → continue → complete → COMPLETED.
+
 ## 2026-11-15 — Cars 15% smaller
 - Single vehicle 84→71 px (carMarker default); fleet overlays 72→61 px (MapView + GoogleMapView).
 

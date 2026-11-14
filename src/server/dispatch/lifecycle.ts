@@ -80,7 +80,9 @@ async function finalizeCompletion(
   actor: ActorRef,
 ): Promise<LifeResult> {
   const w = await tx.waitingSession.findUnique({ where: { bookingId: b.id } });
-  const waitingCents = w?.accruedCents ?? 0;
+  // Paid waiting at the intermediate stop (2026-11-15) is added on top of pickup waiting.
+  const stopWait = await closeStopWaiting(tx, b.id, new Date());
+  const waitingCents = (w?.accruedCents ?? 0) + stopWait;
   const priceType = b.priceType ?? 'REGULATED_METER_ESTIMATE';
   const isUpfront = priceType === 'UPFRONT_DYNAMIC';
   // Upfront = the accepted committed price is the final amount. Regulated estimate =
@@ -168,6 +170,59 @@ export async function completeTrip(bookingId: string, driverId: string, expected
     const a = await activeAssignmentFor(tx, bookingId, driverId);
     if (!a) return err(403, 'FORBIDDEN', 'Not your assignment.');
     return finalizeCompletion(tx, b, a, { type: 'DRIVER', id: driverId });
+  });
+}
+
+// ---- Intermediate stop (2026-11-15) ----
+// While IN_PROGRESS with a stop: ARRIVED_AT_STOP → (optional) paid WAITING meter → CONTINUE to the
+// destination. Sub-state lives in Booking.stop* timestamps; the status stays IN_PROGRESS.
+// Stop waiting is a plain meter at the waiting rate (no grace), started by the driver.
+
+export function stopWaitCentsFor(startedAt: Date, endedAt: Date, rateCentsPerMin = config.dispatch.waitingRateCentsPerMin): number {
+  return Math.round((Math.max(0, (endedAt.getTime() - startedAt.getTime()) / 1000) / 60) * rateCentsPerMin);
+}
+
+/** Stops the stop-waiting meter if it is running and returns the stop waiting charge in cents. */
+async function closeStopWaiting(tx: Prisma.TransactionClient, bookingId: string, now: Date): Promise<number> {
+  const b = await tx.booking.findUnique({ where: { id: bookingId }, select: { stopWaitStartedAt: true, stopDepartedAt: true, stopWaitCents: true } });
+  if (!b) return 0;
+  if (b.stopWaitCents != null) return b.stopWaitCents;
+  if (!b.stopWaitStartedAt) return 0;
+  const cents = stopWaitCentsFor(b.stopWaitStartedAt, b.stopDepartedAt ?? now);
+  await tx.booking.update({ where: { id: bookingId }, data: { stopWaitCents: cents, ...(b.stopDepartedAt ? {} : { stopDepartedAt: now }) } });
+  return cents;
+}
+
+export type StopAction = 'arrived' | 'wait' | 'continue';
+
+export async function driverStopAction(bookingId: string, driverId: string, action: StopAction): Promise<LifeResult> {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
+    const b = await tx.booking.findUnique({ where: { id: bookingId } });
+    if (!b) return err(404, 'NOT_FOUND', 'Booking not found.');
+    if (b.status !== 'IN_PROGRESS') return err(409, 'BAD_STATE', 'Only during the trip.');
+    if (b.stopLat == null || b.stopLng == null) return err(409, 'NO_STOP', 'This ride has no stop.');
+    if (!(await activeAssignmentFor(tx, bookingId, driverId))) return err(403, 'FORBIDDEN', 'Not your assignment.');
+    const now = new Date();
+    let data: Prisma.BookingUpdateInput;
+    let type: string;
+    if (action === 'arrived') {
+      if (b.stopArrivedAt) return ok(b.status, b.revision); // idempotent
+      data = { stopArrivedAt: now }; type = 'STOP_ARRIVED';
+    } else if (action === 'wait') {
+      if (!b.stopArrivedAt || b.stopDepartedAt) return err(409, 'BAD_STATE', 'Paid waiting is only possible at the stop.');
+      if (b.stopWaitStartedAt) return ok(b.status, b.revision);
+      data = { stopWaitStartedAt: now }; type = 'STOP_WAIT_STARTED';
+    } else {
+      if (!b.stopArrivedAt) return err(409, 'BAD_STATE', 'Mark arrival at the stop first.');
+      if (b.stopDepartedAt) return ok(b.status, b.revision);
+      data = { stopDepartedAt: now, ...(b.stopWaitStartedAt ? { stopWaitCents: stopWaitCentsFor(b.stopWaitStartedAt, now) } : {}) };
+      type = 'STOP_DEPARTED';
+    }
+    const u = await tx.booking.update({ where: { id: bookingId }, data: { ...data, revision: { increment: 1 } } });
+    await tx.bookingEvent.create({ data: { bookingId, type, actorType: 'DRIVER', actorId: driverId, beforeStatus: 'IN_PROGRESS', afterStatus: 'IN_PROGRESS' } });
+    if (action === 'arrived') await enqueuePassenger(tx, bookingId, 'Arrived at your stop', 'Your driver is at the stop. Tell them when you are ready to continue.');
+    return ok(u.status, u.revision);
   });
 }
 

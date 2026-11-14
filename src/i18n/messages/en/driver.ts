@@ -40,6 +40,7 @@ const driver = {
     note: 'Foreground GPS only, while on duty. Real device GPS — never simulated.',
   },
   map: {
+    stop: 'Stop',
     noGps: 'Turn on GPS sharing to see your position.',
     free: '{n} available',
     busy: '{n} on a trip',
@@ -273,6 +274,7 @@ const driver = {
     fareEstimate: '≈ {amount}',
     loadFailed: 'Could not load scheduled rides.',
   },
+  stop: { paidWaiting: 'Paid waiting', atStopHint: 'Passenger at the stop. Start paid waiting if they ask you to wait.', atStop: 'At the stop', via: 'Via stop:', arrived: 'Arrived at the stop', startWaiting: 'Start paid waiting', continue: 'Continue to the destination' },
   navigation: {
     toPickup: 'To pickup:',
     toDestination: 'To destination:',
@@ -296,6 +298,8 @@ const driver = {
     unmute: 'Turn voice guidance on',
     paxAtPickup: 'Passenger shares location: at the pickup point',
     paxFromPickup: 'Passenger shares location: {m} from the pickup point',
+    arrivedStop: 'You have arrived at the stop',
+    toStop: 'To the stop:',
     recenter: 'Re-centre',
     details: 'Details',
     hideDetails: 'Hide',

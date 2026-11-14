@@ -135,7 +135,7 @@ export async function googleRoute(
   from: { lat: number; lng: number },
   to: { lat: number; lng: number },
   departureTime?: string,
-  opts: { timeoutMs?: number } = {},
+  opts: { timeoutMs?: number; via?: { lat: number; lng: number } | null } = {},
 ): Promise<RouteResult | null> {
   const key = config.googleServerKey();
   const body: Record<string, unknown> = {
@@ -143,6 +143,8 @@ export async function googleRoute(
     destination: { location: { latLng: { latitude: to.lat, longitude: to.lng } } },
     travelMode: 'DRIVE',
   };
+  // Optional intermediate stop: the route (distance, time, polyline) goes through it.
+  if (opts.via) body.intermediates = [{ location: { latLng: { latitude: opts.via.lat, longitude: opts.via.lng } } }];
   if (departureTime) {
     body.routingPreference = 'TRAFFIC_AWARE';
     body.departureTime = departureTime;

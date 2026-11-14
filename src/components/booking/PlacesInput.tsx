@@ -11,7 +11,11 @@ export interface Selected {
 }
 
 interface Props {
-  kind: 'From' | 'To';
+  kind: 'From' | 'To' | 'Stop';
+  /** Shown inside the field on the right, e.g. «На карте» (2026-11-15). */
+  trailing?: React.ReactNode;
+  onFocusInput?: () => void;
+  autoFocus?: boolean;
   value: Selected | null;
   text: string;
   onText: (t: string) => void;
@@ -30,7 +34,7 @@ interface Result {
   kind?: string;
 }
 
-export function PlacesInput({ kind, value, text, onText, onSelect, error }: Props) {
+export function PlacesInput({ kind, value, text, onText, onSelect, error, trailing, onFocusInput, autoFocus }: Props) {
   const { t } = useT();
   const [results, setResults] = useState<Result[]>([]);
   const [open, setOpen] = useState(false);
@@ -147,16 +151,17 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error }: Prop
   const inputId = useId();
   return (
     <div ref={boxRef} className="relative">
-      <label className="label" htmlFor={inputId}>{kind === 'From' ? t('booking.places.from') : t('booking.places.to')}</label>
+      <label className="label" htmlFor={inputId}>{kind === 'From' ? t('booking.places.from') : kind === 'Stop' ? t('booking.places.stop') : t('booking.places.to')}</label>
       <input
         id={inputId}
-        aria-label={kind === 'From' ? t('booking.places.pickupAria') : t('booking.places.destinationAria')}
-        className={`field mt-1 ${error ? 'border-danger' : value ? 'border-accent/60' : ''}`}
-        placeholder={kind === 'From' ? t('booking.places.pickupPlaceholder') : t('booking.places.destinationPlaceholder')}
+        aria-label={kind === 'From' ? t('booking.places.pickupAria') : kind === 'Stop' ? t('booking.places.stopAria') : t('booking.places.destinationAria')}
+        className={`field mt-1 ${trailing ? 'pr-28' : ''} ${error ? 'border-danger' : value ? 'border-accent/60' : ''}`}
+        placeholder={kind === 'From' ? t('booking.places.pickupPlaceholder') : kind === 'Stop' ? t('booking.places.stopPlaceholder') : t('booking.places.destinationPlaceholder')}
+        autoFocus={autoFocus}
         value={text}
         onChange={(e) => handleText(e.target.value)}
         onKeyDown={onKeyDown}
-        onFocus={() => results.length && setOpen(true)}
+        onFocus={() => { onFocusInput?.(); if (results.length) setOpen(true); }}
         autoComplete="off"
         role="combobox"
         aria-controls={`${inputId}-list`}
@@ -164,7 +169,9 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error }: Prop
         aria-autocomplete="list"
         aria-invalid={!!error}
       />
-      {value && (
+      {trailing ? (
+        <div className="absolute right-1.5 top-[30px] flex items-center">{trailing}</div>
+      ) : value && (
         <span className="absolute right-3 top-9 text-accent text-sm" aria-hidden>
           ✓
         </span>

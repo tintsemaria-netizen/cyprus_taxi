@@ -1,3 +1,4 @@
+import { config } from '@/lib/config';
 import { passengerLocationForDriver } from '@/server/passenger-location';
 import { prisma } from '@/lib/db';
 import { computeFreshness, poorAccuracy } from '@/lib/freshness';
@@ -127,6 +128,7 @@ export async function trackingView(bookingId: string) {
       ? { estimateCents: fareRec.estimateCents, waitingCents: fareRec.waitingCents, finalCents: fareRec.finalCents, currency: fareRec.currency, priceType: fareRec.priceType, paymentMethod: fareRec.paymentMethod, paymentStatus: fareRec.paymentStatus }
       : null,
     pickup: { lat: booking.pickupLat, lng: booking.pickupLng, label: booking.pickupLabel },
+    stop: stopView(booking),
     dropoff: { lat: booking.dropoffLat, lng: booking.dropoffLng, label: booking.dropoffLabel },
     passengerName: booking.passengerName,
     flightNumber: booking.flightNumber,
@@ -176,6 +178,19 @@ export async function shareView(bookingId: string) {
 }
 
 // ---- Driver current-trip view ----
+// One intermediate stop (2026-11-15): position + the driver's progress there and its waiting meter.
+export function stopView(b: { stopLat: number | null; stopLng: number | null; stopLabel: string | null; stopArrivedAt: Date | null; stopWaitStartedAt: Date | null; stopDepartedAt: Date | null; stopWaitCents: number | null }) {
+  if (b.stopLat == null || b.stopLng == null) return null;
+  return {
+    lat: b.stopLat, lng: b.stopLng, label: b.stopLabel ?? '',
+    arrivedAt: b.stopArrivedAt?.toISOString() ?? null,
+    waitStartedAt: b.stopWaitStartedAt?.toISOString() ?? null,
+    departedAt: b.stopDepartedAt?.toISOString() ?? null,
+    waitCents: b.stopWaitCents,
+    rateCentsPerMin: config.dispatch.waitingRateCentsPerMin,
+  };
+}
+
 export async function driverCurrentTrip(driverId: string) {
   const active = await prisma.assignment.findFirst({
     where: { activeDriverId: driverId },
@@ -198,6 +213,7 @@ export async function driverCurrentTrip(driverId: string) {
       pickup: { lat: b.pickupLat, lng: b.pickupLng, label: b.pickupLabel },
       passengerLocation: passengerLocationForDriver(b),
       dropoff: { lat: b.dropoffLat, lng: b.dropoffLng, label: b.dropoffLabel },
+      stop: stopView(b),
       passengerName: b.passengerName,
       passengerPhone: b.phone, // driver may contact passenger
       note: b.note,
@@ -283,6 +299,7 @@ export async function dispatchDetail(id: string) {
     status: b.status,
     revision: b.revision,
     pickup: { lat: b.pickupLat, lng: b.pickupLng, label: b.pickupLabel },
+    stop: stopView(b),
     dropoff: { lat: b.dropoffLat, lng: b.dropoffLng, label: b.dropoffLabel },
     passengerName: b.passengerName,
     phone: b.phone,

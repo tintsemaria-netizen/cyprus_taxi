@@ -1,5 +1,8 @@
 const track = {
   shareLoc: { off: 'Show the driver where I am', on: 'Driver sees where you are', hint: 'Only until pickup. Turn on if you are the one being picked up.', waiting: 'Waiting for your location…' },
+  stop: 'Stop',
+  atStop: 'The driver is at your stop.',
+  stopWaitingPaid: 'At the stop · paid waiting is running',
   loadingRide: 'Loading your ride…',
   reconnecting: 'Reconnecting…',
   noRideTitle: 'No active ride here',

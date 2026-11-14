@@ -3,6 +3,9 @@ import type en from '../en/track';
 
 const track: Catalog<typeof en> = {
   shareLoc: { off: 'Показать водителю, где я', on: 'Водитель видит, где вы', hint: 'Только до посадки. Включайте, если забирают именно вас.', waiting: 'Определяем ваше местоположение…' },
+  stop: 'Остановка',
+  atStop: 'Водитель на остановке.',
+  stopWaitingPaid: 'На остановке · идёт платное ожидание',
   loadingRide: 'Загружаем вашу поездку…',
   reconnecting: 'Переподключение…',
   noRideTitle: 'Активной поездки нет',

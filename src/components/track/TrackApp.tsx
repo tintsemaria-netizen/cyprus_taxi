@@ -23,6 +23,7 @@ interface TrackView {
   scheduledAt: string | null;
   pickup: { lat: number; lng: number; label: string };
   dropoff: { lat: number; lng: number; label: string };
+  stop?: { lat: number; lng: number; label: string; arrivedAt?: string | null; waitStartedAt?: string | null; departedAt?: string | null; waitCents?: number | null; rateCentsPerMin?: number } | null;
   passengerName: string;
   vClass: string;
   passengerCount: number;
@@ -272,6 +273,7 @@ export default function TrackApp() {
   const liveLocation = disconnected ? null : view.location;
   const markers: MapMarker[] = [];
   // Before pickup, anchor on the pickup; during the trip, anchor on the destination.
+  if (view.stop && !view.stop.departedAt) markers.push({ id: 's', lat: view.stop.lat, lng: view.stop.lng, kind: 'stop', label: view.stop.label });
   if (view.status === 'IN_PROGRESS') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
   else markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label });
   if (myLive && view.status !== 'IN_PROGRESS') markers.push({ id: 'me', lat: myLive.lat, lng: myLive.lng, kind: 'person', label: t('booking.youAreHere') });
@@ -387,6 +389,12 @@ export default function TrackApp() {
                 {/* stops */}
                 <div className="mt-4 space-y-2 text-sm">
                   <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" /><span className="text-muted">{t('track.pickup')}</span><span className="ml-auto truncate font-medium">{view.pickup.label}</span></div>
+                  {view.stop && (
+                    <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#FFC83D]" /><span className="text-muted">{t('track.stop')}</span><span className="ml-auto truncate font-medium">{view.stop.label}</span></div>
+                  )}
+                  {view.stop?.arrivedAt && !view.stop.departedAt && (
+                    <p className="rounded-[10px] border border-[#FFC83D]/40 bg-[#FFC83D]/10 px-3 py-2 text-xs text-[#FFC83D]">{view.stop.waitStartedAt ? t('track.stopWaitingPaid') : t('track.atStop')}</p>
+                  )}
                   <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-ink" /><span className="text-muted">{t('track.destination')}</span><span className="ml-auto truncate font-medium">{view.dropoff.label}</span></div>
                 </div>
 

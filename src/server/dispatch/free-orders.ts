@@ -73,6 +73,7 @@ export async function listFreeOrders(driverId: string, now: Date = new Date()): 
       bookingId: b.id,
       pickup: { lat: b.pickupLat, lng: b.pickupLng, label: b.pickupLabel },
       dropoff: { lat: b.dropoffLat, lng: b.dropoffLng, label: b.dropoffLabel },
+      stop: b.stopLat != null && b.stopLng != null ? { lat: b.stopLat, lng: b.stopLng, label: b.stopLabel ?? '' } : null,
       vClass: b.vClass,
       passengerName: b.passengerName,
       passengerCount: b.passengerCount,

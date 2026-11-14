@@ -9,6 +9,10 @@ const booking: Catalog<typeof en> = {
   },
   currentLocation: 'Τρέχουσα τοποθεσία',
   form: {
+    onMap: 'Στον χάρτη',
+    addStop: 'Προσθήκη στάσης',
+    removeStop: 'Αφαίρεση στάσης',
+    dragToReorder: 'Σύρετε για αλλαγή σειράς',
     eyebrow: 'Σας πάμε όπου θέλετε',
     title: 'Πού πηγαίνετε;',
     usingLocation: 'Χρησιμοποιούμε την τρέχουσα τοποθεσία σας — αλλάξτε τη στον χάρτη ή πληκτρολογήστε διεύθυνση.',
@@ -101,6 +105,9 @@ const booking: Catalog<typeof en> = {
     signInFirst: 'Θα συνδεθείτε πριν από την επιβεβαίωση.',
   },
   places: {
+    stop: 'Στάση',
+    stopAria: 'Διεύθυνση στάσης',
+    stopPlaceholder: 'Στάση στη διαδρομή',
     from: 'Από',
     to: 'Προς',
     pickupAria: 'Διεύθυνση παραλαβής',
@@ -113,6 +120,9 @@ const booking: Catalog<typeof en> = {
     demo: 'Δοκιμαστικά μέρη · Κύπρος',
   },
   picker: {
+    titleStop: 'Στάση',
+    selectedStop: 'Επιλεγμένη στάση',
+    confirmStop: 'Επιβεβαίωση στάσης',
     titlePickup: 'Σημείο παραλαβής',
     titleDestination: 'Προορισμός',
     back: '‹ Πίσω',

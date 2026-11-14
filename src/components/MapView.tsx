@@ -13,7 +13,7 @@ export interface MapMarker {
   id: string;
   lat: number;
   lng: number;
-  kind: 'pickup' | 'dropoff' | 'vehicle' | 'person';
+  kind: 'pickup' | 'dropoff' | 'vehicle' | 'person' | 'stop';
   label?: string;
   stale?: boolean;
   /** Visible label under a vehicle marker (e.g. plate number on staff maps). */
@@ -64,7 +64,7 @@ function demoStyle(): maplibregl.StyleSpecification {
   };
 }
 
-const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46' };
+const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF' };
 
 export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -248,5 +248,6 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     );
   }
 
-  return <div ref={containerRef} className={className} aria-label="Map" role="application" />;
+  // isolation: marker z-indexes (own car 1000, person 900) stay inside the map, never above panels.
+  return <div ref={containerRef} className={className} style={{ isolation: 'isolate' }} aria-label="Map" role="application" />;
 }

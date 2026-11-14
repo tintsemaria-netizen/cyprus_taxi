@@ -9,6 +9,10 @@ const booking: Catalog<typeof en> = {
   },
   currentLocation: 'Текущее местоположение',
   form: {
+    onMap: 'На карте',
+    addStop: 'Добавить остановку',
+    removeStop: 'Убрать остановку',
+    dragToReorder: 'Перетащите, чтобы поменять порядок',
     eyebrow: 'Довезём куда нужно',
     title: 'Куда едем?',
     usingLocation: 'Используем ваше текущее местоположение — измените его на карте или введите адрес.',
@@ -106,6 +110,9 @@ const booking: Catalog<typeof en> = {
     signInFirst: 'Перед подтверждением нужно будет войти.',
   },
   places: {
+    stop: 'Остановка',
+    stopAria: 'Адрес остановки',
+    stopPlaceholder: 'Остановка по пути',
     from: 'Откуда',
     to: 'Куда',
     pickupAria: 'Адрес подачи',
@@ -118,6 +125,9 @@ const booking: Catalog<typeof en> = {
     demo: 'Демо-адреса · Кипр',
   },
   picker: {
+    titleStop: 'Остановка',
+    selectedStop: 'Выбранная остановка',
+    confirmStop: 'Подтвердить остановку',
     titlePickup: 'Место подачи',
     titleDestination: 'Пункт назначения',
     back: '‹ Назад',

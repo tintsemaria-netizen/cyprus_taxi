@@ -13,6 +13,7 @@ interface Receipt {
   completedAt: string | null;
   pickup: string;
   dropoff: string;
+  stop?: string | null;
   vClass: string;
   passengerCount: number;
   driver: { name: string; vehicle: string; plate: string } | null;
@@ -65,6 +66,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
           <div className="mt-4 space-y-1 text-sm">
             <div className="flex gap-2"><span className="text-accent">●</span><span className="min-w-0">{receipt.pickup}</span></div>
+            {receipt.stop && <div className="flex gap-2"><span className="text-[#FFC83D]">◆</span><span className="min-w-0">{receipt.stop}</span></div>}
             <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0">{receipt.dropoff}</span></div>
           </div>
 

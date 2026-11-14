@@ -50,6 +50,7 @@ const staff = {
   booking: {
     loading: 'Loading booking…',
     back: '‹ Back to queue',
+    stop: 'Stop', stopWait: 'waiting', stopWaiting: 'paid waiting running',
     pickup: 'Pickup', destination: 'Destination', class: 'Class', when: 'When', passenger: 'Passenger', phone: 'Phone', note: 'Note',
     immediate: 'Immediate',
     disclaimer: 'Times in Europe/Nicosia. Metered estimate — the driver settles the final metered fare.',

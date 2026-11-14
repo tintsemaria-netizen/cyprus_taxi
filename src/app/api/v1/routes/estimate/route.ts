@@ -14,7 +14,8 @@ export async function POST(req: Request) {
   } catch {
     return Errors.validation({ _: 'Invalid JSON body.' });
   }
-  const { from, to, departureTime } = (body as { from?: unknown; to?: unknown; departureTime?: string }) || {};
+  const { from, to, departureTime, via } = (body as { from?: unknown; to?: unknown; departureTime?: string; via?: unknown }) || {};
+  const v = via != null && validCoord(via as never) ? (via as { lat: number; lng: number }) : null;
   if (!validCoord(from as never) || !validCoord(to as never)) {
     return Errors.validation({ _: 'from and to must be valid coordinates.' });
   }
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
     const rl = await rateLimit('routes', clientIp(req, config.trustedProxyHops), 30, 60);
     if (!rl.ok) return Errors.throttled(rl.retryAfter);
     try {
-      const r = await googleRoute(f, t, departureTime);
+      const r = await googleRoute(f, t, departureTime, { via: v });
       if (!r) return apiOk({ provider: 'google', available: false, reason: 'No route found.' });
       return apiOk({ provider: 'google', available: true, estimate: false, ...r });
     } catch {
@@ -36,5 +37,7 @@ export async function POST(req: Request) {
 
   // No real router → demo estimate only in demo mode; otherwise unavailable.
   if (!config.demoMode) return apiOk({ available: false, reason: 'No routing provider configured.' });
-  return apiOk({ available: true, ...demoEstimate(f, t) });
+  if (!v) return apiOk({ available: true, ...demoEstimate(f, t) });
+  const a = demoEstimate(f, v), b2 = demoEstimate(v, t);
+  return apiOk({ ...a, available: true, distanceKm: Math.round((a.distanceKm + b2.distanceKm) * 10) / 10, etaMinutes: a.etaMinutes + b2.etaMinutes });
 }

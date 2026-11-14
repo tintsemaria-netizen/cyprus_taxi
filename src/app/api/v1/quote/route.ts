@@ -11,6 +11,7 @@ export const dynamic = 'force-dynamic';
 const schema = z.object({
   pickup: z.object({ lat: z.number(), lng: z.number() }),
   dropoff: z.object({ lat: z.number(), lng: z.number() }),
+  stop: z.object({ lat: z.number(), lng: z.number() }).optional(),
   vClass: z.enum(['COMFORT', 'XL']),
   passengerCount: z.number().int().min(1).max(6),
   luggageCount: z.number().int().min(0).max(10).optional(),
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
   try { raw = await req.json(); } catch { return Errors.validation({ _: 'Invalid JSON body.' }); }
   const parsed = schema.safeParse(raw);
   if (!parsed.success) return Errors.validation({ _: 'Invalid quote request.' });
-  if (!validCoord(parsed.data.pickup) || !validCoord(parsed.data.dropoff)) return Errors.validation({ _: 'Invalid coordinates.' });
+  if (!validCoord(parsed.data.pickup) || !validCoord(parsed.data.dropoff) || (parsed.data.stop && !validCoord(parsed.data.stop))) return Errors.validation({ _: 'Invalid coordinates.' });
 
   // Convert a scheduled wall time to UTC; if it's not a valid instant (DST gap/ambiguous)
   // we price the quote for "now" — the booking endpoint does the strict schedule check.

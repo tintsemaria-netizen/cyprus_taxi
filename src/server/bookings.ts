@@ -52,6 +52,9 @@ export async function createBooking(
   const dIn = pointInPolygon({ lat: input.dropoff.lat, lng: input.dropoff.lng }, poly);
   if (!pIn) return fail(422, 'OUT_OF_AREA', 'Pickup is outside the configured service area.', { pickup: 'Outside service area.' });
   if (!dIn) return fail(422, 'OUT_OF_AREA', 'Destination is outside the configured service area.', { dropoff: 'Outside service area.' });
+  if (input.stop && !pointInPolygon({ lat: input.stop.lat, lng: input.stop.lng }, poly)) {
+    return fail(422, 'OUT_OF_AREA', 'The stop is outside the configured service area.', { stop: 'Outside service area.' });
+  }
 
   // 3. Minimum distance between stops
   const dist = haversineMeters(input.pickup, input.dropoff);
@@ -79,6 +82,7 @@ export async function createBooking(
       note: input.note || '',
       // Only when present, so hashes of requests without a flight number stay unchanged.
       ...(input.flightNumber ? { f: input.flightNumber } : {}),
+      ...(input.stop ? { st: input.stop } : {}),
     }),
   );
 
@@ -118,7 +122,7 @@ export async function createBooking(
   let fare: { fareCents: number; priceType: string; fareBreakdown: string } | null = null;
   if (input.quoteId) {
     const cq = await consumeQuote(input.quoteId, {
-      pickup: input.pickup, dropoff: input.dropoff, vClass: input.vClass,
+      pickup: input.pickup, dropoff: input.dropoff, stop: input.stop ?? null, vClass: input.vClass,
       passengerCount: input.passengerCount, luggageCount: input.luggageCount,
       scheduledAtUtc: scheduledAt ? scheduledAt.toISOString() : null, // must match the quoted journey time
     });
@@ -146,6 +150,7 @@ export async function createBooking(
           reference,
           pickupLat: input.pickup.lat, pickupLng: input.pickup.lng, pickupLabel: input.pickup.label,
           dropoffLat: input.dropoff.lat, dropoffLng: input.dropoff.lng, dropoffLabel: input.dropoff.label,
+          ...(input.stop ? { stopLat: input.stop.lat, stopLng: input.stop.lng, stopLabel: input.stop.label } : {}),
           passengerName: input.passengerName, phone: input.phone, note: input.note || null, flightNumber: input.flightNumber ?? null,
           vClass: input.vClass, passengerCount: input.passengerCount, luggageCount: input.luggageCount ?? 0, scheduledAt, status: initialStatus,
           ...(passengerId ? { passengerId } : {}),

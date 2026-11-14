@@ -52,6 +52,7 @@ const staff: Catalog<typeof en> = {
   booking: {
     loading: 'Загрузка заказа…',
     back: '‹ К очереди',
+    stop: 'Остановка', stopWait: 'ожидание', stopWaiting: 'идёт платное ожидание',
     pickup: 'Откуда', destination: 'Куда', class: 'Класс', when: 'Когда', passenger: 'Пассажир', phone: 'Телефон', note: 'Комментарий',
     immediate: 'Сейчас',
     disclaimer: 'Время — Europe/Nicosia. Цена ориентировочная — итог по счётчику водитель рассчитывает с клиентом.',

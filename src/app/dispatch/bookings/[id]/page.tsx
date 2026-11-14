@@ -18,6 +18,7 @@ interface Detail {
   revision: number;
   pickup: { lat: number; lng: number; label: string };
   dropoff: { lat: number; lng: number; label: string };
+  stop?: { lat: number; lng: number; label: string; waitStartedAt: string | null; departedAt: string | null; waitCents: number | null } | null;
   passengerName: string;
   phone: string;
   note: string | null;
@@ -130,6 +131,7 @@ function BookingDetail() {
           <AutoMapView markers={markers} className="h-64 w-full" interactive={false} />
           <div className="space-y-3 p-4">
             <Field label={t('staff.booking.pickup')} value={d.pickup.label} dot="accent" />
+            {d.stop && <Field label={t('staff.booking.stop')} value={`${d.stop.label}${d.stop.waitCents ? ` · ${t('staff.booking.stopWait')} ${(d.stop.waitCents / 100).toFixed(2)} €` : d.stop.waitStartedAt && !d.stop.departedAt ? ` · ${t('staff.booking.stopWaiting')}` : ''}`} />}
             <Field label={t('staff.booking.destination')} value={d.dropoff.label} dot="ink" />
             <div className="grid grid-cols-2 gap-3">
               <Field label={t('staff.booking.class')} value={`${d.vClass} · ${d.passengerCount}p`} />

@@ -6,6 +6,10 @@ const booking = {
   },
   currentLocation: 'Current location',
   form: {
+    onMap: 'On map',
+    addStop: 'Add a stop',
+    removeStop: 'Remove stop',
+    dragToReorder: 'Drag to change the order',
     eyebrow: 'Let’s get you there',
     title: 'Where to next?',
     usingLocation: 'Using your current location — change it on the map or type an address.',
@@ -98,6 +102,9 @@ const booking = {
     signInFirst: 'You’ll sign in before confirming.',
   },
   places: {
+    stop: 'Stop',
+    stopAria: 'Stop address',
+    stopPlaceholder: 'A stop on the way',
     from: 'From',
     to: 'To',
     pickupAria: 'Pickup address',
@@ -110,6 +117,9 @@ const booking = {
     demo: 'Demo places · Cyprus fixtures',
   },
   picker: {
+    titleStop: 'Stop',
+    selectedStop: 'Selected stop',
+    confirmStop: 'Confirm stop',
     titlePickup: 'Set pickup location',
     titleDestination: 'Set destination',
     back: '‹ Back',

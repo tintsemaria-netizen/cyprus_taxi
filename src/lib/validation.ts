@@ -23,6 +23,8 @@ export const phoneSchema = z
 export const createBookingSchema = z.object({
   pickup: coord,
   dropoff: coord,
+  // One optional intermediate stop (2026-11-15).
+  stop: coord.optional(),
   when: z.enum(['NOW', 'SCHEDULE']),
   // Naive Europe/Nicosia wall time "YYYY-MM-DDTHH:mm" (interpreted server-side).
   scheduledAt: z

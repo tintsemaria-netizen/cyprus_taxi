@@ -16,6 +16,7 @@ export type PricingMode = 'REGULATED_METER_ESTIMATE' | 'UPFRONT_DYNAMIC';
 export interface QuoteInput {
   pickup: { lat: number; lng: number };
   dropoff: { lat: number; lng: number };
+  stop?: { lat: number; lng: number } | null; // one optional intermediate stop (2026-11-15)
   vClass: 'COMFORT' | 'XL';
   passengerCount: number;
   luggageCount?: number;
@@ -32,6 +33,8 @@ export function quoteRequestHash(i: QuoteInput): string {
     d: [r(i.dropoff.lat), r(i.dropoff.lng)],
     c: i.vClass, n: i.passengerCount, l: i.luggageCount ?? 0,
     t: i.scheduledAtUtc ? new Date(i.scheduledAtUtc).toISOString().slice(0, 16) : null,
+    // Only when present, so hashes of quotes without a stop stay unchanged.
+    ...(i.stop ? { s: [r(i.stop.lat), r(i.stop.lng)] } : {}),
   }));
 }
 
@@ -62,6 +65,11 @@ export interface QuoteBody {
   dynamic?: { multiplier: number; applied: boolean; demandSupplyRatio: number | null; reasons: string[]; version: string };
 }
 
+// Straight-line length of the trip, through the stop when there is one (fallback estimate only).
+function straightMeters(i: QuoteInput): number {
+  return i.stop ? haversineMeters(i.pickup, i.stop) + haversineMeters(i.stop, i.dropoff) : haversineMeters(i.pickup, i.dropoff);
+}
+
 export async function createQuote(input: QuoteInput, at = new Date(), mode: PricingMode = config.pricing.mode): Promise<QuoteResult> {
   // The quote is ISSUED at `at` (drives expiry). It is PRICED for the intended journey
   // time `pricingAt` (scheduled → future; else now) — day/night/holiday tariff and the
@@ -76,7 +84,7 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
   let routeAvailable = true;
   if (googleConfigured()) {
     try {
-      const r = await googleRoute(input.pickup, input.dropoff, departureTime);
+      const r = await googleRoute(input.pickup, input.dropoff, departureTime, { via: input.stop ?? null });
       if (r) {
         distanceMeters = Math.round(r.distanceKm * 1000);
         durationSeconds = r.etaMinutes * 60;
@@ -85,12 +93,12 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
       }
     } catch {
       // Routing unavailable → fall back to a flagged straight-line estimate.
-      distanceMeters = Math.round(haversineMeters(input.pickup, input.dropoff) * 1.3);
+      distanceMeters = Math.round(straightMeters(input) * 1.3);
       durationSeconds = Math.round((distanceMeters / 1000 / 45) * 3600);
       routeAvailable = false;
     }
   } else {
-    distanceMeters = Math.round(haversineMeters(input.pickup, input.dropoff) * 1.3);
+    distanceMeters = Math.round(straightMeters(input) * 1.3);
     durationSeconds = Math.round((distanceMeters / 1000 / 45) * 3600);
     routeAvailable = false;
   }

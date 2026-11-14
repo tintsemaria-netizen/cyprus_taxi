@@ -459,6 +459,14 @@ model Booking {
   passengerLng          Float?
   passengerLocAccuracyM Float?
   passengerLocAt        DateTime?
+  // One optional intermediate stop (2026-11-15) and the paid waiting there.
+  stopLat           Float?
+  stopLng           Float?
+  stopLabel         String?
+  stopArrivedAt     DateTime?
+  stopWaitStartedAt DateTime?
+  stopDepartedAt    DateTime?
+  stopWaitCents     Int?
   requestedAt    DateTime      @default(now())
   scheduledAt    DateTime?
   status         BookingStatus @default(REQUESTED)

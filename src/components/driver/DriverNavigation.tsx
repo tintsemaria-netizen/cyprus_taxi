@@ -22,6 +22,8 @@ export interface NavTrip {
   waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
   /** Passenger's live position, only if they chose to share it, only before pickup (2026-11-15). */
   passengerLocation?: { lat: number; lng: number; accuracyM: number; ageSec: number } | null;
+  /** One optional intermediate stop (2026-11-15). */
+  stop?: { lat: number; lng: number; label: string; arrivedAt: string | null; waitStartedAt: string | null; departedAt: string | null; waitCents: number | null; rateCentsPerMin: number } | null;
 }
 interface NavRoute { distanceM: number; durationSec: number; path: [number, number][]; steps: NavStep[]; fetchedAt: number; from: LatLng }
 type NavResp = { available: boolean; reason?: string; distanceM?: number; durationSec?: number; path?: [number, number][]; steps?: NavStep[] };
@@ -38,9 +40,12 @@ export function DriverNavigation(props: {
 }) {
   const { trip, pos, gps, nowMs, startCode, setStartCode } = props;
   const { t, tp, fmt, locale } = useT();
-  const leg: 'pickup' | 'dropoff' = trip.status === 'IN_PROGRESS' ? 'dropoff' : 'pickup';
-  const target = leg === 'dropoff' ? trip.dropoff : trip.pickup;
-  const waitingAtPickup = trip.status === 'ARRIVED';
+  // Legs: pickup → (stop, if any, until the driver continues from it) → destination.
+  const stop = trip.stop ?? null;
+  const leg: 'pickup' | 'stop' | 'dropoff' = trip.status !== 'IN_PROGRESS' ? 'pickup' : stop && !stop.departedAt ? 'stop' : 'dropoff';
+  const target = leg === 'dropoff' ? trip.dropoff : leg === 'stop' ? stop! : trip.pickup;
+  const atStop = leg === 'stop' && !!stop?.arrivedAt; // standing at the stop (maybe paid waiting)
+  const waitingAtPickup = trip.status === 'ARRIVED' || atStop;
 
   const [route, setRoute] = useState<NavRoute | null>(null);
   const [routeState, setRouteState] = useState<'loading' | 'ok' | 'unavailable'>('loading');
@@ -148,7 +153,7 @@ export function DriverNavigation(props: {
     const key = `arrive:${leg}`;
     if (spoken.current.has(key)) return;
     spoken.current.add(key);
-    say(leg === 'pickup' ? t('driver.navigation.arrivedPickup') : t('driver.navigation.arrivedDestination'));
+    say(leg === 'pickup' ? t('driver.navigation.arrivedPickup') : leg === 'stop' ? t('driver.navigation.arrivedStop') : t('driver.navigation.arrivedDestination'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [atTarget, leg, say]);
   useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);
@@ -162,18 +167,30 @@ export function DriverNavigation(props: {
   const follow = following && camCenter && !waitingAtPickup ? { lat: camCenter.lat, lng: camCenter.lng, heading, zoom: 17, tilt: 45 } : null;
   const markers: MapMarker[] = [];
   if (pos) markers.push({ id: 'me', lat: pos.lat, lng: pos.lng, kind: 'vehicle', self: true, label: t('driver.map.you') });
-  markers.push(leg === 'dropoff'
-    ? { id: 'dp', lat: trip.dropoff.lat, lng: trip.dropoff.lng, kind: 'dropoff', label: t('driver.map.destination') }
-    : { id: 'pk', lat: trip.pickup.lat, lng: trip.pickup.lng, kind: 'pickup', label: t('driver.map.pickup') });
+  if (leg === 'pickup') markers.push({ id: 'pk', lat: trip.pickup.lat, lng: trip.pickup.lng, kind: 'pickup', label: t('driver.map.pickup') });
+  if (stop && leg !== 'dropoff') markers.push({ id: 'st', lat: stop.lat, lng: stop.lng, kind: 'stop', label: t('driver.map.stop') });
+  if (leg !== 'pickup' || !stop) markers.push({ id: 'dp', lat: trip.dropoff.lat, lng: trip.dropoff.lng, kind: 'dropoff', label: t('driver.map.destination') });
   const paxLoc = leg === 'pickup' ? trip.passengerLocation ?? null : null;
   if (paxLoc) markers.push({ id: 'pax', lat: paxLoc.lat, lng: paxLoc.lng, kind: 'person', label: trip.passengerName });
   const paxFromPickupM = paxLoc ? Math.round(metersBetween(paxLoc, trip.pickup)) : null;
   const routeLine = useMemo(() => (route ? route.path.slice(Math.max(0, (progress?.seg ?? 0))).map(([la, ln]) => [ln, la] as [number, number]) : []), [route, progress?.seg]);
   const externalHref = `https://www.google.com/maps/dir/?api=1&destination=${target.lat},${target.lng}&travelmode=driving`;
 
+  // ---- Paid waiting meter at the stop (no grace; added to the main fare) ----
+  let stopNode: React.ReactNode = null;
+  if (atStop && stop) {
+    if (stop.waitStartedAt) {
+      const secs = Math.max(0, Math.floor((nowMs - new Date(stop.waitStartedAt).getTime()) / 1000));
+      const cents = Math.round((secs / 60) * stop.rateCentsPerMin);
+      stopNode = <div className="flex items-center justify-between gap-2"><span className="text-warn">⏱ {t('driver.stop.paidWaiting')}</span><span className="font-mono text-lg text-warn">{Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')}{stop.rateCentsPerMin > 0 ? ` · ${fmt.money(cents)}` : ''}</span></div>;
+    } else {
+      stopNode = <span className="text-muted">{t('driver.stop.atStopHint')}</span>;
+    }
+  }
+
   // ---- Waiting timer at pickup ----
   let waitingNode: React.ReactNode = null;
-  if (waitingAtPickup && trip.waiting) {
+  if (trip.status === 'ARRIVED' && trip.waiting) {
     const elapsed = Math.max(0, Math.floor((nowMs - new Date(trip.waiting.arrivedAt).getTime()) / 1000));
     const freeLeft = Math.max(0, trip.waiting.graceSeconds - elapsed);
     const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -186,10 +203,12 @@ export function DriverNavigation(props: {
     <div className="fixed inset-0 z-50 flex flex-col bg-page" data-testid="driver-nav">
       {/* Manoeuvre banner */}
       <div className="relative z-10 bg-accent px-4 pb-3 text-[#10191C]" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }} aria-live="polite">
-        {waitingAtPickup ? (
+        {atStop && stop ? (
+          <div><div className="text-lg font-bold">{t('driver.stop.atStop')}</div><div className="text-sm">{stop.label}</div></div>
+        ) : waitingAtPickup ? (
           <div><div className="text-lg font-bold">{t('driver.navigation.waitingFor', { name: trip.passengerName })}</div><div className="text-sm">{trip.pickup.label}</div></div>
         ) : atTarget ? (
-          <div><div className="text-lg font-bold">{leg === 'pickup' ? t('driver.navigation.arrivedPickup') : t('driver.navigation.arrivedDestination')}</div><div className="text-sm">{target.label}</div></div>
+          <div><div className="text-lg font-bold">{leg === 'pickup' ? t('driver.navigation.arrivedPickup') : leg === 'stop' ? t('driver.navigation.arrivedStop') : t('driver.navigation.arrivedDestination')}</div><div className="text-sm">{target.label}</div></div>
         ) : !pos ? (
           <div className="text-base font-semibold">{t('driver.navigation.needGps')}</div>
         ) : routeState === 'unavailable' ? (
@@ -242,7 +261,7 @@ export function DriverNavigation(props: {
           </div>
         )}
         <div className="mt-1 text-sm">
-          <span className="text-muted">{leg === 'pickup' ? t('driver.navigation.toPickup') : t('driver.navigation.toDestination')}</span>{' '}
+          <span className="text-muted">{leg === 'pickup' ? t('driver.navigation.toPickup') : leg === 'stop' ? t('driver.navigation.toStop') : t('driver.navigation.toDestination')}</span>{' '}
           <span className="font-medium">{target.label}</span>
         </div>
         {paxLoc && paxFromPickupM != null && (
@@ -257,6 +276,8 @@ export function DriverNavigation(props: {
           <span className="ml-auto font-mono text-xs text-muted">{trip.reference}</span>
         </div>
         {waitingNode && <div className="mt-2 rounded-[12px] border border-edge bg-page p-3 text-sm">{waitingNode}</div>}
+        {stop && leg === 'pickup' && <div className="mt-1 text-sm"><span className="text-muted">{t('driver.stop.via')}</span> <span className="font-medium">{stop.label}</span></div>}
+        {stopNode && <div className="mt-2 rounded-[12px] border border-edge bg-page p-3 text-sm">{stopNode}</div>}
 
         {/* The one action for this stage */}
         <div className="mt-3 space-y-2">
@@ -268,7 +289,14 @@ export function DriverNavigation(props: {
               <button className="btn-primary min-h-[52px] shrink-0 px-4" disabled={startCode.length !== 4} onClick={() => props.onTripAction('start', { code: startCode })}>{t('driver.trip.startTrip')}</button>
             </div>
           )}
-          {trip.status === 'IN_PROGRESS' && <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => setAsk('complete')}>{t('driver.trip.completeTrip')}</button>}
+          {leg === 'stop' && !atStop && <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => props.onTripAction('stop', { action: 'arrived' })}>{t('driver.stop.arrived')}</button>}
+          {atStop && (
+            <>
+              {!stop?.waitStartedAt && <button className="btn-ghost min-h-[48px] w-full !border-warn/60 text-base !text-warn" onClick={() => props.onTripAction('stop', { action: 'wait' })}>⏱ {t('driver.stop.startWaiting')}</button>}
+              <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => props.onTripAction('stop', { action: 'continue' })}>{t('driver.stop.continue')}</button>
+            </>
+          )}
+          {trip.status === 'IN_PROGRESS' && leg === 'dropoff' && <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => setAsk('complete')}>{t('driver.trip.completeTrip')}</button>}
         </div>
 
         <div className="mt-2 grid grid-cols-3 gap-2">

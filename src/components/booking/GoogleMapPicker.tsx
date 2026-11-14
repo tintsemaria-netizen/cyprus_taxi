@@ -12,7 +12,7 @@ const MOVE_TOLERANCE = 1e-6;      // ~0.11m — ignore resize/no-op idle events
 const REVERSE_TIMEOUT_MS = 8000;
 
 interface Props {
-  kind: 'pickup' | 'dropoff';
+  kind: 'pickup' | 'dropoff' | 'stop';
   initial: Selected | null;
   fallback: { lat: number; lng: number } | null;
   onConfirm: (sel: Selected) => void;
@@ -54,7 +54,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
   const [retryKey, setRetryKey] = useState(0);
   const { t } = useT();
   const coordLabel = (lat: number, lng: number) => t('booking.picker.pin', { coords: `${lat.toFixed(5)}, ${lng.toFixed(5)}` });
-  const label = kind === 'pickup' ? t('booking.picker.titlePickup') : t('booking.picker.titleDestination');
+  const label = kind === 'pickup' ? t('booking.picker.titlePickup') : kind === 'stop' ? t('booking.picker.titleStop') : t('booking.picker.titleDestination');
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -277,7 +277,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
         {geoMsg[geo] && <p className="mb-2 text-xs text-warn">{geoMsg[geo]}</p>}
         {geo === 'ok' && coarse && <p className="mb-2 text-xs text-muted">{t('booking.picker.approximate', { m: Math.round(accuracyM as number) })}</p>}
         <div className="mb-3 h-[3.25rem]">
-          <div className="label">{kind === 'pickup' ? t('booking.picker.selectedPickup') : t('booking.picker.selectedDestination')}</div>
+          <div className="label">{kind === 'pickup' ? t('booking.picker.selectedPickup') : kind === 'stop' ? t('booking.picker.selectedStop') : t('booking.picker.selectedDestination')}</div>
           <div className="mt-0.5 truncate text-sm font-medium">
             {addr ?? coordLabel(center.lat, center.lng)}
             {resolving && !addr && <span className="ml-2 text-xs text-muted">{t('booking.picker.resolving')}</span>}
@@ -287,7 +287,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
         <div className="flex gap-2">
           <button className="btn-ghost flex-1" onClick={cancel}>{t('common.cancel')}</button>
           <button className="btn-primary flex-1" onClick={confirm} disabled={failed || !mapLoaded}>
-            {kind === 'pickup' ? t('booking.picker.confirmPickup') : t('booking.picker.confirmDestination')}
+            {kind === 'pickup' ? t('booking.picker.confirmPickup') : kind === 'stop' ? t('booking.picker.confirmStop') : t('booking.picker.confirmDestination')}
           </button>
         </div>
       </div>

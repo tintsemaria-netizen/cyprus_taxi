@@ -25,8 +25,10 @@ export async function POST(req: Request) {
   const active = await prisma.assignment.findFirst({ where: { activeDriverId: ctx.driver.id }, include: { booking: true } });
   if (!active) return apiOk({ available: false, reason: 'NO_TRIP' });
   const b = active.booking;
-  const leg = b.status === 'IN_PROGRESS' ? 'dropoff' : 'pickup';
-  const to = leg === 'dropoff' ? { lat: b.dropoffLat, lng: b.dropoffLng } : { lat: b.pickupLat, lng: b.pickupLng };
+  // With a stop (2026-11-15): pickup → stop (until the driver continues from it) → destination.
+  const toStop = b.status === 'IN_PROGRESS' && b.stopLat != null && b.stopLng != null && !b.stopDepartedAt;
+  const leg = b.status !== 'IN_PROGRESS' ? 'pickup' : toStop ? 'stop' : 'dropoff';
+  const to = leg === 'dropoff' ? { lat: b.dropoffLat, lng: b.dropoffLng } : leg === 'stop' ? { lat: b.stopLat!, lng: b.stopLng! } : { lat: b.pickupLat, lng: b.pickupLng };
   const base = { bookingId: b.id, status: b.status, leg, target: to };
   if (b.status === 'ARRIVED') return apiOk({ ...base, available: false, reason: 'ARRIVED' });
   if (!googleConfigured()) return apiOk({ ...base, available: false, reason: 'NO_ROUTER' });

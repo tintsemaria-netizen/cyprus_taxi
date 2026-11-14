@@ -17,6 +17,7 @@ export interface Receipt {
   completedAt: string | null;
   pickup: string;
   dropoff: string;
+  stop?: string | null;
   vClass: string;
   passengerCount: number;
   driver: { name: string; vehicle: string; plate: string } | null;
@@ -62,6 +63,7 @@ export async function passengerReceipt(bookingId: string, passengerId: string): 
       status: true,
       pickupLabel: true,
       dropoffLabel: true,
+      stopLabel: true,
       vClass: true,
       passengerCount: true,
       fareBreakdown: true,
@@ -112,6 +114,7 @@ export async function passengerReceipt(bookingId: string, passengerId: string): 
       completedAt: completedEvent?.createdAt.toISOString() ?? null,
       pickup: b.pickupLabel,
       dropoff: b.dropoffLabel,
+      stop: b.stopLabel,
       vClass: b.vClass,
       passengerCount: b.passengerCount,
       driver: completing

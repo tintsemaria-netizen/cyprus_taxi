@@ -47,7 +47,7 @@ function framePoint(map: any, g: any, lat: number, lng: number, pad: any, maxZoo
     if (map.getZoom() > maxZoom) map.setZoom(maxZoom);
   });
 }
-const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46' };
+const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF' };
 
 // Google AdvancedMarkerElement anchors its content at the BOTTOM-centre, but our markers (cars,
 // dots) are drawn centred on their point. Without this shift a 84 px car was drawn 42 px north
@@ -317,5 +317,6 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       </div>
     );
   }
-  return <div ref={containerRef} className={className} aria-label="Map" role="application" />;
+  // isolation: marker z-indexes (own car 1000, person 900) stay inside the map, never above panels.
+  return <div ref={containerRef} className={className} style={{ isolation: 'isolate' }} aria-label="Map" role="application" />;
 }
