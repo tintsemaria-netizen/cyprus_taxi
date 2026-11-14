@@ -38,7 +38,7 @@ export function DriverHomeMap({ pos, fullscreen = false, onCounts, pickup = null
   }, []);
 
   const markers = useMemo<MapMarker[]>(() => [
-    ...(pos ? [{ id: 'me', kind: 'vehicle' as const, lat: pos.lat, lng: pos.lng, label: t('driver.map.you') }] : []),
+    ...(pos ? [{ id: 'me', kind: 'vehicle' as const, self: true, lat: pos.lat, lng: pos.lng, label: t('driver.map.you') }] : []),
     ...(pickup ? [{ id: 'pickup', kind: 'pickup' as const, lat: pickup.lat, lng: pickup.lng, label: pickup.label }] : []),
   ], [pos, pickup, t]);
   const free = fleet.filter((v) => v.state !== 'busy').length;

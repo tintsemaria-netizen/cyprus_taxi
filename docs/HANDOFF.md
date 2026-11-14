@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-14 — Cars ×2; driver's own car darker and on top
+- Car marker sizes doubled: single vehicle 42→84 px; fleet 36→72 px (MapView + GoogleMapView).
+- New `VehicleState 'self'`: slate-teal body (#4E6A72) with a lime roof light and a soft lime glow, darker than the pearl fleet cars.
+- `MapMarker.self` marks the driver's own car (DriverHomeMap and DriverNavigation `id: 'me'`).
+- Z-order: self z-index 1000 (MapLibre element style, Google AdvancedMarkerElement `zIndex`); fleet zIndex 1. The own car stays above others at any zoom.
+- Checked: a standalone render of an overlapping self + fleet car shows self on top and darker. The local driver map could not show cars (no GPS share, no fresh fleet in the test DB).
+
 ## 2026-11-14 — Passenger pages: shared top bar with back arrow
 - New `src/components/PassengerTopBar.tsx`: ‹ back arrow, logo (→ /), compact LanguageSwitcher, and the AccountMenu avatar (initial), or «Войти» when signed out.
   - Back uses `history.back()` when the referrer is same-origin; otherwise it goes to the fallback href (default /, /rides for a receipt).

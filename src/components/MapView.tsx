@@ -18,6 +18,8 @@ export interface MapMarker {
   tag?: string;
   /** Vehicle is on a trip (staff fleet map). */
   busy?: boolean;
+  /** The viewer's own car (driver app): darker colour, drawn above other cars. */
+  self?: boolean;
 }
 
 interface Props {
@@ -123,7 +125,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       for (const mk of markers) {
         let el: HTMLElement;
         if (mk.kind === 'vehicle') {
-          el = vehicleMarkerEl({ state: mk.busy ? 'busy' : 'available', stale: mk.stale, title: mk.label || 'Your driver', tag: mk.tag });
+          el = vehicleMarkerEl({ state: mk.self ? 'self' : mk.busy ? 'busy' : 'available', stale: mk.stale, title: mk.label || 'Your driver', tag: mk.tag });
         } else {
           el = document.createElement('div');
           el.style.width = '18px';
@@ -136,6 +138,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
           el.title = mk.label || mk.kind;
         }
         const marker = new maplibre.Marker({ element: el }).setLngLat([mk.lng, mk.lat]).addTo(map);
+        if (mk.self) marker.getElement().style.zIndex = '1000';
         markerObjs.current.push(marker);
       }
       // Fit to markers if more than one (not while the navigation camera is following).
@@ -163,7 +166,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       fleetObjs.current.forEach((m) => m.remove());
       fleetObjs.current = [];
       for (const v of fleet) {
-        const el = vehicleMarkerEl({ state: v.state === 'busy' ? 'busy' : 'available', stale: v.stale, size: 36, title: v.state === 'busy' ? 'On a trip' : 'Available' });
+        const el = vehicleMarkerEl({ state: v.state === 'busy' ? 'busy' : 'available', stale: v.stale, size: 72, title: v.state === 'busy' ? 'On a trip' : 'Available' });
         fleetObjs.current.push(new maplibre.Marker({ element: el }).setLngLat([v.lng, v.lat]).addTo(map));
       }
     })();

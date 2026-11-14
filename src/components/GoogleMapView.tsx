@@ -46,7 +46,7 @@ const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46' };
 
 function markerEl(mk: MapMarker): HTMLElement {
   if (mk.kind === 'vehicle') {
-    const el = vehicleMarkerEl({ state: mk.busy ? 'busy' : 'available', stale: mk.stale, title: mk.label || 'Your driver', tag: mk.tag });
+    const el = vehicleMarkerEl({ state: mk.self ? 'self' : mk.busy ? 'busy' : 'available', stale: mk.stale, title: mk.label || 'Your driver', tag: mk.tag });
     el.dataset.sig = `${mk.busy ? 1 : 0}|${mk.tag ?? ''}`;
     return el;
   }
@@ -159,7 +159,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     for (const mk of markers) {
       let marker = markerMap.current.get(mk.id);
       if (!marker) {
-        marker = new g.marker.AdvancedMarkerElement({ map, position: { lat: mk.lat, lng: mk.lng }, content: markerEl(mk), title: mk.label });
+        marker = new g.marker.AdvancedMarkerElement({ map, position: { lat: mk.lat, lng: mk.lng }, content: markerEl(mk), title: mk.label, ...(mk.self ? { zIndex: 1000 } : {}) });
         markerMap.current.set(mk.id, marker);
         posMap.current.set(mk.id, { lat: mk.lat, lng: mk.lng });
         continue;
@@ -262,10 +262,10 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       const el = vehicleMarkerEl({
         state: v.state === 'busy' ? 'busy' : 'available',
         stale: v.stale,
-        size: 36,
+        size: 72,
         title: v.state === 'busy' ? 'On a trip' : 'Available',
       });
-      fleetObjs.current.push(new g.marker.AdvancedMarkerElement({ map, position: { lat: v.lat, lng: v.lng }, content: el }));
+      fleetObjs.current.push(new g.marker.AdvancedMarkerElement({ map, position: { lat: v.lat, lng: v.lng }, content: el, zIndex: 1 }));
     }
   }, [fleet, ready]);
 

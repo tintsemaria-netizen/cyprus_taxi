@@ -10,8 +10,9 @@ const GLASS = '#22303a'; // tinted glass
 const PEARL = '#F4F2EC'; // available: pearl white
 const BUSY = '#9AA7B4'; // on a trip: soft slate
 const ROOF = '#C8FF46'; // brand lime roof light (available only)
+const SELF = '#4E6A72'; // the driver's own car: deeper slate-teal, darker than the pearl fleet
 
-export type VehicleState = 'available' | 'busy';
+export type VehicleState = 'available' | 'busy' | 'self';
 
 /**
  * Top-down sedan, nose pointing up (north). `viewBox` is 40×44, the car
@@ -55,13 +56,19 @@ export function vehicleMarkerEl(opts: {
   title?: string;
   tag?: string;
 }): HTMLElement {
-  const { state = 'available', stale = false, size = 42, heading = 0, title, tag } = opts;
+  // 2026-11-14: cars doubled in size (single 42→84 px, fleet 36→72 px at the call sites).
+  const { state = 'available', stale = false, size = 84, heading = 0, title, tag } = opts;
   const busy = state === 'busy';
+  const self = state === 'self';
   const el = document.createElement('div');
   el.style.cssText =
     `position:relative;width:${size}px;height:${size}px;opacity:${stale ? 0.55 : 1};` +
     `filter:drop-shadow(0 2px 3px rgba(0,0,0,0.45));transition:opacity .2s ease`;
-  el.innerHTML = `<div class="car" style="width:100%;height:100%">${carSvg(busy ? BUSY : PEARL, heading, !busy)}</div>`;
+  if (self) {
+    el.style.zIndex = '1000'; // own car stays above other cars at every zoom level
+    el.style.filter = 'drop-shadow(0 0 4px rgba(200,255,70,0.55)) drop-shadow(0 2px 3px rgba(0,0,0,0.45))';
+  }
+  el.innerHTML = `<div class="car" style="width:100%;height:100%">${carSvg(self ? SELF : busy ? BUSY : PEARL, heading, !busy)}</div>`;
   if (tag) {
     const t = document.createElement('div');
     t.textContent = tag;

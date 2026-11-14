@@ -159,7 +159,7 @@ export function DriverNavigation(props: {
   const camCenter = camPoint ? offsetPoint(camPoint, heading, 110) : null;
   const follow = following && camCenter && !waitingAtPickup ? { lat: camCenter.lat, lng: camCenter.lng, heading, zoom: 17, tilt: 45 } : null;
   const markers: MapMarker[] = [];
-  if (pos) markers.push({ id: 'me', lat: pos.lat, lng: pos.lng, kind: 'vehicle', label: t('driver.map.you') });
+  if (pos) markers.push({ id: 'me', lat: pos.lat, lng: pos.lng, kind: 'vehicle', self: true, label: t('driver.map.you') });
   markers.push(leg === 'dropoff'
     ? { id: 'dp', lat: trip.dropoff.lat, lng: trip.dropoff.lng, kind: 'dropoff', label: t('driver.map.destination') }
     : { id: 'pk', lat: trip.pickup.lat, lng: trip.pickup.lng, kind: 'pickup', label: t('driver.map.pickup') });
