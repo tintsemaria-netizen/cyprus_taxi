@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-14 — Passenger home: draggable bottom sheet (mobile)
+- On phones (<640px) the booking panel is a bottom sheet with two snap points, both changed by dragging the handle (pointer events, `touch-none`):
+  - full height of the area under the header;
+  - collapsed peek strip `PEEK_PX=170` (+ safe area), showing «Куда едем?» and the top of the form. Phones open collapsed.
+- Tapping the handle toggles the sheet. Focusing any input expands it. A non-form step (review/done) expands it. The CTA is shown only when the sheet is expanded.
+- Desktop keeps the side panel with the collapse/expand button.
+- Checked with Playwright on iPhone 13 (local build): heights are 170 → 452 (full) → 170, and focusing an input gives full height. No page errors.
+
 ## 2026-11-14 — Admin «Клиенты» (passenger accounts)
 - New page `/admin/passengers` (nav «Клиенты», ADMIN only). It shows passenger accounts with name, phone, email, registration date, last sign-in, and ride counts (total / completed / canceled).
 - Search by name, phone or email; the newest 200 are shown. Clicking a client lists their rides, each linking to `/dispatch/bookings/[id]`.

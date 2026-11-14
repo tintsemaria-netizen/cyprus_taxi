@@ -37,6 +37,8 @@ function withSlot(template: string, slot: string, node: React.ReactNode): React.
   return <>{before}{node}{after}</>;
 }
 
+const PEEK_PX = 170;
+
 export default function BookingApp() {
   const router = useRouter();
   const { t, tp, fmt, tError, locale } = useT();
@@ -57,7 +59,7 @@ export default function BookingApp() {
   const [step, setStep] = useState<'form' | 'review' | 'scheduled'>('form');
   // The booking panel floats over the map and can be collapsed to a slim bar (2026-11-14).
   const [collapsed, setCollapsed] = useState(false);
-  useEffect(() => { setCollapsed(false); }, [step]);
+  useEffect(() => { if (step !== 'form') setCollapsed(false); }, [step]);
   // After a pre-booking (2026-11-13) the passenger stays here and can order again right away.
   const [doneAt, setDoneAt] = useState<string | null>(null);
   // Pre-booking reminder on the home page (2026-11-13): the signed-in passenger's next scheduled
@@ -193,10 +195,45 @@ export default function BookingApp() {
     () => (vp.w < 640
       // Mobile: the booking sheet covers most of the screen, so fit the island into
       // the small visible band at the top (large bottom padding).
-      ? { top: 16, right: 24, bottom: collapsed ? 110 : Math.round(vp.h * 0.62), left: 24 }
+      ? { top: 16, right: 24, bottom: collapsed ? PEEK_PX + 24 : Math.round(vp.h * 0.62), left: 24 }
       : collapsed ? { top: 110, right: 60, bottom: 40, left: 40 } : { top: 40, right: 60, bottom: 40, left: 420 }),
     [vp, collapsed],
   );
+
+  // Mobile bottom sheet drag (2026-11-14): full screen when open, a strip stays when collapsed.
+  const isMobile = vp.w < 640;
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+  const sheetBoxRef = useRef<HTMLDivElement | null>(null);
+  const drag = useRef<{ y: number; h: number; max: number; moved: boolean } | null>(null);
+  const [dragH, setDragH] = useState<number | null>(null);
+  function onSheetDown(e: React.PointerEvent<HTMLDivElement>) {
+    const h = sheetRef.current?.getBoundingClientRect().height ?? PEEK_PX;
+    const max = sheetBoxRef.current?.getBoundingClientRect().height ?? vp.h;
+    drag.current = { y: e.clientY, h, max, moved: false };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+  function onSheetMove(e: React.PointerEvent<HTMLDivElement>) {
+    const d = drag.current;
+    if (!d) return;
+    const dy = e.clientY - d.y;
+    if (Math.abs(dy) > 6) d.moved = true;
+    if (d.moved) setDragH(Math.min(d.max, Math.max(PEEK_PX * 0.7, d.h - dy)));
+  }
+  function onSheetUp(e: React.PointerEvent<HTMLDivElement>) {
+    const d = drag.current;
+    drag.current = null;
+    if (!d) return;
+    if (!d.moved) setCollapsed((c) => !c); // a tap on the handle toggles
+    else {
+      const h = d.h - (e.clientY - d.y);
+      const goingUp = e.clientY < d.y;
+      // Snap in the direction of the swipe once it passes a small threshold.
+      setCollapsed(goingUp ? h < PEEK_PX + 40 : h < d.max - 40);
+    }
+    setDragH(null);
+  }
+  // Phones open with the sheet collapsed so the map is visible; tablets/desktop keep the panel open.
+  useEffect(() => { if (window.innerWidth < 640) setCollapsed(true); }, []);
 
   const markers = useMemo<MapMarker[]>(() => {
     const m: MapMarker[] = [];
@@ -485,9 +522,30 @@ export default function BookingApp() {
         </div>
 
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end sm:block">
-          <div className="w-full sm:absolute sm:left-4 sm:top-4 sm:h-[calc(100%-2rem)] sm:w-[380px]">
-            <div className="card pointer-events-auto flex max-h-[64dvh] flex-col overflow-hidden sm:max-h-full">
-              {/* Drag-handle style toggle: tap to collapse the panel and see the map. */}
+          <div ref={sheetBoxRef} className="flex h-full w-full flex-col justify-end sm:absolute sm:left-4 sm:top-4 sm:block sm:h-[calc(100%-2rem)] sm:w-[380px]">
+            <div
+              ref={sheetRef}
+              className={`card pointer-events-auto flex flex-col overflow-hidden sm:max-h-full ${isMobile ? 'rounded-b-none' : ''} ${isMobile && dragH == null ? 'transition-[height] duration-300 ease-out' : ''}`}
+              style={isMobile ? { height: dragH != null ? `${dragH}px` : collapsed ? `calc(${PEEK_PX}px + env(safe-area-inset-bottom))` : '100%' } : undefined}
+              onFocusCapture={() => { if (isMobile && collapsed) setCollapsed(false); }}
+            >
+              {isMobile ? (
+                // Mobile bottom sheet: drag the handle up (full screen) or down (a strip stays visible).
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={!collapsed}
+                  aria-label={collapsed ? t('booking.sheet.expand') : t('booking.sheet.collapse')}
+                  onPointerDown={onSheetDown}
+                  onPointerMove={onSheetMove}
+                  onPointerUp={onSheetUp}
+                  onPointerCancel={onSheetUp}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCollapsed((c) => !c); } }}
+                  className="flex w-full shrink-0 cursor-grab touch-none select-none justify-center pb-2 pt-3"
+                >
+                  <span className="h-1.5 w-12 rounded-full bg-edge-strong" />
+                </div>
+              ) : (
               <button
                 type="button"
                 onClick={() => setCollapsed((c) => !c)}
@@ -497,7 +555,7 @@ export default function BookingApp() {
               >
                 <span className="h-1 w-10 rounded-full bg-edge-strong" />
                 {collapsed ? (
-                  <span className="flex w-full items-center justify-between gap-3 py-1.5 text-left" style={{ paddingBottom: 'max(0.375rem, env(safe-area-inset-bottom))' }}>
+                  <span className="flex w-full items-center justify-between gap-3 py-1.5 text-left">
                     <span className="min-w-0">
                       <span className="block text-base font-bold text-ink">{t('booking.form.title')}</span>
                       {pickup && dropoff && <span className="block truncate text-xs">{pickup.label} → {dropoff.label}</span>}
@@ -508,8 +566,9 @@ export default function BookingApp() {
                   <span className="text-xs">{t('booking.sheet.collapse')} ▼</span>
                 )}
               </button>
-              {!collapsed && (<>
-              <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5" style={{ paddingBottom: step === 'form' ? '1rem' : 'max(1rem, env(safe-area-inset-bottom))' }}>
+              )}
+              {(isMobile || !collapsed) && (<>
+              <div className={`min-h-0 flex-1 p-4 sm:p-5 ${isMobile && collapsed ? 'overflow-hidden' : 'overflow-y-auto'}`} style={{ paddingBottom: step === 'form' ? '1rem' : 'max(1rem, env(safe-area-inset-bottom))' }}>
                 {step === 'form' ? (
                   /* ---- FORM (inlined so inputs keep focus across renders) ---- */
                   <div>
@@ -725,7 +784,7 @@ export default function BookingApp() {
                   )
                 )}
               </div>
-              {step === 'form' && (
+              {step === 'form' && !collapsed && (
                 // Sticky call to action: always visible without scrolling the form (2026-10-01 audit).
                 <div className="border-t border-edge p-3 sm:p-4" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
                   <button className="btn-primary w-full" onClick={toReview}>
