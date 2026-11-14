@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-14 — FIX: cars drawn on the neighbouring street (Google map anchor)
+- Google `AdvancedMarkerElement` anchors content at the bottom-centre. Our cars and dots are centred, so every Google marker was drawn half its height north of its real position. After the ×2 car size, the 84 px own car sat 42 px off: correct when zoomed in, the next street at normal zoom.
+- `centerOnPoint()` in GoogleMapView (`translateY(50%)`) is applied to vehicle, pickup/dropoff and fleet markers; the picker's blue device dot gets the same.
+- MapLibre (local) already anchors at the centre, so this never reproduced locally.
+
 ## 2026-11-14 — Driver GPS quality: filter, coarse-mode retry, accuracy badge
 - `src/lib/gpsFilter.ts` (pure, unit-tested in `tests/gps-filter.test.ts`). It decides which raw fix becomes the driver's position, i.e. what is sent to `/driver/location` and drawn:
   - a poor fix (>50 m) is ignored while a good fix is younger than 30 s; otherwise a rough fix is still used;

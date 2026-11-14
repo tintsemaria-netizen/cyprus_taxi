@@ -48,16 +48,25 @@ function framePoint(map: any, g: any, lat: number, lng: number, pad: any, maxZoo
 }
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46' };
 
+// Google AdvancedMarkerElement anchors its content at the BOTTOM-centre, but our markers (cars,
+// dots) are drawn centred on their point. Without this shift a 84 px car was drawn 42 px north
+// of its real GPS position — a few metres when zoomed in, hundreds of metres (the neighbouring
+// street) at the normal zoom (bug 2026-11-14). MapLibre anchors at the centre already.
+function centerOnPoint(el: HTMLElement): HTMLElement {
+  el.style.transform = 'translateY(50%)';
+  return el;
+}
+
 function markerEl(mk: MapMarker): HTMLElement {
   if (mk.kind === 'vehicle') {
     const el = vehicleMarkerEl({ state: mk.self ? 'self' : mk.busy ? 'busy' : 'available', stale: mk.stale, title: mk.label || 'Your driver', tag: mk.tag });
     el.dataset.sig = `${mk.busy ? 1 : 0}|${mk.tag ?? ''}`;
-    return el;
+    return centerOnPoint(el);
   }
   const el = document.createElement('div');
   el.style.cssText = `width:18px;height:18px;border-radius:50px;background:${COLORS[mk.kind]};border:2px solid #0d1608;box-shadow:0 0 0 3px rgba(200,255,70,0.25);opacity:${mk.stale ? 0.5 : 1};display:flex;align-items:center;justify-content:center;font-size:14px`;
   el.title = mk.label || mk.kind;
-  return el;
+  return centerOnPoint(el);
 }
 
 export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
@@ -277,7 +286,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
         size: 72,
         title: v.state === 'busy' ? 'On a trip' : 'Available',
       });
-      fleetObjs.current.push(new g.marker.AdvancedMarkerElement({ map, position: { lat: v.lat, lng: v.lng }, content: el, zIndex: 1 }));
+      fleetObjs.current.push(new g.marker.AdvancedMarkerElement({ map, position: { lat: v.lat, lng: v.lng }, content: centerOnPoint(el), zIndex: 1 }));
     }
   }, [fleet, ready]);
 

@@ -169,7 +169,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
     if (!g || !map || closed.current || gen !== mapGen.current) return;
     if (!userMarker.current) {
       const el = document.createElement('div');
-      el.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#4C9AFF;border:2px solid #fff;box-shadow:0 0 0 2px rgba(76,154,255,0.4)';
+      el.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#4C9AFF;border:2px solid #fff;box-shadow:0 0 0 2px rgba(76,154,255,0.4);transform:translateY(50%)'; // centre on the point (Google anchors bottom-centre)
       userMarker.current = new g.marker.AdvancedMarkerElement({ map, position: { lat, lng }, content: el, title: t('booking.picker.deviceLocation') });
     } else {
       userMarker.current.position = { lat, lng };
