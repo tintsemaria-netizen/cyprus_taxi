@@ -62,7 +62,7 @@ const auth = {
     doneBody: 'We couldn’t verify your phone right now, so it wasn’t saved. You can enter a contact number when you book a ride.',
     doneContinue: 'Continue to booking',
   },
-  pw: { title: 'Change password', setTitle: 'Set a password', current: 'Current password', next: 'New password', save: 'Save password', changed: 'Password updated.' },
+  pw: { title: 'Change password', setTitle: 'Set a password', current: 'Current password', next: 'New password', save: 'Save password', changed: 'Password updated.', otherDevices: 'Other devices will be signed out.' },
   account: {
     signInPrompt: 'Please sign in to view your account.',
     title: 'Profile settings',

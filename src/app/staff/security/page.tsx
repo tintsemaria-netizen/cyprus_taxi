@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { StaffShell } from '@/components/staff/StaffShell';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import { StaffPasswordForm } from '@/components/StaffPasswordForm';
 import { PasswordInput } from '@/components/PasswordInput';
 
 export const dynamic = 'force-dynamic';
@@ -88,6 +89,7 @@ function Security() {
           </div>
         )}
       </section>
+      <div className="mt-4"><StaffPasswordForm /></div>
     </div>
   );
 }

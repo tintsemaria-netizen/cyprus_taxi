@@ -13,6 +13,7 @@ import { unlockOfferSound, playOfferChime, vibrateOffer, keepScreenOn } from '@/
 import { formatFlight } from '@/lib/flight';
 import { useT, MsgKey } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
+import { StaffPasswordForm } from '@/components/StaffPasswordForm';
 
 export const dynamic = 'force-dynamic';
 
@@ -791,6 +792,8 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
           </div>
         ) : <p className="text-sm text-muted">{t('driver.profile.noSupport')}</p>}
       </div>
+
+      <StaffPasswordForm />
 
       <button onClick={signOut} className="btn-ghost w-full !text-danger">{t('driver.profile.signOut')}</button>
     </div>

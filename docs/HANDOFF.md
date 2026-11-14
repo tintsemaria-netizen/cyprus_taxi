@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-14 — Drivers/staff can change their own password
+- `POST /api/v1/auth/password` takes `{current, next}` and checks the current password. It is rate-limited to 10 per 10 min.
+- On success it bumps `sessionVersion` (signs out every other device), re-issues this device's session and writes the AuditEvent `CHANGE_OWN_PASSWORD`.
+- UI: `src/components/StaffPasswordForm.tsx` («Сменить пароль»). It is in the driver app under Профиль (bottom) and on /staff/security for admin/dispatcher.
+- Drivers sign in either by SMS code (/driver/login) or by login + password (/staff/login, which redirects to /driver). The password matters for the second way.
+- Tests: `tests/staff-password.db.test.ts`. Playwright check (local build, iPhone 13, driver andreas): the change works, this device stays signed in, and the new password logs in.
+
 ## 2026-11-14 — Readable temporary passwords for clients
 - `readablePassword()` in `src/server/admin-passengers.ts`: format `XXXX-XXXX-XXXX` from an alphabet without 0/O/1/l/I (~69 bits of entropy).
 - The admin page shows it large, in monospace, with a hint to copy it or type it with the dashes.
