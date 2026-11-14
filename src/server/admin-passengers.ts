@@ -48,3 +48,41 @@ export async function passengerRides(passengerId: string, limit = 50) {
   });
   return rows.map((b) => ({ ...b, scheduledAt: b.scheduledAt?.toISOString() ?? null, createdAt: b.createdAt.toISOString() }));
 }
+
+// Full client profile for the admin (2026-11-14). Passwords are stored only as a one-way hash,
+// so the admin sees whether one is set — never the password itself.
+export async function passengerDetail(passengerId: string) {
+  const p = await prisma.passenger.findUnique({ where: { id: passengerId } });
+  if (!p) return null;
+  const now = new Date();
+  const [activeSessions, lastSession, places] = await Promise.all([
+    prisma.passengerSession.count({ where: { passengerId, revokedAt: null, expiresAt: { gt: now } } }),
+    prisma.passengerSession.findFirst({ where: { passengerId }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
+    prisma.savedPlace.findMany({ where: { passengerId }, select: { kind: true, label: true } }),
+  ]);
+  return {
+    id: p.id, name: p.name, email: p.email, phone: p.phone,
+    phoneVerifiedAt: p.phoneVerifiedAt?.toISOString() ?? null,
+    hasPassword: !!p.passwordHash,
+    createdAt: p.createdAt.toISOString(), updatedAt: p.updatedAt.toISOString(),
+    activeSessions, lastLoginAt: lastSession?.createdAt.toISOString() ?? null,
+    savedPlaces: places,
+  };
+}
+
+// Admin password reset: a new temporary password (returned once, never stored in clear) and all of
+// the client's sessions are signed out. Audited without the password.
+export async function resetPassengerPassword(passengerId: string, actorId: string): Promise<string | null> {
+  const { generateToken } = await import('@/lib/crypto');
+  const { hashPassword } = await import('@/lib/auth');
+  const p = await prisma.passenger.findUnique({ where: { id: passengerId }, select: { id: true } });
+  if (!p) return null;
+  const temporaryPassword = generateToken(9);
+  const passwordHash = await hashPassword(temporaryPassword);
+  await prisma.$transaction([
+    prisma.passenger.update({ where: { id: passengerId }, data: { passwordHash } }),
+    prisma.passengerSession.updateMany({ where: { passengerId, revokedAt: null }, data: { revokedAt: new Date() } }),
+    prisma.auditEvent.create({ data: { actorId, actorRole: 'ADMIN', action: 'RESET_PASSENGER_PASSWORD', target: passengerId } }),
+  ]);
+  return temporaryPassword;
+}

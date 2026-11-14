@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const p = await getPassenger();
   if (!p) return Errors.unauthorized();
-  return apiOk({ phone: p.phone, name: p.name, email: p.email });
+  return apiOk({ phone: p.phone, name: p.name, email: p.email, hasPassword: !!p.passwordHash });
 }
 
 // Update the passenger's display name only (Task 019 profile settings). Phone and email are the

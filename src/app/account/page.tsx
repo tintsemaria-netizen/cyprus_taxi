@@ -5,12 +5,14 @@ import { Logo } from '@/components/Brand';
 import { PlacesInput, Selected } from '@/components/booking/PlacesInput';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import { PasswordInput } from '@/components/PasswordInput';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 export const dynamic = 'force-dynamic';
 
-interface Me { phone: string | null; name?: string | null; email?: string | null }
+interface Me {
+  hasPassword?: boolean; phone: string | null; name?: string | null; email?: string | null }
 
 // Passenger profile settings (Task 019). Read-mostly: shows the verified phone + email; the display
 // name is editable (phone/email changes need re-verification and are not offered here yet).
@@ -74,6 +76,8 @@ export default function Account() {
         {msg && <p className="text-sm text-muted">{msg}</p>}
         <button className="btn-primary min-h-[44px] w-full" disabled={busy || !name.trim()}>{busy ? t('auth.saving') : t('auth.account.save')}</button>
       </form>
+
+      <ChangePassword hasPassword={!!me.hasPassword} />
 
       <SavedPlaces />
 
@@ -189,5 +193,42 @@ function DataRights() {
       </div>
       {ask && <ConfirmSheet title={t('auth.data.confirmTitle')} body={t('auth.data.confirmBody')} confirmLabel={t('auth.data.confirm')} danger busy={busy} onConfirm={del} onCancel={() => setAsk(false)} />}
     </section>
+  );
+}
+
+// Change (or set) the account password (2026-11-14). An admin-issued temporary password is
+// replaced here.
+function ChangePassword({ hasPassword }: { hasPassword: boolean }) {
+  const { t, tError } = useT();
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [has, setHas] = useState(hasPassword);
+  async function submit(e: React.FormEvent) {
+    e.preventDefault(); setBusy(true); setMsg(null);
+    try {
+      await api('/passenger/password', { method: 'POST', body: { current, next } });
+      setMsg(t('auth.pw.changed')); setCurrent(''); setNext(''); setHas(true);
+    } catch (err) { setMsg(err instanceof ApiRequestError ? tError(err) : t('auth.account.couldNotSave')); }
+    finally { setBusy(false); }
+  }
+  return (
+    <form onSubmit={submit} className="card space-y-3 p-4">
+      <h2 className="font-medium">{has ? t('auth.pw.title') : t('auth.pw.setTitle')}</h2>
+      {has && (
+        <div>
+          <label className="label" htmlFor="pw-current">{t('auth.pw.current')}</label>
+          <PasswordInput id="pw-current" className="field mt-1" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
+        </div>
+      )}
+      <div>
+        <label className="label" htmlFor="pw-next">{t('auth.pw.next')}</label>
+        <PasswordInput id="pw-next" className="field mt-1" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" />
+        <p className="mt-1 text-xs text-muted">{t('auth.register.passwordHint')}</p>
+      </div>
+      {msg && <p className="text-sm text-muted">{msg}</p>}
+      <button className="btn-primary min-h-[44px] w-full" disabled={busy || next.length < 8 || (has && !current)}>{busy ? t('auth.saving') : t('auth.pw.save')}</button>
+    </form>
   );
 }

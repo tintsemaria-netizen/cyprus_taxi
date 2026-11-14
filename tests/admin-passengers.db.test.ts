@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { prisma } from '@/lib/db';
-import { listPassengers, passengerRides } from '@/server/admin-passengers';
+import { listPassengers, passengerRides, passengerDetail, resetPassengerPassword } from '@/server/admin-passengers';
+import { verifyPassword, hashPassword } from '@/lib/auth';
 import { createBooking } from '@/server/bookings';
 import type { CreateBookingInput } from '@/lib/validation';
 
@@ -26,5 +27,20 @@ describe('admin passengers', () => {
     expect(byName.passengers[0]).toMatchObject({ id: p.id, rides: 3, completed: 2, canceled: 1 });
     expect((await listPassengers(`zed${RUN}@EXAMPLE`)).passengers[0]?.id).toBe(p.id);
     expect((await passengerRides(p.id)).length).toBe(3);
+  });
+
+  it('reset password: new temp password works, old one fails, sessions revoked, audited', async () => {
+    const p = await prisma.passenger.create({ data: { name: `Pw ${RUN}`, email: `pw${RUN}@example.com`, passwordHash: await hashPassword('OldPassword1') } });
+    await prisma.passengerSession.create({ data: { passengerId: p.id, sessionDigest: `d-${RUN}`, expiresAt: new Date(Date.now() + 3600e3) } });
+    expect((await passengerDetail(p.id))).toMatchObject({ hasPassword: true, activeSessions: 1, email: `pw${RUN}@example.com` });
+    const temp = await resetPassengerPassword(p.id, 'admin-test');
+    expect(temp).toBeTruthy();
+    const after = await prisma.passenger.findUniqueOrThrow({ where: { id: p.id } });
+    expect(after.passwordHash).not.toContain(temp!);
+    expect(await verifyPassword(temp!, after.passwordHash!)).toBe(true);
+    expect(await verifyPassword('OldPassword1', after.passwordHash!)).toBe(false);
+    expect((await passengerDetail(p.id))?.activeSessions).toBe(0);
+    expect(await prisma.auditEvent.count({ where: { action: 'RESET_PASSENGER_PASSWORD', target: p.id } })).toBe(1);
+    expect(await resetPassengerPassword('00000000-0000-0000-0000-000000000000', 'admin-test')).toBeNull();
   });
 });

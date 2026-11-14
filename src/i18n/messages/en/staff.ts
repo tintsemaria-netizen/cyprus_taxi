@@ -25,6 +25,13 @@ const staff = {
     noName: '(no name)', since: 'registered {date}', lastLogin: 'last sign-in {date}',
     rides: 'rides: {n}', completed: 'completed: {n}', canceled: 'canceled: {n}', noRides: 'No rides yet.',
     more: 'Showing the newest {n}. Use search to find others.',
+    lastLoginLabel: 'Last sign-in',
+    id: 'Client ID', login: 'Login (email)', phone: 'Phone', verified: 'verified', notVerified: 'not verified', name: 'Name',
+    password: 'Password', pwSet: 'set (stored encrypted, cannot be viewed)', pwNone: 'not set (SMS sign-in only)',
+    sessions: 'Signed-in devices', places: 'Saved places', updated: 'Profile updated',
+    resetPw: 'Reset password', resetTitle: 'Reset this client’s password?',
+    resetBody: 'A new temporary password is created and shown once. The client is signed out on all devices. Give it to them; they can change it in their account.',
+    newPw: 'New temporary password (shown once): {pw}', copy: 'Copy', copied: 'Copied', ridesTitle: 'Rides',
   },
   dispatch: {
     title: 'Dispatch queue',

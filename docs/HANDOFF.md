@@ -1,5 +1,14 @@
 # Session handoff
 
+## 2026-11-14 — Admin client details + password reset; client password change
+- In admin «Клиенты», expanding a client shows the full profile: ID, name, login (email), phone and its verification, whether a password is set, signed-in device count, last sign-in, last update, saved places, then their rides.
+- Passwords are bcrypt hashes and cannot be shown. The admin can «Сбросить пароль» instead:
+  - `POST /api/v1/admin/passengers/[id]/reset-password` returns a temporary password once;
+  - all the client's sessions are revoked;
+  - an AuditEvent `RESET_PASSENGER_PASSWORD` is written, without the password.
+- Client side: the /account page has «Сменить пароль» (or «Задать пароль» if the account has none). `POST /api/v1/passenger/password` checks the current password and is rate-limited. `/passenger/me` now returns `hasPassword`.
+- Tests: `tests/admin-passengers.db.test.ts` (+ reset). Playwright end-to-end on a local build: register → admin resets → old session gives 401 → sign-in with the temporary password → change the password in the account. All OK, no page errors.
+
 ## 2026-11-14 — Bottom sheet: swipe on the form body too
 - Native touch listeners (`passive: false`) are attached to the sheet body (`contentRef`).
 - Collapsed: any vertical swipe moves the sheet.

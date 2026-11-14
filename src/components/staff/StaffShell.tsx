@@ -86,7 +86,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
           </nav>
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden text-xs text-muted xl:inline">{me.displayName} · {t(`staff.role.${me.role}`)}</span>
+          <span className="hidden text-xs text-muted 2xl:inline">{me.displayName} · {t(`staff.role.${me.role}`)}</span>
           <LanguageSwitcher compact />
           <button onClick={logout} className="btn-ghost !min-h-0 !py-1.5 text-sm">{t('common.signOut')}</button>
         </div>
