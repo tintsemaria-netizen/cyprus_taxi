@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-15 — Car palette per owner: own car model, white fleet, yellow busy on admin
+- `carMarker.ts`:
+  - driver's own car (`state 'self'`) is a new original model `selfCarSvg`: silver-white gradient body, dark glossy cabin, red tail-light bar, no lime glow; still zIndex 1000;
+  - every other car is white (#FFFFFF);
+  - on-trip (`busy`) cars are yellow (#FFC83D), used only on the staff/dispatch map (`MapMarker.busy`); plate tags take the same colour.
+- Fleet overlays (passenger home, driver home) always render white: MapView/GoogleMapView fleet now use `state: 'available'`.
+- Checked: standalone render of self + white + white-with-plate + yellow-with-plate.
+
 ## 2026-11-15 — Passenger «you are here» marker + opt-in location sharing with the driver
 - Map: new `MapMarker.kind 'person'` (`personMarkerEl` in carMarker.ts: a blue disc with a figure, centred) on both MapView and GoogleMapView. `fitKeyOf` (`src/components/mapFit.ts`) ignores moving markers (vehicle, person), so they never re-fit the map; MapLibre now fits only when the fixed points change.
 - `src/components/useLiveLocation.ts`: watchPosition while the page is visible; only if permission is already granted unless `prompt`.

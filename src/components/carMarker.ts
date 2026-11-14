@@ -2,15 +2,16 @@
 // both the MapLibre (MapView) and Google (GoogleMapView) maps so the car looks identical
 // everywhere. It can be rotated to face its travel heading.
 //
-// 2026-11-14 palette: pearl-white body with a small lime roof light when free, a soft
-// slate body when on a trip; neutral shadow instead of the lime glow. Slightly larger.
+// 2026-11-15 palette (owner's choice):
+//  - other cars everywhere: white body;
+//  - staff/dispatch map: free = white, on a trip = yellow;
+//  - the driver's own car: a separate, more detailed model — silver-white body, dark glossy
+//    roof/glass, red tail-light bar (selfCarSvg).
 
-const DARK = '#1b2420'; // outline
+const DARK = '#2a2f35'; // outline
 const GLASS = '#22303a'; // tinted glass
-const PEARL = '#F4F2EC'; // available: pearl white
-const BUSY = '#9AA7B4'; // on a trip: soft slate
-const ROOF = '#C8FF46'; // brand lime roof light (available only)
-const SELF = '#4E6A72'; // the driver's own car: deeper slate-teal, darker than the pearl fleet
+const WHITE = '#FFFFFF'; // available / every non-staff car
+const BUSY = '#FFC83D'; // on a trip (staff map only): yellow
 
 export type VehicleState = 'available' | 'busy' | 'self';
 
@@ -18,7 +19,7 @@ export type VehicleState = 'available' | 'busy' | 'self';
  * Top-down sedan, nose pointing up (north). `viewBox` is 40×44, the car
  * centred on (20, 22) so a heading rotation spins it about its own centre.
  */
-function carSvg(body: string, heading = 0, roof = false): string {
+function carSvg(body: string, heading = 0): string {
   return `<svg viewBox="0 0 40 44" width="100%" height="100%" aria-hidden="true" style="overflow:visible">
   <g transform="rotate(${heading} 20 22)">
     <!-- body -->
@@ -35,10 +36,44 @@ function carSvg(body: string, heading = 0, roof = false): string {
     <rect x="14" y="21.8" width="12" height="2.2" fill="${body}"/>
     <!-- hood crease -->
     <path d="M17.2 8.6Q20 10.2 22.8 8.6" fill="none" stroke="${DARK}" stroke-width="0.5" opacity="0.45"/>
-    ${roof ? `<!-- taxi roof light --><rect x="16.6" y="21.2" width="6.8" height="3.4" rx="1.2" fill="${ROOF}" stroke="${DARK}" stroke-width="0.6"/>` : ''}
     <!-- taillights -->
     <path d="M15.4 36.4L18 37" stroke="#ff5a4d" stroke-width="1" stroke-linecap="round"/>
     <path d="M24.6 36.4L22 37" stroke="#ff5a4d" stroke-width="1" stroke-linecap="round"/>
+  </g>
+</svg>`;
+}
+
+/**
+ * The driver's own car (2026-11-15): a smoother top-down model in silver-white with a dark
+ * glossy cabin and a red tail-light bar. Same 40×44 viewBox and rotation centre as carSvg.
+ */
+function selfCarSvg(heading = 0): string {
+  return `<svg viewBox="0 0 40 44" width="100%" height="100%" aria-hidden="true" style="overflow:visible">
+  <defs>
+    <linearGradient id="ilyBody" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#B9BEC4"/><stop offset="0.18" stop-color="#E9ECEF"/>
+      <stop offset="0.5" stop-color="#F7F8F9"/><stop offset="0.82" stop-color="#E9ECEF"/><stop offset="1" stop-color="#B9BEC4"/>
+    </linearGradient>
+    <radialGradient id="ilyCabin" cx="0.5" cy="0.42" r="0.62">
+      <stop offset="0" stop-color="#5E636B"/><stop offset="0.55" stop-color="#2C3036"/><stop offset="1" stop-color="#121417"/>
+    </radialGradient>
+    <linearGradient id="ilyShine" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.28"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <g transform="rotate(${heading} 20 22)">
+    <!-- mirrors -->
+    <path d="M12.6 13.2L9.2 14.6L9.6 15.9L12.8 15Z" fill="#D9DDE1" stroke="#8E949B" stroke-width="0.5" stroke-linejoin="round"/>
+    <path d="M27.4 13.2L30.8 14.6L30.4 15.9L27.2 15Z" fill="#D9DDE1" stroke="#8E949B" stroke-width="0.5" stroke-linejoin="round"/>
+    <!-- body: rounded nose, straight flanks, square tail -->
+    <path d="M20 3.6C24.6 3.6 27.6 5 27.9 8.6L28.2 34.2C28.2 37 26.6 38.4 23.6 38.6L16.4 38.6C13.4 38.4 11.8 37 11.8 34.2L12.1 8.6C12.4 5 15.4 3.6 20 3.6Z" fill="url(#ilyBody)" stroke="#9AA0A7" stroke-width="0.6"/>
+    <!-- red tail-light bar -->
+    <path d="M12.6 35.6C12.9 37.5 14.4 38.3 16.4 38.4L23.6 38.4C25.6 38.3 27.1 37.5 27.4 35.6L27.4 37C27.2 38.8 25.6 39.6 23.6 39.7L16.4 39.7C14.4 39.6 12.8 38.8 12.6 37Z" fill="#E0262B"/>
+    <!-- dark glossy cabin (windscreen + roof + rear glass in one piece) -->
+    <path d="M20 9.4C23.4 9.4 25.4 10.4 25.6 12.8L25.9 30.6C25.9 33.2 24.4 34.4 20 34.4C15.6 34.4 14.1 33.2 14.1 30.6L14.4 12.8C14.6 10.4 16.6 9.4 20 9.4Z" fill="url(#ilyCabin)"/>
+    <path d="M20 9.9C22.9 9.9 24.6 10.7 24.8 12.6L24.9 17C23.4 15.9 21.8 15.5 20 15.5C18.2 15.5 16.6 15.9 15.1 17L15.2 12.6C15.4 10.7 17.1 9.9 20 9.9Z" fill="url(#ilyShine)"/>
+    <!-- door seams -->
+    <path d="M12.4 20.5L13.6 20.5M27.6 20.5L26.4 20.5M12.5 27L13.7 27M27.5 27L26.3 27" stroke="#A3A9B0" stroke-width="0.5" stroke-linecap="round"/>
   </g>
 </svg>`;
 }
@@ -64,18 +99,15 @@ export function vehicleMarkerEl(opts: {
   el.style.cssText =
     `position:relative;width:${size}px;height:${size}px;opacity:${stale ? 0.55 : 1};` +
     `filter:drop-shadow(0 2px 3px rgba(0,0,0,0.45));transition:opacity .2s ease`;
-  if (self) {
-    el.style.zIndex = '1000'; // own car stays above other cars at every zoom level
-    el.style.filter = 'drop-shadow(0 0 4px rgba(200,255,70,0.55)) drop-shadow(0 2px 3px rgba(0,0,0,0.45))';
-  }
-  el.innerHTML = `<div class="car" style="width:100%;height:100%">${carSvg(self ? SELF : busy ? BUSY : PEARL, heading, !busy)}</div>`;
+  if (self) el.style.zIndex = '1000'; // own car stays above other cars at every zoom level
+  el.innerHTML = `<div class="car" style="width:100%;height:100%">${self ? selfCarSvg(heading) : carSvg(busy ? BUSY : WHITE, heading)}</div>`;
   if (tag) {
     const t = document.createElement('div');
     t.textContent = tag;
     t.style.cssText =
       'position:absolute;left:50%;top:100%;transform:translate(-50%,1px);white-space:nowrap;' +
       'font:600 11px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;' +
-      `padding:1px 5px;border-radius:5px;background:${busy ? '#2a333b' : '#F4F2EC'};color:${busy ? '#e6ebef' : '#141b17'};` +
+      `padding:1px 5px;border-radius:5px;background:${busy ? '#FFC83D' : '#FFFFFF'};color:#141b17;` +
       'border:1px solid rgba(0,0,0,.35);pointer-events:none';
     el.appendChild(t);
   }

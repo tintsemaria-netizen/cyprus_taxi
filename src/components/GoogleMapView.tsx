@@ -283,7 +283,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     fleetObjs.current = [];
     for (const v of fleet) {
       const el = vehicleMarkerEl({
-        state: v.state === 'busy' ? 'busy' : 'available',
+        state: 'available', // fleet overlays: every car white (on-trip yellow is staff-only)
         stale: v.stale,
         size: 72,
         title: v.state === 'busy' ? 'On a trip' : 'Available',
