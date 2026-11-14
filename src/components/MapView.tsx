@@ -6,6 +6,7 @@ import { loadMaplibre } from '@/lib/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { publicMapConfig } from '@/lib/config';
 import { vehicleMarkerEl } from './carMarker';
+import { useIdleReturn } from './useIdleReturn';
 
 export interface MapMarker {
   id: string;
@@ -35,6 +36,8 @@ interface Props {
   focus?: { lat: number; lng: number } | null; // zoom the map to this point (e.g. the user's location)
   // Navigation camera (see GoogleMapView): centred, heading-up, tilted; suspends auto-fit.
   follow?: { lat: number; lng: number; heading: number; zoom?: number; tilt?: number } | null;
+  /** Let the user pan/zoom freely; return to the automatic view this many ms after the last gesture. */
+  idleReturnMs?: number;
   onFollowBreak?: () => void;
 }
 
@@ -60,8 +63,9 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, follow, onFollowBreak }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, follow, onFollowBreak, idleReturnMs }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const idle = useIdleReturn(containerRef, idleReturnMs);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerObjs = useRef<maplibregl.Marker[]>([]);
   const fleetObjs = useRef<maplibregl.Marker[]>([]);
@@ -142,7 +146,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         markerObjs.current.push(marker);
       }
       // Fit to markers if more than one (not while the navigation camera is following).
-      if (followRef.current) return;
+      if (followRef.current || idle.active.current) return;
       if (markers.length >= 2) {
         const b = new maplibre.LngLatBounds();
         markers.forEach((m) => b.extend([m.lng, m.lat]));
@@ -153,7 +157,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     })();
     // fitPadding is layout-only: re-fitting when it changes identity would fight the user's panning.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [markers, ready]);
+  }, [markers, ready, idle.returnTick]);
 
   // Live on-duty cars overlay (does not affect the fit) — same as GoogleMapView.
   useEffect(() => {
@@ -177,10 +181,10 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
   const focusKey = focus ? `${focus.lat.toFixed(5)},${focus.lng.toFixed(5)}` : '';
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready || !focus || followRef.current) return;
+    if (!map || !ready || !focus || followRef.current || idle.active.current) return;
     map.easeTo({ center: [focus.lng, focus.lat], zoom: 15, duration: 500 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusKey, ready]);
+  }, [focusKey, ready, idle.returnTick]);
 
   const followKey = follow ? `${follow.lat.toFixed(6)},${follow.lng.toFixed(6)},${Math.round(follow.heading)},${follow.zoom ?? 17},${follow.tilt ?? 45}` : '';
   useEffect(() => {

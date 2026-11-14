@@ -6,6 +6,7 @@ import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { CYPRUS_BOUNDS } from '@/lib/config';
 import type { MapMarker } from './MapView';
 import { vehicleMarkerEl, setVehicleHeading, bearing } from './carMarker';
+import { useIdleReturn } from './useIdleReturn';
 
 interface Props {
   markers?: MapMarker[];
@@ -25,6 +26,7 @@ interface Props {
   // Navigation camera: keep this point centred, rotated to `heading` (heading-up), with tilt.
   // While set, the auto-fit/focus framing is suspended. Dragging the map calls onFollowBreak.
   follow?: { lat: number; lng: number; heading: number; zoom?: number; tilt?: number } | null;
+  idleReturnMs?: number;
   onFollowBreak?: () => void;
 }
 
@@ -56,7 +58,7 @@ function markerEl(mk: MapMarker): HTMLElement {
   return el;
 }
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, follow, onFollowBreak }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, follow, onFollowBreak, idleReturnMs }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   // Reconcile markers by id (no recreation flicker) and remember each one's logical
@@ -77,6 +79,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   breakRef.current = onFollowBreak;
   const camAnim = useRef<number | null>(null);
   const homeRef = useRef<{ lat: number; lng: number }>(center ?? CYPRUS_CENTER);
+  const idle = useIdleReturn(containerRef, idleReturnMs);
 
   useEffect(() => {
     let cancelled = false;
@@ -201,7 +204,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   const fitKey = markers.map((m) => (m.kind === 'vehicle' ? 'v' : `${m.id}:${m.lat.toFixed(4)},${m.lng.toFixed(4)}`)).join('|');
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
-    if (!map || !g || !ready || followRef.current) return;
+    if (!map || !g || !ready || followRef.current || idle.active.current) return;
     const pad = fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 };
     if (markers.length >= 2) {
       const b = new g.LatLngBounds();
@@ -216,17 +219,17 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       map.fitBounds(b, pad);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fitKey, ready]);
+  }, [fitKey, ready, idle.returnTick]);
 
   // Zoom to a focus point (the passenger's detected location) once it resolves, unless a
   // full 2-stop route is already framed.
   const focusKey = focus ? `${focus.lat.toFixed(5)},${focus.lng.toFixed(5)}` : '';
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
-    if (!map || !g || !ready || !focus || markers.length >= 2 || followRef.current) return;
+    if (!map || !g || !ready || !focus || markers.length >= 2 || followRef.current || idle.active.current) return;
     framePoint(map, g, focus.lat, focus.lng, fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusKey, ready]);
+  }, [focusKey, ready, idle.returnTick]);
 
   // Navigation camera: ease centre + heading toward the latest fix (shortest way round).
   const followKey = follow ? `${follow.lat.toFixed(6)},${follow.lng.toFixed(6)},${Math.round(follow.heading)},${follow.zoom ?? 17},${follow.tilt ?? 45}` : '';

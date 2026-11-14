@@ -48,7 +48,7 @@ export function DriverHomeMap({ pos, fullscreen = false, onCounts, pickup = null
   if (fullscreen) {
     return (
       <div className="fixed inset-0 z-0">
-        <AutoMapView markers={markers} fleet={pickup ? [] : fleet} focus={pickup ? null : pos} center={pos ?? CYPRUS} zoom={pos ? 14 : 8} interactive fitPadding={fitPadding} className="h-full w-full" />
+        <AutoMapView markers={markers} fleet={pickup ? [] : fleet} focus={pickup ? null : pos} center={pos ?? CYPRUS} zoom={pos ? 14 : 8} interactive idleReturnMs={4000} fitPadding={fitPadding} className="h-full w-full" />
       </div>
     );
   }
@@ -56,7 +56,7 @@ export function DriverHomeMap({ pos, fullscreen = false, onCounts, pickup = null
   return (
     <div className="card overflow-hidden">
       <div className="relative h-60">
-        <AutoMapView markers={markers} fleet={fleet} focus={pos} center={pos ?? CYPRUS} zoom={pos ? 13 : 8} interactive className="h-full w-full" />
+        <AutoMapView markers={markers} fleet={fleet} focus={pos} center={pos ?? CYPRUS} zoom={pos ? 13 : 8} interactive idleReturnMs={4000} className="h-full w-full" />
         {!pos && (
           <div className="pointer-events-none absolute inset-x-2 top-2 rounded-[10px] bg-page/85 px-3 py-1.5 text-xs text-muted">{t('driver.map.noGps')}</div>
         )}

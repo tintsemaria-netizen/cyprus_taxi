@@ -1,5 +1,14 @@
 # Session handoff
 
+## 2026-11-14 — Driver map: free pan/zoom, auto-return after 4 s idle
+- Root cause: the camera re-framed on every GPS fix. The focus effect is keyed on position, and MapLibre also re-fits on every markers change.
+- `src/components/useIdleReturn.ts`: pointer/wheel listeners on the map container.
+  - While a gesture is in progress, and for N ms after the last one, `active` is set and the automatic camera effects (fit, focus) are skipped.
+  - Then `returnTick` increments and those effects re-run, restoring the default view.
+- New prop `idleReturnMs` on MapView/GoogleMapView (via AutoMapView). DriverHomeMap (fullscreen and card) uses 4000.
+- The passenger maps are unchanged (no prop). The navigation follow camera is unchanged.
+- Playwright (local MapLibre, driver andreas with GPS): own car at (153,290) → dragged to (-7,130) → a new GPS fix 2 s later did not snap the view → at ~5.5 s back to (153,290). No errors.
+
 ## 2026-11-14 — Passenger back arrow = one step back; profile settings grouped into categories
 - `src/lib/navTrail.ts` keeps a per-tab trail of passenger URLs in sessionStorage. It is recorded by PassengerTopBar and the home BookingApp (on mount + pageshow).
   - ‹ pops the trail and calls `history.back()`. A deep link or new tab goes to the fallback.
