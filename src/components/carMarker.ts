@@ -91,8 +91,8 @@ export function vehicleMarkerEl(opts: {
   title?: string;
   tag?: string;
 }): HTMLElement {
-  // 2026-11-14: cars doubled in size (single 42→84 px, fleet 36→72 px at the call sites).
-  const { state = 'available', stale = false, size = 84, heading = 0, title, tag } = opts;
+  // Car sizes: 2026-11-14 doubled (42→84, fleet 36→72); 2026-11-15 −15% (84→71, fleet 72→61).
+  const { state = 'available', stale = false, size = 71, heading = 0, title, tag } = opts;
   const busy = state === 'busy';
   const self = state === 'self';
   const el = document.createElement('div');

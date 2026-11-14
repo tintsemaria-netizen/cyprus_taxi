@@ -285,7 +285,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       const el = vehicleMarkerEl({
         state: 'available', // fleet overlays: every car white (on-trip yellow is staff-only)
         stale: v.stale,
-        size: 72,
+        size: 61,
         title: v.state === 'busy' ? 'On a trip' : 'Available',
       });
       fleetObjs.current.push(new g.marker.AdvancedMarkerElement({ map, position: { lat: v.lat, lng: v.lng }, content: centerOnPoint(el), zIndex: 1 }));

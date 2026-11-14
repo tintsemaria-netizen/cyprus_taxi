@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-15 — Cars 15% smaller
+- Single vehicle 84→71 px (carMarker default); fleet overlays 72→61 px (MapView + GoogleMapView).
+
 ## 2026-11-15 — Car palette per owner: own car model, white fleet, yellow busy on admin
 - `carMarker.ts`:
   - driver's own car (`state 'self'`) is a new original model `selfCarSvg`: silver-white gradient body, dark glossy cabin, red tail-light bar, no lime glow; still zIndex 1000;

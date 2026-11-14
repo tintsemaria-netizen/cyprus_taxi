@@ -187,7 +187,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       fleetObjs.current.forEach((m) => m.remove());
       fleetObjs.current = [];
       for (const v of fleet) {
-        const el = vehicleMarkerEl({ state: 'available', stale: v.stale, size: 72, title: v.state === 'busy' ? 'On a trip' : 'Available' });
+        const el = vehicleMarkerEl({ state: 'available', stale: v.stale, size: 61, title: v.state === 'busy' ? 'On a trip' : 'Available' });
         fleetObjs.current.push(new maplibre.Marker({ element: el }).setLngLat([v.lng, v.lat]).addTo(map));
       }
     })();
