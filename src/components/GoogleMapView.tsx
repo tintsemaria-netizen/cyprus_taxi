@@ -46,7 +46,9 @@ const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46' };
 
 function markerEl(mk: MapMarker): HTMLElement {
   if (mk.kind === 'vehicle') {
-    return vehicleMarkerEl({ stale: mk.stale, title: mk.label || 'Your driver' });
+    const el = vehicleMarkerEl({ state: mk.busy ? 'busy' : 'available', stale: mk.stale, title: mk.label || 'Your driver', tag: mk.tag });
+    el.dataset.sig = `${mk.busy ? 1 : 0}|${mk.tag ?? ''}`;
+    return el;
   }
   const el = document.createElement('div');
   el.style.cssText = `width:18px;height:18px;border-radius:50px;background:${COLORS[mk.kind]};border:2px solid #0d1608;box-shadow:0 0 0 3px rgba(200,255,70,0.25);opacity:${mk.stale ? 0.5 : 1};display:flex;align-items:center;justify-content:center;font-size:14px`;
@@ -163,6 +165,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
         continue;
       }
       marker.title = mk.label ?? '';
+      // Re-render a vehicle whose plate tag or busy state changed (staff fleet map).
+      if (mk.kind === 'vehicle' && marker.content && (marker.content as HTMLElement).dataset.sig !== `${mk.busy ? 1 : 0}|${mk.tag ?? ''}`) marker.content = markerEl(mk);
       if (marker.content) (marker.content as HTMLElement).style.opacity = mk.stale ? '0.5' : '1';
       const from = posMap.current.get(mk.id) ?? { lat: mk.lat, lng: mk.lng };
       const moved = Math.abs(from.lat - mk.lat) > 1e-7 || Math.abs(from.lng - mk.lng) > 1e-7;
@@ -258,7 +262,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       const el = vehicleMarkerEl({
         state: v.state === 'busy' ? 'busy' : 'available',
         stale: v.stale,
-        size: 28,
+        size: 36,
         title: v.state === 'busy' ? 'On a trip' : 'Available',
       });
       fleetObjs.current.push(new g.marker.AdvancedMarkerElement({ map, position: { lat: v.lat, lng: v.lng }, content: el }));

@@ -23,7 +23,7 @@ interface QueueRow {
   assignedDriver: string | null;
   dueSoon: boolean;
 }
-interface FleetVehicle { driverId: string; name: string; lat: number; lng: number; freshness: string; booking: { reference: string; status: string } | null; }
+interface FleetVehicle { driverId: string; name: string; plate: string | null; lat: number; lng: number; freshness: string; booking: { reference: string; status: string } | null; }
 
 const STATUSES = ['', 'REQUESTED', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELED'];
 
@@ -69,7 +69,7 @@ function Dispatch() {
     return () => clearInterval(iv);
   }, [load]);
 
-  const markers: MapMarker[] = fleet.map((f) => ({ id: f.driverId, lat: f.lat, lng: f.lng, kind: 'vehicle', label: f.name, stale: f.freshness !== 'fresh' }));
+  const markers: MapMarker[] = fleet.map((f) => ({ id: f.driverId, lat: f.lat, lng: f.lng, kind: 'vehicle', label: f.plate ? `${f.plate} · ${f.name}` : f.name, tag: f.plate ?? f.name, busy: !!f.booking, stale: f.freshness !== 'fresh' }));
 
   return (
     <div className="grid h-[calc(100dvh-49px)] grid-cols-1 lg:grid-cols-[minmax(380px,460px)_1fr]">

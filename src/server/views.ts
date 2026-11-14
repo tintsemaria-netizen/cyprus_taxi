@@ -362,7 +362,11 @@ export async function publicFleet(opts: { excludeDriverId?: string } = {}) {
 export async function fleet() {
   const drivers = await prisma.driver.findMany({
     where: { onDuty: true, active: true },
-    include: { location: true, assignments: { where: { activeDriverId: { not: null } }, take: 1, include: { booking: true } } },
+    include: {
+      location: true,
+      assignments: { where: { activeDriverId: { not: null } }, take: 1, include: { booking: true } },
+      bindings: { where: { endedAt: null }, take: 1, include: { vehicle: { select: { plate: true } } } },
+    },
   });
   return drivers
     .map((d) => {
@@ -372,6 +376,7 @@ export async function fleet() {
       return {
         driverId: d.id,
         name: d.publicName,
+        plate: d.bindings[0]?.vehicle.plate ?? null,
         lat: loc.lat,
         lng: loc.lng,
         freshness,

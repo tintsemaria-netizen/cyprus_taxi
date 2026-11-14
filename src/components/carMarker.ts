@@ -1,22 +1,23 @@
-// Shared map marker for the driver's vehicle: a top-down Mercedes sedan rendered in
-// the brand palette (lime #C8FF46 on tinted glass), used by both the MapLibre
-// (MapView) and Google (GoogleMapView) maps so the car looks identical everywhere.
+// Shared map marker for a vehicle: a generic top-down sedan (no third-party badge), used by
+// both the MapLibre (MapView) and Google (GoogleMapView) maps so the car looks identical
+// everywhere. It can be rotated to face its travel heading.
 //
-// It replaces the old 🚕 emoji badge. The car floats on a soft lime glow and can be
-// rotated to face its travel heading.
+// 2026-11-14 palette: pearl-white body with a small lime roof light when free, a soft
+// slate body when on a trip; neutral shadow instead of the lime glow. Slightly larger.
 
-const DARK = '#0b1206'; // outline / shadow
-const GLASS = '#0d1608'; // tinted greenhouse glass
-const LIME = '#C8FF46'; // brand accent (available)
-const BUSY = '#5b6b62'; // muted grey-green (on a trip)
+const DARK = '#1b2420'; // outline
+const GLASS = '#22303a'; // tinted glass
+const PEARL = '#F4F2EC'; // available: pearl white
+const BUSY = '#9AA7B4'; // on a trip: soft slate
+const ROOF = '#C8FF46'; // brand lime roof light (available only)
 
 export type VehicleState = 'available' | 'busy';
 
 /**
- * Top-down Mercedes sedan, nose pointing up (north). `viewBox` is 40×44, the car
+ * Top-down sedan, nose pointing up (north). `viewBox` is 40×44, the car
  * centred on (20, 22) so a heading rotation spins it about its own centre.
  */
-function carSvg(body: string, heading = 0): string {
+function carSvg(body: string, heading = 0, roof = false): string {
   return `<svg viewBox="0 0 40 44" width="100%" height="100%" aria-hidden="true" style="overflow:visible">
   <g transform="rotate(${heading} 20 22)">
     <!-- body -->
@@ -31,14 +32,9 @@ function carSvg(body: string, heading = 0): string {
     <rect x="14" y="14.2" width="12" height="16.8" rx="3" fill="${GLASS}"/>
     <!-- roofline bar splits windshield / rear glass -->
     <rect x="14" y="21.8" width="12" height="2.2" fill="${body}"/>
-    <!-- three-pointed star on the hood -->
-    <circle cx="20" cy="9.6" r="2.7" fill="${GLASS}"/>
-    <circle cx="20" cy="9.6" r="2.7" fill="none" stroke="${body}" stroke-width="0.5"/>
-    <g stroke="${body}" stroke-width="0.8" stroke-linecap="round">
-      <path d="M20 9.6L20 7.6"/>
-      <path d="M20 9.6L18.27 10.6"/>
-      <path d="M20 9.6L21.73 10.6"/>
-    </g>
+    <!-- hood crease -->
+    <path d="M17.2 8.6Q20 10.2 22.8 8.6" fill="none" stroke="${DARK}" stroke-width="0.5" opacity="0.45"/>
+    ${roof ? `<!-- taxi roof light --><rect x="16.6" y="21.2" width="6.8" height="3.4" rx="1.2" fill="${ROOF}" stroke="${DARK}" stroke-width="0.6"/>` : ''}
     <!-- taillights -->
     <path d="M15.4 36.4L18 37" stroke="#ff5a4d" stroke-width="1" stroke-linecap="round"/>
     <path d="M24.6 36.4L22 37" stroke="#ff5a4d" stroke-width="1" stroke-linecap="round"/>
@@ -47,9 +43,9 @@ function carSvg(body: string, heading = 0): string {
 }
 
 /**
- * Build the DOM element for a vehicle marker: the Mercedes SVG floating on a soft
- * lime glow. `size` is the on-map pixel size; `heading` (deg) rotates the car to
- * face its direction of travel.
+ * Build the DOM element for a vehicle marker. `size` is the on-map pixel size; `heading`
+ * (deg) rotates the car to face its direction of travel; `tag` (e.g. the plate number)
+ * is shown as a small label under the car (admin/dispatch maps).
  */
 export function vehicleMarkerEl(opts: {
   state?: VehicleState;
@@ -57,23 +53,32 @@ export function vehicleMarkerEl(opts: {
   size?: number;
   heading?: number;
   title?: string;
+  tag?: string;
 }): HTMLElement {
-  const { state = 'available', stale = false, size = 34, heading = 0, title } = opts;
-  const body = state === 'busy' ? BUSY : LIME;
-  const glow = state === 'busy' ? 0.1 : 0.28;
+  const { state = 'available', stale = false, size = 42, heading = 0, title, tag } = opts;
+  const busy = state === 'busy';
   const el = document.createElement('div');
   el.style.cssText =
-    `width:${size}px;height:${size}px;opacity:${stale ? 0.55 : 1};` +
-    `filter:drop-shadow(0 0 3px rgba(200,255,70,${glow})) drop-shadow(0 1px 2px rgba(0,0,0,0.5));` +
-    `transition:opacity .2s ease`;
-  el.innerHTML = carSvg(body, heading);
+    `position:relative;width:${size}px;height:${size}px;opacity:${stale ? 0.55 : 1};` +
+    `filter:drop-shadow(0 2px 3px rgba(0,0,0,0.45));transition:opacity .2s ease`;
+  el.innerHTML = `<div class="car" style="width:100%;height:100%">${carSvg(busy ? BUSY : PEARL, heading, !busy)}</div>`;
+  if (tag) {
+    const t = document.createElement('div');
+    t.textContent = tag;
+    t.style.cssText =
+      'position:absolute;left:50%;top:100%;transform:translate(-50%,1px);white-space:nowrap;' +
+      'font:600 11px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;' +
+      `padding:1px 5px;border-radius:5px;background:${busy ? '#2a333b' : '#F4F2EC'};color:${busy ? '#e6ebef' : '#141b17'};` +
+      'border:1px solid rgba(0,0,0,.35);pointer-events:none';
+    el.appendChild(t);
+  }
   if (title) el.title = title;
   return el;
 }
 
 /** Update an existing vehicle marker's heading in place (no re-create / flicker). */
 export function setVehicleHeading(el: HTMLElement, heading: number): void {
-  const g = el.querySelector('svg > g') as SVGGElement | null;
+  const g = el.querySelector('.car svg > g') as SVGGElement | null;
   if (g) g.setAttribute('transform', `rotate(${heading} 20 22)`);
 }
 

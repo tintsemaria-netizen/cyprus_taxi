@@ -14,6 +14,10 @@ export interface MapMarker {
   kind: 'pickup' | 'dropoff' | 'vehicle';
   label?: string;
   stale?: boolean;
+  /** Visible label under a vehicle marker (e.g. plate number on staff maps). */
+  tag?: string;
+  /** Vehicle is on a trip (staff fleet map). */
+  busy?: boolean;
 }
 
 interface Props {
@@ -119,7 +123,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       for (const mk of markers) {
         let el: HTMLElement;
         if (mk.kind === 'vehicle') {
-          el = vehicleMarkerEl({ stale: mk.stale, title: mk.label || 'Your driver' });
+          el = vehicleMarkerEl({ state: mk.busy ? 'busy' : 'available', stale: mk.stale, title: mk.label || 'Your driver', tag: mk.tag });
         } else {
           el = document.createElement('div');
           el.style.width = '18px';
@@ -159,7 +163,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       fleetObjs.current.forEach((m) => m.remove());
       fleetObjs.current = [];
       for (const v of fleet) {
-        const el = vehicleMarkerEl({ state: v.state === 'busy' ? 'busy' : 'available', stale: v.stale, size: 28, title: v.state === 'busy' ? 'On a trip' : 'Available' });
+        const el = vehicleMarkerEl({ state: v.state === 'busy' ? 'busy' : 'available', stale: v.stale, size: 36, title: v.state === 'busy' ? 'On a trip' : 'Available' });
         fleetObjs.current.push(new maplibre.Marker({ element: el }).setLngLat([v.lng, v.lat]).addTo(map));
       }
     })();

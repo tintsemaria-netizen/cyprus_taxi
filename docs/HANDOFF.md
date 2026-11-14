@@ -1,5 +1,15 @@
 # Session handoff
 
+## 2026-11-14 — Car markers: bigger, new palette, plate labels on staff maps
+- `src/components/carMarker.ts`: a generic sedan.
+  - Third-party hood emblem removed.
+  - Free: pearl-white body (#F4F2EC) with a lime roof light. On a trip: soft slate (#9AA7B4). Neutral shadow instead of the lime glow.
+  - Sizes: single vehicle default 34→42 px; fleet markers 28→36 px (MapView + GoogleMapView).
+  - New `tag` option renders a plate label under the car.
+- `MapMarker` has new `tag` and `busy` fields. GoogleMapView re-renders a vehicle when its tag or busy state changes (`dataset.sig`).
+- `fleet()` (`src/server/views.ts`) now returns `plate` from the active DriverVehicleBinding. The dispatch map shows the plate under each car (falls back to the name), busy cars in slate, and the title "PLATE · Name".
+- Checked: tsc and build OK. Admin map DOM shows the KXY 248 / MCE 512 / VAN 900 labels; a standalone close-up of the marker variants looks right.
+
 ## 2026-11-14 — Drivers/staff can change their own password
 - `POST /api/v1/auth/password` takes `{current, next}` and checks the current password. It is rate-limited to 10 per 10 min.
 - On success it bumps `sessionVersion` (signs out every other device), re-issues this device's session and writes the AuditEvent `CHANGE_OWN_PASSWORD`.
