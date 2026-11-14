@@ -1,5 +1,6 @@
 'use client';
 
+import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
@@ -10,7 +11,6 @@ import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { formatFlight } from '@/lib/flight';
 import { useT } from '@/i18n/I18nProvider';
 import type { MsgKey } from '@/i18n/I18nProvider';
-import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 interface TrackView {
   flightNumber?: string | null;
@@ -280,13 +280,7 @@ export default function TrackApp() {
 
   return (
     <div className="relative flex h-[100dvh] flex-col overflow-hidden">
-      <header className="z-20 flex items-center justify-between border-b border-edge bg-page/90 px-4 py-3 backdrop-blur">
-        <Logo />
-        <div className="flex items-center gap-3">
-          <LanguageSwitcher compact />
-          <a href="/" className="text-sm text-muted hover:text-ink">{t('common.book')}</a>
-        </div>
-      </header>
+      <PassengerTopBar sticky={false} />
 
       <div className="relative flex-1">
         <div className="absolute inset-0">
@@ -511,5 +505,10 @@ export default function TrackApp() {
 }
 
 function Centered({ children }: { children: React.ReactNode }) {
-  return <div className="flex h-[100dvh] items-center justify-center bg-page px-4">{children}</div>;
+  return (
+    <div className="flex h-[100dvh] flex-col bg-page">
+      <PassengerTopBar sticky={false} />
+      <div className="flex flex-1 items-center justify-center px-4">{children}</div>
+    </div>
+  );
 }

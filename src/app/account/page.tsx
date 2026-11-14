@@ -1,13 +1,12 @@
 'use client';
 
+import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { useEffect, useState } from 'react';
-import { Logo } from '@/components/Brand';
 import { PlacesInput, Selected } from '@/components/booking/PlacesInput';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { PasswordInput } from '@/components/PasswordInput';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
-import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,22 +39,21 @@ export default function Account() {
 
   if (authed === false) {
     return (
+      <div>
+      <PassengerTopBar />
       <div className="mx-auto max-w-md p-6 text-center">
-        <div className="flex justify-end"><LanguageSwitcher /></div>
-        <a href="/" className="inline-block"><Logo /></a>
         <p className="mt-6 text-muted">{t('auth.account.signInPrompt')}</p>
         <a href="/login" className="btn-primary mt-4 inline-block">{t('auth.signIn')}</a>
       </div>
+      </div>
     );
   }
-  if (!me) return <div className="p-8 text-muted">{t('common.loading')}</div>;
+  if (!me) return <div><PassengerTopBar /><div className="p-8 text-muted">{t('common.loading')}</div></div>;
 
   return (
+    <div>
+    <PassengerTopBar />
     <div className="mx-auto max-w-md space-y-4 p-4 sm:p-6">
-      <div className="flex items-center justify-between">
-        <a href="/" className="inline-block"><Logo /></a>
-        <div className="flex items-center gap-3"><a href="/rides" className="text-sm text-accent">{t('auth.myRides')}</a><LanguageSwitcher /></div>
-      </div>
       <h1 className="text-2xl font-semibold">{t('auth.account.title')}</h1>
 
       <form onSubmit={save} className="card space-y-3 p-4">
@@ -87,6 +85,7 @@ export default function Account() {
 
       <DataRights />
       <button onClick={logout} className="btn-ghost w-full !text-danger">{t('auth.logOut')}</button>
+    </div>
     </div>
   );
 }

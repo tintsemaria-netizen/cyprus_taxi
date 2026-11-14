@@ -1,8 +1,8 @@
 'use client';
 
+import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Logo } from '@/components/Brand';
 import { PassengerLoginModal } from '@/components/booking/PassengerLoginModal';
 import { NotifyToggle } from '@/components/NotifyToggle';
 import { api, ApiRequestError } from '@/lib/api-client';
@@ -46,11 +46,9 @@ export default function Page() {
   }
 
   return (
+    <div>
+    <PassengerTopBar back={'/'} />
     <div className="mx-auto max-w-lg p-4 sm:p-6">
-      <header className="mb-4 flex items-center justify-between">
-        <a href="/"><Logo className="h-8" /></a>
-        <a href="/" className="text-sm text-muted hover:text-ink">{t('common.book')}</a>
-      </header>
       <h1 className="mb-1 text-xl font-bold">{t('rides.prebookings.title')}</h1>
       <p className="mb-3 text-sm text-muted">{t('rides.prebookings.subtitle')}</p>
       {needLogin ? (
@@ -91,6 +89,7 @@ export default function Page() {
       )}
       {toast && <p role="alert" className="fixed inset-x-4 bottom-4 z-40 mx-auto max-w-lg rounded-[12px] border border-danger/40 bg-panel px-3 py-2 text-sm text-danger shadow-card">{toast}</p>}
       {show && <PassengerLoginModal onClose={() => setShow(false)} onDone={() => { setShow(false); load(); }} />}
+    </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
+import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { use, useEffect, useState } from 'react';
-import { Logo } from '@/components/Brand';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 
@@ -45,11 +45,9 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const f = receipt?.fare;
 
   return (
+    <div>
+    <PassengerTopBar back={'/rides'} />
     <div className="mx-auto max-w-lg p-4 sm:p-6">
-      <header className="mb-4 flex items-center justify-between">
-        <a href="/"><Logo className="h-8" /></a>
-        <a href="/rides" className="text-sm text-muted hover:text-ink">{t('rides.receipt.backToRides')}</a>
-      </header>
 
       {error ? (
         <div className="card p-6 text-center text-sm text-muted">{error}</div>
@@ -119,6 +117,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
           )}
         </div>
       )}
+    </div>
     </div>
   );
 }

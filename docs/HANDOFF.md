@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-14 — Passenger pages: shared top bar with back arrow
+- New `src/components/PassengerTopBar.tsx`: ‹ back arrow, logo (→ /), compact LanguageSwitcher, and the AccountMenu avatar (initial), or «Войти» when signed out.
+  - Back uses `history.back()` when the referrer is same-origin; otherwise it goes to the fallback href (default /, /rides for a receipt).
+  - Sticky at the top.
+- Used on /account, /rides, /rides/[id], /prebookings, /privacy, /terms, and /track (the live view and the "no ride" / error screens).
+- The home screen keeps its own header (logo, language, avatar). Login/register keep their in-card logo, language switcher and back link.
+- Playwright (iPhone 13, local build, signed in): all 6 pages show back, logo, language and avatar. Back from /account returns to /. No errors.
+
 ## 2026-11-14 — Car markers: bigger, new palette, plate labels on staff maps
 - `src/components/carMarker.ts`: a generic sedan.
   - Third-party hood emblem removed.

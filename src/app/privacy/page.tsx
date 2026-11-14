@@ -1,4 +1,4 @@
-import { Logo } from '@/components/Brand';
+import { PassengerTopBar } from '@/components/PassengerTopBar';
 
 export default function Privacy() {
   return <LegalShell title="Privacy (beta placeholder)">
@@ -11,11 +11,13 @@ export default function Privacy() {
 
 function LegalShell({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mx-auto min-h-[100dvh] max-w-2xl px-5 py-8">
-      <a href="/" className="inline-block"><Logo /></a>
-      <h1 className="mt-6 text-2xl font-bold">{title}</h1>
+    <div className="min-h-[100dvh]">
+    <PassengerTopBar />
+    <div className="mx-auto max-w-2xl px-5 py-8">
+      <h1 className="mt-2 text-2xl font-bold">{title}</h1>
       <div className="mt-4 space-y-4 text-sm leading-relaxed text-muted">{children}</div>
       <a href="/" className="btn-ghost mt-8 inline-flex">‹ Back to booking</a>
+    </div>
     </div>
   );
 }
