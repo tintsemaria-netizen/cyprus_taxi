@@ -7,9 +7,15 @@ import { useEffect, useRef, useState } from 'react';
 // map's automatic camera (follow own car, fit pickup) must not move the view. `ms` after the
 // last gesture ends, `active` clears and `returnTick` increments so the camera effects re-run
 // and bring the default view back. Disabled when `ms` is undefined.
-export function useIdleReturn(containerRef: React.RefObject<HTMLElement | null>, ms?: number) {
+export function useIdleReturn(
+  containerRef: React.RefObject<HTMLElement | null>,
+  ms?: number,
+  cb: { onStart?: () => void; onReturn?: () => void } = {},
+) {
   const active = useRef(false);
   const [returnTick, setReturnTick] = useState(0);
+  const cbRef = useRef(cb);
+  cbRef.current = cb;
   useEffect(() => {
     const el = containerRef.current;
     if (!el || !ms) return;
@@ -21,11 +27,13 @@ export function useIdleReturn(containerRef: React.RefObject<HTMLElement | null>,
         if (pointers.size) return;
         active.current = false;
         setReturnTick((n) => n + 1);
+        cbRef.current.onReturn?.();
       }, ms);
     };
-    const onDown = (e: PointerEvent) => { pointers.add(e.pointerId); active.current = true; clearTimeout(timer); };
+    const start = () => { if (!active.current) cbRef.current.onStart?.(); active.current = true; };
+    const onDown = (e: PointerEvent) => { pointers.add(e.pointerId); start(); clearTimeout(timer); };
     const onUp = (e: PointerEvent) => { if (!pointers.delete(e.pointerId)) return; if (!pointers.size) arm(); };
-    const onWheel = () => { active.current = true; arm(); };
+    const onWheel = () => { start(); arm(); };
     el.addEventListener('pointerdown', onDown, true);
     window.addEventListener('pointerup', onUp, true);
     window.addEventListener('pointercancel', onUp, true);

@@ -210,7 +210,7 @@ export function DriverNavigation(props: {
       {/* Map */}
       <div className="relative min-h-0 flex-1">
         <AutoMapView markers={markers} route={routeLine} center={pos ?? target} zoom={15} interactive className="h-full w-full"
-          follow={follow} onFollowBreak={() => setFollowing(false)} fitPadding={{ top: 60, right: 50, bottom: 60, left: 50 }} />
+          follow={follow} onFollowBreak={() => setFollowing(false)} idleReturnMs={4000} onIdleReturn={() => setFollowing(true)} fitPadding={{ top: 60, right: 50, bottom: 60, left: 50 }} />
         <div className="absolute right-3 top-3 flex flex-col gap-2">
           <button onClick={toggleMute} className="flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-lg" aria-label={muted ? t('driver.navigation.unmute') : t('driver.navigation.mute')} aria-pressed={muted}>{muted ? '🔇' : '🔊'}</button>
         </div>

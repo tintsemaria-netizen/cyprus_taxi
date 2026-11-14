@@ -38,6 +38,8 @@ interface Props {
   follow?: { lat: number; lng: number; heading: number; zoom?: number; tilt?: number } | null;
   /** Let the user pan/zoom freely; return to the automatic view this many ms after the last gesture. */
   idleReturnMs?: number;
+  /** Called when the map returns to its automatic view after idleReturnMs (e.g. resume follow). */
+  onIdleReturn?: () => void;
   onFollowBreak?: () => void;
 }
 
@@ -63,9 +65,16 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, follow, onFollowBreak, idleReturnMs }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const idle = useIdleReturn(containerRef, idleReturnMs);
+  // Any touch/pinch/scroll stops the navigation follow-camera at once (not only a drag) and,
+  // with idleReturnMs, hands the camera back after that many ms without gestures.
+  const idleReturnRef = useRef(onIdleReturn);
+  idleReturnRef.current = onIdleReturn;
+  const idle = useIdleReturn(containerRef, idleReturnMs, {
+    onStart: () => { if (followRef.current) breakRef.current?.(); },
+    onReturn: () => idleReturnRef.current?.(),
+  });
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerObjs = useRef<maplibregl.Marker[]>([]);
   const fleetObjs = useRef<maplibregl.Marker[]>([]);
@@ -189,7 +198,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
   const followKey = follow ? `${follow.lat.toFixed(6)},${follow.lng.toFixed(6)},${Math.round(follow.heading)},${follow.zoom ?? 17},${follow.tilt ?? 45}` : '';
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready || !follow) return;
+    if (!map || !ready || !follow || idle.active.current) return;
     // Demo raster tiles run out past z16 in places; cap the fallback map there.
     map.easeTo({ center: [follow.lng, follow.lat], bearing: follow.heading, zoom: Math.min(16, follow.zoom ?? 16), pitch: follow.tilt ?? 45, duration: 800 });
     // eslint-disable-next-line react-hooks/exhaustive-deps

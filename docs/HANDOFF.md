@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-14 — Driver navigation: map movable while driving
+- The follow camera (DriverNavigation) used to be broken only by Google/MapLibre `dragstart`. A pinch or wheel zoom never broke it, and every GPS fix re-applied zoom 17 and the heading, so while moving the map could not be zoomed or moved.
+- `useIdleReturn` now takes `{onStart, onReturn}`. Any pointerdown or wheel on the map calls `onFollowBreak` immediately, and the follow effect is skipped while a gesture is active.
+- New map prop `onIdleReturn`. DriverNavigation passes `idleReturnMs={4000}` and `onIdleReturn={() => setFollowing(true)}`, so follow resumes 4 s after the last gesture. The «К моей позиции» button still works manually.
+- Playwright (local, driver andreas with an assigned test trip, GPS moving every 1 s): a gesture on the map shows «К моей позиции» and the view stays free through 3 s of driving; at ~6 s follow has resumed. No errors.
+
 ## 2026-11-14 — Driver map: free pan/zoom, auto-return after 4 s idle
 - Root cause: the camera re-framed on every GPS fix. The focus effect is keyed on position, and MapLibre also re-fits on every markers change.
 - `src/components/useIdleReturn.ts`: pointer/wheel listeners on the map container.

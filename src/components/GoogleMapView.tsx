@@ -27,6 +27,8 @@ interface Props {
   // While set, the auto-fit/focus framing is suspended. Dragging the map calls onFollowBreak.
   follow?: { lat: number; lng: number; heading: number; zoom?: number; tilt?: number } | null;
   idleReturnMs?: number;
+  /** Called when the map returns to its automatic view after idleReturnMs (e.g. resume follow). */
+  onIdleReturn?: () => void;
   onFollowBreak?: () => void;
 }
 
@@ -58,7 +60,7 @@ function markerEl(mk: MapMarker): HTMLElement {
   return el;
 }
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, follow, onFollowBreak, idleReturnMs }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   // Reconcile markers by id (no recreation flicker) and remember each one's logical
@@ -79,7 +81,14 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   breakRef.current = onFollowBreak;
   const camAnim = useRef<number | null>(null);
   const homeRef = useRef<{ lat: number; lng: number }>(center ?? CYPRUS_CENTER);
-  const idle = useIdleReturn(containerRef, idleReturnMs);
+  // Any touch/pinch/scroll stops the navigation follow-camera at once (not only a drag) and,
+  // with idleReturnMs, hands the camera back after that many ms without gestures.
+  const idleReturnRef = useRef(onIdleReturn);
+  idleReturnRef.current = onIdleReturn;
+  const idle = useIdleReturn(containerRef, idleReturnMs, {
+    onStart: () => { if (followRef.current) breakRef.current?.(); },
+    onReturn: () => idleReturnRef.current?.(),
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -235,7 +244,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   const followKey = follow ? `${follow.lat.toFixed(6)},${follow.lng.toFixed(6)},${Math.round(follow.heading)},${follow.zoom ?? 17},${follow.tilt ?? 45}` : '';
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready || !follow) return;
+    if (!map || !ready || !follow || idle.active.current) return;
     if (camAnim.current) cancelAnimationFrame(camAnim.current);
     const c0 = map.getCenter?.();
     const from = { lat: c0 ? c0.lat() : follow.lat, lng: c0 ? c0.lng() : follow.lng, heading: map.getHeading?.() ?? 0 };
