@@ -5,7 +5,7 @@ const staff = {
   minChars: 'At least {n} characters.',
   nav: {
     dispatch: 'Dispatch', analytics: 'Analytics', reliability: 'Reliability', applications: 'Applications',
-    drivers: 'Drivers', vehicles: 'Vehicles', settings: 'Settings', security: 'Security',
+    passengers: 'Clients', drivers: 'Drivers', vehicles: 'Vehicles', settings: 'Settings', security: 'Security',
   },
   role: { ADMIN: 'Admin', DISPATCHER: 'Dispatcher', DRIVER: 'Driver' },
   status: {
@@ -20,6 +20,12 @@ const staff = {
   activate: 'Activate',
   deactivate: 'Deactivate',
   rev: 'rev {n}',
+  pax: {
+    title: 'Clients', total: '{n} total', search: 'Search by name, phone or email', empty: 'No clients found.',
+    noName: '(no name)', since: 'registered {date}', lastLogin: 'last sign-in {date}',
+    rides: 'rides: {n}', completed: 'completed: {n}', canceled: 'canceled: {n}', noRides: 'No rides yet.',
+    more: 'Showing the newest {n}. Use search to find others.',
+  },
   dispatch: {
     title: 'Dispatch queue',
     reconnecting: 'Reconnecting…',

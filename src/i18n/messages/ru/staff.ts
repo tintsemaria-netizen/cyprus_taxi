@@ -7,7 +7,7 @@ const staff: Catalog<typeof en> = {
   minChars: 'Минимум {n} символа.',
   nav: {
     dispatch: 'Диспетчерская', analytics: 'Аналитика', reliability: 'Надёжность', applications: 'Заявки',
-    drivers: 'Водители', vehicles: 'Автомобили', settings: 'Настройки', security: 'Безопасность',
+    passengers: 'Клиенты', drivers: 'Водители', vehicles: 'Автомобили', settings: 'Настройки', security: 'Безопасность',
   },
   role: { ADMIN: 'Администратор', DISPATCHER: 'Диспетчер', DRIVER: 'Водитель' },
   status: {
@@ -22,6 +22,12 @@ const staff: Catalog<typeof en> = {
   activate: 'Активировать',
   deactivate: 'Деактивировать',
   rev: 'ред. {n}',
+  pax: {
+    title: 'Клиенты', total: 'Всего: {n}', search: 'Поиск по имени, телефону или email', empty: 'Клиенты не найдены.',
+    noName: '(без имени)', since: 'регистрация {date}', lastLogin: 'последний вход {date}',
+    rides: 'заказов: {n}', completed: 'выполнено: {n}', canceled: 'отменено: {n}', noRides: 'Заказов пока нет.',
+    more: 'Показаны последние {n}. Остальных найдите через поиск.',
+  },
   dispatch: {
     title: 'Очередь заказов',
     reconnecting: 'Переподключение…',

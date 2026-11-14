@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-14 — Admin «Клиенты» (passenger accounts)
+- New page `/admin/passengers` (nav «Клиенты», ADMIN only). It shows passenger accounts with name, phone, email, registration date, last sign-in, and ride counts (total / completed / canceled).
+- Search by name, phone or email; the newest 200 are shown. Clicking a client lists their rides, each linking to `/dispatch/bookings/[id]`.
+- Server code is in `src/server/admin-passengers.ts`. API: `GET /api/v1/admin/passengers?q=` and `GET /api/v1/admin/passengers/[id]`.
+- Rides made without an account (legacy or anonymous, `passengerId` null) are not listed here; they are only in the dispatch queue.
+- StaffShell header no longer squeezes the logo.
+- Tests: `tests/admin-passengers.db.test.ts`; the suite is at 210 passed / 1 skipped. Playwright (local build, RU): list, expand and links work, no page errors.
+
 ## 2026-11-14 — Passenger home: map is the background again, collapsible booking panel
 - `BookingApp`: the map (with the live fleet) is always shown behind the booking form. The plain logo background from 2026-11-13 is removed.
 - The panel has a handle button at the top: «Свернуть ▼» / a collapsed bar «Куда едем? … Развернуть ▲» (keys `booking.sheet.*` in en/ru/el). The panel re-expands on any step change.

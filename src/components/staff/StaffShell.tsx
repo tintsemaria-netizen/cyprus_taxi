@@ -59,6 +59,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
                 { href: '/admin/analytics', label: t('staff.nav.analytics') },
                 { href: '/admin/reliability', label: t('staff.nav.reliability') },
                 { href: '/admin/applications', label: t('staff.nav.applications') },
+                { href: '/admin/passengers', label: t('staff.nav.passengers') },
                 { href: '/admin/drivers', label: t('staff.nav.drivers') },
                 { href: '/admin/vehicles', label: t('staff.nav.vehicles') },
                 { href: '/admin/settings', label: t('staff.nav.settings') },
@@ -70,14 +71,14 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
   return (
     <div className="flex min-h-[100dvh] flex-col">
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-edge bg-page/95 px-4 py-2.5 backdrop-blur">
-        <div className="flex items-center gap-6">
-          <a href="/dispatch"><Logo className="h-6" /></a>
+        <div className="flex min-w-0 items-center gap-4">
+          <a href="/dispatch" className="shrink-0"><Logo className="h-6" /></a>
           <nav className="hidden items-center gap-1 sm:flex">
             {nav.map((n) => (
               <a
                 key={n.href}
                 href={n.href}
-                className={`rounded-[10px] px-3 py-1.5 text-sm ${pathname === n.href ? 'bg-elevated text-accent' : 'text-muted hover:text-ink'}`}
+                className={`whitespace-nowrap rounded-[10px] px-2.5 py-1.5 text-sm ${pathname === n.href ? 'bg-elevated text-accent' : 'text-muted hover:text-ink'}`}
               >
                 {n.label}
               </a>
@@ -85,7 +86,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
           </nav>
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden text-xs text-muted sm:inline">{me.displayName} · {t(`staff.role.${me.role}`)}</span>
+          <span className="hidden text-xs text-muted xl:inline">{me.displayName} · {t(`staff.role.${me.role}`)}</span>
           <LanguageSwitcher compact />
           <button onClick={logout} className="btn-ghost !min-h-0 !py-1.5 text-sm">{t('common.signOut')}</button>
         </div>
