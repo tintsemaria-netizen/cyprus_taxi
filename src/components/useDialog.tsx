@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { ConfirmSheet, SheetInput } from './ConfirmSheet';
+import { useT } from '@/i18n/I18nProvider';
 
 // Promise-based in-app dialog — a drop-in for confirm()/prompt() in staff consoles:
 //   const [dialog, ask] = useDialog();
@@ -11,6 +12,7 @@ import { ConfirmSheet, SheetInput } from './ConfirmSheet';
 export interface AskOptions { title: string; body?: React.ReactNode; confirmLabel: string; cancelLabel?: string; danger?: boolean; input?: SheetInput }
 
 export function useDialog(): [React.ReactNode, <O extends AskOptions>(o: O) => Promise<(O['input'] extends SheetInput ? string : true) | null>] {
+  const { t } = useT();
   const [opts, setOpts] = useState<AskOptions | null>(null);
   const resolver = useRef<((v: unknown) => void) | null>(null);
 
@@ -24,7 +26,7 @@ export function useDialog(): [React.ReactNode, <O extends AskOptions>(o: O) => P
   const node = opts ? (
     <ConfirmSheet
       key={opts.title}
-      title={opts.title} body={opts.body} confirmLabel={opts.confirmLabel} cancelLabel={opts.cancelLabel ?? 'Cancel'} danger={opts.danger}
+      title={opts.title} body={opts.body} confirmLabel={opts.confirmLabel} cancelLabel={opts.cancelLabel ?? t('common.cancel')} danger={opts.danger}
       input={opts.input}
       onConfirm={(v) => close(opts.input ? (v ?? '') : true)}
       onCancel={() => close(null)}

@@ -10,6 +10,7 @@ import enAuth from './en/auth';
 import enDriver from './en/driver';
 import enDriverReg from './en/driverReg';
 import enRides from './en/rides';
+import enStaff from './en/staff';
 import elCommon from './el/common';
 import elErrors from './el/errors';
 import elBooking from './el/booking';
@@ -18,6 +19,7 @@ import elAuth from './el/auth';
 import elDriver from './el/driver';
 import elDriverReg from './el/driverReg';
 import elRides from './el/rides';
+import elStaff from './el/staff';
 import ruCommon from './ru/common';
 import ruErrors from './ru/errors';
 import ruBooking from './ru/booking';
@@ -26,6 +28,7 @@ import ruAuth from './ru/auth';
 import ruDriver from './ru/driver';
 import ruDriverReg from './ru/driverReg';
 import ruRides from './ru/rides';
+import ruStaff from './ru/staff';
 
 const en = {
   common: enCommon,
@@ -36,6 +39,7 @@ const en = {
   driver: enDriver,
   driverReg: enDriverReg,
   rides: enRides,
+  staff: enStaff,
 };
 export type Messages = typeof en;
 
@@ -48,6 +52,7 @@ const el: Catalog<Messages> = {
   driver: elDriver,
   driverReg: elDriverReg,
   rides: elRides,
+  staff: elStaff,
 };
 const ru: Catalog<Messages> = {
   common: ruCommon,
@@ -58,6 +63,7 @@ const ru: Catalog<Messages> = {
   driver: ruDriver,
   driverReg: ruDriverReg,
   rides: ruRides,
+  staff: ruStaff,
 };
 
 export const MESSAGES: Record<Locale, Catalog<Messages>> = { en, el, ru };

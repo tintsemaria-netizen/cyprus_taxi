@@ -54,7 +54,7 @@ export function ConfirmSheet({
               <input id="cs-input" ref={fieldRef} type={input.type ?? 'text'} className={`field mt-1 ${touched && invalid ? 'border-danger' : ''}`} placeholder={input.placeholder} value={value} onChange={(e) => setValue(e.target.value)} aria-invalid={touched && invalid} />
             )}
             {touched && invalid ? (
-              <p className="mt-1 text-xs text-danger">{input.minLength ? `At least ${input.minLength} characters.` : 'Required.'}</p>
+              <p className="mt-1 text-xs text-danger">{input.minLength ? t('staff.minChars', { n: input.minLength }) : t('staff.required')}</p>
             ) : input.hint ? <p className="mt-1 text-xs text-muted">{input.hint}</p> : null}
           </form>
         )}

@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-14 — Admin/dispatch consoles localized (RU)
+- New i18n namespace `staff` (`src/i18n/messages/{en,ru}/staff.ts`; `el` reuses English for now).
+- Translated: StaffShell nav and role, StatusBadge (`statusLabel()` helper), dispatch queue and booking detail, admin drivers/vehicles/settings/applications (+detail)/reliability/analytics, staff/security, useDialog default Cancel, and ConfirmSheet validation.
+- StaffShell header now has a compact LanguageSwitcher (EN/ΕΛ/РУ). The choice is saved in the `lang` cookie, so an admin picks РУ once.
+- Dates in these pages now use `fmt` (Europe/Nicosia, locale-aware) instead of hardcoded en-GB.
+- Checks: tsc and eslint clean (warnings only, all pre-existing); vitest 209 passed / 1 skipped; build OK. Playwright with the `lang=ru` cookie on a local build: all 8 staff pages render in Russian with no page errors.
+
 ## Passenger "My pre-bookings" + 1-hour reminder (2026-11-13)
 - New page `/prebookings` ("My pre-bookings"; account menu item under "My rides"):
   - Upcoming scheduled rides, soonest first: time, from/to, note, "Driver: <name>" once a driver pre-booked it.

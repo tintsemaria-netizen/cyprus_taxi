@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Logo } from '@/components/Brand';
 import { api } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 export interface Me {
   id: string;
@@ -45,25 +46,25 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
   }
 
   if (state !== 'ok' || !me) {
-    return <div className="flex h-[100dvh] items-center justify-center text-muted">Loading…</div>;
+    return <div className="flex h-[100dvh] items-center justify-center text-muted">{t('staff.loading')}</div>;
   }
 
   const nav =
     me.role === 'DRIVER'
       ? [{ href: '/driver', label: t('common.myTrip') }]
       : [
-          { href: '/dispatch', label: 'Dispatch' },
+          { href: '/dispatch', label: t('staff.nav.dispatch') },
           ...(me.role === 'ADMIN'
             ? [
-                { href: '/admin/analytics', label: 'Analytics' },
-                { href: '/admin/reliability', label: 'Reliability' },
-                { href: '/admin/applications', label: 'Applications' },
-                { href: '/admin/drivers', label: 'Drivers' },
-                { href: '/admin/vehicles', label: 'Vehicles' },
-                { href: '/admin/settings', label: 'Settings' },
+                { href: '/admin/analytics', label: t('staff.nav.analytics') },
+                { href: '/admin/reliability', label: t('staff.nav.reliability') },
+                { href: '/admin/applications', label: t('staff.nav.applications') },
+                { href: '/admin/drivers', label: t('staff.nav.drivers') },
+                { href: '/admin/vehicles', label: t('staff.nav.vehicles') },
+                { href: '/admin/settings', label: t('staff.nav.settings') },
               ]
             : []),
-          { href: '/staff/security', label: 'Security' },
+          { href: '/staff/security', label: t('staff.nav.security') },
         ];
 
   return (
@@ -84,7 +85,8 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
           </nav>
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden text-xs text-muted sm:inline">{me.displayName} · {me.role}</span>
+          <span className="hidden text-xs text-muted sm:inline">{me.displayName} · {t(`staff.role.${me.role}`)}</span>
+          <LanguageSwitcher compact />
           <button onClick={logout} className="btn-ghost !min-h-0 !py-1.5 text-sm">{t('common.signOut')}</button>
         </div>
       </header>
