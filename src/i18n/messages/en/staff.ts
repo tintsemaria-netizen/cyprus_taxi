@@ -26,6 +26,8 @@ const staff = {
     rides: 'rides: {n}', completed: 'completed: {n}', canceled: 'canceled: {n}', noRides: 'No rides yet.',
     more: 'Showing the newest {n}. Use search to find others.',
     lastLoginLabel: 'Last sign-in',
+    newPwLabel: 'New temporary password (shown once):',
+    newPwHint: 'Copy it with the button below, or type it exactly — including the dashes.',
     id: 'Client ID', login: 'Login (email)', phone: 'Phone', verified: 'verified', notVerified: 'not verified', name: 'Name',
     password: 'Password', pwSet: 'set (stored encrypted, cannot be viewed)', pwNone: 'not set (SMS sign-in only)',
     sessions: 'Signed-in devices', places: 'Saved places', updated: 'Profile updated',

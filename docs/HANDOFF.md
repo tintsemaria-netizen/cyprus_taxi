@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-14 — Readable temporary passwords for clients
+- `readablePassword()` in `src/server/admin-passengers.ts`: format `XXXX-XXXX-XXXX` from an alphabet without 0/O/1/l/I (~69 bits of entropy).
+- The admin page shows it large, in monospace, with a hint to copy it or type it with the dashes.
+- Reason: the owner typed a temp password by hand and mixed up l/1/0.
+- Known flaky DB tests (dispatch offers / fare-breakdown), which depend on leftover test-DB state: a different 1–3 fail per run; unrelated to this change.
+
 ## 2026-11-14 — Admin client details + password reset; client password change
 - In admin «Клиенты», expanding a client shows the full profile: ID, name, login (email), phone and its verification, whether a password is set, signed-in device count, last sign-in, last update, saved places, then their rides.
 - Passwords are bcrypt hashes and cannot be shown. The admin can «Сбросить пароль» instead:

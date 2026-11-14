@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import { prisma } from '@/lib/db';
 
 // Admin: passenger (client) accounts with ride counts (2026-11-14).
@@ -73,11 +74,10 @@ export async function passengerDetail(passengerId: string) {
 // Admin password reset: a new temporary password (returned once, never stored in clear) and all of
 // the client's sessions are signed out. Audited without the password.
 export async function resetPassengerPassword(passengerId: string, actorId: string): Promise<string | null> {
-  const { generateToken } = await import('@/lib/crypto');
   const { hashPassword } = await import('@/lib/auth');
   const p = await prisma.passenger.findUnique({ where: { id: passengerId }, select: { id: true } });
   if (!p) return null;
-  const temporaryPassword = generateToken(9);
+  const temporaryPassword = readablePassword();
   const passwordHash = await hashPassword(temporaryPassword);
   await prisma.$transaction([
     prisma.passenger.update({ where: { id: passengerId }, data: { passwordHash } }),
@@ -85,4 +85,18 @@ export async function resetPassengerPassword(passengerId: string, actorId: strin
     prisma.auditEvent.create({ data: { actorId, actorRole: 'ADMIN', action: 'RESET_PASSENGER_PASSWORD', target: passengerId } }),
   ]);
   return temporaryPassword;
+}
+
+// Temporary passwords are read off a screen and typed by hand, so they use an alphabet without
+// look-alike characters (no 0/O, 1/l/I) and are grouped for readability: e.g. "K7mP-x3Qa-9vHt".
+// 12 random symbols from 54 ≈ 69 bits of entropy.
+const READABLE = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+export function readablePassword(): string {
+  const groups: string[] = [];
+  for (let g = 0; g < 3; g++) {
+    let s = '';
+    for (let i = 0; i < 4; i++) s += READABLE[randomInt(READABLE.length)];
+    groups.push(s);
+  }
+  return groups.join('-');
 }

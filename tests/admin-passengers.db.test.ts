@@ -34,7 +34,8 @@ describe('admin passengers', () => {
     await prisma.passengerSession.create({ data: { passengerId: p.id, sessionDigest: `d-${RUN}`, expiresAt: new Date(Date.now() + 3600e3) } });
     expect((await passengerDetail(p.id))).toMatchObject({ hasPassword: true, activeSessions: 1, email: `pw${RUN}@example.com` });
     const temp = await resetPassengerPassword(p.id, 'admin-test');
-    expect(temp).toBeTruthy();
+    expect(temp).toMatch(/^[A-HJ-NP-Za-km-z2-9]{4}-[A-HJ-NP-Za-km-z2-9]{4}-[A-HJ-NP-Za-km-z2-9]{4}$/);
+    expect(temp).not.toMatch(/[01lIO]/);
     const after = await prisma.passenger.findUniqueOrThrow({ where: { id: p.id } });
     expect(after.passwordHash).not.toContain(temp!);
     expect(await verifyPassword(temp!, after.passwordHash!)).toBe(true);

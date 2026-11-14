@@ -90,7 +90,9 @@ function Passengers() {
                     {profile.savedPlaces.length > 0 && <Row k={t('staff.pax.places')} v={profile.savedPlaces.map((s) => `${s.kind}: ${s.label}`).join('; ')} />}
                     {tempPw ? (
                       <div className="mt-2 rounded-[10px] border border-accent/40 bg-accent/10 p-2">
-                        <p className="break-all">{t('staff.pax.newPw', { pw: tempPw })}</p>
+                        <p>{t('staff.pax.newPwLabel')}</p>
+                        <p className="my-1 select-all font-mono text-2xl tracking-wider text-ink">{tempPw}</p>
+                        <p className="text-xs text-muted">{t('staff.pax.newPwHint')}</p>
                         <button className="btn-ghost mt-2 !py-1 text-xs" onClick={() => { void navigator.clipboard?.writeText(tempPw); setCopied(true); }}>{copied ? t('staff.pax.copied') : t('staff.pax.copy')}</button>
                       </div>
                     ) : (
