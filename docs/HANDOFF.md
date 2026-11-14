@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-15 — Removed the «Используем ваше текущее местоположение…» hint under «Откуда»
+- Owner request. The auto-filled pickup still works; only the hint line is gone.
+
 ## 2026-11-15 — Booking form rework + one intermediate stop (end-to-end)
 - **Passenger form** (`BookingApp`):
   - Only «Куда» is shown at first. Touching it (or choosing a destination) reveals «Откуда» above it, auto-filled from the device.

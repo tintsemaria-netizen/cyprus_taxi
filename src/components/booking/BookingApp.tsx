@@ -725,9 +725,6 @@ export default function BookingApp() {
                           </div>
                         );
                       })}
-                      {addrOpen && autoPickup && pickup && (
-                        <p className="text-xs text-accent">📍 {t('booking.form.usingLocation')}</p>
-                      )}
                       {addrOpen && !hasStop && (
                         <button type="button" className="chip hover:border-accent/50" onClick={() => setHasStop(true)}>＋ {t('booking.form.addStop')}</button>
                       )}
