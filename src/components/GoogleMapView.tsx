@@ -125,6 +125,10 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
           gestureHandling: interactive ? 'greedy' : 'none',
           keyboardShortcuts: interactive,
           fullscreenControl: false,
+          // Zoom/camera buttons only with a mouse (touch → pinch); kept clear of the bottom sheets.
+          zoomControl: interactive && !window.matchMedia('(pointer: coarse)').matches,
+          cameraControl: false,
+          zoomControlOptions: g.ControlPosition ? { position: g.ControlPosition.RIGHT_CENTER } : undefined,
           streetViewControl: false,
           mapTypeControl: false,
         });

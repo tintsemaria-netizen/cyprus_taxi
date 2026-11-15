@@ -359,7 +359,7 @@ export default function TrackApp() {
                           {view.confirmedDriver.color} {view.confirmedDriver.make} {view.confirmedDriver.model}
                         </div>
                       </div>
-                      <span className="shrink-0 rounded-[8px] border border-edge bg-page px-2.5 py-1.5 font-mono text-base font-bold tracking-wide">{view.confirmedDriver.plate}</span>
+                      <span className="shrink-0 rounded-[8px] border border-edge bg-page px-2.5 py-1.5 font-mono text-base font-bold tracking-wide max-[359px]:px-1.5 max-[359px]:text-sm">{view.confirmedDriver.plate}</span>
                     </div>
                     <p className="mt-2 text-xs text-muted">{t('track.prebook.confirmedNote')}</p>
                   </div>
@@ -374,7 +374,7 @@ export default function TrackApp() {
 
                 {view.vehicle ? (
                   <div className="mt-3 flex items-center gap-3 rounded-[12px] border border-edge bg-elevated p-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/20 text-lg" aria-hidden>🧑‍✈️</div>
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/20 text-lg max-[359px]:hidden" aria-hidden>🧑‍✈️</div>
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-semibold">{view.vehicle.driverName}</div>
                       <div className="truncate text-sm text-muted">
@@ -382,7 +382,7 @@ export default function TrackApp() {
                         {vehicleDesc}
                       </div>
                     </div>
-                    <span className="shrink-0 rounded-[8px] border border-edge bg-page px-2.5 py-1.5 font-mono text-base font-bold tracking-wide" aria-label={t('track.plateAria', { plate: view.vehicle.plate })}>{view.vehicle.plate}</span>
+                    <span className="shrink-0 rounded-[8px] border border-edge bg-page px-2.5 py-1.5 font-mono text-base font-bold tracking-wide max-[359px]:px-1.5 max-[359px]:text-sm" aria-label={t('track.plateAria', { plate: view.vehicle.plate })}>{view.vehicle.plate}</span>
                   </div>
                 ) : view.status === 'SEARCHING' ? (
                   <div className="mt-4 flex items-center gap-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm text-muted">

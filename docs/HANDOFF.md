@@ -1,5 +1,28 @@
 # Session handoff
 
+## 2026-11-15 — Multi-device UI audit + responsive fixes
+**Audit:** Playwright, 11 viewports (280 Fold, 320, 375, 390, 412, 430, 844×390 landscape phone, 768 iPad mini, 1180 iPad landscape, 1280, 1920) × 24 pages (anon, passenger, driver, admin) = 264 page renders.
+- Checks: horizontal overflow, off-screen controls, controls covered by other elements (elementFromPoint), clipped text, page errors; plus visual review of screenshots.
+- Script: /tmp/ui/audit.mjs (local only; not committed).
+
+**Results:**
+- No horizontal overflow and no off-screen controls on any page or device.
+- No page errors.
+
+**Fixed:**
+- StaffShell: on 768–1279 px the inline nav ran under the language/logout buttons. The inline nav is now shown only at ≥1280 px (xl); below that the scrollable second-row nav is used.
+- Maps:
+  - Zoom +/- buttons were hidden under the bottom sheets on phones. They are now shown only with a mouse (pointer: fine); touch uses pinch.
+  - Google zoom control moved to RIGHT_CENTER; cameraControl is off.
+- DriverNavigation ≥640 px: the action button and sheet stretched across the whole screen. They are now a 420 px left column (rounded card), and the map fit pads the left side.
+- TrackApp <360 px: the driver card hid the driver name. The avatar is hidden and the plate made smaller there.
+
+**Known false positives:**
+- The native language `<select>` is reported as "clipped".
+- Phone landscape shows the intentional portrait-lock cover (passenger/driver apps are portrait-only since 2026-11-12).
+- The sticky «Заказать поездку» button over the scrolled booking form is reported as covering fields.
+- The driver nav (fullscreen) covers the driver app header by design.
+
 ## 2026-11-15 — Removed the "BETA · TEST SERVICE" banner from the passenger app
 - At the user's request, the DemoBanner was removed from BookingApp and its component deleted.
 - The `auth.demoBanner` strings are left in the catalogs, unused.

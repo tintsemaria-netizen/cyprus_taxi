@@ -73,7 +73,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-edge bg-page/95 px-4 py-2.5 backdrop-blur">
         <div className="flex min-w-0 items-center gap-4">
           <a href="/dispatch" className="shrink-0"><Logo className="h-6" /></a>
-          <nav className="hidden items-center gap-1 sm:flex">
+          <nav className="hidden items-center gap-1 xl:flex">
             {nav.map((n) => (
               <a
                 key={n.href}
@@ -93,7 +93,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
       </header>
       {/* mobile nav */}
       {nav.length > 1 && (
-        <nav className="flex gap-1 overflow-x-auto border-b border-edge bg-page px-3 py-1.5 sm:hidden">
+        <nav className="flex gap-1 overflow-x-auto border-b border-edge bg-page px-3 py-1.5 xl:hidden">
           {nav.map((n) => (
             <a key={n.href} href={n.href} className={`whitespace-nowrap rounded-[10px] px-3 py-1.5 text-sm ${pathname === n.href ? 'bg-elevated text-accent' : 'text-muted'}`}>
               {n.label}

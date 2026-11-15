@@ -116,7 +116,9 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         map.on('rotate', () => { const b = map!.getBearing(); document.querySelectorAll<HTMLElement>('.ily-vehicle').forEach((el) => orientVehicle(el, b)); });
         map.on('dragstart', () => { if (followRef.current) breakRef.current?.(); });
         if (interactive) {
-          map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'bottom-right');
+          // Zoom buttons only with a mouse; on touch screens pinch-zoom is used and bottom sheets
+          // would cover the buttons anyway (2026-11-15 multi-device audit). (Google: right-centre.)
+          if (!window.matchMedia('(pointer: coarse)').matches) map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'bottom-right');
           map.on('click', (ev) => clickRef.current?.({ lat: ev.lngLat.lat, lng: ev.lngLat.lng }));
         }
         mapRef.current = map;

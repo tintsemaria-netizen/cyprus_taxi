@@ -56,6 +56,9 @@ export function DriverNavigation(props: {
   const [details, setDetails] = useState(false);
   // Info panel open/collapsed (2026-11-15): tap the handle or swipe it up/down.
   const [panelOpen, setPanelOpen] = useState(trip.status !== 'IN_PROGRESS');
+  // Tablets/desktop (≥640px): the sheet becomes a left column, so the map fit pads the left side.
+  const [wide, setWide] = useState(false);
+  useEffect(() => { const mq = window.matchMedia('(min-width: 640px)'); const on = () => setWide(mq.matches); on(); mq.addEventListener('change', on); return () => mq.removeEventListener('change', on); }, []);
   // The info panel folds itself away the moment the ride starts (manual tap/swipe still works).
   const prevStatus = useRef(trip.status);
   const panelBodyRef = useRef<HTMLDivElement | null>(null);
@@ -252,14 +255,14 @@ export function DriverNavigation(props: {
       {/* Map */}
       <div className="relative min-h-0 flex-1">
         <AutoMapView markers={markers} route={routeLine} center={pos ?? target} zoom={15} interactive className="h-full w-full"
-          follow={follow} onFollowBreak={() => setFollowing(false)} idleReturnMs={4000} onIdleReturn={() => setFollowing(true)} fitPadding={{ top: 60, right: 50, bottom: panelOpen ? 380 : 200, left: 50 }} />
+          follow={follow} onFollowBreak={() => setFollowing(false)} idleReturnMs={4000} onIdleReturn={() => setFollowing(true)} fitPadding={wide ? { top: 60, right: 50, bottom: 60, left: 470 } : { top: 60, right: 50, bottom: panelOpen ? 380 : 200, left: 50 }} />
         <div className="absolute right-3 top-3 flex flex-col gap-2">
           <button onClick={toggleMute} className="flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-lg" aria-label={muted ? t('driver.navigation.unmute') : t('driver.navigation.mute')} aria-pressed={muted}>{muted ? '🔇' : '🔊'}</button>
         </div>
       </div>
 
       {/* Overlay over the map: recenter, then the stage action (its own floating bar), then the info sheet. */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col" data-testid="nav-overlay">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col sm:bottom-4 sm:left-4 sm:right-auto sm:w-[420px]" data-testid="nav-overlay">
         {!following && !waitingAtPickup && pos && (
           <button onClick={() => setFollowing(true)} className="pointer-events-auto mx-auto mb-2 rounded-full border border-accent bg-page/95 px-4 py-2 text-sm font-semibold text-accent">{t('driver.navigation.recenter')}</button>
         )}
@@ -283,7 +286,7 @@ export function DriverNavigation(props: {
           {trip.status === 'IN_PROGRESS' && leg === 'dropoff' && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => setAsk('complete')}>{t('driver.trip.completeTrip')}</button>}
       </div>
       {/* Info sheet: collapses to the summary line (handle tap or swipe). */}
-      <div className="pointer-events-auto rounded-t-[18px] border-t border-edge bg-elevated shadow-[0_-6px_20px_rgba(0,0,0,0.35)]" ref={sheetDrag.panelRef} style={{ paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }} data-testid="nav-sheet">
+      <div className="pointer-events-auto rounded-t-[18px] border-t border-edge bg-elevated sm:rounded-[18px] sm:border shadow-[0_-6px_20px_rgba(0,0,0,0.35)]" ref={sheetDrag.panelRef} style={{ paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }} data-testid="nav-sheet">
         <button type="button" aria-expanded={panelOpen} aria-label={panelOpen ? t('booking.sheet.collapse') : t('booking.sheet.expand')}
           onClick={() => { if (!swiped.current) setPanelOpen((o) => !o); swiped.current = false; }}
           onPointerDown={(e) => { swipeY.current = e.clientY; }}
