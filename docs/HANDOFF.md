@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-15 — Driver «Свободные заказы» card simplified and fully tappable
+- The whole card opens the order: role=button, Enter/Space; «Посмотреть» is kept and does the same.
+- The distance («263 м от вас») moved to the top as a large bold line.
+- Removed: the «N пасс.» chip text (now only the class, plus 🧳 if any), the «осталось N с» countdown chip (the card still disappears when the deadline passes), and the «Телефон пассажира станет доступен…» note.
+- Playwright (local): free list renders; the card text has no countdown or phone note; tapping the card body opens the detail; no errors.
+
 ## 2026-11-15 — Driver offers: pop over everything in the app; heads-up banner with sound + vibration in the background
 **In the app (driver/page.tsx):**
 - A new offerId switches to the main tab, resets profile sub-views and closes an open order detail, so the offer card is on top wherever the driver was.

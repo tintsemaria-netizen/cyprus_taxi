@@ -547,20 +547,23 @@ function FreeOrdersSection({ pos, onDuty, onTaken }: { pos: { lat: number; lng: 
           const leftSec = Math.max(0, Math.ceil(((o.localDeadline ?? new Date(o.expiresAt).getTime()) - nowMs) / 1000));
           if (leftSec === 0) return null;
           return (
-            <div key={o.bookingId} className="card p-4">
+            // The whole card opens the order (2026-11-15), not only the «Посмотреть» button.
+            <div key={o.bookingId} role="button" tabIndex={0} aria-label={t('driver.free.view')}
+              onClick={() => setViewId(o.bookingId)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setViewId(o.bookingId); } }}
+              className="card cursor-pointer p-4 transition hover:border-accent/50 active:scale-[0.99]">
+              {o.distanceM != null && <p className="mb-2 text-lg font-bold text-ink">{t('driver.offer.away', { dist: km(o.distanceM) })}</p>}
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="text-muted">{t('driver.offer.pickup')}</span><span className="ml-auto text-right font-medium">{o.pickup.label}</span></div>
                 {o.stop && <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-[#FFC83D]" /><span className="text-muted">{t('driver.map.stop')}</span><span className="ml-auto text-right font-medium">{o.stop.label}</span></div>}
                 <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-ink" /><span className="text-muted">{t('driver.offer.destination')}</span><span className="ml-auto text-right font-medium">{o.dropoff.label}</span></div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
-                {o.distanceM != null && <span className="rounded-full bg-elevated px-2 py-1">{t('driver.offer.away', { dist: km(o.distanceM) })}</span>}
-                <span className="rounded-full bg-elevated px-2 py-1">{t('driver.units.paxShort', { count: o.passengerCount })}{o.luggageCount ? ` · 🧳 ${o.luggageCount}` : ''} · {o.vClass}</span>
+                <span className="rounded-full bg-elevated px-2 py-1">{o.vClass}{o.luggageCount ? ` · 🧳 ${o.luggageCount}` : ''}</span>
                 {o.scheduledAt && <span className="rounded-full bg-elevated px-2 py-1">🕒 {fmt.dateTime(o.scheduledAt)}</span>}
                 {o.flightNumber && <span className="rounded-full bg-elevated px-2 py-1">✈ {o.flightNumber}</span>}
-                <span className={`rounded-full bg-elevated px-2 py-1 ${leftSec <= 30 ? 'text-danger' : ''}`}>{t('driver.free.left', { sec: leftSec })}</span>
               </div>
-              <p className="mt-2 text-sm"><span className="font-medium">{o.passengerName}</span> <span className="text-xs text-muted">· {t('driver.offer.phoneHidden')}</span></p>
+              <p className="mt-2 text-sm font-medium">{o.passengerName}</p>
               {o.note && <p className="mt-1 text-xs text-muted">{t('driver.offer.note', { note: o.note })}</p>}
               <div className="mt-3 flex items-center justify-between gap-3">
                 <div className="text-sm"><span className="font-semibold">{money(o.fareCents, o.currency)}</span>{o.priceType && <span className="ml-1 text-xs text-muted">{o.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.upfront') : o.priceType === 'REGULATED_METER_ESTIMATE' ? t('driver.offer.meterEstimate') : ''}</span>}</div>
