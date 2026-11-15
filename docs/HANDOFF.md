@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-15 — Route reset × in the sheet corner, 2× size; collapsed peek fits the «Куда» field
+- The reset × moved from the address block to the booking sheet's top-right corner. It is now 48 px with a 36 px glyph (was 28/18) and is shown on the form step while the sheet is open.
+- **Regression fixed:** the collapsed peek was a fixed 170 px, but the «Куда» input ends at 189 px. Without a bottom safe area (Android, iPhone Safari tab) the field was half-cut, and useHideClipped then hid it entirely, so the collapsed sheet could only be opened by the handle.
+  - The peek height is now measured: input bottom + 14 px, clamped 150 px … 60 % of the viewport, re-measured on content resize. `peekPx` state replaces the constant.
+- Playwright (local): iPhone 13 / SE / 440 px, logged in and anon → peek 203 px, field visible; × at 7 px from the card corner, 48 px, resets the route; no errors.
+
 ## 2026-11-15 — Fix: passenger track sheet could only be moved by its handle
 **Cause:** `useSheetDrag` used a plain ref and attached its touch listeners in an effect keyed on `open`. TrackApp renders a loader first, so the panel mounted later and the effect never re-ran.
 - At IN_PROGRESS the auto-collapse changed `open` and attached the listeners by luck.

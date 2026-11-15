@@ -61,6 +61,7 @@ export default function BookingApp() {
   const [step, setStep] = useState<'form' | 'review' | 'scheduled'>('form');
   // The booking panel floats over the map and can be collapsed to a slim bar (2026-11-14).
   const [collapsed, setCollapsed] = useState(false);
+  const [peekPx, setPeekPx] = useState(PEEK_PX); // measured below (see contentRef)
   useEffect(() => { if (step !== 'form') setCollapsed(false); }, [step]);
   // After a pre-booking (2026-11-13) the passenger stays here and can order again right away.
   const [doneAt, setDoneAt] = useState<string | null>(null);
@@ -256,9 +257,9 @@ export default function BookingApp() {
     () => (vp.w < 640
       // Mobile: the booking sheet covers most of the screen, so fit the island into
       // the small visible band at the top (large bottom padding).
-      ? { top: 16, right: 24, bottom: collapsed ? PEEK_PX + 24 : Math.round(vp.h * 0.62), left: 24 }
+      ? { top: 16, right: 24, bottom: collapsed ? peekPx + 24 : Math.round(vp.h * 0.62), left: 24 }
       : collapsed ? { top: 110, right: 60, bottom: 40, left: 40 } : { top: 40, right: 60, bottom: 40, left: 420 }),
-    [vp, collapsed],
+    [vp, collapsed, peekPx],
   );
 
   // Mobile bottom sheet drag (2026-11-14): full screen when open, a strip stays when collapsed.
@@ -268,7 +269,7 @@ export default function BookingApp() {
   const drag = useRef<{ y: number; h: number; max: number; moved: boolean } | null>(null);
   const [dragH, setDragH] = useState<number | null>(null);
   function onSheetDown(e: React.PointerEvent<HTMLDivElement>) {
-    const h = sheetRef.current?.getBoundingClientRect().height ?? PEEK_PX;
+    const h = sheetRef.current?.getBoundingClientRect().height ?? peekPx;
     const max = sheetBoxRef.current?.getBoundingClientRect().height ?? vp.h;
     drag.current = { y: e.clientY, h, max, moved: false };
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -278,7 +279,7 @@ export default function BookingApp() {
     if (!d) return;
     const dy = e.clientY - d.y;
     if (Math.abs(dy) > 6) d.moved = true;
-    if (d.moved) setDragH(Math.min(d.max, Math.max(PEEK_PX * 0.7, d.h - dy)));
+    if (d.moved) setDragH(Math.min(d.max, Math.max(peekPx * 0.7, d.h - dy)));
   }
   function onSheetUp(e: React.PointerEvent<HTMLDivElement>) {
     const d = drag.current;
@@ -289,7 +290,7 @@ export default function BookingApp() {
       const h = d.h - (e.clientY - d.y);
       const goingUp = e.clientY < d.y;
       // Snap in the direction of the swipe once it passes a small threshold.
-      setCollapsed(goingUp ? h < PEEK_PX + 40 : h < d.max - 40);
+      setCollapsed(goingUp ? h < peekPx + 40 : h < d.max - 40);
     }
     setDragH(null);
   }
@@ -297,6 +298,27 @@ export default function BookingApp() {
   // moves the sheet; expanded → a downward pull while the form is scrolled to the top collapses it,
   // otherwise the form scrolls normally. Native listeners: preventDefault needs passive: false.
   const contentRef = useRef<HTMLDivElement | null>(null);
+  // Collapsed peek height = up to the bottom of the «Куда» field + a margin, measured (2026-11-15):
+  // a fixed 170 px cut the field off on phones without a bottom safe area, and the half-visible
+  // field was then hidden entirely (useHideClipped) — the passenger could not tap it.
+  useEffect(() => {
+    const box = contentRef.current, sheet = sheetRef.current;
+    if (!isMobile || !box || !sheet) return;
+    const measure = () => {
+      if (box.scrollTop > 0) return;
+      const inp = box.querySelector('input[role=combobox]');
+      if (!inp) return;
+      const h = Math.round(inp.getBoundingClientRect().bottom - sheet.getBoundingClientRect().top + 14);
+      const next = Math.max(150, Math.min(Math.round(window.innerHeight * 0.6), h));
+      setPeekPx((p) => (Math.abs(p - next) > 2 ? next : p));
+    };
+    measure();
+    const first = box.firstElementChild;
+    const ro = new ResizeObserver(measure);
+    if (first) ro.observe(first);
+    window.addEventListener('resize', measure);
+    return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
+  }, [isMobile, step]);
   useHideClipped(contentRef, isMobile && (collapsed || dragH != null));
   useEffect(() => {
     const el = contentRef.current;
@@ -304,7 +326,7 @@ export default function BookingApp() {
     let s: { y: number; h: number; max: number; mode: 'drag' | 'scroll' | null } | null = null;
     const onStart = (e: TouchEvent) => {
       if (e.touches.length !== 1) { s = null; return; }
-      s = { y: e.touches[0].clientY, h: sheetRef.current?.getBoundingClientRect().height ?? PEEK_PX, max: sheetBoxRef.current?.getBoundingClientRect().height ?? window.innerHeight, mode: null };
+      s = { y: e.touches[0].clientY, h: sheetRef.current?.getBoundingClientRect().height ?? peekPx, max: sheetBoxRef.current?.getBoundingClientRect().height ?? window.innerHeight, mode: null };
     };
     const onMove = (e: TouchEvent) => {
       if (!s) return;
@@ -317,7 +339,7 @@ export default function BookingApp() {
       if (s.mode !== 'drag') return;
       e.preventDefault();
       const d = e.touches[0].clientY - s.y;
-      setDragH(Math.min(s.max, Math.max(PEEK_PX * 0.7, s.h - d)));
+      setDragH(Math.min(s.max, Math.max(peekPx * 0.7, s.h - d)));
     };
     const onEnd = (e: TouchEvent) => {
       const cur = s;
@@ -325,7 +347,7 @@ export default function BookingApp() {
       if (!cur || cur.mode !== 'drag') return;
       const y = e.changedTouches[0]?.clientY ?? cur.y;
       const h = cur.h - (y - cur.y);
-      setCollapsed(y < cur.y ? h < PEEK_PX + 40 : h < cur.max - 40);
+      setCollapsed(y < cur.y ? h < peekPx + 40 : h < cur.max - 40);
       setDragH(null);
     };
     el.addEventListener('touchstart', onStart, { passive: true });
@@ -674,10 +696,15 @@ export default function BookingApp() {
           <div ref={sheetBoxRef} className="flex h-full w-full flex-col justify-end sm:absolute sm:left-4 sm:top-4 sm:block sm:h-[calc(100%-2rem)] sm:w-[380px]">
             <div
               ref={sheetRef}
-              className={`card pointer-events-auto flex flex-col overflow-hidden sm:max-h-full ${isMobile ? 'rounded-b-none' : ''} ${isMobile && dragH == null ? 'transition-[height] duration-300 ease-out' : ''}`}
-              style={isMobile ? { height: dragH != null ? `${dragH}px` : collapsed ? `calc(${PEEK_PX}px + env(safe-area-inset-bottom))` : '100%' } : undefined}
+              className={`card pointer-events-auto relative flex flex-col overflow-hidden sm:max-h-full ${isMobile ? 'rounded-b-none' : ''} ${isMobile && dragH == null ? 'transition-[height] duration-300 ease-out' : ''}`}
+              style={isMobile ? { height: dragH != null ? `${dragH}px` : collapsed ? `calc(${peekPx}px + env(safe-area-inset-bottom))` : '100%' } : undefined}
               onFocusCapture={() => { if (isMobile && collapsed) setCollapsed(false); }}
             >
+              {/* Reset the route (2026-11-15): in the sheet's top-right corner, twice the old size. */}
+              {step === 'form' && !collapsed && (addrOpen || dropoff || dropoffText) && (
+                <button type="button" aria-label={t('booking.form.resetRoute')} title={t('booking.form.resetRoute')} onClick={resetRoute}
+                  className="absolute right-1.5 top-1.5 z-20 flex h-12 w-12 items-center justify-center rounded-full text-[36px] leading-none text-muted hover:bg-page/60 hover:text-ink">×</button>
+              )}
               {isMobile ? (
                 // Mobile bottom sheet: drag the handle up (full screen) or down (a strip stays visible).
                 <div
@@ -738,10 +765,6 @@ export default function BookingApp() {
                         from the device) above it. Each field has «На карте» on the right; one optional stop;
                         the rows can be dragged up/down to change the order of the route. */}
                     <div className="relative space-y-2">
-                      {(addrOpen || dropoff || dropoffText) && (
-                        <button type="button" aria-label={t('booking.form.resetRoute')} title={t('booking.form.resetRoute')} onClick={resetRoute}
-                          className="absolute -top-1 right-0 z-10 flex h-7 w-7 items-center justify-center rounded-full text-lg text-muted hover:bg-elevated hover:text-ink">×</button>
-                      )}
                       {(addrOpen ? slots : (['d'] as Slot[])).map((slot, i, arr) => {
                         const kind: 'From' | 'Stop' | 'To' = !addrOpen ? 'To' : i === 0 ? 'From' : i === arr.length - 1 ? 'To' : 'Stop';
                         const v = slotGet(slot);
