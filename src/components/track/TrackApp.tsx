@@ -214,6 +214,22 @@ export default function TrackApp() {
   const prePickup = view?.status === 'ASSIGNED' || view?.status === 'EN_ROUTE' || view?.status === 'ARRIVED';
   const [wantLoc, setWantLoc] = useState(false);
   const [ratedNow, setRatedNow] = useState<number | null>(null); // 5-star rating left on this screen
+  // Info sheet open/collapsed (2026-11-15): handle tap or swipe. Collapses by itself when the trip
+  // starts so the passenger sees the car driving the route up close.
+  const [sheetOpen, setSheetOpen] = useState(true);
+  const sheetSwipeY = useRef<number | null>(null);
+  const sheetSwiped = useRef(false);
+  const prevStatus = useRef<string | null>(null);
+  useEffect(() => {
+    const st = view?.status ?? null;
+    if (st && st !== prevStatus.current) {
+      if (st === 'IN_PROGRESS') setSheetOpen(false);
+      if (st === 'COMPLETED' || st === 'CANCELED' || st === 'ARRIVED') setSheetOpen(true);
+      prevStatus.current = st;
+    }
+  }, [view?.status]);
+  // During the trip the map follows the car closely (north-up); a gesture frees it for 4 s.
+  const [followCar, setFollowCar] = useState(true);
   const myLive = useLiveLocation(view?.status !== 'IN_PROGRESS', wantLoc);
 
   // Tick the pickup-waiting timer once per second while the driver is waiting.
@@ -274,6 +290,7 @@ export default function TrackApp() {
   // While disconnected we suppress the live vehicle position/ETA entirely — a stale
   // marker must never look current.
   const liveLocation = disconnected ? null : view.location;
+  const carFollow = view.status === 'IN_PROGRESS' && followCar && liveLocation ? { lat: liveLocation.lat, lng: liveLocation.lng, heading: 0, zoom: 16, tilt: 0 } : null;
   const markers: MapMarker[] = [];
   // Before pickup, anchor on the pickup; during the trip, anchor on the destination.
   if (view.stop && !view.stop.departedAt) markers.push({ id: 's', lat: view.stop.lat, lng: view.stop.lng, kind: 'stop', label: view.stop.label });
@@ -299,7 +316,8 @@ export default function TrackApp() {
 
       <div className="relative flex-1">
         <div className="absolute inset-0">
-          <AutoMapView markers={markers} route={routeLine.length ? routeLine : undefined} center={view.pickup} zoom={12} interactive className="h-full w-full" />
+          <AutoMapView markers={markers} route={routeLine.length ? routeLine : undefined} center={view.pickup} zoom={12} interactive className="h-full w-full"
+            follow={carFollow} onFollowBreak={() => setFollowCar(false)} idleReturnMs={4000} onIdleReturn={() => setFollowCar(true)} />
         </div>
 
         {/* status pill */}
@@ -314,8 +332,13 @@ export default function TrackApp() {
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end sm:block">
           <div className="pointer-events-auto w-full sm:absolute sm:bottom-4 sm:left-4 sm:w-[400px]">
             <div className="card flex max-h-[78dvh] flex-col overflow-hidden sm:max-h-[calc(100dvh-7rem)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+              <button type="button" aria-expanded={sheetOpen} aria-label={sheetOpen ? t('booking.sheet.collapse') : t('booking.sheet.expand')}
+                onClick={() => { if (!sheetSwiped.current) setSheetOpen((o) => !o); sheetSwiped.current = false; }}
+                onPointerDown={(e) => { sheetSwipeY.current = e.clientY; }}
+                onPointerUp={(e) => { if (sheetSwipeY.current == null) return; const dy = e.clientY - sheetSwipeY.current; sheetSwipeY.current = null; if (Math.abs(dy) > 25) { sheetSwiped.current = true; setSheetOpen(dy < 0); } }}
+                className="flex w-full shrink-0 touch-none justify-center pb-0.5 pt-2"><span className="h-1.5 w-12 rounded-full bg-edge-strong" /></button>
               {/* Pinned: what the passenger needs at pickup (status, driver/plate, start code). */}
-              <div className="shrink-0 border-b border-edge p-4 pb-3 sm:p-5 sm:pb-3">
+              <div className={`shrink-0 p-4 pb-3 pt-1 sm:p-5 sm:pb-3 sm:pt-1 ${sheetOpen ? 'border-b border-edge' : ''}`}>
                 <h1 className="text-xl font-bold" role="status" aria-live="polite">{headline}</h1>
                 {view.status === 'REQUESTED' && !view.confirmedDriver && (
                   <p className="mt-1 text-sm text-muted">{t('track.scheduledNote')}</p>
@@ -373,7 +396,7 @@ export default function TrackApp() {
                   </div>
                 )}
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto p-4 pt-3 sm:p-5 sm:pt-3">
+              <div className={`min-h-0 flex-1 overflow-y-auto p-4 pt-3 sm:p-5 sm:pt-3 ${sheetOpen ? '' : 'hidden'}`}>
                 {actionError && <p role="alert" className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{actionError}</p>}
 
                 {/* pickup waiting timer (after arrival) */}
