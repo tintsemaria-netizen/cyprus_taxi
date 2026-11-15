@@ -1,5 +1,17 @@
 # Session handoff
 
+## 2026-11-15 — iPhone keyboard pushed the header under the status bar
+**Cause:** with the keyboard open, iOS shrinks and pans the visual viewport, while the `fixed inset-0` app root stays on the layout viewport. The header ended up under the time/battery (user's screenshot).
+
+**Fix:** new `src/components/useKeyboardViewport.ts`. While a keyboard is open (`innerHeight − visualViewport.height > 80`), the root is pinned to the visual viewport (`top = offsetTop`, `height = vv.height`), and the focused input is scrolled into view. Otherwise the root stays `inset: 0`.
+- Used by BookingApp, TrackApp and /share.
+
+**Check:** Playwright with a mocked `visualViewport` (iPhone 13, local):
+- keyboard open (top 300, h 360) → root at 300 px / 360 px high, header at 300, the «Куда» field inside the visible band;
+- keyboard closed → back to inset 0;
+- no errors.
+- Not verified on a real iPhone keyboard here.
+
 ## 2026-11-15 — Route reset × in the sheet corner, 2× size; collapsed peek fits the «Куда» field
 - The reset × moved from the address block to the booking sheet's top-right corner. It is now 48 px with a 36 px glyph (was 28/18) and is shown on the form step while the sheet is open.
 - **Regression fixed:** the collapsed peek was a fixed 170 px, but the «Куда» input ends at 189 px. Without a bottom safe area (Android, iPhone Safari tab) the field was half-cut, and useHideClipped then hid it entirely, so the collapsed sheet could only be opened by the handle.

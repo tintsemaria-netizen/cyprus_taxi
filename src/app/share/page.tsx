@@ -1,5 +1,6 @@
 'use client';
 
+import { useKeyboardViewport } from '@/components/useKeyboardViewport';
 import { useEffect, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
@@ -28,6 +29,7 @@ interface ShareView {
 const STATUS_KEYS = new Set(['REQUESTED', 'SEARCHING', 'NO_DRIVER', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELED']);
 
 export default function SharePage() {
+  const kbBox = useKeyboardViewport(); // keep the header below the status bar while typing (iOS)
   const { t, tp, tError } = useT();
   const [view, setView] = useState<ShareView | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +76,7 @@ export default function SharePage() {
   const statusLabel = STATUS_KEYS.has(view.status) ? t(`track.share.status.${view.status}` as MsgKey) : view.status;
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden">
+    <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
       <header className="z-20 flex items-center justify-between border-b border-edge bg-page/90 px-4 py-3 backdrop-blur" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
         <Logo />
         <div className="flex items-center gap-2">

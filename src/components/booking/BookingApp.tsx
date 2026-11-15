@@ -1,5 +1,6 @@
 'use client';
 
+import { useKeyboardViewport } from '@/components/useKeyboardViewport';
 import { useHideClipped } from '@/components/useHideClipped';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -42,6 +43,7 @@ function withSlot(template: string, slot: string, node: React.ReactNode): React.
 const PEEK_PX = 170;
 
 export default function BookingApp() {
+  const kbBox = useKeyboardViewport(); // keep the header below the status bar while typing (iOS)
   const router = useRouter();
   const { t, tp, fmt, tError, locale } = useT();
   const [cfg, setCfg] = useState<PublicConfig | null>(null);
@@ -645,7 +647,7 @@ export default function BookingApp() {
   ];
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden">
+    <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
       {cfgError && (
         <div className="flex items-center justify-center gap-3 bg-warn/15 border-b border-warn/30 px-3 py-1.5 text-xs sm:text-xs text-warn">
           <span>{t('booking.config.loadFailed')}</span>

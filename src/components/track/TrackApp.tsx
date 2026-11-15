@@ -1,5 +1,6 @@
 'use client';
 
+import { useKeyboardViewport } from '@/components/useKeyboardViewport';
 import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
@@ -58,6 +59,7 @@ function rich(template: string, node: React.ReactNode): React.ReactNode {
   return <>{before}{node}{after}</>;
 }
 export default function TrackApp() {
+  const kbBox = useKeyboardViewport(); // keep the header below the status bar while typing (iOS)
   const { t, tp, fmt, tError } = useT();
   const [view, setView] = useState<TrackView | null>(null);
   const [phase, setPhase] = useState<'loading' | 'ready' | 'noauth' | 'error'>('loading');
@@ -314,7 +316,7 @@ export default function TrackApp() {
   const SLOT = '\u0000';
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden">
+    <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
       <PassengerTopBar sticky={false} />
 
       <div className="relative flex-1">
