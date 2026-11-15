@@ -26,6 +26,7 @@ function jitter(deg: number) { return (Math.random() - 0.5) * deg; }
 const pct = (arr: number[], p: number) => (arr.length ? arr.slice().sort((a, b) => a - b)[Math.min(arr.length - 1, Math.floor((p / 100) * arr.length))] : 0);
 
 async function cleanup() {
+  await prisma.passengerRating.deleteMany({});
   await prisma.fare.deleteMany({});
   await prisma.waitingSession.deleteMany({});
   await prisma.driverOffer.deleteMany({});
