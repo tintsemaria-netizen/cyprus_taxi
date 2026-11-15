@@ -12,7 +12,8 @@ import { filterFix, initialFilterState, accuracyLevel, type FilterState } from '
 import { DriverHomeMap } from '@/components/driver/DriverHomeMap';
 import { unlockOfferSound, playOfferChime, vibrateOffer, keepScreenOn } from '@/lib/driver-alerts';
 import { formatFlight } from '@/lib/flight';
-import { useT, MsgKey } from '@/i18n/I18nProvider';
+import { useT, useLocale, MsgKey } from '@/i18n/I18nProvider';
+import { rememberPushLocale } from '@/lib/push-client';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 import { StaffPasswordForm } from '@/components/StaffPasswordForm';
 import { RatePassengerSheet } from '@/components/driver/RatePassengerSheet';
@@ -81,6 +82,9 @@ export default function Page() {
 
 function Driver() {
   const { t, tError } = useT();
+  // The service worker localises background offer banners; it reads the app language from here.
+  const uiLocale = useLocale();
+  useEffect(() => { void rememberPushLocale(uiLocale); }, [uiLocale]);
   // Ref so the long-lived polling callbacks always use the current locale without re-subscribing.
   const tErrRef = useRef(tError);
   tErrRef.current = tError;
@@ -228,6 +232,12 @@ function Driver() {
 
   // Ring + vibrate for a new offer, repeating every 2 s until it is answered or expires.
   const offerId = offer?.offerId ?? null;
+  // A new offer jumps over whatever the driver is looking at (2026-11-15): back to the main
+  // screen (other tabs, profile pages, an open order detail are left) so the offer card is on top.
+  useEffect(() => {
+    if (!offerId) return;
+    setTab('home'); setProfileView('me'); setActiveDetailId(null);
+  }, [offerId]);
   useEffect(() => {
     if (!offerId) return;
     const ring = () => { playOfferChime(); vibrateOffer(); };
@@ -407,7 +417,7 @@ function HomeSection(props: {
         )}
       {/* Offer takes priority */}
       {offer && !trip && (
-        <div className="card pointer-events-auto max-h-[58dvh] overflow-y-auto border-2 border-accent p-4">
+        <div key={offer.offerId} className="ily-offer-in card pointer-events-auto max-h-[58dvh] overflow-y-auto border-2 border-accent p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.55)]">
           <div className="flex items-center justify-between"><span className="font-semibold text-accent">{t('driver.offer.title')}</span><span className={`chip ${offerSecs <= 5 ? '!text-danger' : ''}`}>⏳ {t('driver.units.sec', { n: offerSecs })}</span></div>
           {/* 1) How far the client is: time and km to the pickup (the pickup is also on the map). */}
           <div className="mt-2 flex items-baseline gap-3">

@@ -1,5 +1,27 @@
 # Session handoff
 
+## 2026-11-15 — Driver offers: pop over everything in the app; heads-up banner with sound + vibration in the background
+**In the app (driver/page.tsx):**
+- A new offerId switches to the main tab, resets profile sub-views and closes an open order detail, so the offer card is on top wherever the driver was.
+- The card slides up (`.ily-offer-in`, globals.css) with a strong shadow.
+- Ring and vibration every 2 s are unchanged.
+
+**In the background (public/sw.js), the offer push now:**
+- reads like «🚕 Новый заказ» / «<pickup> · ~N мин до клиента — нажмите, чтобы открыть» in the app language;
+- sets `requireInteraction`, `renotify`, `silent:false`, a long vibration [600,200]×4 and a timestamp;
+- closes itself 12 s after showing (only that banner, never a newer offer).
+
+**Language:** the driver app stores its UI language in Cache API (`ily-prefs` → `/__ily-locale`, `rememberPushLocale` in push-client.ts); the SW falls back to the device language. The SW parses the server body format from `offerBody` (comment added in push.ts).
+
+**Checks:**
+- Playwright (local): driver on the Profile tab, an offer is created → main tab + offer card + «Принять» within 4 s; locale cached «ru»; no errors.
+- The SW handler was unit-run in a node vm sandbox: Russian title/body, requireInteraction, vibration, auto-close; chat pushes unchanged.
+- Headless Chromium does not display notifications, so the real banner was not observed.
+
+**Device requirement (unchanged):** the driver must tap «Включить уведомления» in the driver app. Android Chrome site notifications must allow pop-up and sound; iOS needs the PWA on the home screen (16.4+).
+
+**Open question for the user:** OFFER_TTL_SEC is 10 s. From another app (banner → open → accept) that is tight; 20 s was suggested.
+
 ## 2026-11-15 — Comfort picture: white three-quarter sedan with a dark glass roof
 - CarClassIcon «sedan» was redrawn as an own SVG in the style of the user's reference: a white body, a dark panoramic roof, shading, door lines, a headlight (lime when selected), a tail light and two wheels with a ground shadow. viewBox 64×34.
 - The user's image was not embedded (it may come from another app); this is our own drawing in that style.

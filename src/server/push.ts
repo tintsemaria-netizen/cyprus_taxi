@@ -115,6 +115,7 @@ export async function enqueueDriver(db: Db, driverId: string, title: string, bod
   await enqueue(db, { audience: `DRIVER:${d.userId}`, title, body, url: opts?.url ?? '/driver', tag: opts?.tag ?? 'ride', offerId: opts?.offerId ?? null, dedupeKey: opts?.dedupeKey });
 }
 // Build the offer-notification body from a pickup label + ETA (no passenger PII).
+// public/sw.js parses this exact format to show the banner in the driver's language.
 export function offerBody(pickupLabel: string | null | undefined, pickupEtaSec?: number | null): string {
   const etaMin = pickupEtaSec != null ? Math.max(1, Math.round(pickupEtaSec / 60)) : null;
   return `${pickupLabel ?? 'Pickup nearby'}${etaMin != null ? ` · ~${etaMin} min away` : ''} — tap to accept`;

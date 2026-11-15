@@ -69,3 +69,7 @@ body {
 /* ErrorFocus (2026-11-15): a still-unfixed field shakes when the user tries to continue again. */
 @keyframes ily-err-shake { 0%,100% { transform: translateX(0) } 20% { transform: translateX(-6px) } 40% { transform: translateX(6px) } 60% { transform: translateX(-4px) } 80% { transform: translateX(4px) } }
 .ily-err-shake { animation: ily-err-shake .45s ease-in-out; }
+
+/* Driver offer card (2026-11-15): slides up over everything when a new order arrives. */
+@keyframes ily-offer-in { from { transform: translateY(110%); opacity: .4 } to { transform: translateY(0); opacity: 1 } }
+.ily-offer-in { animation: ily-offer-in .35s cubic-bezier(.2,.9,.3,1.15); }

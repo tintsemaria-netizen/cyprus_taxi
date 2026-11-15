@@ -21,6 +21,16 @@ export function pushPermission(): NotificationPermission | 'unsupported' {
   return Notification.permission;
 }
 
+// Save the app language where the service worker can read it (Cache API), so notifications
+// shown while the app is in the background use the driver's language (2026-11-15).
+export async function rememberPushLocale(locale: string): Promise<void> {
+  try {
+    if (typeof caches === 'undefined') return;
+    const c = await caches.open('ily-prefs');
+    await c.put('/__ily-locale', new Response(locale, { headers: { 'content-type': 'text/plain' } }));
+  } catch { /* storage unavailable — the worker falls back to the device language */ }
+}
+
 export async function enablePush(subscribeUrl: string): Promise<{ ok: boolean; reason?: string }> {
   if (!pushSupported()) return { ok: false, reason: 'unsupported' };
   let perm = Notification.permission;
