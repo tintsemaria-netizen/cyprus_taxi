@@ -14,7 +14,7 @@ const CONSTRUCTIVE = ['late', 'unsafe_driving', 'rude', 'dirty_car', 'wrong_rout
 
 export function RateTripModal({ rideId, onClose, onDone, postUrl, inline }: { rideId?: string; onClose?: () => void; onDone: (stars: number) => void; postUrl?: string; inline?: boolean }) {
   const { t, tp, tError } = useT();
-  const [stars, setStars] = useState(0);
+  const [stars, setStars] = useState(5);
   const [hover, setHover] = useState(0);
   const [tags, setTags] = useState<string[]>([]);
   const [comment, setComment] = useState('');

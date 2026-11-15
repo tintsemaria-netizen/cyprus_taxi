@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-15 — Passenger rating defaults to 5 stars
+- RateTripModal (inline on /track and the rides modal) now starts at 5 stars; positive tags are shown immediately.
+- Playwright (local): a COMPLETED ride's /track page showed 5 stars checked; no page errors.
+
 ## 2026-11-15 — Map-overlay sheets drag by the whole panel (passenger tracking + driver navigation)
 - New `src/components/useSheetDrag.ts`: native touch listeners on the panel.
   - Collapsed: any vertical swipe moves it, with rubber-band feedback.
