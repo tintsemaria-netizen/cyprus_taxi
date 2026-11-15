@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-15 — Map-overlay sheets drag by the whole panel (passenger tracking + driver navigation)
+- New `src/components/useSheetDrag.ts`: native touch listeners on the panel.
+  - Collapsed: any vertical swipe moves it, with rubber-band feedback.
+  - Open: a downward pull while the body is scrolled to the top collapses it; otherwise the body scrolls.
+  - The panel follows the finger (translateY) and snaps on release. Inputs and `[data-no-sheet-drag]` are ignored; taps still work.
+- Used by TrackApp (`track-sheet`) and DriverNavigation (`nav-sheet`). The handles still tap/swipe as before. The booking sheet already had this behaviour.
+- Playwright with CDP touch events (local, iPhone 13): on both sheets, swiping up on the panel body opened it and swiping down collapsed it; no page errors.
+
 ## 2026-11-15 — Driver navigation: info sheet floats over the map; separate action button; rating defaults to 5
 - DriverNavigation: the map now fills the screen. Recenter, the stage action (On my way / Arrived / start code / stop actions / Complete trip) and the info sheet are an absolute overlay at the bottom.
 - The action is a separate floating bar above the info sheet.

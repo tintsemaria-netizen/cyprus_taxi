@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { ChatPanel } from '@/components/ChatPanel';
 import { FarePreviewSheet } from './FarePreviewSheet';
+import { useSheetDrag } from '@/components/useSheetDrag';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { api } from '@/lib/api-client';
 import { formatFlight } from '@/lib/flight';
@@ -57,6 +58,8 @@ export function DriverNavigation(props: {
   const [panelOpen, setPanelOpen] = useState(trip.status !== 'IN_PROGRESS');
   // The info panel folds itself away the moment the ride starts (manual tap/swipe still works).
   const prevStatus = useRef(trip.status);
+  const panelBodyRef = useRef<HTMLDivElement | null>(null);
+  const sheetDrag = useSheetDrag({ open: panelOpen, setOpen: setPanelOpen, scrollRef: panelBodyRef });
   useEffect(() => { if (trip.status !== prevStatus.current) { if (trip.status === 'IN_PROGRESS') setPanelOpen(false); prevStatus.current = trip.status; } }, [trip.status]);
   const swipeY = useRef<number | null>(null);
   const swiped = useRef(false);
@@ -280,13 +283,13 @@ export function DriverNavigation(props: {
           {trip.status === 'IN_PROGRESS' && leg === 'dropoff' && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => setAsk('complete')}>{t('driver.trip.completeTrip')}</button>}
       </div>
       {/* Info sheet: collapses to the summary line (handle tap or swipe). */}
-      <div className="pointer-events-auto rounded-t-[18px] border-t border-edge bg-elevated shadow-[0_-6px_20px_rgba(0,0,0,0.35)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} data-testid="nav-sheet">
+      <div className="pointer-events-auto rounded-t-[18px] border-t border-edge bg-elevated shadow-[0_-6px_20px_rgba(0,0,0,0.35)]" ref={sheetDrag.panelRef} style={{ paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }} data-testid="nav-sheet">
         <button type="button" aria-expanded={panelOpen} aria-label={panelOpen ? t('booking.sheet.collapse') : t('booking.sheet.expand')}
           onClick={() => { if (!swiped.current) setPanelOpen((o) => !o); swiped.current = false; }}
           onPointerDown={(e) => { swipeY.current = e.clientY; }}
           onPointerUp={(e) => { if (swipeY.current == null) return; const dy = e.clientY - swipeY.current; swipeY.current = null; if (Math.abs(dy) > 25) { swiped.current = true; setPanelOpen(dy < 0); } }}
           className="flex w-full touch-none justify-center pb-1 pt-2"><span className="h-1.5 w-12 rounded-full bg-edge-strong" /></button>
-        <div className={`${panelOpen ? 'max-h-[45vh] overflow-y-auto' : 'max-h-[64px] overflow-hidden'} px-4 pb-2 transition-[max-height] duration-300`}>
+        <div ref={panelBodyRef} className={`${panelOpen ? 'max-h-[45vh] overflow-y-auto overscroll-contain' : 'max-h-[64px] overflow-hidden'} px-4 pb-2 transition-[max-height] duration-300`}>
         {!gps.active && (
           <div className="mb-3 rounded-[12px] border border-warn/40 bg-warn/10 p-3 text-sm">
             <div className="font-semibold text-warn">{t('driver.navigation.gpsOffTitle')}</div>

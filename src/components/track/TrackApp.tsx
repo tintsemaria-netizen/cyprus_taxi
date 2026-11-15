@@ -14,6 +14,7 @@ import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { formatFlight } from '@/lib/flight';
 import { useT } from '@/i18n/I18nProvider';
 import type { MsgKey } from '@/i18n/I18nProvider';
+import { useSheetDrag } from '@/components/useSheetDrag';
 
 interface TrackView {
   flightNumber?: string | null;
@@ -219,6 +220,8 @@ export default function TrackApp() {
   const [sheetOpen, setSheetOpen] = useState(true);
   const sheetSwipeY = useRef<number | null>(null);
   const sheetSwiped = useRef(false);
+  const sheetBodyRef = useRef<HTMLDivElement | null>(null);
+  const sheetDrag = useSheetDrag({ open: sheetOpen, setOpen: setSheetOpen, scrollRef: sheetBodyRef });
   const prevStatus = useRef<string | null>(null);
   useEffect(() => {
     const st = view?.status ?? null;
@@ -331,7 +334,7 @@ export default function TrackApp() {
         {/* bottom sheet */}
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end sm:block">
           <div className="pointer-events-auto w-full sm:absolute sm:bottom-4 sm:left-4 sm:w-[400px]">
-            <div className="card flex max-h-[78dvh] flex-col overflow-hidden sm:max-h-[calc(100dvh-7rem)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+            <div ref={sheetDrag.panelRef} data-testid="track-sheet" className="card flex max-h-[78dvh] flex-col overflow-hidden sm:max-h-[calc(100dvh-7rem)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }}>
               <button type="button" aria-expanded={sheetOpen} aria-label={sheetOpen ? t('booking.sheet.collapse') : t('booking.sheet.expand')}
                 onClick={() => { if (!sheetSwiped.current) setSheetOpen((o) => !o); sheetSwiped.current = false; }}
                 onPointerDown={(e) => { sheetSwipeY.current = e.clientY; }}
@@ -396,7 +399,7 @@ export default function TrackApp() {
                   </div>
                 )}
               </div>
-              <div className={`min-h-0 flex-1 overflow-y-auto p-4 pt-3 sm:p-5 sm:pt-3 ${sheetOpen ? '' : 'hidden'}`}>
+              <div ref={sheetBodyRef} className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pt-3 sm:p-5 sm:pt-3 ${sheetOpen ? '' : 'hidden'}`}>
                 {actionError && <p role="alert" className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{actionError}</p>}
 
                 {/* pickup waiting timer (after arrival) */}
