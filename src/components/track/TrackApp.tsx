@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
 import { ChatPanel } from '@/components/ChatPanel';
-import { NotifyToggle } from '@/components/NotifyToggle';
+import { useSilentPush } from '@/components/NotifyPrompt';
 import { useLiveLocation } from '@/components/useLiveLocation';
 import { ShareLocationToggle } from './ShareLocationToggle';
 import { RateTripModal } from '@/components/booking/RateTripModal';
@@ -219,6 +219,7 @@ export default function TrackApp() {
   const [ratedNow, setRatedNow] = useState<number | null>(null); // 5-star rating left on this screen
   // Info sheet open/collapsed (2026-11-15): handle tap or swipe. Collapses by itself when the trip
   // starts so the passenger sees the car driving the route up close.
+  useSilentPush('/tracking/push');
   const [sheetOpen, setSheetOpen] = useState(true);
   const sheetSwipeY = useRef<number | null>(null);
   const sheetSwiped = useRef(false);
@@ -327,9 +328,10 @@ export default function TrackApp() {
 
         {/* status pill */}
         <div className="absolute left-4 top-4 z-10 max-w-[70%]">
-          <span className="chip !bg-page/90 !text-accent">
+          {/* No pill while searching (2026-11-15): the sheet already says it, bigger. */}
+          {view.status !== 'SEARCHING' && <span className="chip !bg-page/90 !text-accent">
             {view.status === 'EN_ROUTE' ? `● ${t('track.pillEnRoute')}` : `● ${statusLabel.toUpperCase()}`}
-          </span>
+          </span>}
           {reconnecting && <span className="chip ml-2 !bg-page/90 !text-warn">{t('track.reconnecting')}</span>}
         </div>
 
@@ -349,7 +351,9 @@ export default function TrackApp() {
                 className="flex w-full shrink-0 touch-none justify-center pb-0.5 pt-2"><span className="h-1.5 w-12 rounded-full bg-edge-strong" /></button>
               {/* Pinned: what the passenger needs at pickup (status, driver/plate, start code). */}
               <div className={`shrink-0 p-4 pb-3 pt-1 sm:p-5 sm:pb-3 sm:pt-1 ${sheetOpen ? 'border-b border-edge' : ''}`}>
-                <h1 className="text-xl font-bold" role="status" aria-live="polite">{headline}</h1>
+                {view.status === 'SEARCHING'
+                  ? <h1 className="text-lg font-medium leading-snug text-ink" role="status" aria-live="polite">{t('track.searchingNote')}</h1>
+                  : <h1 className="text-xl font-bold" role="status" aria-live="polite">{headline}</h1>}
                 {view.status === 'REQUESTED' && !view.confirmedDriver && (
                   <p className="mt-1 text-sm text-muted">{t('track.scheduledNote')}</p>
                 )}
@@ -372,9 +376,6 @@ export default function TrackApp() {
                   </div>
                 )}
                 {view.flightNumber && !terminal && <p className="mt-2 font-mono text-xs text-muted">✈ {t('track.prebook.flightRow', { flight: formatFlight(view.flightNumber) })}</p>}
-                {view.status === 'SEARCHING' && (
-                  <p className="mt-1 text-sm text-muted">{t('track.searchingNote')}</p>
-                )}
                 {view.status === 'NO_DRIVER' && (
                   <p className="mt-1 text-sm text-muted">{t('track.noDriverNote')}</p>
                 )}
@@ -449,7 +450,6 @@ export default function TrackApp() {
                 {/* actions */}
                 {!terminal && (
                   <div className="mt-4 space-y-2">
-                    <NotifyToggle pushUrl="/tracking/push" className="pb-1" />
                     <ShareLocationToggle active={prePickup} loc={myLive} onWantLocation={setWantLoc} />
                     <div className="grid grid-cols-2 gap-2">
                       <button type="button" className="btn-ghost !min-h-[44px] text-sm" onClick={share}>{t('track.shareTrip')}</button>

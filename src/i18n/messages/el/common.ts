@@ -31,6 +31,12 @@ const common: Catalog<typeof en> = {
   },
   vClass: { COMFORT: 'Comfort', XL: 'XL' },
   payment: { CASH_TO_DRIVER: 'Μετρητά στον οδηγό' },
+  notifyPrompt: {
+    title: 'Ενεργοποιήστε τις ειδοποιήσεις',
+    body: 'Θα σας ενημερώσουμε όταν βρεθεί οδηγός, έρχεται και σας περιμένει — ακόμη κι αν η εφαρμογή είναι κλειστή.',
+    allow: 'Να επιτρέπεται',
+    later: 'Όχι τώρα',
+  },
   install: {
     title: 'Εγκαταστήστε το IL-Y στο κινητό σας',
     titleDriver: 'Εγκαταστήστε το IL-Y Driver στο κινητό σας',

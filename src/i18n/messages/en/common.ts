@@ -28,6 +28,12 @@ const common = {
   },
   vClass: { COMFORT: 'Comfort', XL: 'XL' },
   payment: { CASH_TO_DRIVER: 'Cash to driver' },
+  notifyPrompt: {
+    title: 'Turn on notifications',
+    body: "We'll tell you when a driver is found, on the way and waiting for you — even when the app is closed.",
+    allow: 'Allow',
+    later: 'Not now',
+  },
   install: {
     title: 'Install IL-Y on your phone',
     titleDriver: 'Install IL-Y Driver on your phone',

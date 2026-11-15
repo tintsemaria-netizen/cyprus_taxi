@@ -1,5 +1,19 @@
 # Session handoff
 
+## 2026-11-15 — Searching screen cleanup; notifications asked once after sign-in
+**Tracking page, SEARCHING:**
+- The map pill and the «Ищем водителя» title were removed.
+- The sheet heading is now «Ищем ближайшего свободного водителя…» (text-lg, medium, ink).
+
+**Notifications:**
+- The «Включить уведомления» link was removed from the tracking page, the pre-booked confirmation and /prebookings.
+- New `src/components/NotifyPrompt.tsx`: a one-time dialog («Включите уведомления» / «Разрешить» / «Не сейчас») in BookingApp for a signed-in passenger. It appears after registration/login while the permission is undecided and is never shown again after an answer (`localStorage ily-notify-asked`). A tap is needed for the browser permission dialog (iOS).
+- `useSilentPush(url)` re-registers the subscription silently when permission is already granted (tracking page `/tracking/push`, /prebookings `/passenger/push`).
+- Keys `common.notifyPrompt.*` (en/ru/el).
+- The driver app keeps its own toggle (unchanged).
+
+**Check:** Playwright (local, Pixel 7, permission emulated as «default»): the dialog shows on home; «Не сейчас» + reload → not shown again; track SEARCHING → no pill, no «Ищем водителя», large «Ищем ближайшего…», no notify link; no errors.
+
 ## 2026-11-15 — Driver «Свободные заказы» card simplified and fully tappable
 - The whole card opens the order: role=button, Enter/Space; «Посмотреть» is kept and does the same.
 - The distance («263 м от вас») moved to the top as a large bold line.

@@ -4,7 +4,7 @@ import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PassengerLoginModal } from '@/components/booking/PassengerLoginModal';
-import { NotifyToggle } from '@/components/NotifyToggle';
+import { useSilentPush } from '@/components/NotifyPrompt';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 
@@ -20,6 +20,7 @@ interface Prebooking {
 export default function Page() {
   const router = useRouter();
   const { t, fmt } = useT();
+  useSilentPush('/passenger/push'); // permission is asked once after sign-in (NotifyPrompt)
   const [items, setItems] = useState<Prebooking[] | null>(null);
   const [needLogin, setNeedLogin] = useState(false);
   const [show, setShow] = useState(false);
@@ -60,7 +61,6 @@ export default function Page() {
         <p className="text-muted">{t('common.loading')}</p>
       ) : (
         <>
-          <div className="card mb-3 px-3 py-2"><NotifyToggle pushUrl="/passenger/push" /></div>
           {items.length === 0 ? (
             <p className="text-sm text-muted">{t('rides.prebookings.empty')}</p>
           ) : (

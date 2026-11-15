@@ -19,7 +19,7 @@ import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 import { INTL_TAG } from '@/i18n/config';
-import { NotifyToggle } from '@/components/NotifyToggle';
+import { NotifyPrompt } from '@/components/NotifyPrompt';
 
 interface PublicConfig {
   demoMode: boolean;
@@ -717,6 +717,7 @@ export default function BookingApp() {
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
+      <NotifyPrompt pushUrl="/passenger/push" active={!!passenger} />
       <input ref={proxyRef} aria-hidden tabIndex={-1} readOnly={false} className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0" style={{ fontSize: 16 }} />
       {editor && (
         <RouteEditor
@@ -994,7 +995,6 @@ export default function BookingApp() {
                       <h2 className="mt-3 text-xl font-bold">{t('booking.prebooked.title')}</h2>
                       <p className="mt-1 text-sm text-muted">{t('booking.prebooked.when', { when: (doneAt ?? '').replace('T', ' ') })}</p>
                       <p className="mt-2 text-sm text-muted">{t('booking.prebooked.body')}</p>
-                      <div className="mt-3 flex justify-center"><NotifyToggle pushUrl="/passenger/push" /></div>
                       <div className="mt-5 space-y-2">
                         <button className="btn-primary w-full" onClick={orderAnother}>{t('booking.prebooked.another')}</button>
                         <div className="grid grid-cols-2 gap-2">

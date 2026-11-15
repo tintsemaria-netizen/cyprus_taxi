@@ -31,6 +31,12 @@ const common: Catalog<typeof en> = {
   },
   vClass: { COMFORT: 'Comfort', XL: 'XL' },
   payment: { CASH_TO_DRIVER: 'Наличными водителю' },
+  notifyPrompt: {
+    title: 'Включите уведомления',
+    body: 'Сообщим, когда водитель найден, едет к вам и ждёт на месте — даже если приложение закрыто.',
+    allow: 'Разрешить',
+    later: 'Не сейчас',
+  },
   install: {
     title: 'Установите IL-Y на телефон',
     titleDriver: 'Установите IL-Y Driver на телефон',
