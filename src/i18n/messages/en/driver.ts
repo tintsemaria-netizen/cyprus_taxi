@@ -295,6 +295,7 @@ const driver = {
     unavailable: 'In-app navigation is unavailable right now.',
     openExternal: 'Google Maps',
     googleMaps: '🧭 Google Maps',
+    gpsOffShort: '⚠ GPS is off — turn on',
     gpsOffTitle: 'Turn on location sharing to navigate. The passenger sees your car from it too.',
     mute: 'Mute voice guidance',
     unmute: 'Turn voice guidance on',

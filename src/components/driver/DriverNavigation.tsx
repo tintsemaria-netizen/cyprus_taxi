@@ -5,6 +5,7 @@ import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { ChatPanel } from '@/components/ChatPanel';
 import { FarePreviewSheet } from './FarePreviewSheet';
 import { useSheetDrag } from '@/components/useSheetDrag';
+import { useHideClipped } from '@/components/useHideClipped';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { api } from '@/lib/api-client';
 import { formatFlight } from '@/lib/flight';
@@ -63,6 +64,7 @@ export function DriverNavigation(props: {
   const prevStatus = useRef(trip.status);
   const panelBodyRef = useRef<HTMLDivElement | null>(null);
   const sheetDrag = useSheetDrag({ open: panelOpen, setOpen: setPanelOpen, scrollRef: panelBodyRef });
+  useHideClipped(panelBodyRef, !panelOpen);
   useEffect(() => { if (trip.status !== prevStatus.current) { if (trip.status === 'IN_PROGRESS') setPanelOpen(false); prevStatus.current = trip.status; } }, [trip.status]);
   const swipeY = useRef<number | null>(null);
   const swiped = useRef(false);
@@ -292,8 +294,12 @@ export function DriverNavigation(props: {
           onPointerDown={(e) => { swipeY.current = e.clientY; }}
           onPointerUp={(e) => { if (swipeY.current == null) return; const dy = e.clientY - swipeY.current; swipeY.current = null; if (Math.abs(dy) > 25) { swiped.current = true; setPanelOpen(dy < 0); } }}
           className="flex w-full touch-none justify-center pb-1 pt-2"><span className="h-1.5 w-12 rounded-full bg-edge-strong" /></button>
-        <div ref={panelBodyRef} className={`${panelOpen ? 'max-h-[45vh] overflow-y-auto overscroll-contain' : 'max-h-[64px] overflow-hidden'} px-4 pb-2 transition-[max-height] duration-300`}>
-        {!gps.active && (
+        <div ref={panelBodyRef} className={`${panelOpen ? 'max-h-[45vh] overflow-y-auto overscroll-contain' : (gps.active ? 'max-h-[72px]' : 'max-h-[96px]') + ' overflow-hidden'} px-4 pb-2 transition-[max-height] duration-300`}>
+        {/* Collapsed: a one-line GPS warning instead of the full box (no half-cut box in the peek). */}
+        {!gps.active && !panelOpen && (
+          <button type="button" onClick={props.onStartGps} className="mb-1 block text-left text-sm font-semibold text-warn">{t('driver.navigation.gpsOffShort')}</button>
+        )}
+        {!gps.active && panelOpen && (
           <div className="mb-3 rounded-[12px] border border-warn/40 bg-warn/10 p-3 text-sm">
             <div className="font-semibold text-warn">{t('driver.navigation.gpsOffTitle')}</div>
             {gps.error && gps.error !== 'acquiring' && <div className="mt-1 text-xs text-danger">{t(`driver.gps.${gps.error as 'denied' | 'unsupported'}`)}</div>}
@@ -308,7 +314,7 @@ export function DriverNavigation(props: {
             {remainingSec != null && clock > 0 && <span className="ml-auto text-sm text-muted">{t('driver.navigation.arriveAt', { time: fmt.time(new Date(clock + remainingSec * 1000)) })}</span>}
           </div>
         )}
-        <div className="mt-1 text-sm">
+        <div className={`mt-1 text-sm ${panelOpen ? '' : 'truncate'}`}>
           <span className="text-muted">{leg === 'pickup' ? t('driver.navigation.toPickup') : leg === 'stop' ? t('driver.navigation.toStop') : t('driver.navigation.toDestination')}</span>{' '}
           <span className="font-medium">{target.label}</span>
         </div>

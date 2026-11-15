@@ -1,5 +1,15 @@
 # Session handoff
 
+## 2026-11-15 — No half-cut text in collapsed sheets; full-screen roots
+- New `src/components/useHideClipped.ts`. While a sheet is collapsed or being dragged, any element only partly visible at the sheet's bottom edge is hidden (visibility), so the peek never shows half a line or half a box. It re-checks on resize, drag and content changes.
+  - Used by the booking sheet (mobile, collapsed or dragging) and the driver navigation panel (collapsed).
+- Driver nav collapsed:
+  - a one-line «⚠ GPS выключен — включить» replaces the big GPS box (new key `driver.navigation.gpsOffShort` en/ru/el);
+  - the destination line is single-line with an ellipsis;
+  - peek height is 72/96 px.
+- BookingApp, TrackApp and /share root containers are now `fixed inset-0` instead of `h-[100dvh]`. The user's iPhone screenshot showed a band under the sheet where 100dvh fell short of the screen.
+- Playwright (440×956, safe-area override top 62 / bottom 34, local): no partly visible text in the collapsed booking sheet or the collapsed driver panel; screenshots reviewed.
+
 ## 2026-11-15 — iPhone status bar overlapped the header (safe-area top)
 - The apps use `viewportFit: cover` + `statusBarStyle: black-translucent`. Installed on a notched or Dynamic Island iPhone (e.g. 16 Pro Max), page headers were drawn under the time/battery.
 - Every top header now adds `env(safe-area-inset-top)` to its top padding:

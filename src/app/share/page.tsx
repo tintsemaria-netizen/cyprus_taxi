@@ -74,7 +74,7 @@ export default function SharePage() {
   const statusLabel = STATUS_KEYS.has(view.status) ? t(`track.share.status.${view.status}` as MsgKey) : view.status;
 
   return (
-    <div className="relative flex h-[100dvh] flex-col overflow-hidden">
+    <div className="fixed inset-0 flex flex-col overflow-hidden">
       <header className="z-20 flex items-center justify-between border-b border-edge bg-page/90 px-4 py-3 backdrop-blur" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
         <Logo />
         <div className="flex items-center gap-2">

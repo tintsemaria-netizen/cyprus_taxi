@@ -314,7 +314,7 @@ export default function TrackApp() {
   const SLOT = '\u0000';
 
   return (
-    <div className="relative flex h-[100dvh] flex-col overflow-hidden">
+    <div className="fixed inset-0 flex flex-col overflow-hidden">
       <PassengerTopBar sticky={false} />
 
       <div className="relative flex-1">

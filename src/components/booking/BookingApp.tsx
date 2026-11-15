@@ -1,5 +1,6 @@
 'use client';
 
+import { useHideClipped } from '@/components/useHideClipped';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
@@ -296,6 +297,7 @@ export default function BookingApp() {
   // moves the sheet; expanded → a downward pull while the form is scrolled to the top collapses it,
   // otherwise the form scrolls normally. Native listeners: preventDefault needs passive: false.
   const contentRef = useRef<HTMLDivElement | null>(null);
+  useHideClipped(contentRef, isMobile && (collapsed || dragH != null));
   useEffect(() => {
     const el = contentRef.current;
     if (!isMobile || !el) return;
@@ -590,7 +592,7 @@ export default function BookingApp() {
   ];
 
   return (
-    <div className="relative flex h-[100dvh] flex-col overflow-hidden">
+    <div className="fixed inset-0 flex flex-col overflow-hidden">
       {cfgError && (
         <div className="flex items-center justify-center gap-3 bg-warn/15 border-b border-warn/30 px-3 py-1.5 text-xs sm:text-xs text-warn">
           <span>{t('booking.config.loadFailed')}</span>
