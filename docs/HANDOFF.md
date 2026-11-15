@@ -1,5 +1,25 @@
 # Session handoff
 
+## 2026-11-15 — Driver navigation: bigger info, big Google Maps/chat buttons in the bottom corner, bigger chat, red «Завершить поездку»
+Same sizes on every leg (to the client, stop, with the client).
+
+**Summary row:**
+- minutes 44 px bold lime;
+- distance 28 px;
+- arrival time 24 px;
+- address 26 px semibold (2 lines when collapsed);
+- name row 18 px.
+
+**Sheet:** collapsed peek is 150 px (176 px with the GPS line). The map fitPadding bottom is 330/520.
+
+**Buttons:**
+- Google Maps and chat moved from the top-right column to a row at the bottom-right above the action button, 72 px each with 44 px icons; the unread badge is bigger. Mute stays top-right.
+- «Завершить поездку» is a red (bg-danger) bold 56 px button.
+
+**Chat:** ChatPanel `large` gives a messages area of max 336 px (or 50 dvh), min 200 px, base-size text and a taller input; used by the driver map chat.
+
+**Check:** Playwright (local): to client and with client both show a 26 px address and 72 px buttons at the bottom-right; the complete button is rgb(255,107,107); the chat opens; no errors.
+
 ## 2026-11-15 — Ride screen: pulsing pickup pin while searching; route box; passenger can add/remove the stop
 **Pickup pin pulse:** `pickupPinEl({pulse})` draws two lime rings pulsing from the needle tip. `MapMarker.pulse` is supported by Google and MapLibre; Google swaps content when it changes. TrackApp sets it while SEARCHING.
 

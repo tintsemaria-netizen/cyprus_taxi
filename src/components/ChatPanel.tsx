@@ -14,7 +14,7 @@ interface Msg { id: string; sender: 'PASSENGER' | 'DRIVER'; body: string; at: st
 // Optional (2026-11-15, driver map chat): `expandedOverride` controls opening from outside,
 // `onUnread` reports unread messages (badge on a map button), `callHref` adds a call button
 // in the chat header, `onClose` turns the header into a close bar.
-export function ChatPanel({ listUrl, postUrl, me, pushUrl, expandedOverride, onUnread, callHref, onClose }: { listUrl: string; postUrl: string; me: 'PASSENGER' | 'DRIVER'; peerLabel: string; pushUrl?: string; expandedOverride?: boolean; onUnread?: (n: number) => void; callHref?: string | null; onClose?: () => void }) {
+export function ChatPanel({ listUrl, postUrl, me, pushUrl, expandedOverride, onUnread, callHref, onClose, large }: { large?: boolean; listUrl: string; postUrl: string; me: 'PASSENGER' | 'DRIVER'; peerLabel: string; pushUrl?: string; expandedOverride?: boolean; onUnread?: (n: number) => void; callHref?: string | null; onClose?: () => void }) {
   const { t, fmt, tError } = useT();
   const peerIsDriver = me === 'PASSENGER';
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -132,7 +132,8 @@ export function ChatPanel({ listUrl, postUrl, me, pushUrl, expandedOverride, onU
 
       {expanded && (
         <div className="border-t border-edge">
-          <div ref={scrollRef} className="max-h-56 space-y-2 overflow-y-auto p-3">
+          {/* `large` (driver map chat, 2026-11-15): 1.5× taller with bigger text. */}
+          <div ref={scrollRef} className={`${large ? 'max-h-[min(336px,50dvh)] min-h-[200px] text-base' : 'max-h-56'} space-y-2 overflow-y-auto p-3`}>
             {hasOlder && (
               <div className="text-center">
                 <button type="button" className="text-xs text-accent hover:underline disabled:opacity-50" disabled={loadingOlder} onClick={loadOlder}>
@@ -143,7 +144,7 @@ export function ChatPanel({ listUrl, postUrl, me, pushUrl, expandedOverride, onU
             {msgs.length === 0 && <p className="py-4 text-center text-xs text-muted">{t('track.chat.empty')}</p>}
             {msgs.map((m) => (
               <div key={m.id} className={`flex ${m.sender === me ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] rounded-[12px] px-3 py-1.5 text-sm ${m.sender === me ? 'bg-accent text-[#10191C]' : 'bg-panel text-ink'}`}>
+                <div className={`max-w-[80%] rounded-[12px] px-3 py-1.5 ${large ? 'text-base' : 'text-sm'} ${m.sender === me ? 'bg-accent text-[#10191C]' : 'bg-panel text-ink'}`}>
                   {m.body}
                   <span className={`ml-2 align-bottom text-[11px] ${m.sender === me ? 'text-[#10191C]/60' : 'text-muted'}`}>{fmt.time(m.at)}</span>
                 </div>
@@ -167,7 +168,7 @@ export function ChatPanel({ listUrl, postUrl, me, pushUrl, expandedOverride, onU
           {open ? (
             <div className="flex items-center gap-2 border-t border-edge p-2">
               <input
-                className="field !min-h-0 flex-1 !py-2 text-sm"
+                className={`field !min-h-0 flex-1 ${large ? '!py-3 text-base' : '!py-2 text-sm'}`}
                 placeholder={peerIsDriver ? t('track.chat.placeholderDriver') : t('track.chat.placeholderPassenger')}
                 value={text}
                 maxLength={1000}

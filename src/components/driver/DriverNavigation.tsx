@@ -279,25 +279,9 @@ export function DriverNavigation(props: {
       {/* Map */}
       <div className="relative min-h-0 flex-1">
         <AutoMapView markers={markers} route={routeLine} center={pos ?? target} zoom={15} interactive className="h-full w-full"
-          follow={follow} onFollowBreak={() => setFollowing(false)} idleReturnMs={4000} onIdleReturn={() => setFollowing(true)} fitPadding={wide ? { top: 60, right: 50, bottom: 60, left: 470 } : { top: 60, right: 50, bottom: panelOpen ? 380 : 200, left: 50 }} />
+          follow={follow} onFollowBreak={() => setFollowing(false)} idleReturnMs={4000} onIdleReturn={() => setFollowing(true)} fitPadding={wide ? { top: 60, right: 50, bottom: 60, left: 470 } : { top: 60, right: 50, bottom: panelOpen ? 520 : 330, left: 50 }} />
         <div className="absolute right-3 top-3 flex flex-col gap-2">
           <button onClick={toggleMute} className="flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-lg" aria-label={muted ? t('driver.navigation.unmute') : t('driver.navigation.mute')} aria-pressed={muted}>{muted ? '🔇' : '🔊'}</button>
-          {/* Google Maps and the chat (with the call inside) as map buttons (2026-11-15). */}
-          <a href={externalHref} target="_blank" rel="noreferrer" aria-label={t('driver.navigation.googleMaps')} title={t('driver.navigation.googleMaps')}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-white shadow-md">
-            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden>
-              <path d="M12 2.2c-3.9 0-7 3-7 6.9 0 5.1 7 12.7 7 12.7s7-7.6 7-12.7c0-3.9-3.1-6.9-7-6.9z" fill="#34A853" />
-              <path d="M12 2.2c-2.2 0-4.1 1-5.4 2.5L12 10.1l5.4-5.4C16.1 3.2 14.2 2.2 12 2.2z" fill="#4285F4" />
-              <path d="M6.6 4.7A6.9 6.9 0 0 0 5 9.1c0 1.3.4 2.7 1 4l6-6z" fill="#EA4335" />
-              <path d="M17.4 4.7 12 10.1l6 3c.6-1.4 1-2.7 1-4 0-1.7-.6-3.2-1.6-4.4z" fill="#FBBC04" />
-              <circle cx="12" cy="9.1" r="2.6" fill="#fff" />
-            </svg>
-          </a>
-          <button type="button" onClick={() => setChatOpen(true)} aria-label={t('driver.navigation.chat')} title={t('driver.navigation.chat')}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-xl shadow-md">
-            💬
-            {chatUnread > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold text-[#10191C]">{chatUnread > 9 ? '9+' : chatUnread}</span>}
-          </button>
         </div>
       </div>
 
@@ -306,6 +290,24 @@ export function DriverNavigation(props: {
         {!following && !waitingAtPickup && pos && (
           <button onClick={() => setFollowing(true)} className="pointer-events-auto mx-auto mb-2 rounded-full border border-accent bg-page/95 px-4 py-2 text-sm font-semibold text-accent">{t('driver.navigation.recenter')}</button>
         )}
+        {/* Google Maps and the chat (call inside) — bottom-right corner, big (2026-11-15). */}
+        <div className="pointer-events-auto mb-2 flex justify-end gap-3 px-3">
+          <a href={externalHref} target="_blank" rel="noreferrer" aria-label={t('driver.navigation.googleMaps')} title={t('driver.navigation.googleMaps')}
+            className="flex h-[72px] w-[72px] items-center justify-center rounded-full border border-edge bg-white shadow-lg">
+            <svg viewBox="0 0 24 24" width="44" height="44" aria-hidden>
+              <path d="M12 2.2c-3.9 0-7 3-7 6.9 0 5.1 7 12.7 7 12.7s7-7.6 7-12.7c0-3.9-3.1-6.9-7-6.9z" fill="#34A853" />
+              <path d="M12 2.2c-2.2 0-4.1 1-5.4 2.5L12 10.1l5.4-5.4C16.1 3.2 14.2 2.2 12 2.2z" fill="#4285F4" />
+              <path d="M6.6 4.7A6.9 6.9 0 0 0 5 9.1c0 1.3.4 2.7 1 4l6-6z" fill="#EA4335" />
+              <path d="M17.4 4.7 12 10.1l6 3c.6-1.4 1-2.7 1-4 0-1.7-.6-3.2-1.6-4.4z" fill="#FBBC04" />
+              <circle cx="12" cy="9.1" r="2.6" fill="#fff" />
+            </svg>
+          </a>
+          <button type="button" onClick={() => setChatOpen(true)} aria-label={t('driver.navigation.chat')} title={t('driver.navigation.chat')}
+            className="relative flex h-[72px] w-[72px] items-center justify-center rounded-full border border-edge bg-page/95 text-[38px] shadow-lg">
+            💬
+            {chatUnread > 0 && <span className="absolute -right-1 -top-1 flex h-7 min-w-7 items-center justify-center rounded-full bg-accent px-1.5 text-sm font-bold text-[#10191C]">{chatUnread > 9 ? '9+' : chatUnread}</span>}
+          </button>
+        </div>
       {/* Action bar: the one action for this stage — separate, above the info sheet, always visible. */}
       <div className="pointer-events-auto space-y-2 px-3 pb-2" data-testid="nav-actions">
           {trip.status === 'ASSIGNED' && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('status', { to: 'EN_ROUTE' })}>{t('driver.trip.onTheWay')}</button>}
@@ -323,7 +325,7 @@ export function DriverNavigation(props: {
               <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('stop', { action: 'continue' })}>{t('driver.stop.continue')}</button>
             </>
           )}
-          {trip.status === 'IN_PROGRESS' && leg === 'dropoff' && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => setAsk('complete')}>{t('driver.trip.completeTrip')}</button>}
+          {trip.status === 'IN_PROGRESS' && leg === 'dropoff' && <button className="min-h-[56px] w-full rounded-[14px] bg-danger text-lg font-bold text-white shadow-lg active:scale-[0.99]" onClick={() => setAsk('complete')}>{t('driver.trip.completeTrip')}</button>}
       </div>
       {/* Info sheet: collapses to the summary line (handle tap or swipe). */}
       <div className="pointer-events-auto rounded-t-[18px] border-t border-edge bg-elevated sm:rounded-[18px] sm:border shadow-[0_-6px_20px_rgba(0,0,0,0.35)]" ref={sheetDrag.panelRef} style={{ paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }} data-testid="nav-sheet">
@@ -332,7 +334,7 @@ export function DriverNavigation(props: {
           onPointerDown={(e) => { swipeY.current = e.clientY; }}
           onPointerUp={(e) => { if (swipeY.current == null) return; const dy = e.clientY - swipeY.current; swipeY.current = null; if (Math.abs(dy) > 25) { swiped.current = true; setPanelOpen(dy < 0); } }}
           className="flex w-full touch-none justify-center pb-1 pt-2"><span className="h-1.5 w-12 rounded-full bg-edge-strong" /></button>
-        <div ref={panelBodyRef} className={`${panelOpen ? 'max-h-[45vh] overflow-y-auto overscroll-contain' : (gps.active ? 'max-h-[72px]' : 'max-h-[96px]') + ' overflow-hidden'} px-4 pb-2 transition-[max-height] duration-300`}>
+        <div ref={panelBodyRef} className={`${panelOpen ? 'max-h-[45vh] overflow-y-auto overscroll-contain' : (gps.active ? 'max-h-[150px]' : 'max-h-[176px]') + ' overflow-hidden'} px-4 pb-2 transition-[max-height] duration-300`}>
         {/* Collapsed: a one-line GPS warning instead of the full box (no half-cut box in the peek). */}
         {!gps.active && !panelOpen && (
           <button type="button" onClick={props.onStartGps} className="mb-1 block text-left text-sm font-semibold text-warn">{t('driver.navigation.gpsOffShort')}</button>
@@ -347,20 +349,21 @@ export function DriverNavigation(props: {
 
         {!waitingAtPickup && (
           <div className="flex items-baseline gap-3" data-testid="nav-summary">
-            <span className="text-2xl font-bold text-accent">{remainingSec != null ? t('driver.navigation.min', { n: Math.max(1, Math.round(remainingSec / 60)) }) : '—'}</span>
-            <span className="text-sm text-muted">{remainingM != null ? distLabel(remainingM) : ''}</span>
-            {remainingSec != null && clock > 0 && <span className="ml-auto text-sm text-muted">{t('driver.navigation.arriveAt', { time: fmt.time(new Date(clock + remainingSec * 1000)) })}</span>}
+            {/* Twice the old size (2026-11-15) — readable at a glance from the phone holder. */}
+            <span className="text-[44px] font-bold leading-none text-accent">{remainingSec != null ? t('driver.navigation.min', { n: Math.max(1, Math.round(remainingSec / 60)) }) : '—'}</span>
+            <span className="text-[28px] font-semibold leading-none text-ink">{remainingM != null ? distLabel(remainingM) : ''}</span>
+            {remainingSec != null && clock > 0 && <span className="ml-auto text-2xl font-semibold leading-none text-muted">{t('driver.navigation.arriveAt', { time: fmt.time(new Date(clock + remainingSec * 1000)) })}</span>}
           </div>
         )}
         {/* Address only — no «К подаче:» label (2026-11-15); the map shows which point it is. */}
-        <div className={`mt-1 text-base font-medium ${panelOpen ? '' : 'truncate'}`}>{target.label}</div>
+        <div className={`mt-2 text-[26px] font-semibold leading-tight ${panelOpen ? '' : 'line-clamp-2'}`}>{target.label}</div>
         {paxLoc && paxFromPickupM != null && (
           <div className="mt-1 flex items-center gap-1.5 text-sm text-[#7FB6FF]">
             <span aria-hidden="true">🧍</span>
             {paxFromPickupM <= 30 ? t('driver.navigation.paxAtPickup') : t('driver.navigation.paxFromPickup', { m: paxFromPickupM < 1000 ? `${paxFromPickupM} ${t('driver.home.gpsM')}` : `${(paxFromPickupM / 1000).toFixed(1)} km` })}
           </div>
         )}
-        <div className="mt-1 flex items-center gap-2 text-sm">
+        <div className="mt-2 flex items-center gap-2 text-lg">
           <span className="font-medium">{trip.passengerName}</span>
           {trip.passengerRating && trip.passengerRating.count > 0 && <span className="text-accent">★ {trip.passengerRating.average.toFixed(1)}</span>}
           <span className="ml-auto text-muted">{t(`common.vClass.${trip.vClass}` as MsgKey)}</span>
@@ -391,7 +394,7 @@ export function DriverNavigation(props: {
       {/* Chat over the map (2026-11-15) — kept mounted so new messages are counted on the map button. */}
       <div className={chatOpen ? 'fixed inset-0 z-[60] flex flex-col justify-end bg-black/50' : 'hidden'} onClick={(e) => { if (e.target === e.currentTarget) setChatOpen(false); }}>
         <div className="rounded-t-[18px] bg-page p-2" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
-          <ChatPanel key={trip.bookingId} listUrl={`/driver/bookings/${trip.bookingId}/messages`} postUrl={`/driver/bookings/${trip.bookingId}/messages`} pushUrl="/driver/push" me="DRIVER" peerLabel="passenger"
+          <ChatPanel key={trip.bookingId} listUrl={`/driver/bookings/${trip.bookingId}/messages`} postUrl={`/driver/bookings/${trip.bookingId}/messages`} pushUrl="/driver/push" me="DRIVER" peerLabel="passenger" large
             expandedOverride={chatOpen} onUnread={setChatUnread} callHref={trip.passengerPhone ? `tel:${trip.passengerPhone}` : null} onClose={() => setChatOpen(false)} />
         </div>
       </div>
