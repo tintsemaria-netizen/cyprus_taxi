@@ -71,6 +71,7 @@ export default function TrackApp() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [safety, setSafety] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(0);
   const [routeLine, setRouteLine] = useState<[number, number][]>([]); // [lng,lat] driver→pickup / →destination
@@ -338,7 +339,23 @@ export default function TrackApp() {
 
         {/* bottom sheet */}
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end sm:block">
-          <div className="pointer-events-auto w-full sm:absolute sm:bottom-4 sm:left-4 sm:w-[400px]">
+          <div className="pointer-events-auto relative w-full sm:absolute sm:bottom-4 sm:left-4 sm:w-[400px]">
+            {/* ☰ above the sheet (2026-11-15): «Поделиться» and «Безопасность» live in this menu. */}
+            {!terminal && (
+              <div className="absolute bottom-full right-3 z-20 mb-2">
+                {menuOpen && (
+                  <div className="absolute bottom-full right-0 mb-2 w-56 overflow-hidden rounded-[14px] border border-edge bg-page shadow-2xl" role="menu">
+                    <button type="button" role="menuitem" className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] hover:bg-white/5" onClick={() => { setMenuOpen(false); share(); }}>{t('track.shareTrip')}</button>
+                    <button type="button" role="menuitem" className="flex w-full items-center gap-3 border-t border-edge px-4 py-3.5 text-left text-[15px] hover:bg-white/5" onClick={() => { setMenuOpen(false); setSafety(true); }}>{t('track.safety')}</button>
+                  </div>
+                )}
+                <button type="button" aria-label={t('track.menu')} aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)}
+                  className="flex h-12 w-12 items-center justify-center rounded-full border border-edge bg-page/95 shadow-lg">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="text-ink" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+                </button>
+              </div>
+            )}
+            {shareMsg && <p role="status" className="absolute bottom-full left-3 mb-3 rounded-full bg-page/95 px-3 py-1.5 text-xs text-muted shadow">{shareMsg}</p>}
             <div ref={sheetDrag.panelRef} data-testid="track-sheet" className="card relative flex max-h-[78dvh] flex-col overflow-hidden sm:max-h-[calc(100dvh-7rem)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }}>
               {/* Finished ride (2026-11-15): × in the top-right corner returns to the start (new booking). */}
               {(view.status === 'COMPLETED' || view.status === 'CANCELED') && (
@@ -393,12 +410,7 @@ export default function TrackApp() {
                     </div>
                     <span className="shrink-0 rounded-[8px] border border-edge bg-page px-2.5 py-1.5 font-mono text-base font-bold tracking-wide max-[359px]:px-1.5 max-[359px]:text-sm" aria-label={t('track.plateAria', { plate: view.vehicle.plate })}>{view.vehicle.plate}</span>
                   </div>
-                ) : view.status === 'SEARCHING' ? (
-                  <div className="mt-4 flex items-center gap-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm text-muted">
-                    <span className="inline-block h-3 w-3 animate-ping rounded-full bg-accent" />
-                    {t('track.reserving')}
-                  </div>
-                ) : null}
+                ) : null /* searching: the pulsing pin on the map says it — no «Закрепляем…» box (2026-11-15) */}
 
                 {/* start code — shown to the driver at pickup */}
                 {view.startCode && (
@@ -447,11 +459,6 @@ export default function TrackApp() {
                 {!terminal && (
                   <div className="mt-4 space-y-2">
                     <ShareLocationToggle active={prePickup} loc={myLive} onWantLocation={setWantLoc} />
-                    <div className="grid grid-cols-2 gap-2">
-                      <button type="button" className="btn-ghost !min-h-[44px] text-sm" onClick={share}>{t('track.shareTrip')}</button>
-                      <button type="button" className="btn-ghost !min-h-[44px] text-sm" onClick={() => setSafety(true)}>{t('track.safety')}</button>
-                    </div>
-                    {shareMsg && <p role="status" className="text-xs text-muted">{shareMsg}</p>}
                     {view.vehicle?.phone && (
                       <a href={`tel:${view.vehicle.phone}`} className="btn-primary w-full">{t('track.callDriver')}</a>
                     )}

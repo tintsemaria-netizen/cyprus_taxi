@@ -3,6 +3,7 @@ const track = {
   stop: 'Stop',
   stopAdd: 'Add the stop',
   stopRepriceNote: 'The estimate is recalculated for the new route; you pay the final amount by the taximeter.',
+  menu: 'Menu',
   atStop: 'The driver is at your stop.',
   stopWaitingPaid: 'At the stop · paid waiting is running',
   loadingRide: 'Loading your ride…',

@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-15 — Ride screen: no «Закрепляем…» box; Share + Safety moved into a ☰ menu above the sheet
+- The SEARCHING placeholder card («Закрепляем за вами ближайшего водителя…») was removed; the pulsing pin shows the search.
+- The «Поделиться» / «Безопасность» buttons left the sheet. A round ☰ button sits above the sheet's top-right edge (until the ride ends) and opens a menu with both items; «Безопасность» opens the existing safety dialog.
+- The share status message is now a small pill above the sheet.
+- New key `track.menu`.
+- Playwright (local, SEARCHING): no reserving box and no share/safety buttons in the sheet; ☰ → «↗ Поделиться | 🛡 Безопасность»; safety dialog opens; no errors.
+
 ## 2026-11-15 — Driver navigation: bigger info, big Google Maps/chat buttons in the bottom corner, bigger chat, red «Завершить поездку»
 Same sizes on every leg (to the client, stop, with the client).
 
