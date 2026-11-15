@@ -44,7 +44,7 @@ beforeAll(async () => {
 afterAll(async () => { await prisma.preAssignment.deleteMany({}); });
 beforeEach(async () => {
   await prisma.preAssignment.deleteMany({});
-  for (const t of ['tripRating', 'chatMessage', 'fare', 'waitingSession', 'driverOffer', 'dispatchJob', 'bookingEvent', 'assignment', 'trackingGrant', 'idempotencyReceipt', 'notificationOutbox', 'booking'] as const) {
+  for (const t of ['passengerRating', 'tripRating', 'chatMessage', 'fare', 'waitingSession', 'driverOffer', 'dispatchJob', 'bookingEvent', 'assignment', 'trackingGrant', 'idempotencyReceipt', 'notificationOutbox', 'booking'] as const) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (prisma as any)[t].deleteMany({});
   }

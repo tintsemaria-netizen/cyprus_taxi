@@ -51,6 +51,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  await prisma.passengerRating.deleteMany({});
   await prisma.tripRating.deleteMany({});
   await prisma.chatMessage.deleteMany({});
   await prisma.fare.deleteMany({});

@@ -48,6 +48,7 @@ beforeEach(async () => {
   await prisma.trackingGrant.deleteMany({});
   await prisma.latestDriverLocation.deleteMany({});
   await prisma.idempotencyReceipt.deleteMany({});
+  await prisma.passengerRating.deleteMany({});
   await prisma.booking.deleteMany({});
   for (const name of ['Andreas', 'Maria']) {
     const d = await prisma.driver.findFirst({ where: { publicName: name } });

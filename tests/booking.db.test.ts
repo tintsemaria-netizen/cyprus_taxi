@@ -55,6 +55,7 @@ beforeAll(async () => {
   await prisma.trackingGrant.deleteMany({});
   await prisma.latestDriverLocation.deleteMany({});
   await prisma.idempotencyReceipt.deleteMany({});
+  await prisma.passengerRating.deleteMany({});
   await prisma.booking.deleteMany({});
 });
 

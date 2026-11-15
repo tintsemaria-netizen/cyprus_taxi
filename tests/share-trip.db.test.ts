@@ -44,7 +44,7 @@ beforeAll(async () => {
   if (!dbName.endsWith('_test')) throw new Error(`Refusing: DB name must end in _test (got "${dbName}").`);
 });
 beforeEach(async () => {
-  for (const t of ['tripRating', 'chatMessage', 'fare', 'waitingSession', 'driverOffer', 'dispatchJob', 'bookingEvent', 'assignment', 'trackingGrant', 'idempotencyReceipt', 'booking'] as const) {
+  for (const t of ['passengerRating', 'tripRating', 'chatMessage', 'fare', 'waitingSession', 'driverOffer', 'dispatchJob', 'bookingEvent', 'assignment', 'trackingGrant', 'idempotencyReceipt', 'booking'] as const) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (prisma as any)[t].deleteMany({});
   }
