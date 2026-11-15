@@ -22,6 +22,7 @@ const booking = {
     home: 'Home',
     work: 'Work',
     recent: 'Recent:',
+    upToPeople: 'up to {n} people',
     chooseRide: 'Choose your ride',
     pricing: 'Pricing…',
     now: 'Now',
@@ -99,6 +100,7 @@ const booking = {
   sheet: { collapse: 'Collapse', expand: 'Expand' },
   cta: {
     request: 'Request a ride',
+    requestFrom: 'Order · from ≈ {price}',
     requestClass: 'Request {vClass}',
     requestClassPrice: 'Request {vClass} · ≈ {price}',
     signInFirst: 'You’ll sign in before confirming.',

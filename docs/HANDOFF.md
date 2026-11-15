@@ -1,5 +1,15 @@
 # Session handoff
 
+## 2026-11-15 — Car class choice moved to the final step, with sedan / minibus pictures
+- **Form step:** the Comfort/XL list was removed. The CTA now reads «Заказать · от ≈ {cheapest quote}» (`booking.cta.requestFrom`), or «Заказать поездку» without a route.
+- **Review step (before the final order):** `classPicker` is shown under the trip details.
+  - Each card has an own SVG side view (`CarClassIcon`): a sedan for Comfort, a minibus for XL. The selected one is lime.
+  - Text: «до {n} человек» (`booking.form.upToPeople`, n = class maxPassengers), plus price and range.
+  - The confirm button reads «Заказать {class} · ≈ price».
+  - The «Класс» review row was removed (the picker shows it).
+- en/ru/el keys added.
+- Playwright (local, iPhone 13): form has 0 class radios and CTA «Заказать · от ≈ 9,50 €»; review has 2 radios with icons and «до 4/6 человек»; choosing XL → «Заказать XL · ≈ 9,50 €»; no errors.
+
 ## 2026-11-15 — Collapsed sheet with a chosen route: addresses + order button (no «Куда едем?»)
 **Collapsed peek with a route (`peekRoute` = mobile + collapsed + pickup & dropoff + form step):**
 - the eyebrow/title are hidden;

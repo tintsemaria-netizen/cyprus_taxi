@@ -25,6 +25,7 @@ const booking: Catalog<typeof en> = {
     home: 'Σπίτι',
     work: 'Εργασία',
     recent: 'Πρόσφατα:',
+    upToPeople: 'έως {n} άτομα',
     chooseRide: 'Επιλέξτε όχημα',
     pricing: 'Υπολογισμός…',
     now: 'Τώρα',
@@ -102,6 +103,7 @@ const booking: Catalog<typeof en> = {
   sheet: { collapse: 'Σύμπτυξη', expand: 'Ανάπτυξη' },
   cta: {
     request: 'Κλείστε διαδρομή',
+    requestFrom: 'Παραγγελία · από ≈ {price}',
     requestClass: 'Κράτηση {vClass}',
     requestClassPrice: 'Κράτηση {vClass} · ≈ {price}',
     signInFirst: 'Θα συνδεθείτε πριν από την επιβεβαίωση.',

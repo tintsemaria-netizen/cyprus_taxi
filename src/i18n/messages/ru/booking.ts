@@ -25,6 +25,7 @@ const booking: Catalog<typeof en> = {
     home: 'Дом',
     work: 'Работа',
     recent: 'Недавние:',
+    upToPeople: 'до {n} человек',
     chooseRide: 'Выберите класс',
     pricing: 'Расчёт…',
     now: 'Сейчас',
@@ -107,6 +108,7 @@ const booking: Catalog<typeof en> = {
   sheet: { collapse: 'Свернуть', expand: 'Развернуть' },
   cta: {
     request: 'Заказать поездку',
+    requestFrom: 'Заказать · от ≈ {price}',
     requestClass: 'Заказать {vClass}',
     requestClassPrice: 'Заказать {vClass} · ≈ {price}',
     signInFirst: 'Перед подтверждением нужно будет войти.',

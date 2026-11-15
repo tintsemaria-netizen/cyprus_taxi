@@ -680,6 +680,41 @@ export default function BookingApp() {
     { key: 'XL' as const, label: 'XL', maxPassengers: 6 },
   ];
 
+  // Car class choice (2026-11-15): moved from the address form to the final step before ordering.
+  // Each class has its own picture (sedan / minibus) and «up to N people».
+  const classPicker = (
+    <div className="mt-4">
+      <p className="label mb-2" id="ride-class-label">{t('booking.form.chooseRide')}</p>
+      <div className="space-y-2" role="radiogroup" aria-labelledby="ride-class-label">
+        {classes.map((c) => {
+          const q = quotes[c.key as 'COMFORT' | 'XL'];
+          const selected = vClass === c.key;
+          return (
+            <button key={c.key} type="button" role="radio" aria-checked={selected}
+              onClick={() => { setVClass(c.key); if (pax > c.maxPassengers) setPax(c.maxPassengers); }}
+              className={`flex w-full items-center gap-3 rounded-[14px] border px-3 py-3 text-left transition ${selected ? 'border-accent bg-accent/10' : 'border-edge bg-elevated hover:border-accent/40'}`}>
+              <CarClassIcon kind={c.key === 'XL' ? 'minibus' : 'sedan'} active={selected} />
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold">{t(`common.vClass.${c.key}`)}</span>
+                <span className="block text-xs text-muted">{t('booking.form.upToPeople', { n: c.maxPassengers })}</span>
+              </span>
+              <span className="shrink-0 text-right">
+                {q ? (
+                  <>
+                    <span className={`block font-semibold tabular-nums ${selected ? 'text-accent' : 'text-ink'}`}>≈ {eur(q.totalCents)}</span>
+                    <span className="block text-xs text-muted tabular-nums">{eur(q.rangeLowCents)}–{eur(q.rangeHighCents)}</span>
+                  </>
+                ) : <span className="text-xs text-muted">{quoting ? t('booking.form.pricing') : '—'}</span>}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {errors.pax && <p className="mt-1 text-xs text-danger">{errors.pax}</p>}
+    </div>
+  );
+  const minQuote = Object.values(quotes).reduce<number | null>((m, q) => (q && (m == null || q.totalCents < m) ? q.totalCents : m), null);
+
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
       <input ref={proxyRef} aria-hidden tabIndex={-1} readOnly={false} className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0" style={{ fontSize: 16 }} />
@@ -889,44 +924,6 @@ export default function BookingApp() {
                       );
                     })()}
 
-                    <div className="mt-5">
-                      <p className="label mb-2" id="ride-class-label">{t('booking.form.chooseRide')}</p>
-                      <div className="space-y-2" role="radiogroup" aria-labelledby="ride-class-label">
-                        {classes.map((c) => {
-                          const q = quotes[c.key as 'COMFORT' | 'XL'];
-                          const selected = vClass === c.key;
-                          return (
-                            <button
-                              key={c.key}
-                              type="button"
-                              role="radio"
-                              aria-checked={selected}
-                              onClick={() => {
-                                setVClass(c.key);
-                                if (pax > c.maxPassengers) setPax(c.maxPassengers);
-                              }}
-                              className={`flex w-full items-center justify-between gap-3 rounded-[12px] border px-4 py-3 text-left transition ${selected ? 'border-accent bg-accent/10' : 'border-edge bg-elevated hover:border-accent/40'}`}
-                            >
-                              <span className="min-w-0">
-                                <span className="block font-semibold">{t(`common.vClass.${c.key}`)}</span>
-                                <span className="text-xs text-muted">👥 {CLASS_META[c.key] && t(CLASS_META[c.key].seatsLabel)} · {CLASS_META[c.key] && t(CLASS_META[c.key].blurb)}</span>
-                              </span>
-                              <span className="shrink-0 text-right">
-                                {pickup && dropoff ? (
-                                  q ? (
-                                    <>
-                                      <span className={`block font-semibold tabular-nums ${selected ? 'text-accent' : 'text-ink'}`}>≈ {eur(q.totalCents)}</span>
-                                      <span className="block text-xs text-muted tabular-nums">{eur(q.rangeLowCents)}–{eur(q.rangeHighCents)}</span>
-                                    </>
-                                  ) : <span className="text-xs text-muted">{quoting ? t('booking.form.pricing') : '—'}</span>
-                                ) : <span className={selected ? 'text-accent' : 'text-muted'} aria-hidden>›</span>}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {errors.pax && <p className="mt-1 text-xs text-danger">{errors.pax}</p>}
-                    </div>
 
                     <div className="mt-4">
                       <div className="flex gap-2 rounded-[12px] border border-edge bg-elevated p-1">
@@ -1016,12 +1013,12 @@ export default function BookingApp() {
                       {viaStop && <Row label={t('booking.places.stop')} value={viaStop.label} />}
                       <Row label={t('booking.review.destination')} value={dropoff?.label ?? '—'} dot="ink" />
                       <Row label={t('booking.review.when')} value={when === 'NOW' ? t('booking.review.nowImmediate') : `${scheduledAt.replace('T', ' ')} · ${cfg?.timezone}`} />
-                      <Row label={t('booking.review.class')} value={t(`common.vClass.${vClass}`)} />
                       <Row label={t('booking.review.driverAsksFor')} value={name || passenger?.name || '—'} />
                       <Row label={t('booking.review.yourPhone')} value={passenger?.phone || phone} />
                       {effNote && <Row label={t('booking.review.note')} value={effNote} />}
                       <Row label={t('booking.review.fare')} value={quote ? t('booking.review.fareValue', { total: eur(quote.totalCents), low: eur(quote.rangeLowCents), high: eur(quote.rangeHighCents) }) : t('booking.review.fareByMeter')} />
                     </div>
+                    {classPicker}
                     {quote?.airport && <AirportFareNote />}
                     {ambiguous ? (
                       <div className="mt-4 rounded-[12px] border border-warn/40 bg-warn/10 p-3">
@@ -1043,7 +1040,7 @@ export default function BookingApp() {
                         </div>
                       </div>
                     ) : (
-                      <button className="btn-primary mt-5 w-full" onClick={() => submit()} disabled={submitting}>{submitting ? t('booking.review.sending') : t('booking.review.confirm')}</button>
+                      <button className="btn-primary mt-5 w-full" onClick={() => submit()} disabled={submitting}>{submitting ? t('booking.review.sending') : quote ? t('booking.cta.requestClassPrice', { vClass: t(`common.vClass.${vClass}`), price: eur(quote.totalCents) }) : t('booking.review.confirm')}</button>
                     )}
                     <p className="mt-2 text-center text-xs text-muted">{when === 'NOW' ? t('booking.review.autoMatchNow') : t('booking.review.autoMatchScheduled')} {t('booking.review.trackingAndPay')}</p>
                   </div>
@@ -1055,10 +1052,8 @@ export default function BookingApp() {
                 // also in the collapsed sheet once the route is set (2026-11-15).
                 <div ref={footerRef} className="shrink-0 border-t border-edge p-3 sm:p-4" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
                   <button className="btn-primary w-full" onClick={toReview}>
-                    {pickup && dropoff
-                      ? (quote
-                        ? t('booking.cta.requestClassPrice', { vClass: t(`common.vClass.${vClass}`), price: eur(quote.totalCents) })
-                        : t('booking.cta.requestClass', { vClass: t(`common.vClass.${vClass}`) }))
+                    {pickup && dropoff && minQuote != null
+                      ? t('booking.cta.requestFrom', { price: eur(minQuote) })
                       : t('booking.cta.request')}
                   </button>
                   {!passenger && pickup && dropoff && <p className="mt-2 text-center text-xs text-muted">{t('booking.cta.signInFirst')}</p>}
@@ -1118,5 +1113,33 @@ function Row({ label, value, dot }: { label: string; value: string; dot?: 'accen
       </span>
       <span className="text-right font-medium">{value}</span>
     </div>
+  );
+}
+
+// Car class pictures (2026-11-15): own simple side views — a sedan (Comfort) and a minibus (XL).
+function CarClassIcon({ kind, active }: { kind: 'sedan' | 'minibus'; active: boolean }) {
+  const body = active ? '#C8FF46' : '#D9DFDC';
+  const glass = '#1B2427';
+  return (
+    <svg viewBox="0 0 64 30" width="64" height="30" aria-hidden className="shrink-0">
+      {kind === 'sedan' ? (
+        <>
+          <path d="M3 21.5v-4.2c0-2 1.3-3.4 3.3-3.8l9.4-1.8 6.6-5.6c1.2-1 2.6-1.6 4.2-1.6h13.6c1.8 0 3.4.8 4.6 2.1l4.6 5.1 7.5 1.4c2 .4 3.3 2 3.3 4v4.4z" fill={body} />
+          <path d="M23.5 12 28.3 8h6.2v4zM37 12V8h4.2c.9 0 1.7.4 2.3 1l2.8 3z" fill={glass} />
+          <rect x="3" y="18.2" width="3" height="1.6" rx=".8" fill="#FF6B5A" />
+          <rect x="58" y="17.2" width="3" height="1.6" rx=".8" fill="#FFF3B0" />
+        </>
+      ) : (
+        <>
+          <path d="M3 22.5V9.2C3 6.3 5.3 4 8.2 4h37.6c2 0 3.8 1 4.9 2.7l6.6 9.4 3 1.1c1 .4 1.7 1.3 1.7 2.4v2.9z" fill={body} />
+          <path d="M8 8h7.5v6H8zM18 8h7.5v6H18zM28 8h7.5v6H28zM38 8h7c.9 0 1.6.4 2.1 1.1l3.4 4.9H38z" fill={glass} />
+          <rect x="3" y="17.5" width="2.6" height="2" rx=".8" fill="#FF6B5A" />
+          <rect x="58.4" y="18" width="2.8" height="1.6" rx=".8" fill="#FFF3B0" />
+        </>
+      )}
+      {(kind === 'sedan' ? [15.5, 48] : [14.5, 49]).map((x) => (
+        <g key={x}><circle cx={x} cy="22.5" r="5.2" fill="#0F1517" /><circle cx={x} cy="22.5" r="2.2" fill="#8A9490" /></g>
+      ))}
+    </svg>
   );
 }
