@@ -244,6 +244,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       const b = new g.LatLngBounds();
       markers.forEach((m) => b.extend({ lat: m.lat, lng: m.lng }));
       map.fitBounds(b, pad);
+      // Points very close together (driver waiting at the pickup): don't zoom in past street level.
+      g.event.addListenerOnce(map, 'idle', () => { if (map.getZoom() > 17) map.setZoom(17); });
     } else if (markers.length === 1) {
       framePoint(map, g, markers[0].lat, markers[0].lng, pad);
     } else {

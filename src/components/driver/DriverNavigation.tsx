@@ -185,9 +185,11 @@ export function DriverNavigation(props: {
   const markers: MapMarker[] = [];
   // The own car points along the route/travel heading (same heading the camera uses).
   if (pos) markers.push({ id: 'me', lat: pos.lat, lng: pos.lng, kind: 'vehicle', self: true, heading, label: t('driver.map.you') });
+  // Only the CURRENT target is on the map (2026-11-15): on the way to / waiting at the pickup the
+  // driver sees just the pickup point — not the whole trip (the map would zoom out to fit it).
   if (leg === 'pickup') markers.push({ id: 'pk', lat: trip.pickup.lat, lng: trip.pickup.lng, kind: 'pickup', label: t('driver.map.pickup') });
-  if (stop && leg !== 'dropoff') markers.push({ id: 'st', lat: stop.lat, lng: stop.lng, kind: 'stop', label: t('driver.map.stop') });
-  if (leg !== 'pickup' || !stop) markers.push({ id: 'dp', lat: trip.dropoff.lat, lng: trip.dropoff.lng, kind: 'dropoff', label: t('driver.map.destination') });
+  if (leg === 'stop' && stop) markers.push({ id: 'st', lat: stop.lat, lng: stop.lng, kind: 'stop', label: t('driver.map.stop') });
+  if (leg === 'dropoff') markers.push({ id: 'dp', lat: trip.dropoff.lat, lng: trip.dropoff.lng, kind: 'dropoff', label: t('driver.map.destination') });
   const paxLoc = leg === 'pickup' ? trip.passengerLocation ?? null : null;
   if (paxLoc) markers.push({ id: 'pax', lat: paxLoc.lat, lng: paxLoc.lng, kind: 'person', label: trip.passengerName });
   const paxFromPickupM = paxLoc ? Math.round(metersBetween(paxLoc, trip.pickup)) : null;

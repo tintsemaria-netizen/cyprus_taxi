@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-15 — Driver map shows only the current target
+- DriverNavigation markers: on the way to or waiting at the pickup, only the pickup (plus own car and the opted-in passenger) is shown. Before, the destination marker was included and the map zoomed out to the whole route; the user's screenshot showed «Ожидание» framing Limassol–Larnaca.
+- Stop leg → only the stop; dropoff leg → only the destination.
+- GoogleMapView: a multi-marker fit is capped at zoom 17, so car+pickup a few metres apart don't zoom in absurdly.
+- Playwright (local, ARRIVED): no destination marker; map framed on car/pickup; no errors.
+
 ## 2026-11-15 — No half-cut text in collapsed sheets; full-screen roots
 - New `src/components/useHideClipped.ts`. While a sheet is collapsed or being dragged, any element only partly visible at the sheet's bottom edge is hidden (visibility), so the peek never shows half a line or half a box. It re-checks on resize, drag and content changes.
   - Used by the booking sheet (mobile, collapsed or dragging) and the driver navigation panel (collapsed).
