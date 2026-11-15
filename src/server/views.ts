@@ -222,6 +222,9 @@ export async function driverCurrentTrip(driverId: string) {
       // Drivers' average rating of this passenger (2026-11-15) — shown next to the name.
       passengerRating: b.passengerId ? ((await passengerRatingSummary([b.passengerId])).get(b.passengerId) ?? null) : null,
       passengerPhone: b.phone, // driver may contact passenger
+      // How the passenger pays (2026-11-15). Today every ride is paid to the driver in cash (no
+      // card option at booking yet); 'CARD' is reserved for when card payment is added.
+      payment: 'CASH' as 'CASH' | 'CARD',
       note: b.note,
       flightNumber: b.flightNumber,
       passengerCount: b.passengerCount,

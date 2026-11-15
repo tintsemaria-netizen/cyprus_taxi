@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-15 — Driver nav: Google Maps right, chat two icons higher, both 20 % smaller; cash/card badge
+**Map buttons:** a right-hand column above the action button — chat 💬 (58 px), a 58 px spacer, then Google Maps (58 px, 35 px icon) at the bottom-right. The container is pointer-events-none so the map stays draggable around them (the previous full-width row blocked map gestures).
+
+**Payment badge:** left of the class name — «cash» in green (#34C759) or «card» in red.
+- The driver trip view now has `payment: 'CASH' | 'CARD'`. It is always 'CASH' today: rides are paid to the driver, and there is no card choice at booking. 'CARD' is reserved.
+
+**Check:** Playwright (local): Google Maps 58 px at the right edge, chat 116 px above it; badge «cash» rgb(52,199,89); no errors.
+
 ## 2026-11-15 — Ride screen: no «Закрепляем…» box; Share + Safety moved into a ☰ menu above the sheet
 - The SEARCHING placeholder card («Закрепляем за вами ближайшего водителя…») was removed; the pulsing pin shows the search.
 - The «Поделиться» / «Безопасность» buttons left the sheet. A round ☰ button sits above the sheet's top-right edge (until the ride ends) and opens a menu with both items; «Безопасность» opens the existing safety dialog.

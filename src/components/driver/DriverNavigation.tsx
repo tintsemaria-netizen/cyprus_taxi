@@ -22,7 +22,7 @@ import { bearingDeg, cumulative, distM, locate, maneuverIcon, nextStep, offsetPo
 export interface NavTrip {
   bookingId: string; reference: string; status: string;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string };
-  passengerName: string; passengerRating?: { average: number; count: number } | null; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; luggageCount?: number; vClass: string;
+  payment?: 'CASH' | 'CARD'; passengerName: string; passengerRating?: { average: number; count: number } | null; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; luggageCount?: number; vClass: string;
   waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
   /** Passenger's live position, only if they chose to share it, only before pickup (2026-11-15). */
   passengerLocation?: { lat: number; lng: number; accuracyM: number; ageSec: number } | null;
@@ -290,11 +290,17 @@ export function DriverNavigation(props: {
         {!following && !waitingAtPickup && pos && (
           <button onClick={() => setFollowing(true)} className="pointer-events-auto mx-auto mb-2 rounded-full border border-accent bg-page/95 px-4 py-2 text-sm font-semibold text-accent">{t('driver.navigation.recenter')}</button>
         )}
-        {/* Google Maps and the chat (call inside) — bottom-right corner, big (2026-11-15). */}
-        <div className="pointer-events-auto mb-2 flex justify-end gap-3 px-3">
+        {/* Bottom-right column (2026-11-15): chat two icons above Google Maps; both 20 % smaller (58 px). */}
+        <div className="pointer-events-none mb-2 flex flex-col items-end gap-0 px-3">
+          <button type="button" onClick={() => setChatOpen(true)} aria-label={t('driver.navigation.chat')} title={t('driver.navigation.chat')}
+            className="pointer-events-auto relative flex h-[58px] w-[58px] items-center justify-center rounded-full border border-edge bg-page/95 text-[30px] shadow-lg">
+            💬
+            {chatUnread > 0 && <span className="absolute -right-1 -top-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-bold text-[#10191C]">{chatUnread > 9 ? '9+' : chatUnread}</span>}
+          </button>
+          <div className="h-[58px]" aria-hidden />
           <a href={externalHref} target="_blank" rel="noreferrer" aria-label={t('driver.navigation.googleMaps')} title={t('driver.navigation.googleMaps')}
-            className="flex h-[72px] w-[72px] items-center justify-center rounded-full border border-edge bg-white shadow-lg">
-            <svg viewBox="0 0 24 24" width="44" height="44" aria-hidden>
+            className="pointer-events-auto flex h-[58px] w-[58px] items-center justify-center rounded-full border border-edge bg-white shadow-lg">
+            <svg viewBox="0 0 24 24" width="35" height="35" aria-hidden>
               <path d="M12 2.2c-3.9 0-7 3-7 6.9 0 5.1 7 12.7 7 12.7s7-7.6 7-12.7c0-3.9-3.1-6.9-7-6.9z" fill="#34A853" />
               <path d="M12 2.2c-2.2 0-4.1 1-5.4 2.5L12 10.1l5.4-5.4C16.1 3.2 14.2 2.2 12 2.2z" fill="#4285F4" />
               <path d="M6.6 4.7A6.9 6.9 0 0 0 5 9.1c0 1.3.4 2.7 1 4l6-6z" fill="#EA4335" />
@@ -302,11 +308,6 @@ export function DriverNavigation(props: {
               <circle cx="12" cy="9.1" r="2.6" fill="#fff" />
             </svg>
           </a>
-          <button type="button" onClick={() => setChatOpen(true)} aria-label={t('driver.navigation.chat')} title={t('driver.navigation.chat')}
-            className="relative flex h-[72px] w-[72px] items-center justify-center rounded-full border border-edge bg-page/95 text-[38px] shadow-lg">
-            💬
-            {chatUnread > 0 && <span className="absolute -right-1 -top-1 flex h-7 min-w-7 items-center justify-center rounded-full bg-accent px-1.5 text-sm font-bold text-[#10191C]">{chatUnread > 9 ? '9+' : chatUnread}</span>}
-          </button>
         </div>
       {/* Action bar: the one action for this stage — separate, above the info sheet, always visible. */}
       <div className="pointer-events-auto space-y-2 px-3 pb-2" data-testid="nav-actions">
@@ -366,7 +367,9 @@ export function DriverNavigation(props: {
         <div className="mt-2 flex items-center gap-2 text-lg">
           <span className="font-medium">{trip.passengerName}</span>
           {trip.passengerRating && trip.passengerRating.count > 0 && <span className="text-accent">★ {trip.passengerRating.average.toFixed(1)}</span>}
-          <span className="ml-auto text-muted">{t(`common.vClass.${trip.vClass}` as MsgKey)}</span>
+          {/* Payment left of the class (2026-11-15): cash green, card red. */}
+          <span className={`ml-auto rounded-md border px-2 py-0.5 text-sm font-bold ${trip.payment === 'CARD' ? 'border-danger/60 text-danger' : 'border-[#34C759]/60 text-[#34C759]'}`}>{trip.payment === 'CARD' ? 'card' : 'cash'}</span>
+          <span className="text-muted">{t(`common.vClass.${trip.vClass}` as MsgKey)}</span>
         </div>
         {waitingNode && <div className="mt-2 rounded-[12px] border border-edge bg-page p-3 text-sm">{waitingNode}</div>}
         {stop && leg === 'pickup' && <div className="mt-1 text-sm"><span className="text-muted">{t('driver.stop.via')}</span> <span className="font-medium">{stop.label}</span></div>}
