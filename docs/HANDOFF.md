@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-15 — Person marker: plain grey outline
+- At the user's request the light badge, the lime frame and the tie were removed. The marker is now only the grey two-tone outline, with a thin dark halo so it reads on dark and light map tiles.
+- Checked by rendering the SVG on dark and light backgrounds (local).
+
 ## 2026-11-15 — Driver on an order: navigation arrow with a standing-still pulse
 - New `navArrowEl` in carMarker.ts: a rounded arrow in darker IL-Y lime (#7FA620) with a white outline. It uses the same `.car svg > g` rotation as the car, so `orientVehicle` and map-rotation handling work unchanged.
   - A translucent lime circle pulses around it (CSS keyframes injected once).

@@ -182,7 +182,7 @@ export function bearing(from: { lat: number; lng: number }, to: { lat: number; l
 
 /**
  * "You are here" person marker (2026-11-15, user-supplied style): a man in a shirt and tie raising
- * his hand, drawn in two grey outline tones on a light rounded badge. Shown for the passenger's
+ * his hand, drawn as a plain two-tone grey outline (no badge, no tie — 2026-11-15). Shown for the passenger's
  * live position only while the app is open (own map: live GPS; driver's map: shared position
  * younger than 60 s). Centred on its point.
  */
@@ -191,9 +191,8 @@ export function personMarkerEl(opts: { title?: string; size?: number; stale?: bo
   const el = document.createElement('div');
   el.style.cssText =
     `width:${size}px;height:${size}px;opacity:${stale ? 0.55 : 1};` +
-    'filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));z-index:900;transition:opacity .2s ease';
+    'filter:drop-shadow(0 0 1.5px rgba(0,0,0,0.9)) drop-shadow(0 1px 3px rgba(0,0,0,0.5));z-index:900;transition:opacity .2s ease';
   el.innerHTML = `<svg viewBox="0 0 48 48" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="1.5" y="1.5" width="45" height="45" rx="11" fill="#F6F6F6" stroke="#C8FF46" stroke-width="2"/>
     <g stroke-width="2.2">
       <path d="M14.6 16.2C14.4 10.8 17.6 7.4 21.6 7.4c4.2 0 7.2 3 7 8.4" stroke="#A9A9A9"/>
       <path d="M14.8 15.4c2.6.3 5-1.4 6.2-3.8 1.4 2.4 4.2 3.8 7.6 3.8" stroke="#A9A9A9"/>
@@ -201,7 +200,6 @@ export function personMarkerEl(opts: { title?: string; size?: number; stale?: bo
       <path d="M15.3 17.4c-1.9-.2-2.6 2.9-.1 3.5M27.9 17.4c1.9-.2 2.6 2.9.1 3.5" stroke="#A9A9A9"/>
       <path d="M18.8 25.2v3.2M24.4 25.2v3.2" stroke="#7A7A7A"/>
       <path d="M18.8 28.4l-2.3 2.4 4.1 3 1-2.4 1 2.4 4.1-3-2.3-2.4" stroke="#7A7A7A"/>
-      <path d="M21.6 31.4l-1.8 9.6M21.6 31.4l1.8 9.6" stroke="#A9A9A9"/>
       <path d="M16.5 30.8l-4.4 1.2C9.8 32.7 8.4 34.6 8.4 37v4M12.6 37v4" stroke="#7A7A7A"/>
       <path d="M26.7 30.8l7-1.9V15.6M40 15.6v15.2l-6.2 3.6v6.6" stroke="#7A7A7A"/>
       <path d="M33.4 15.6V8.7c0-1 .8-1.8 1.8-1.8h3c1 0 1.8.8 1.8 1.8v6.9z" stroke="#A9A9A9"/>
