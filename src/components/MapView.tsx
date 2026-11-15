@@ -28,6 +28,8 @@ export interface MapMarker {
   nav?: boolean;
   /** Vehicle is driving (the arrow's standing-still pulse is hidden). */
   moving?: boolean;
+  /** Pickup pin pulses (a driver is being searched). */
+  pulse?: boolean;
 }
 
 interface Props {
@@ -159,7 +161,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         } else if (mk.kind === 'person') {
           el = personMarkerEl({ title: mk.label, stale: mk.stale });
         } else if (mk.kind === 'pickup') {
-          el = pickupPinEl({ title: mk.label, stale: mk.stale });
+          el = pickupPinEl({ title: mk.label, stale: mk.stale, pulse: mk.pulse });
         } else {
           el = document.createElement('div');
           el.style.width = '18px';

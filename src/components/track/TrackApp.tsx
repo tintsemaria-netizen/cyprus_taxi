@@ -16,6 +16,7 @@ import { formatFlight } from '@/lib/flight';
 import { useT } from '@/i18n/I18nProvider';
 import type { MsgKey } from '@/i18n/I18nProvider';
 import { useSheetDrag } from '@/components/useSheetDrag';
+import { PlacesInput, type Selected } from '@/components/booking/PlacesInput';
 
 interface TrackView {
   flightNumber?: string | null;
@@ -302,7 +303,7 @@ export default function TrackApp() {
   if (view.stop && !view.stop.departedAt) markers.push({ id: 's', lat: view.stop.lat, lng: view.stop.lng, kind: 'stop', label: view.stop.label });
   // During the trip and after it (2026-11-15) the map stays on the destination, not the pickup.
   if (view.status === 'IN_PROGRESS' || view.status === 'COMPLETED') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
-  else markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label });
+  else markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label, pulse: view.status === 'SEARCHING' });
   if (myLive && view.status !== 'IN_PROGRESS') markers.push({ id: 'me', lat: myLive.lat, lng: myLive.lng, kind: 'person', label: t('booking.youAreHere') });
   if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: t('track.yourDriver'), stale: liveLocation.freshness === 'stale' });
 
@@ -424,17 +425,12 @@ export default function TrackApp() {
                   );
                 })()}
 
-                {/* stops */}
-                <div className="mt-4 space-y-2 text-sm">
-                  <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-accent" /><span className="text-muted">{t('track.pickup')}</span><span className="ml-auto truncate font-medium">{view.pickup.label}</span></div>
-                  {view.stop && (
-                    <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#FFC83D]" /><span className="text-muted">{t('track.stop')}</span><span className="ml-auto truncate font-medium">{view.stop.label}</span></div>
-                  )}
-                  {view.stop?.arrivedAt && !view.stop.departedAt && (
-                    <p className="rounded-[10px] border border-[#FFC83D]/40 bg-[#FFC83D]/10 px-3 py-2 text-xs text-[#FFC83D]">{view.stop.waitStartedAt ? t('track.stopWaitingPaid') : t('track.atStop')}</p>
-                  )}
-                  <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-ink" /><span className="text-muted">{t('track.destination')}</span><span className="ml-auto truncate font-medium">{view.dropoff.label}</span></div>
-                </div>
+                {/* Route (2026-11-15): the same dotted box as when ordering, with room between points;
+                    a stop can be added/removed in the middle until the car reaches it. */}
+                <TrackRoute view={view} editable={!terminal && !view.stop?.arrivedAt} onChanged={load} />
+                {view.stop?.arrivedAt && !view.stop.departedAt && (
+                  <p className="mt-2 rounded-[10px] border border-[#FFC83D]/40 bg-[#FFC83D]/10 px-3 py-2 text-xs text-[#FFC83D]">{view.stop.waitStartedAt ? t('track.stopWaitingPaid') : t('track.atStop')}</p>
+                )}
 
                 {liveLocation && (
                   <p className="mt-2 text-xs text-muted">
@@ -575,6 +571,78 @@ function Centered({ children }: { children: React.ReactNode }) {
     <div className="flex h-[100dvh] flex-col bg-page">
       <PassengerTopBar sticky={false} />
       <div className="flex flex-1 items-center justify-center px-4">{children}</div>
+    </div>
+  );
+}
+
+// Route box on the ride screen (2026-11-15): dots joined by a line like the booking form, roomy
+// rows, and the stop in the middle — add one if plans changed, or remove it — while the car has
+// not reached it. The estimate is re-quoted on the server; the driver is notified.
+type RoutePoint = { lat: number; lng: number; label: string };
+function TrackRoute({ view, editable, onChanged }: { view: { pickup: RoutePoint; dropoff: RoutePoint; stop?: (RoutePoint & { arrivedAt?: string | null }) | null }; editable: boolean; onChanged: () => void }) {
+  const { t, tError } = useT();
+  const [picking, setPicking] = useState(false);
+  const [sel, setSel] = useState<Selected | null>(null);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const ROW = 58;
+  const rows: { key: string; label: string; dot: 'p' | 's' | 'd' | 'add' }[] = [
+    { key: 'p', label: view.pickup.label, dot: 'p' },
+    ...(view.stop ? [{ key: 's', label: view.stop.label, dot: 's' as const }] : editable ? [{ key: 'add', label: t('booking.form.addStop'), dot: 'add' as const }] : []),
+    { key: 'd', label: view.dropoff.label, dot: 'd' },
+  ];
+  async function save(stop: Selected | null) {
+    setBusy(true); setErr(null);
+    try {
+      if (stop) await api('/tracking/stop', { method: 'POST', body: { lat: stop.lat, lng: stop.lng, label: stop.label } });
+      else await api('/tracking/stop', { method: 'DELETE' });
+      setPicking(false); setSel(null); setText('');
+      onChanged();
+    } catch (e) { setErr(e instanceof ApiRequestError ? tError(e) : t('common.somethingWrong')); }
+    finally { setBusy(false); }
+  }
+  return (
+    <div className="mt-4">
+      <div className="relative rounded-[14px] border border-edge-strong bg-elevated px-3">
+        <span aria-hidden className="absolute left-[19px] w-[2px]" style={{ top: ROW / 2, height: (rows.length - 1) * (ROW + 1), background: 'rgba(200,255,70,0.45)' }} />
+        {rows.map((r, i) => (
+          <div key={r.key} className={`relative flex items-center gap-3 ${i ? 'border-t border-white/[0.08]' : ''}`} style={{ minHeight: ROW }}>
+            <span className="relative z-10 flex w-4 shrink-0 justify-center" aria-hidden>
+              {r.dot === 'p' ? <span className="block h-3.5 w-3.5 rounded-full border-[3px] border-accent bg-elevated" />
+                : r.dot === 's' ? <span className="block h-3 w-3 rounded-[3px] bg-[#FFC83D]" />
+                : r.dot === 'add' ? <span className="block h-3 w-3 rounded-full border-2 border-dashed border-muted bg-elevated" />
+                : <span className="block h-3.5 w-3.5 rounded-full bg-accent" />}
+            </span>
+            {r.dot === 'add' ? (
+              <button type="button" onClick={() => { setPicking(true); setErr(null); }} className="flex-1 py-2 text-left text-[15px] font-medium text-accent">＋ {r.label}</button>
+            ) : (
+              <span className="min-w-0 flex-1 py-2 text-[15px] font-medium leading-snug text-ink">{r.label}</span>
+            )}
+            {r.dot === 's' && editable && (
+              <button type="button" disabled={busy} onClick={() => void save(null)} aria-label={t('booking.form.removeStop')} className="flex h-9 w-8 shrink-0 items-center justify-center text-xl text-muted hover:text-danger">×</button>
+            )}
+          </div>
+        ))}
+      </div>
+      {err && !picking && <p className="mt-1 text-xs text-danger">{err}</p>}
+      {picking && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label={t('booking.form.addStop')}
+          onClick={(e) => { if (e.target === e.currentTarget && !busy) setPicking(false); }}>
+          <div className="card w-full max-w-md p-4" style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold">{t('booking.form.addStop')}</h2>
+              <button type="button" onClick={() => setPicking(false)} aria-label={t('track.closeToStart')} className="flex h-10 w-10 items-center justify-center rounded-full text-2xl text-muted">×</button>
+            </div>
+            <div className="mt-3">
+              <PlacesInput kind="Stop" value={sel} text={text} onText={setText} onSelect={setSel} autoFocus />
+            </div>
+            <p className="mt-2 text-xs text-muted">{t('track.stopRepriceNote')}</p>
+            {err && <p className="mt-1 text-xs text-danger">{err}</p>}
+            <button type="button" className="btn-primary mt-3 w-full" disabled={!sel || busy} onClick={() => sel && void save(sel)}>{busy ? t('common.loading') : t('track.stopAdd')}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,24 @@
 # Session handoff
 
+## 2026-11-15 — Ride screen: pulsing pickup pin while searching; route box; passenger can add/remove the stop
+**Pickup pin pulse:** `pickupPinEl({pulse})` draws two lime rings pulsing from the needle tip. `MapMarker.pulse` is supported by Google and MapLibre; Google swaps content when it changes. TrackApp sets it while SEARCHING.
+
+**TrackApp route (`TrackRoute`):** the dotted box like the booking form (58 px rows, lime line).
+- In the middle: «＋ Добавить остановку». It opens a dialog with the stop search (PlacesInput «Stop») and the note «Оценка пересчитается…».
+- An existing stop has ×.
+- Editable until the car reaches the stop and while the ride is not over.
+
+**Server:** new `src/server/passenger-stop.ts` `passengerSetStop(bookingId, stop|null)` with POST/DELETE `/api/v1/tracking/stop` (full tracking session, rate-limited).
+- Allowed statuses: SEARCHING…IN_PROGRESS. STOP_LOCKED once `stopArrivedAt`.
+- Re-quotes the meter estimate (createQuote + consumeQuote → fareCents/quoteId/breakdown; the old estimate is kept if quoting fails).
+- Resets the stop timers, increments the revision, writes a STOP_SET / STOP_REMOVED event, and notifies the assigned driver (outbox tag `stop-<id>`).
+- Driver navigation picks the stop up from the trip view.
+- New error key STOP_LOCKED (en/ru/el).
+
+**Tests:** `tests/passenger-stop.db.test.ts` (2 tests: add re-quoted + event + driver notification, then remove; locked at the stop and after completion).
+
+**Check:** Playwright (local, SEARCHING): 2 pulse rings; add stop via dialog → stop row with ×; remove → «Добавить остановку» back; no errors.
+
 ## 2026-11-15 — Driver navigation panel trimmed; Google Maps + chat as map buttons; call inside the chat
 **DriverNavigation, all legs (to the pickup, stop, destination):**
 - The info sheet now shows: ETA + distance + arrival time (summary row), the address with no «К подаче:» label, the passenger name, ★ the drivers' average rating of the passenger (if any), and the class name («Comfort»).

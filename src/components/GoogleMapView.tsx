@@ -73,7 +73,7 @@ function markerEl(mk: MapMarker): HTMLElement {
   }
   if (mk.kind === 'person') return centerOnPoint(personMarkerEl({ title: mk.label, stale: mk.stale }));
   // Pin: the needle tip (element bottom) is the point — Google's default bottom anchor, no shift.
-  if (mk.kind === 'pickup') return pickupPinEl({ title: mk.label, stale: mk.stale });
+  if (mk.kind === 'pickup') { const el = pickupPinEl({ title: mk.label, stale: mk.stale, pulse: mk.pulse }); el.dataset.sig = mk.pulse ? 'pulse' : 'pin'; return el; }
   const el = document.createElement('div');
   el.style.cssText = `width:18px;height:18px;border-radius:50px;background:${COLORS[mk.kind]};border:2px solid #0d1608;box-shadow:0 0 0 3px rgba(200,255,70,0.25);opacity:${mk.stale ? 0.5 : 1};display:flex;align-items:center;justify-content:center;font-size:14px`;
   el.title = mk.label || mk.kind;
@@ -206,6 +206,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       marker.title = mk.label ?? '';
       // Re-render a vehicle whose plate tag or busy state changed (staff fleet map).
       const sig = mk.nav ? 'nav' : `${mk.busy ? 1 : 0}|${mk.tag ?? ''}`;
+      if (mk.kind === 'pickup' && marker.content && (marker.content as HTMLElement).dataset.sig !== (mk.pulse ? 'pulse' : 'pin')) marker.content = markerEl(mk);
       if (mk.kind === 'vehicle' && marker.content && (marker.content as HTMLElement).dataset.sig !== sig) {
         marker.content = markerEl(mk);
         if (mk.heading != null) orientVehicle(marker.content as HTMLElement, map.getHeading?.() ?? 0, mk.heading);

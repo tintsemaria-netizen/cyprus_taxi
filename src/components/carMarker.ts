@@ -123,7 +123,10 @@ export function vehicleMarkerEl(opts: {
  */
 const NAV_ARROW_CSS = `@keyframes ilyPulse{0%{transform:scale(.55);opacity:.75}70%{transform:scale(1);opacity:.18}100%{transform:scale(1);opacity:0}}
 .ily-nav-pulse{position:absolute;inset:0;border-radius:50%;background:rgba(127,166,32,.30);border:1.5px solid rgba(127,166,32,.45);animation:ilyPulse 1.8s ease-out infinite;transition:opacity .3s}
-.ily-moving .ily-nav-pulse{animation:none;opacity:0}`;
+.ily-moving .ily-nav-pulse{animation:none;opacity:0}
+@keyframes ilyPinPulse{0%{transform:translate(-50%,-50%) scale(.25);opacity:.85}100%{transform:translate(-50%,-50%) scale(1);opacity:0}}
+.ily-pin-pulse{position:absolute;left:50%;top:100%;width:84px;height:84px;border-radius:50%;background:rgba(200,255,70,.28);border:2px solid rgba(200,255,70,.6);animation:ilyPinPulse 1.6s ease-out infinite;pointer-events:none}
+.ily-pin-pulse.d2{animation-delay:.8s}`;
 function ensureNavArrowCss() {
   if (typeof document === 'undefined' || document.getElementById('ily-nav-arrow-css')) return;
   const st = document.createElement('style');
@@ -215,7 +218,8 @@ export function personMarkerEl(opts: { title?: string; size?: number; stale?: bo
  * The element's BOTTOM-CENTRE is the exact point (needle tip): Google anchors there by default;
  * MapLibre must use anchor 'bottom'.
  */
-export function pickupPinEl(opts: { title?: string; stale?: boolean } = {}): HTMLElement {
+export function pickupPinEl(opts: { title?: string; stale?: boolean; pulse?: boolean } = {}): HTMLElement {
+  ensureNavArrowCss();
   const el = document.createElement('div');
   el.style.cssText = `width:26px;height:44px;opacity:${opts.stale ? 0.55 : 1};filter:drop-shadow(0 2px 3px rgba(0,0,0,0.5));pointer-events:auto`;
   el.innerHTML = `<svg viewBox="0 0 26 44" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -225,6 +229,8 @@ export function pickupPinEl(opts: { title?: string; stale?: boolean } = {}): HTM
     <circle cx="13" cy="12" r="10.5" fill="#C8FF46" stroke="#0d1608" stroke-width="1.6"/>
     <circle cx="9.6" cy="8.6" r="3" fill="#ffffff" opacity="0.55"/>
   </svg>`;
+  // While a driver is being searched (2026-11-15): lime rings pulse out from the needle tip.
+  if (opts.pulse) { el.style.position = 'relative'; el.insertAdjacentHTML('afterbegin', '<div class="ily-pin-pulse"></div><div class="ily-pin-pulse d2"></div>'); }
   el.classList.add('ily-pickup-pin');
   if (opts.title) el.title = opts.title;
   return el;

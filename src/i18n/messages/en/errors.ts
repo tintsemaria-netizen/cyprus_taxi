@@ -25,6 +25,7 @@ const errors = {
   NO_VEHICLE: 'No vehicle is assigned to you, so you cannot receive ride offers. Contact the operator.',
   NOT_COMPLETED: 'You can rate a ride only after it is completed.',
   NOT_ELIGIBLE: 'Your account can’t take rides right now.',
+  STOP_LOCKED: 'The car is already at the stop — it can no longer be changed.',
   NOT_FOUND: 'Not found.',
   NOT_RETRYABLE: 'This ride cannot be searched again.',
   NO_FRESH_GPS: 'Your location is not up to date. Turn on location sharing and try again.',
