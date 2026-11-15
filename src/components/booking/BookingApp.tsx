@@ -1116,28 +1116,37 @@ function Row({ label, value, dot }: { label: string; value: string; dot?: 'accen
   );
 }
 
-// Car class pictures (2026-11-15): own simple side views — a sedan (Comfort) and a minibus (XL).
+// Car class pictures (2026-11-15): own drawings — for Comfort a white sedan in a three-quarter view
+// with a dark panoramic glass roof (the style the user picked), for XL a minibus side view.
 function CarClassIcon({ kind, active }: { kind: 'sedan' | 'minibus'; active: boolean }) {
   const body = active ? '#C8FF46' : '#D9DFDC';
   const glass = '#1B2427';
+  if (kind === 'sedan') {
+    return (
+      <svg viewBox="0 0 64 34" width="64" height="34" aria-hidden className="shrink-0">
+        <ellipse cx="33" cy="30" rx="28" ry="2.6" fill="rgba(0,0,0,.35)" />
+        <path d="M3.5 19.5C3.5 16.8 5 15.2 8 14.6L20 12.6C25 9.2 30.5 7.6 36.5 7.8C42.5 8 47.5 10.4 51.5 13.6L57.5 15.6C60.5 16.6 61.8 18.6 61.6 21.4L61.2 24.8C61 26.4 59.8 27.4 58.2 27.4H8.4C5.6 27.4 3.5 25.6 3.5 23Z" fill="#F3F5F6" />
+        <path d="M3.6 21.5C14 22.6 30 23.2 61.4 22.4L61.2 24.8C61 26.4 59.8 27.4 58.2 27.4H8.4C5.6 27.4 3.5 25.6 3.5 23Z" fill="#DCE1E4" />
+        <path d="M14.5 13.6C20 9.6 27.5 7.8 35.5 8.2C43 8.6 48.6 11.4 52.8 15C46 15.6 38 15.8 30 15.6C24 15.4 18.5 14.8 14.5 13.6Z" fill="#1C2633" />
+        <path d="M17 13.2C23 10.6 29 9.6 35 9.8" stroke="#3A4A5C" strokeWidth=".7" fill="none" strokeLinecap="round" />
+        <path d="M24.6 16.4 25.4 24.6M38 16.7 38.2 24.8" stroke="#C9CFD3" strokeWidth=".6" />
+        <path d="M27.8 18.4h2.6M41 18.6h2.6" stroke="#B8BEC2" strokeWidth=".8" strokeLinecap="round" />
+        <path d="M52.6 18.4C55.6 18.2 58.4 17.6 60.8 16.8" stroke={active ? '#C8FF46' : '#9EDCFF'} strokeWidth="1.1" strokeLinecap="round" fill="none" />
+        <path d="M52.8 24.6C56 24.4 58.6 24 60.9 23.3" stroke="#262C31" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+        <path d="M3.9 16.6 6.6 16" stroke="#FF5A4E" strokeWidth="1.2" strokeLinecap="round" />
+        {([[15.5, 26.2, 5], [48.5, 26.6, 5.2]] as const).map(([x, y, r]) => (
+          <g key={x}><circle cx={x} cy={y} r={r} fill="#15191C" /><circle cx={x} cy={y} r={r * 0.52} fill="#3A4248" /><circle cx={x} cy={y} r=".9" fill="#8A9490" /></g>
+        ))}
+      </svg>
+    );
+  }
   return (
     <svg viewBox="0 0 64 30" width="64" height="30" aria-hidden className="shrink-0">
-      {kind === 'sedan' ? (
-        <>
-          <path d="M3 21.5v-4.2c0-2 1.3-3.4 3.3-3.8l9.4-1.8 6.6-5.6c1.2-1 2.6-1.6 4.2-1.6h13.6c1.8 0 3.4.8 4.6 2.1l4.6 5.1 7.5 1.4c2 .4 3.3 2 3.3 4v4.4z" fill={body} />
-          <path d="M23.5 12 28.3 8h6.2v4zM37 12V8h4.2c.9 0 1.7.4 2.3 1l2.8 3z" fill={glass} />
-          <rect x="3" y="18.2" width="3" height="1.6" rx=".8" fill="#FF6B5A" />
-          <rect x="58" y="17.2" width="3" height="1.6" rx=".8" fill="#FFF3B0" />
-        </>
-      ) : (
-        <>
-          <path d="M3 22.5V9.2C3 6.3 5.3 4 8.2 4h37.6c2 0 3.8 1 4.9 2.7l6.6 9.4 3 1.1c1 .4 1.7 1.3 1.7 2.4v2.9z" fill={body} />
-          <path d="M8 8h7.5v6H8zM18 8h7.5v6H18zM28 8h7.5v6H28zM38 8h7c.9 0 1.6.4 2.1 1.1l3.4 4.9H38z" fill={glass} />
-          <rect x="3" y="17.5" width="2.6" height="2" rx=".8" fill="#FF6B5A" />
-          <rect x="58.4" y="18" width="2.8" height="1.6" rx=".8" fill="#FFF3B0" />
-        </>
-      )}
-      {(kind === 'sedan' ? [15.5, 48] : [14.5, 49]).map((x) => (
+      <path d="M3 22.5V9.2C3 6.3 5.3 4 8.2 4h37.6c2 0 3.8 1 4.9 2.7l6.6 9.4 3 1.1c1 .4 1.7 1.3 1.7 2.4v2.9z" fill={body} />
+      <path d="M8 8h7.5v6H8zM18 8h7.5v6H18zM28 8h7.5v6H28zM38 8h7c.9 0 1.6.4 2.1 1.1l3.4 4.9H38z" fill={glass} />
+      <rect x="3" y="17.5" width="2.6" height="2" rx=".8" fill="#FF6B5A" />
+      <rect x="58.4" y="18" width="2.8" height="1.6" rx=".8" fill="#FFF3B0" />
+      {[14.5, 49].map((x) => (
         <g key={x}><circle cx={x} cy="22.5" r="5.2" fill="#0F1517" /><circle cx={x} cy="22.5" r="2.2" fill="#8A9490" /></g>
       ))}
     </svg>

@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-15 — Comfort picture: white three-quarter sedan with a dark glass roof
+- CarClassIcon «sedan» was redrawn as an own SVG in the style of the user's reference: a white body, a dark panoramic roof, shading, door lines, a headlight (lime when selected), a tail light and two wheels with a ground shadow. viewBox 64×34.
+- The user's image was not embedded (it may come from another app); this is our own drawing in that style.
+- The XL minibus is unchanged.
+- Playwright (local, iPhone 13): the review step shows the new sedan and the minibus; flow unchanged; no errors.
+
 ## 2026-11-15 — Car class choice moved to the final step, with sedan / minibus pictures
 - **Form step:** the Comfort/XL list was removed. The CTA now reads «Заказать · от ≈ {cheapest quote}» (`booking.cta.requestFrom`), or «Заказать поездку» without a route.
 - **Review step (before the final order):** `classPicker` is shown under the trip details.
