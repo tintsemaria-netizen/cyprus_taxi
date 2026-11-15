@@ -389,6 +389,25 @@ export default function BookingApp() {
   const [quotes, setQuotes] = useState<Partial<Record<'COMFORT' | 'XL', QuoteBody>>>({});
   const [quoteErr, setQuoteErr] = useState<string | null>(null);
   const [quoting, setQuoting] = useState(false);
+  // Quotes live 2 minutes on the server (Task 012 §6.3). Keep them fresh while the passenger
+  // looks at the form (2026-11-15: «Оценка стоимости устарела» after a pause), and re-quote +
+  // retry once on submit if one still expired.
+  const quotesAt = useRef(0);
+  const [quoteTick, setQuoteTick] = useState(0);
+  useEffect(() => {
+    if (!pickup || !dropoff) return;
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible' && Date.now() - quotesAt.current > 90_000) setQuoteTick((n) => n + 1);
+    }, 10_000);
+    const onVis = () => { if (document.visibilityState === 'visible' && Date.now() - quotesAt.current > 90_000) setQuoteTick((n) => n + 1); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVis); };
+  }, [pickup, dropoff]);
+  const quoteBody = (key: 'COMFORT' | 'XL', max: number) => ({
+    pickup: { lat: pickup!.lat, lng: pickup!.lng }, dropoff: { lat: dropoff!.lat, lng: dropoff!.lng }, ...(viaStop ? { stop: { lat: viaStop.lat, lng: viaStop.lng } } : {}), vClass: key, passengerCount: Math.min(effPax, max), luggageCount: effBags,
+    // Price a scheduled ride for its journey time (day/night/holiday + traffic).
+    ...(when === 'SCHEDULE' && scheduledAt ? { scheduledAt, scheduleOffsetMin } : {}),
+  });
   const classKeys = (cfg?.classes ?? [{ key: 'COMFORT' as const, maxPassengers: 4 }, { key: 'XL' as const, maxPassengers: 6 }]).map((c) => `${c.key}:${c.maxPassengers}`).join(',');
   useEffect(() => {
     if (!pickup || !dropoff) { setQuotes({}); setQuoteErr(null); return; }
@@ -400,11 +419,7 @@ export default function BookingApp() {
         try {
           const q = await api<QuoteBody>('/quote', {
             method: 'POST',
-            body: {
-              pickup: { lat: pickup.lat, lng: pickup.lng }, dropoff: { lat: dropoff.lat, lng: dropoff.lng }, ...(viaStop ? { stop: { lat: viaStop.lat, lng: viaStop.lng } } : {}), vClass: c.key, passengerCount: Math.min(effPax, c.max), luggageCount: effBags,
-              // Price a scheduled ride for its journey time (day/night/holiday + traffic).
-              ...(when === 'SCHEDULE' && scheduledAt ? { scheduledAt, scheduleOffsetMin } : {}),
-            },
+            body: quoteBody(c.key, c.max),
             signal: controller.signal, timeoutMs: 9000,
           });
           return [c.key, q] as const;
@@ -416,10 +431,11 @@ export default function BookingApp() {
       if (controller.signal.aborted) return;
       const next: Partial<Record<'COMFORT' | 'XL', QuoteBody>> = {};
       for (const [k, q] of results) if (q) next[k] = q;
-      setQuotes(next); setQuoting(false);
+      setQuotes(next); setQuoting(false); quotesAt.current = Date.now();
     }, 500);
     return () => { clearTimeout(t); controller.abort(); };
-  }, [pickup, dropoff, viaStop, pax, when, scheduledAt, scheduleOffsetMin, classKeys, tError]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickup, dropoff, viaStop, pax, when, scheduledAt, scheduleOffsetMin, classKeys, tError, quoteTick]);
   const quote: QuoteBody | null = quotes[vClass] ?? null;
   const eur = (c: number) => fmt.money(c, 'EUR');
 
@@ -492,7 +508,7 @@ export default function BookingApp() {
     setStep('review');
   }
 
-  async function submit(offsetOverride?: number) {
+  async function submit(offsetOverride?: number, freshQuote?: QuoteBody) {
     if (!pickup || !dropoff) return;
     const effOffset = offsetOverride ?? scheduleOffsetMin;
     // If the payload changed since the key was minted (e.g. the user just chose a
@@ -516,7 +532,7 @@ export default function BookingApp() {
         vClass,
         passengerCount: effPax,
         luggageCount: effBags,
-        quoteId: quote?.quoteId,
+        quoteId: (freshQuote ?? quote)?.quoteId,
         passengerName: name.trim() || passenger?.name || 'Passenger',
         phone: passenger?.phone || phone.trim(),
         note: effNote || undefined,
@@ -540,6 +556,19 @@ export default function BookingApp() {
           pendingSubmit.current = effOffset;
           pendingSubmitActive.current = true;
           setShowLogin(true);
+          setSubmitting(false);
+          return;
+        }
+        if (!freshQuote && quote && (err.body.code === 'QUOTE_EXPIRED' || err.body.code === 'QUOTE_MISMATCH' || err.body.code === 'QUOTE_NOT_FOUND')) {
+          // The estimate went stale: get a new one. Same price → book silently with it;
+          // a different price → show it and let the passenger confirm (never charge an unseen price).
+          try {
+            const max = cfg?.classes.find((c) => c.key === vClass)?.maxPassengers ?? (vClass === 'XL' ? 6 : 4);
+            const fresh = await api<QuoteBody>('/quote', { method: 'POST', body: quoteBody(vClass as 'COMFORT' | 'XL', max), timeoutMs: 9000 });
+            setQuotes((prev) => ({ ...prev, [vClass]: fresh })); quotesAt.current = Date.now();
+            if (fresh.totalCents === quote.totalCents) return submit(effOffset, fresh);
+            setBanner(t('booking.form.priceUpdated', { price: fmt.money(fresh.totalCents, 'EUR') }));
+          } catch { setBanner(tError(err)); }
           setSubmitting(false);
           return;
         }

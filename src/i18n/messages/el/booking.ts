@@ -9,6 +9,7 @@ const booking: Catalog<typeof en> = {
   },
   currentLocation: 'Τρέχουσα τοποθεσία',
   form: {
+    priceUpdated: 'Η τιμή ενημερώθηκε σε ≈ {price}. Ελέγξτε την και πατήστε ξανά «Παραγγελία».',
     resetRoute: 'Εκκαθάριση διαδρομής',
     onMap: 'Στον χάρτη',
     addStop: 'Προσθήκη στάσης',

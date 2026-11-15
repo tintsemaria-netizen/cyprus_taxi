@@ -9,6 +9,7 @@ const booking: Catalog<typeof en> = {
   },
   currentLocation: 'Текущее местоположение',
   form: {
+    priceUpdated: 'Цена обновилась: ≈ {price}. Проверьте и нажмите «Заказать» ещё раз.',
     resetRoute: 'Сбросить маршрут',
     onMap: 'На карте',
     addStop: 'Добавить остановку',

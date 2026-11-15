@@ -6,6 +6,7 @@ const booking = {
   },
   currentLocation: 'Current location',
   form: {
+    priceUpdated: 'The price was updated to ≈ {price}. Check it and tap «Order» again.',
     resetRoute: 'Clear the route',
     onMap: 'On map',
     addStop: 'Add a stop',

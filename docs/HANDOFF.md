@@ -1,5 +1,17 @@
 # Session handoff
 
+## 2026-11-15 — «Оценка стоимости устарела» on order: quotes kept fresh + silent re-quote
+**Cause:** server quotes live 2 min (`QUOTE_TTL_MS`, Task 012 §6.3). A passenger who waited longer before «Заказать» got QUOTE_EXPIRED.
+
+**Fix (BookingApp):**
+- Quotes are re-fetched when they are older than 90 s: checked every 10 s while the page is visible, and when the page becomes visible again.
+- On submit, QUOTE_EXPIRED / QUOTE_MISMATCH / QUOTE_NOT_FOUND triggers a fresh quote for the chosen class.
+  - Same total → the booking is retried once automatically with the new quoteId.
+  - Different total → the new price is shown with `booking.form.priceUpdated` (en/ru/el) and the passenger confirms again. An unseen price is never charged.
+- The server is unchanged and still rejects expired quotes.
+
+**Check:** Playwright (local): route chosen; all Quote rows set to expired in the DB; confirm order → one extra /quote call, booking created (/track «Ищем водителя»); no errors.
+
 ## 2026-11-15 — Person marker: plain grey outline
 - At the user's request the light badge, the lime frame and the tie were removed. The marker is now only the grey two-tone outline, with a thin dark halo so it reads on dark and light map tiles.
 - Checked by rendering the SVG on dark and light backgrounds (local).
