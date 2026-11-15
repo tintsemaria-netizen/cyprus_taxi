@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
 import { InstallPrompt } from '@/components/InstallPrompt';
-import { PlacesInput, Selected } from './PlacesInput';
+import type { Selected } from './PlacesInput';
 import { RouteEditor, type RouteSlot } from './RouteEditor';
 import AutoMapPicker from './AutoMapPicker';
 import { PassengerLoginModal } from './PassengerLoginModal';
@@ -319,7 +319,7 @@ export default function BookingApp() {
     if (!isMobile || !box || !sheet) return;
     const measure = () => {
       if (box.scrollTop > 0) return;
-      const inp = box.querySelector('input[role=combobox]');
+      const inp = box.querySelector('input[readonly][aria-label]');
       if (!inp) return;
       const h = Math.round(inp.getBoundingClientRect().bottom - sheet.getBoundingClientRect().top + 14);
       const next = Math.max(150, Math.min(Math.round(window.innerHeight * 0.6), h));
@@ -796,47 +796,67 @@ export default function BookingApp() {
                     {flash && <p role="status" className="mb-3 rounded-[12px] border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">{flash}</p>}
                     {banner && <p className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{banner}</p>}
 
-                    {/* Addresses (2026-11-15): only «Куда» at first; touching it reveals «Откуда» (auto-filled
-                        from the device) above it. Each field has «На карте» on the right; one optional stop;
-                        the rows can be dragged up/down to change the order of the route. */}
-                    <div className="relative space-y-2">
-                      {(addrOpen ? slots : (['d'] as Slot[])).map((slot, i, arr) => {
-                        const kind: 'From' | 'Stop' | 'To' = !addrOpen ? 'To' : i === 0 ? 'From' : i === arr.length - 1 ? 'To' : 'Stop';
-                        const v = slotGet(slot);
-                        const dragging = rowDrag?.index === i;
-                        return (
-                          <div key={slot} ref={(el) => { rowEls.current[i] = el; }} className={`flex items-end gap-1.5 ${dragging ? 'relative z-20 opacity-90' : ''}`}
-                            style={dragging && rowDrag ? { transform: `translateY(${rowDrag.dy}px)` } : undefined}>
-                            <div className="min-w-0 flex-1">
-                              <PlacesInput
-                                kind={kind}
-                                value={v.sel}
-                                text={v.text}
-                                onText={(x) => { v.setText(x); if (slot === 'p' && autoPickup) setAutoPickup(false); }}
-                                onSelect={(sel) => { v.setSel(sel); if (slot === 'p') setAutoPickup(false); }}
-                                onFocusInput={() => setAddrOpen(true)}
-                                onActivate={() => openEditor(slot)}
-                                error={slot === 'p' ? errors.pickup : slot === 'd' ? errors.dropoff : errors.stop}
-                                trailing={<button type="button" className="rounded-[8px] px-2 py-1 text-xs font-semibold text-accent hover:bg-accent/10" onClick={() => { setAddrOpen(true); setPicker(slot === 'p' ? 'pickup' : slot === 's' ? 'stop' : 'dropoff'); }}>⌖ {t('booking.form.onMap')}</button>}
-                              />
-                            </div>
-                            {slot === 's' && (
-                              <button type="button" aria-label={t('booking.form.removeStop')} onClick={() => { setHasStop(false); setStop(null); setStopText(''); }}
-                                className="mb-1 flex h-10 w-8 shrink-0 items-center justify-center rounded-[8px] text-lg text-muted hover:bg-elevated hover:text-danger">×</button>
-                            )}
-                            {addrOpen && (
-                              <button type="button" aria-label={t('booking.form.dragToReorder')}
-                                onPointerDown={(e) => onDragStart(e, i)} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}
-                                className="mb-1 flex h-10 w-7 shrink-0 cursor-grab touch-none select-none items-center justify-center rounded-[8px] text-lg text-muted hover:bg-elevated">≡</button>
-                            )}
+                    {/* Addresses (2026-11-15): one box like the route editor — no «Откуда/Куда» labels, a dot per
+                        point (lime ring = from, amber square = stop, lime disc = to) joined by a line. Tapping a
+                        row opens the route editor; «На карте» per row; ≡ drags a row to reorder the route. */}
+                    {(() => {
+                      const shown: Slot[] = addrOpen ? slots : ['d'];
+                      const rowErr = (s: Slot) => (s === 'p' ? errors.pickup : s === 'd' ? errors.dropoff : errors.stop);
+                      const anyErr = shown.map(rowErr).filter(Boolean) as string[];
+                      return (
+                        <div>
+                          <div className={`relative rounded-[14px] border bg-elevated px-3 ${anyErr.length ? 'border-danger' : 'border-edge-strong'}`}>
+                            {shown.length > 1 && <span aria-hidden className="absolute left-[19px] w-[2px]" style={{ top: 26, height: (shown.length - 1) * 53, background: 'rgba(200,255,70,0.45)' }} />}
+                            {shown.map((slot, i) => {
+                              const v = slotGet(slot);
+                              const dragging = rowDrag?.index === i;
+                              const kind = !addrOpen ? 'd' : slot;
+                              return (
+                                <div key={slot} ref={(el) => { rowEls.current[i] = el; }}
+                                  className={`relative flex h-[52px] items-center gap-2.5 ${i ? 'border-t border-white/[0.08]' : ''} ${dragging ? 'z-20 rounded-[10px] bg-panel opacity-95' : ''}`}
+                                  style={dragging && rowDrag ? { transform: `translateY(${rowDrag.dy}px)` } : undefined}>
+                                  <span className="relative z-10 flex w-4 shrink-0 justify-center" aria-hidden>
+                                    {kind === 'p' ? <span className="block h-3.5 w-3.5 rounded-full border-[3px] border-accent bg-elevated" />
+                                      : kind === 's' ? <span className="block h-3 w-3 rounded-[3px] bg-[#FFC83D]" />
+                                      : <span className="block h-3.5 w-3.5 rounded-full bg-accent" />}
+                                  </span>
+                                  <input
+                                    readOnly
+                                    value={v.text}
+                                    placeholder={kind === 'p' ? t('booking.places.pickupPlaceholder') : kind === 's' ? t('booking.places.stopPlaceholder') : t('booking.places.destinationPlaceholder')}
+                                    aria-label={kind === 'p' ? t('booking.places.pickupAria') : kind === 's' ? t('booking.places.stopAria') : t('booking.places.destinationAria')}
+                                    aria-invalid={!!rowErr(slot)}
+                                    onFocus={() => openEditor(slot)}
+                                    onClick={() => openEditor(slot)}
+                                    className="h-full min-w-0 flex-1 cursor-pointer truncate bg-transparent text-[16px] text-ink placeholder:text-muted"
+                                    style={{ outline: 'none', boxShadow: 'none', border: 0 }}
+                                  />
+                                  <button type="button" aria-label={t('booking.form.onMap')} title={t('booking.form.onMap')}
+                                    onClick={() => { setAddrOpen(true); setPicker(slot === 'p' ? 'pickup' : slot === 's' ? 'stop' : 'dropoff'); }}
+                                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-accent hover:bg-accent/10">
+                                    <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="6.5" /><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4" /><circle cx="12" cy="12" r="1.6" fill="currentColor" /></svg>
+                                  </button>
+                                  {slot === 's' && (
+                                    <button type="button" aria-label={t('booking.form.removeStop')} onClick={() => { setHasStop(false); setStop(null); setStopText(''); }}
+                                      className="flex h-9 w-7 shrink-0 items-center justify-center rounded-[8px] text-lg text-muted hover:text-danger">×</button>
+                                  )}
+                                  {slot !== 's' && shown.includes('s') && <span className="w-7 shrink-0" aria-hidden /> /* keep the map icons in one column */}
+                                  {addrOpen && (
+                                    <button type="button" aria-label={t('booking.form.dragToReorder')}
+                                      onPointerDown={(e) => onDragStart(e, i)} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}
+                                      className="flex h-9 w-6 shrink-0 cursor-grab touch-none select-none items-center justify-center rounded-[8px] text-lg text-muted hover:bg-panel">≡</button>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
-                      {addrOpen && !hasStop && (
-                        <button type="button" className="chip hover:border-accent/50" onClick={() => setHasStop(true)}>＋ {t('booking.form.addStop')}</button>
-                      )}
-                      {/* Recent / home / work places now live in the route editor (2026-11-15). */}
-                    </div>
+                          {anyErr.map((e) => <p key={e} className="mt-1 text-xs text-danger">{e}</p>)}
+                          {addrOpen && !hasStop && (
+                            <button type="button" className="chip mt-2 hover:border-accent/50" onClick={() => { setHasStop(true); openEditor('s'); }}>＋ {t('booking.form.addStop')}</button>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     <div className="mt-5">
                       <p className="label mb-2" id="ride-class-label">{t('booking.form.chooseRide')}</p>

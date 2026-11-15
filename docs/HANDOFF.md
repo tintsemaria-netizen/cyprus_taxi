@@ -1,5 +1,14 @@
 # Session handoff
 
+## 2026-11-15 — Booking sheet: address box like the route editor
+- The «Откуда/Куда» labels and separate fields were removed. The sheet now shows one box: a row per point with a dot (lime ring = from, amber square = stop, lime disc = to) joined by a lime line.
+- Each row has the address (read-only; a tap opens the route editor on that row), a lime map icon («На карте»), × for the stop, and ≡ to drag-reorder.
+- Errors: the box gets a red border, with the messages under it. The input has aria-invalid, so ErrorFocus still finds it.
+- «＋ Добавить остановку» adds the stop and opens the editor on it.
+- The peek measurement now targets the first read-only address input.
+- BookingApp no longer uses PlacesInput (it is still used on /account).
+- Playwright (local, iPhone 13): no labels; the 3-row box renders with aligned icons; editor flow unchanged (route.mjs all green); peek 178 px with the field visible; no errors.
+
 ## 2026-11-15 — Route editor back to the app's dark theme
 - At the user's request the white background was dropped. RouteEditor now uses the theme classes (bg-page / bg-elevated / text-ink / text-muted / border-edge).
 - Dots: lime ring (from), amber square (stop), lime disc (to). The connector line is translucent lime and the map-pick button lime.
