@@ -10,7 +10,7 @@ import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { api } from '@/lib/api-client';
 import { formatFlight } from '@/lib/flight';
 import { meterWaitingCents, meterWaitingRatePerHourCents } from '@/lib/tariff';
-import { useT } from '@/i18n/I18nProvider';
+import { useT, type MsgKey } from '@/i18n/I18nProvider';
 import { INTL_TAG } from '@/i18n/config';
 import { bearingDeg, cumulative, distM, locate, maneuverIcon, nextStep, offsetPoint, promptBand, roundNavDistance, type LatLng, type NavStep } from '@/lib/nav';
 
@@ -22,7 +22,7 @@ import { bearingDeg, cumulative, distM, locate, maneuverIcon, nextStep, offsetPo
 export interface NavTrip {
   bookingId: string; reference: string; status: string;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string };
-  passengerName: string; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; luggageCount?: number; vClass: string;
+  passengerName: string; passengerRating?: { average: number; count: number } | null; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; luggageCount?: number; vClass: string;
   waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
   /** Passenger's live position, only if they chose to share it, only before pickup (2026-11-15). */
   passengerLocation?: { lat: number; lng: number; accuracyM: number; ageSec: number } | null;
@@ -55,6 +55,9 @@ export function DriverNavigation(props: {
   const [routeState, setRouteState] = useState<'loading' | 'ok' | 'unavailable'>('loading');
   const [following, setFollowing] = useState(true);
   const [details, setDetails] = useState(false);
+  // Chat lives behind a map button now (2026-11-15); kept mounted so it polls and counts unread.
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatUnread, setChatUnread] = useState(0);
   // Info panel open/collapsed (2026-11-15): tap the handle or swipe it up/down.
   const [panelOpen, setPanelOpen] = useState(trip.status !== 'IN_PROGRESS');
   // Tablets/desktop (≥640px): the sheet becomes a left column, so the map fit pads the left side.
@@ -279,6 +282,22 @@ export function DriverNavigation(props: {
           follow={follow} onFollowBreak={() => setFollowing(false)} idleReturnMs={4000} onIdleReturn={() => setFollowing(true)} fitPadding={wide ? { top: 60, right: 50, bottom: 60, left: 470 } : { top: 60, right: 50, bottom: panelOpen ? 380 : 200, left: 50 }} />
         <div className="absolute right-3 top-3 flex flex-col gap-2">
           <button onClick={toggleMute} className="flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-lg" aria-label={muted ? t('driver.navigation.unmute') : t('driver.navigation.mute')} aria-pressed={muted}>{muted ? '🔇' : '🔊'}</button>
+          {/* Google Maps and the chat (with the call inside) as map buttons (2026-11-15). */}
+          <a href={externalHref} target="_blank" rel="noreferrer" aria-label={t('driver.navigation.googleMaps')} title={t('driver.navigation.googleMaps')}
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-white shadow-md">
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden>
+              <path d="M12 2.2c-3.9 0-7 3-7 6.9 0 5.1 7 12.7 7 12.7s7-7.6 7-12.7c0-3.9-3.1-6.9-7-6.9z" fill="#34A853" />
+              <path d="M12 2.2c-2.2 0-4.1 1-5.4 2.5L12 10.1l5.4-5.4C16.1 3.2 14.2 2.2 12 2.2z" fill="#4285F4" />
+              <path d="M6.6 4.7A6.9 6.9 0 0 0 5 9.1c0 1.3.4 2.7 1 4l6-6z" fill="#EA4335" />
+              <path d="M17.4 4.7 12 10.1l6 3c.6-1.4 1-2.7 1-4 0-1.7-.6-3.2-1.6-4.4z" fill="#FBBC04" />
+              <circle cx="12" cy="9.1" r="2.6" fill="#fff" />
+            </svg>
+          </a>
+          <button type="button" onClick={() => setChatOpen(true)} aria-label={t('driver.navigation.chat')} title={t('driver.navigation.chat')}
+            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-xl shadow-md">
+            💬
+            {chatUnread > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold text-[#10191C]">{chatUnread > 9 ? '9+' : chatUnread}</span>}
+          </button>
         </div>
       </div>
 
@@ -333,10 +352,8 @@ export function DriverNavigation(props: {
             {remainingSec != null && clock > 0 && <span className="ml-auto text-sm text-muted">{t('driver.navigation.arriveAt', { time: fmt.time(new Date(clock + remainingSec * 1000)) })}</span>}
           </div>
         )}
-        <div className={`mt-1 text-sm ${panelOpen ? '' : 'truncate'}`}>
-          <span className="text-muted">{leg === 'pickup' ? t('driver.navigation.toPickup') : leg === 'stop' ? t('driver.navigation.toStop') : t('driver.navigation.toDestination')}</span>{' '}
-          <span className="font-medium">{target.label}</span>
-        </div>
+        {/* Address only — no «К подаче:» label (2026-11-15); the map shows which point it is. */}
+        <div className={`mt-1 text-base font-medium ${panelOpen ? '' : 'truncate'}`}>{target.label}</div>
         {paxLoc && paxFromPickupM != null && (
           <div className="mt-1 flex items-center gap-1.5 text-sm text-[#7FB6FF]">
             <span aria-hidden="true">🧍</span>
@@ -345,19 +362,16 @@ export function DriverNavigation(props: {
         )}
         <div className="mt-1 flex items-center gap-2 text-sm">
           <span className="font-medium">{trip.passengerName}</span>
-          <span className="text-muted">· {t('driver.units.paxShort', { count: trip.passengerCount })}{trip.luggageCount ? ` · 🧳 ${trip.luggageCount}` : ''} · {trip.vClass}</span>
-          <span className="ml-auto font-mono text-xs text-muted">{trip.reference}</span>
+          {trip.passengerRating && trip.passengerRating.count > 0 && <span className="text-accent">★ {trip.passengerRating.average.toFixed(1)}</span>}
+          <span className="ml-auto text-muted">{t(`common.vClass.${trip.vClass}` as MsgKey)}</span>
         </div>
         {waitingNode && <div className="mt-2 rounded-[12px] border border-edge bg-page p-3 text-sm">{waitingNode}</div>}
         {stop && leg === 'pickup' && <div className="mt-1 text-sm"><span className="text-muted">{t('driver.stop.via')}</span> <span className="font-medium">{stop.label}</span></div>}
         {stopNode && <div className="mt-2 rounded-[12px] border border-edge bg-page p-3 text-sm">{stopNode}</div>}
 
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          <a href={`tel:${trip.passengerPhone}`} className="btn-ghost !min-h-[44px] !py-2 text-sm">{t('driver.trip.call')}</a>
-          <a href={externalHref} target="_blank" rel="noreferrer" className="btn-ghost !min-h-[44px] !py-2 text-sm">{t('driver.navigation.googleMaps')}</a>
-          <button className="btn-ghost !min-h-[44px] !py-2 text-sm" onClick={() => setDetails((d) => !d)} aria-expanded={details}>{details ? t('driver.navigation.hideDetails') : t('driver.navigation.details')}</button>
-        </div>
-        <div className="mt-2"><ChatPanel key={trip.bookingId} listUrl={`/driver/bookings/${trip.bookingId}/messages`} postUrl={`/driver/bookings/${trip.bookingId}/messages`} pushUrl="/driver/push" me="DRIVER" peerLabel="passenger" /></div>
+        {panelOpen && (
+          <button className="mt-2 text-sm text-muted underline-offset-2 hover:underline" onClick={() => setDetails((d) => !d)} aria-expanded={details}>{details ? t('driver.navigation.hideDetails') : t('driver.navigation.details')} ›</button>
+        )}
 
         {details && (
           <div className="mt-3 space-y-2 rounded-[12px] border border-edge bg-page p-3 text-sm" data-testid="nav-details">
@@ -372,6 +386,14 @@ export function DriverNavigation(props: {
         )}
         </div>
       </div>
+      </div>
+
+      {/* Chat over the map (2026-11-15) — kept mounted so new messages are counted on the map button. */}
+      <div className={chatOpen ? 'fixed inset-0 z-[60] flex flex-col justify-end bg-black/50' : 'hidden'} onClick={(e) => { if (e.target === e.currentTarget) setChatOpen(false); }}>
+        <div className="rounded-t-[18px] bg-page p-2" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+          <ChatPanel key={trip.bookingId} listUrl={`/driver/bookings/${trip.bookingId}/messages`} postUrl={`/driver/bookings/${trip.bookingId}/messages`} pushUrl="/driver/push" me="DRIVER" peerLabel="passenger"
+            expandedOverride={chatOpen} onUnread={setChatUnread} callHref={trip.passengerPhone ? `tel:${trip.passengerPhone}` : null} onClose={() => setChatOpen(false)} />
+        </div>
       </div>
 
       {ask === 'complete' && (

@@ -1,4 +1,5 @@
 import { config } from '@/lib/config';
+import { passengerRatingSummary } from '@/server/trip-close';
 import { passengerLocationForDriver } from '@/server/passenger-location';
 import { prisma } from '@/lib/db';
 import { computeFreshness, poorAccuracy } from '@/lib/freshness';
@@ -218,6 +219,8 @@ export async function driverCurrentTrip(driverId: string) {
       dropoff: { lat: b.dropoffLat, lng: b.dropoffLng, label: b.dropoffLabel },
       stop: stopView(b),
       passengerName: b.passengerName,
+      // Drivers' average rating of this passenger (2026-11-15) — shown next to the name.
+      passengerRating: b.passengerId ? ((await passengerRatingSummary([b.passengerId])).get(b.passengerId) ?? null) : null,
       passengerPhone: b.phone, // driver may contact passenger
       note: b.note,
       flightNumber: b.flightNumber,

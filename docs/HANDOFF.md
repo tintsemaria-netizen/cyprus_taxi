@@ -1,5 +1,24 @@
 # Session handoff
 
+## 2026-11-15 — Driver navigation panel trimmed; Google Maps + chat as map buttons; call inside the chat
+**DriverNavigation, all legs (to the pickup, stop, destination):**
+- The info sheet now shows: ETA + distance + arrival time (summary row), the address with no «К подаче:» label, the passenger name, ★ the drivers' average rating of the passenger (if any), and the class name («Comfort»).
+- Removed: pax count, luggage, reference, the Call/Google Maps/Details button row, and the inline chat.
+- «Подробнее ›» is a small link when the sheet is open; it still holds the note, flight and «Отказаться».
+
+**Map buttons (top-right, under mute):**
+- Google Maps: a round white button with a four-colour pin.
+- Chat 💬 with an unread badge. It opens a bottom-sheet chat (always mounted, so it keeps polling).
+
+**ChatPanel:** new optional props `expandedOverride`, `onUnread`, `callHref` (a «📞 Позвонить» button in the chat header) and `onClose`. The passenger usage is unchanged.
+
+**Server:** the driver trip view adds `passengerRating` {average, count} via `passengerRatingSummary`.
+
+**Check:** Playwright (local, EN_ROUTE):
+- panel «— | 250 м | Amerikanas 2, Germasogeia | Ilias | Comfort | Подробнее ›»;
+- map buttons present; the chat opens with a tel: call link and an input;
+- no errors.
+
 ## 2026-11-15 — Searching screen cleanup; notifications asked once after sign-in
 **Tracking page, SEARCHING:**
 - The map pill and the «Ищем водителя» title were removed.

@@ -11,14 +11,18 @@ interface Msg { id: string; sender: 'PASSENGER' | 'DRIVER'; body: string; at: st
 // given endpoint; `me` decides bubble alignment. Works for both roles. When `pushUrl`
 // is given, offers Web Push enrolment so new messages notify even in the background.
 // `peerLabel` is kept for API compatibility; the visible (localized) peer wording is derived from `me`.
-export function ChatPanel({ listUrl, postUrl, me, pushUrl }: { listUrl: string; postUrl: string; me: 'PASSENGER' | 'DRIVER'; peerLabel: string; pushUrl?: string }) {
+// Optional (2026-11-15, driver map chat): `expandedOverride` controls opening from outside,
+// `onUnread` reports unread messages (badge on a map button), `callHref` adds a call button
+// in the chat header, `onClose` turns the header into a close bar.
+export function ChatPanel({ listUrl, postUrl, me, pushUrl, expandedOverride, onUnread, callHref, onClose }: { listUrl: string; postUrl: string; me: 'PASSENGER' | 'DRIVER'; peerLabel: string; pushUrl?: string; expandedOverride?: boolean; onUnread?: (n: number) => void; callHref?: string | null; onClose?: () => void }) {
   const { t, fmt, tError } = useT();
   const peerIsDriver = me === 'PASSENGER';
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [open, setOpen] = useState(true); // chat available (driver assigned, pre-terminal)
   const [hasOlder, setHasOlder] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [expandedState, setExpanded] = useState(false);
+  const expanded = expandedOverride ?? expandedState;
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -92,6 +96,7 @@ export function ChatPanel({ listUrl, postUrl, me, pushUrl }: { listUrl: string; 
   }, [expanded, lastId]);
 
   const unread = expanded ? 0 : msgs.filter((m) => m.sender !== me && new Date(m.at).getTime() > lastSeenRef.current).length;
+  useEffect(() => { onUnread?.(unread); }, [unread, onUnread]);
 
   async function send() {
     const b = text.trim();
@@ -111,13 +116,19 @@ export function ChatPanel({ listUrl, postUrl, me, pushUrl }: { listUrl: string; 
 
   return (
     <div className="rounded-[12px] border border-edge bg-elevated">
-      <button type="button" className="flex w-full items-center justify-between px-3 py-2.5 text-left" onClick={() => setExpanded((e) => !e)}>
-        <span className="flex items-center gap-2 text-sm font-medium">
-          {peerIsDriver ? t('track.chat.titleDriver') : t('track.chat.titlePassenger')}
-          {unread > 0 && <span className="rounded-full bg-accent px-1.5 text-xs font-bold text-[#10191C]">{unread > 9 ? '9+' : unread}</span>}
-        </span>
-        <span className="text-xs text-muted">{expanded ? t('track.chat.hide') : t('track.chat.open')}</span>
-      </button>
+      <div className="flex items-center">
+        <button type="button" className="flex min-w-0 flex-1 items-center justify-between px-3 py-2.5 text-left" onClick={() => (onClose ? onClose() : setExpanded((e) => !e))}>
+          <span className="flex items-center gap-2 text-sm font-medium">
+            {peerIsDriver ? t('track.chat.titleDriver') : t('track.chat.titlePassenger')}
+            {unread > 0 && <span className="rounded-full bg-accent px-1.5 text-xs font-bold text-[#10191C]">{unread > 9 ? '9+' : unread}</span>}
+          </span>
+          <span className="text-xs text-muted">{onClose ? '' : expanded ? t('track.chat.hide') : t('track.chat.open')}</span>
+        </button>
+        {callHref && (
+          <a href={callHref} className="mr-1 flex h-10 items-center gap-1.5 rounded-full bg-accent px-3 text-sm font-semibold text-[#10191C]" aria-label={t('driver.trip.call')}>{t('driver.trip.call').includes('📞') ? '' : '📞 '}{t('driver.trip.call')}</a>
+        )}
+        {onClose && <button type="button" onClick={onClose} aria-label={t('track.closeToStart')} className="mr-1 flex h-10 w-10 items-center justify-center rounded-full text-2xl text-muted hover:text-ink">×</button>}
+      </div>
 
       {expanded && (
         <div className="border-t border-edge">

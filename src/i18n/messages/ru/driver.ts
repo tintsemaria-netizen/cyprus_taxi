@@ -297,6 +297,7 @@ const driver: Catalog<typeof en> = {
     needGps: 'Ждём ваше местоположение…',
     unavailable: 'Навигация в приложении сейчас недоступна.',
     openExternal: 'Google Maps',
+    chat: 'Чат с пассажиром',
     googleMaps: '🧭 Google Maps',
     gpsOffShort: '⚠ GPS выключен — включить',
     gpsOffTitle: 'Включите передачу геопозиции для навигации. По ней пассажир также видит вашу машину.',

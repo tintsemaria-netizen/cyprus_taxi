@@ -294,6 +294,7 @@ const driver = {
     needGps: 'Waiting for your location…',
     unavailable: 'In-app navigation is unavailable right now.',
     openExternal: 'Google Maps',
+    chat: 'Chat with the passenger',
     googleMaps: '🧭 Google Maps',
     gpsOffShort: '⚠ GPS is off — turn on',
     gpsOffTitle: 'Turn on location sharing to navigate. The passenger sees your car from it too.',
