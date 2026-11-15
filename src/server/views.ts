@@ -214,7 +214,7 @@ export async function driverCurrentTrip(driverId: string) {
       status: b.status,
       revision: b.revision,
       pickup: { lat: b.pickupLat, lng: b.pickupLng, label: b.pickupLabel },
-      passengerLocation: passengerLocationForDriver(b),
+      passengerLocation: passengerLocationForDriver(b, new Date(), await prisma.latestDriverLocation.findUnique({ where: { driverId }, select: { lat: true, lng: true } })),
       dropoff: { lat: b.dropoffLat, lng: b.dropoffLng, label: b.dropoffLabel },
       stop: stopView(b),
       passengerName: b.passengerName,

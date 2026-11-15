@@ -26,9 +26,17 @@ describe('passenger location sharing', () => {
     const t0 = new Date();
     expect(await savePassengerLocation(b.id, { lat: 34.6707, lng: 33.0414, accuracyM: 8 }, t0)).toBe('ok');
     const row = await prisma.booking.findUniqueOrThrow({ where: { id: b.id } });
-    expect(passengerLocationForDriver(row, t0)).toMatchObject({ lat: 34.6707, lng: 33.0414, accuracyM: 8, ageSec: 0 });
-    expect(passengerLocationForDriver(row, new Date(t0.getTime() + 61_000))).toBeNull(); // stale → hidden
-    expect(passengerLocationForDriver({ ...row, status: 'IN_PROGRESS' }, t0)).toBeNull();  // after pickup → hidden
+    const near = { lat: 34.6712, lng: 33.0420 }; // ~90 m from the pickup
+    const far = { lat: 34.6800, lng: 33.0600 };  // ~2 km away
+    // Visible only near the pickup: driver within 300 m (EN_ROUTE) or ARRIVED.
+    expect(passengerLocationForDriver(row, t0, near)).toMatchObject({ lat: 34.6707, lng: 33.0414, accuracyM: 8, ageSec: 0 });
+    expect(passengerLocationForDriver(row, t0, far)).toBeNull();
+    expect(passengerLocationForDriver(row, t0, null)).toBeNull();
+    expect(passengerLocationForDriver({ ...row, status: 'ARRIVED' }, t0, far)).not.toBeNull();
+    // Fresh only: the app sends every 2 s; > 8 s old means the app was closed → hidden.
+    expect(passengerLocationForDriver(row, new Date(t0.getTime() + 7_000), near)).not.toBeNull();
+    expect(passengerLocationForDriver(row, new Date(t0.getTime() + 9_000), near)).toBeNull();
+    expect(passengerLocationForDriver({ ...row, status: 'IN_PROGRESS' }, t0, near)).toBeNull();  // after pickup → hidden
     await clearPassengerLocation(b.id);
     expect((await prisma.booking.findUniqueOrThrow({ where: { id: b.id } })).passengerLat).toBeNull();
   });

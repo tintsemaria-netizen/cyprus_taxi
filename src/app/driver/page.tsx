@@ -106,8 +106,9 @@ function Driver() {
   const highModeRef = useRef(true);
   const retryTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const statusRef = useRef<string | null>(null);
   const load = useCallback(async () => {
-    try { setData(await api<CurrentTrip>('/driver/current-trip')); }
+    try { const d = await api<CurrentTrip>('/driver/current-trip'); statusRef.current = d.trip?.status ?? null; setData(d); }
     catch (e) { if (e instanceof ApiRequestError) setBanner(tErrRef.current(e)); }
   }, []);
   const loadDash = useCallback(async () => {
@@ -116,7 +117,17 @@ function Driver() {
 
   useEffect(() => {
     load(); loadDash();
-    const t = setInterval(() => { if (document.visibilityState === 'visible') { load(); loadDash(); } }, 5000);
+    // Trip every 2 s while heading to / waiting at the pickup (the passenger's live marker),
+    // otherwise every 5 s; the dashboard stays at 5 s.
+    let n = 0;
+    const t = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      n += 1;
+      const st = statusRef.current;
+      const fast = st === 'EN_ROUTE' || st === 'ARRIVED' || st === 'ASSIGNED';
+      if (fast || n % 5 === 0) load();
+      if (n % 5 === 0) loadDash();
+    }, 1000);
     return () => { clearInterval(t); stopGps(); };
      
   }, [load, loadDash]);

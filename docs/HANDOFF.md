@@ -1,5 +1,28 @@
 # Session handoff
 
+## 2026-11-15 — Passenger's live position for the driver: near the pickup only, every 2 s, gone when the app closes
+**Purpose:** the passenger's ACTUAL position (not the pickup point), so the driver can find someone who set a wrong pickup.
+
+**Server:**
+- `passengerLocationForDriver(b, now, driverPos)`: shown only when the booking is ARRIVED, or the driver's latest location is within `SHOW_NEAR_PICKUP_M` (300 m) of the pickup.
+- Positions older than `SHOW_MAX_AGE_MS` (now 8 s) are hidden.
+- `driverCurrentTrip` passes the driver's latest location.
+- The /tracking/location POST rate limit is raised to 45/min.
+
+**Passenger (ShareLocationToggle, opt-in as before):**
+- Sends every 2 s while visible.
+- On `visibilitychange→hidden` and `pagehide` it sends DELETE (`fetch keepalive`), so the marker disappears at once. The 8 s age is the fallback.
+
+**Driver app:** current trip is polled every 1 s while ASSIGNED / EN_ROUTE / ARRIVED (otherwise 5 s); the dashboard stays at 5 s.
+
+**Tests:**
+- passenger-location.db.test updated: near/far/ARRIVED gating; 7 s shown, 9 s hidden.
+- Playwright two-browser e2e (local), passenger sharing 60 m from the pickup:
+  - driver ~500 m away → no marker;
+  - driver drives in → marker shown;
+  - passenger page closed → marker gone after ~1 s;
+  - no errors.
+
 ## 2026-11-15 — «Оценка стоимости устарела» on order: quotes kept fresh + silent re-quote
 **Cause:** server quotes live 2 min (`QUOTE_TTL_MS`, Task 012 §6.3). A passenger who waited longer before «Заказать» got QUOTE_EXPIRED.
 

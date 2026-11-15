@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: Request) {
   const bookingId = await getTrackingBookingId();
   if (!bookingId) return Errors.unauthorized();
-  const rl = await rateLimit('pax-loc', bookingId, 30, 60);
+  const rl = await rateLimit('pax-loc', bookingId, 45, 60) // app sends every 2 s;
   if (!rl.ok) return Errors.throttled(rl.retryAfter);
   let b: { lat?: unknown; lng?: unknown; accuracyM?: unknown };
   try { b = await req.json(); } catch { return Errors.validation({ _: 'Invalid JSON body.' }); }
