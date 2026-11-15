@@ -132,12 +132,21 @@ export default function BookingApp() {
     const y = d.mids[d.index] + d.dy;
     let to = 0;
     d.mids.forEach((m, i) => { if (Math.abs(m - y) < Math.abs(d.mids[to] - y)) to = i; });
-    if (to === d.index) return;
+    reorderRoute(d.index, to);
+  }
+  // Move the point at `from` to position `to` (values move, roles stay by position).
+  function reorderRoute(from: number, to: number) {
+    if (from === to) return;
     const vals = slots.map((s) => { const v = slotGet(s); return { sel: v.sel, text: v.text }; });
-    const [moved] = vals.splice(d.index, 1);
+    const [moved] = vals.splice(from, 1);
     vals.splice(to, 0, moved);
     slots.forEach((s, i) => { const v = slotGet(s); v.setSel(vals[i].sel); v.setText(vals[i].text); });
     setAutoPickup(false);
+  }
+  // Two points: ⇅ swaps start and destination (2026-11-15). With a stop the rows are dragged by ≡.
+  function swapRoute() {
+    const a = { sel: pickup, text: pickupText }, b = { sel: dropoff, text: dropoffText };
+    setPickup(b.sel); setPickupText(b.text); setDropoff(a.sel); setDropoffText(a.text); setAutoPickup(false);
   }
   // Passenger's detected location (for centring the map + defaulting the pickup).
   const [myLoc, setMyLoc] = useState<{ lat: number; lng: number } | null>(null);
@@ -673,10 +682,8 @@ export default function BookingApp() {
           onSelect={(s, sel) => { slotGet(s).setSel(sel); if (s === 'p') setAutoPickup(false); }}
           onAddStop={() => setHasStop(true)}
           onRemoveStop={() => { setHasStop(false); setStop(null); setStopText(''); }}
-          onSwap={() => {
-            const a = { sel: pickup, text: pickupText }, b = { sel: dropoff, text: dropoffText };
-            setPickup(b.sel); setPickupText(b.text); setDropoff(a.sel); setDropoffText(a.text); setAutoPickup(false);
-          }}
+          onSwap={swapRoute}
+          onReorder={reorderRoute}
           onPickOnMap={(s) => { setEditor(null); setPicker(s === 'p' ? 'pickup' : s === 's' ? 'stop' : 'dropoff'); }}
           onClose={() => { setEditor(null); (document.activeElement as HTMLElement | null)?.blur(); }}
         />
@@ -805,7 +812,8 @@ export default function BookingApp() {
                       const anyErr = shown.map(rowErr).filter(Boolean) as string[];
                       return (
                         <div>
-                          <div className={`relative rounded-[14px] border bg-elevated px-3 ${anyErr.length ? 'border-danger' : 'border-edge-strong'}`}>
+                          <div className="flex items-center gap-1.5">
+                          <div className={`relative min-w-0 flex-1 rounded-[14px] border bg-elevated px-3 ${anyErr.length ? 'border-danger' : 'border-edge-strong'}`}>
                             {shown.length > 1 && <span aria-hidden className="absolute left-[19px] w-[2px]" style={{ top: 26, height: (shown.length - 1) * 53, background: 'rgba(200,255,70,0.45)' }} />}
                             {shown.map((slot, i) => {
                               const v = slotGet(slot);
@@ -841,7 +849,7 @@ export default function BookingApp() {
                                       className="flex h-9 w-7 shrink-0 items-center justify-center rounded-[8px] text-lg text-muted hover:text-danger">×</button>
                                   )}
                                   {slot !== 's' && shown.includes('s') && <span className="w-7 shrink-0" aria-hidden /> /* keep the map icons in one column */}
-                                  {addrOpen && (
+                                  {addrOpen && shown.length > 2 && (
                                     <button type="button" aria-label={t('booking.form.dragToReorder')}
                                       onPointerDown={(e) => onDragStart(e, i)} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}
                                       className="flex h-9 w-6 shrink-0 cursor-grab touch-none select-none items-center justify-center rounded-[8px] text-lg text-muted hover:bg-panel">≡</button>
@@ -849,6 +857,13 @@ export default function BookingApp() {
                                 </div>
                               );
                             })}
+                          </div>
+                          {shown.length === 2 && (
+                            <button type="button" onClick={swapRoute} aria-label={t('booking.route.swap')} title={t('booking.route.swap')}
+                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink hover:bg-white/5">
+                              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M8 4v15M4.5 7.5 8 4l3.5 3.5M16 20V5M12.5 16.5 16 20l3.5-3.5" /></svg>
+                            </button>
+                          )}
                           </div>
                           {anyErr.map((e) => <p key={e} className="mt-1 text-xs text-danger">{e}</p>)}
                           {addrOpen && !hasStop && (

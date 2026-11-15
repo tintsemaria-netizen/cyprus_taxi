@@ -1,5 +1,19 @@
 # Session handoff
 
+## 2026-11-15 — Two points: ⇅ swap; with a stop: drag ≡ (editor + sheet)
+- **RouteEditor:**
+  - 2 points → «+» and ⇅;
+  - 3 points (stop) → no ⇅; each row gets ≡ and is dragged with pointer capture (row height 53 px → target index by rounding); `onReorder(from, to)`.
+  - The right column is hidden when empty.
+- **Sheet:** 2 points → a ⇅ button beside the address box, no ≡; 3 points → ≡ per row, no ⇅.
+- **BookingApp:** shared `reorderRoute(from, to)` (also used by the sheet drag) and `swapRoute()`.
+- **Playwright (local):**
+  - sheet with 2 points: swap 1 / drag 0;
+  - editor with a stop: swap 0 / drag 3 / add 0;
+  - dragging the stop row up one row → [Castle, current, Marina];
+  - sheet after close: swap 0 / drag 3 with the same order;
+  - no errors.
+
 ## 2026-11-15 — Booking sheet: address box like the route editor
 - The «Откуда/Куда» labels and separate fields were removed. The sheet now shows one box: a row per point with a dot (lime ring = from, amber square = stop, lime disc = to) joined by a lime line.
 - Each row has the address (read-only; a tap opens the route editor on that row), a lime map icon («На карте»), × for the stop, and ≡ to drag-reorder.

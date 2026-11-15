@@ -29,6 +29,8 @@ interface Props {
   onAddStop: () => void;
   onRemoveStop: () => void;
   onSwap: () => void;
+  /** Move a point from one position to another (drag by ≡ when there is a stop). */
+  onReorder: (from: number, to: number) => void;
   onPickOnMap: (slot: RouteSlot) => void;
   onClose: () => void;
 }
@@ -53,6 +55,15 @@ const LIME = '#C8FF46';
 export function RouteEditor(p: Props) {
   const { t, locale } = useT();
   const [active, setActive] = useState<RouteSlot>(p.initial);
+  // With a stop (3 points) the rows are reordered by dragging ≡; with 2 points ⇅ swaps them.
+  const ROW_H = 53;
+  const [drag, setDrag] = useState<{ index: number; startY: number; dy: number } | null>(null);
+  const endDrag = () => {
+    const d = drag; setDrag(null);
+    if (!d || Math.abs(d.dy) < 8) return;
+    const to = Math.max(0, Math.min(p.rows.length - 1, Math.round(d.index + d.dy / ROW_H)));
+    p.onReorder(d.index, to);
+  };
   const inputs = useRef<Partial<Record<RouteSlot, HTMLInputElement | null>>>({});
   const [results, setResults] = useState<Result[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'none' | 'unavailable'>('idle');
@@ -159,7 +170,8 @@ export function RouteEditor(p: Props) {
           {/* connector line between the dots */}
           <span aria-hidden className="absolute left-[19px] w-[2px]" style={{ top: 26, height: (p.rows.length - 1) * 53, background: 'rgba(200,255,70,0.45)' }} />
           {p.rows.map((r, i) => (
-            <div key={r.slot} className="relative flex items-center gap-3" style={{ borderTop: i ? '1px solid rgba(255,255,255,0.08)' : undefined }}>
+            <div key={r.slot} className={`relative flex items-center gap-3 ${drag?.index === i ? 'z-20 rounded-[10px] bg-panel opacity-95' : ''}`}
+              style={{ borderTop: i ? '1px solid rgba(255,255,255,0.08)' : undefined, transform: drag?.index === i ? `translateY(${drag.dy}px)` : undefined }}>
               <span className="relative z-10 flex w-4 justify-center">{dot(r.slot)}</span>
               <input
                 ref={(el) => { inputs.current[r.slot] = el; }}
@@ -183,21 +195,28 @@ export function RouteEditor(p: Props) {
                 <button type="button" onClick={() => { p.onRemoveStop(); setActive('d'); }} aria-label={t('booking.form.removeStop')}
                   className="flex h-9 w-8 shrink-0 items-center justify-center text-[22px] text-muted hover:text-danger">×</button>
               )}
+              {p.rows.length > 2 && (
+                <button type="button" aria-label={t('booking.form.dragToReorder')}
+                  onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDrag({ index: i, startY: e.clientY, dy: 0 }); }}
+                  onPointerMove={(e) => setDrag((d) => (d ? { ...d, dy: e.clientY - d.startY } : d))}
+                  onPointerUp={endDrag} onPointerCancel={endDrag}
+                  className="flex h-9 w-7 shrink-0 cursor-grab touch-none select-none items-center justify-center rounded-[8px] text-xl text-muted">≡</button>
+              )}
             </div>
           ))}
         </div>
-        <div className="flex w-10 shrink-0 flex-col items-center justify-around">
+        {(p.canAddStop || p.rows.length === 2) && <div className="flex w-10 shrink-0 flex-col items-center justify-around">
           {p.canAddStop && (
             <button type="button" onClick={() => { p.onAddStop(); setActive('s'); }} aria-label={t('booking.form.addStop')} title={t('booking.form.addStop')}
               className="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-white/5">
               <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
             </button>
           )}
-          <button type="button" onClick={p.onSwap} aria-label={t('booking.route.swap')} title={t('booking.route.swap')}
+          {p.rows.length === 2 && <button type="button" onClick={p.onSwap} aria-label={t('booking.route.swap')} title={t('booking.route.swap')}
             className="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-white/5">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M8 4v15M4.5 7.5 8 4l3.5 3.5M16 20V5M12.5 16.5 16 20l3.5-3.5" /></svg>
-          </button>
-        </div>
+          </button>}
+        </div>}
       </div>
 
       {/* Suggestions */}
