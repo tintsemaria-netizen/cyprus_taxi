@@ -106,6 +106,13 @@ const booking: Catalog<typeof en> = {
     requestClassPrice: 'Κράτηση {vClass} · ≈ {price}',
     signInFirst: 'Θα συνδεθείτε πριν από την επιβεβαίωση.',
   },
+  route: {
+    title: 'Διαδρομή',
+    close: 'Κλείσιμο',
+    swap: 'Αντιστροφή',
+    suggestions: 'Προτάσεις',
+    km: 'χλμ',
+  },
   places: {
     stop: 'Στάση',
     stopAria: 'Διεύθυνση στάσης',

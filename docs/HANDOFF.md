@@ -1,5 +1,35 @@
 # Session handoff
 
+## 2026-11-15 — Full-screen route editor (light), recent places moved out of the sheet
+**Request:** typing an address was cramped and the suggestions took too much space. The user wanted a «Маршрут» screen like the reference app (white background) — similar but not a copy — and the recent places removed from the initial sheet.
+
+**New `src/components/booking/RouteEditor.tsx`:** light full-screen dialog (desktop: a 380 px card on the left).
+- Top bar: × close, title «Маршрут».
+- Route box: from → [stop] → to, joined by a line. Own dots: lime pickup ring, amber stop square, graphite destination with a lime core.
+- Map-pick button in the active field; × on the stop row.
+- Right column: «+» add stop (hidden when a stop exists), «⇅» swap start/destination.
+- List:
+  - empty field → home/work + recent destinations with a clock icon and distance (km from the device location or the pickup);
+  - typing → /places/search results with pin icon and distance.
+- Picking fills the field, jumps to the next empty field, or closes when the route is complete (prices show in the sheet).
+- New keys `booking.route.*` (en/ru/el).
+
+**BookingApp:**
+- The sheet's address fields are now read-only triggers (`PlacesInput.onActivate`, fired on focus and on click). A tap on a collapsed sheet expands it and moves the field, so the click alone was unreliable.
+- A hidden proxy input is focused synchronously in the tap, so iOS opens the keyboard and keeps it while focus moves into the editor.
+- The «Недавние» and home/work chips were removed from the sheet.
+- Drag ≡, «+ Добавить остановку», «На карте» and the × reset stay in the sheet.
+
+**Check:** Playwright (local, iPhone 13 + 1280 desktop):
+- the sheet has no recent chips;
+- tap «Куда» → editor with the destination focused and recent «Larnaca Airport (LCA) · 55 км»;
+- typing «Lima» → 3 results with km;
+- + adds the stop row (focused), × removes it;
+- picking a result closes the editor and shows the price (≈ 9,50 €);
+- ⇅ swaps start/destination; × closes;
+- no page errors.
+- **Not verified:** the iOS keyboard handoff on a real device.
+
 ## 2026-11-15 — ErrorFocus: every repeated attempt points at the unfixed error
 **Problem:** ErrorFocus only reacted to NEW errors. A second «Заказать» with the same missing phone did nothing (user report).
 

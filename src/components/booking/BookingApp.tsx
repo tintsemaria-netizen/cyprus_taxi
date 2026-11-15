@@ -8,6 +8,7 @@ import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { PlacesInput, Selected } from './PlacesInput';
+import { RouteEditor, type RouteSlot } from './RouteEditor';
 import AutoMapPicker from './AutoMapPicker';
 import { PassengerLoginModal } from './PassengerLoginModal';
 import { AccountMenu } from './AccountMenu';
@@ -84,6 +85,16 @@ export default function BookingApp() {
   const [stopText, setStopText] = useState('');
   const [hasStop, setHasStop] = useState(false);
   const [addrOpen, setAddrOpen] = useState(false); // «Откуда» shown once «Куда» is touched
+  // Full-screen route editor (2026-11-15): tapping an address field opens it. A hidden proxy input
+  // is focused synchronously inside the tap so iOS opens the keyboard and keeps it while focus
+  // moves to the editor's field.
+  const [editor, setEditor] = useState<RouteSlot | null>(null);
+  const proxyRef = useRef<HTMLInputElement | null>(null);
+  function openEditor(slot: RouteSlot) {
+    proxyRef.current?.focus({ preventScroll: true });
+    setAddrOpen(true);
+    setEditor(slot);
+  }
   useEffect(() => { if (dropoff || stop || hasStop) setAddrOpen(true); }, [dropoff, stop, hasStop]);
   type Slot = 'p' | 's' | 'd';
   const slots: Slot[] = hasStop ? ['p', 's', 'd'] : ['p', 'd'];
@@ -648,6 +659,28 @@ export default function BookingApp() {
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
+      <input ref={proxyRef} aria-hidden tabIndex={-1} readOnly={false} className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0" style={{ fontSize: 16 }} />
+      {editor && (
+        <RouteEditor
+          rows={slots.map((s) => { const v = slotGet(s); return { slot: s, sel: v.sel, text: v.text }; })}
+          initial={editor}
+          origin={myLoc ?? (pickup ? { lat: pickup.lat, lng: pickup.lng } : null)}
+          recent={destinations}
+          home={places.home}
+          work={places.work}
+          canAddStop={!hasStop}
+          onText={(s, x) => { slotGet(s).setText(x); if (s === 'p' && autoPickup) setAutoPickup(false); }}
+          onSelect={(s, sel) => { slotGet(s).setSel(sel); if (s === 'p') setAutoPickup(false); }}
+          onAddStop={() => setHasStop(true)}
+          onRemoveStop={() => { setHasStop(false); setStop(null); setStopText(''); }}
+          onSwap={() => {
+            const a = { sel: pickup, text: pickupText }, b = { sel: dropoff, text: dropoffText };
+            setPickup(b.sel); setPickupText(b.text); setDropoff(a.sel); setDropoffText(a.text); setAutoPickup(false);
+          }}
+          onPickOnMap={(s) => { setEditor(null); setPicker(s === 'p' ? 'pickup' : s === 's' ? 'stop' : 'dropoff'); }}
+          onClose={() => { setEditor(null); (document.activeElement as HTMLElement | null)?.blur(); }}
+        />
+      )}
       {cfgError && (
         <div className="flex items-center justify-center gap-3 bg-warn/15 border-b border-warn/30 px-3 py-1.5 text-xs sm:text-xs text-warn">
           <span>{t('booking.config.loadFailed')}</span>
@@ -782,6 +815,7 @@ export default function BookingApp() {
                                 onText={(x) => { v.setText(x); if (slot === 'p' && autoPickup) setAutoPickup(false); }}
                                 onSelect={(sel) => { v.setSel(sel); if (slot === 'p') setAutoPickup(false); }}
                                 onFocusInput={() => setAddrOpen(true)}
+                                onActivate={() => openEditor(slot)}
                                 error={slot === 'p' ? errors.pickup : slot === 'd' ? errors.dropoff : errors.stop}
                                 trailing={<button type="button" className="rounded-[8px] px-2 py-1 text-xs font-semibold text-accent hover:bg-accent/10" onClick={() => { setAddrOpen(true); setPicker(slot === 'p' ? 'pickup' : slot === 's' ? 'stop' : 'dropoff'); }}>⌖ {t('booking.form.onMap')}</button>}
                               />
@@ -801,20 +835,7 @@ export default function BookingApp() {
                       {addrOpen && !hasStop && (
                         <button type="button" className="chip hover:border-accent/50" onClick={() => setHasStop(true)}>＋ {t('booking.form.addStop')}</button>
                       )}
-                      {!dropoff && (places.home || places.work) && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {places.home && <button type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: places.home!.lat, lng: places.home!.lng, label: places.home!.label }); setDropoffText(places.home!.label); setAddrOpen(true); }}>🏠 {t('booking.form.home')}</button>}
-                          {places.work && <button type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: places.work!.lat, lng: places.work!.lng, label: places.work!.label }); setDropoffText(places.work!.label); setAddrOpen(true); }}>💼 {t('booking.form.work')}</button>}
-                        </div>
-                      )}
-                      {!dropoff && destinations.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          <span className="text-xs text-muted">{t('booking.form.recent')}</span>
-                          {destinations.map((d) => (
-                            <button key={d.label} type="button" className="chip hover:border-accent/50" onClick={() => { setDropoff({ lat: d.lat, lng: d.lng, label: d.label }); setDropoffText(d.label); setAddrOpen(true); }}>{d.label.length > 22 ? d.label.slice(0, 21) + '…' : d.label}</button>
-                          ))}
-                        </div>
-                      )}
+                      {/* Recent / home / work places now live in the route editor (2026-11-15). */}
                     </div>
 
                     <div className="mt-5">

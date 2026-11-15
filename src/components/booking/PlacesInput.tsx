@@ -16,6 +16,8 @@ interface Props {
   trailing?: React.ReactNode;
   onFocusInput?: () => void;
   autoFocus?: boolean;
+  /** Tap opens the full-screen route editor instead of typing here (2026-11-15). */
+  onActivate?: () => void;
   value: Selected | null;
   text: string;
   onText: (t: string) => void;
@@ -34,7 +36,7 @@ interface Result {
   kind?: string;
 }
 
-export function PlacesInput({ kind, value, text, onText, onSelect, error, trailing, onFocusInput, autoFocus }: Props) {
+export function PlacesInput({ kind, value, text, onText, onSelect, error, trailing, onFocusInput, autoFocus, onActivate }: Props) {
   const { t } = useT();
   const [results, setResults] = useState<Result[]>([]);
   const [open, setOpen] = useState(false);
@@ -161,7 +163,12 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
         value={text}
         onChange={(e) => handleText(e.target.value)}
         onKeyDown={onKeyDown}
-        onFocus={() => { onFocusInput?.(); if (results.length) setOpen(true); }}
+        readOnly={!!onActivate}
+        onClick={onActivate}
+        onKeyUp={(e) => { if (onActivate && (e.key === 'Enter' || e.key === ' ')) onActivate(); }}
+        // Activate on focus too: on a collapsed sheet the tap expands it and moves the field, so
+        // the click may never arrive (2026-11-15).
+        onFocus={() => { onFocusInput?.(); if (onActivate) onActivate(); else if (results.length) setOpen(true); }}
         autoComplete="off"
         role="combobox"
         aria-controls={`${inputId}-list`}

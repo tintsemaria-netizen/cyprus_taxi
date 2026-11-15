@@ -103,6 +103,13 @@ const booking = {
     requestClassPrice: 'Request {vClass} · ≈ {price}',
     signInFirst: 'You’ll sign in before confirming.',
   },
+  route: {
+    title: 'Route',
+    close: 'Close',
+    swap: 'Swap start and destination',
+    suggestions: 'Suggestions',
+    km: 'km',
+  },
   places: {
     stop: 'Stop',
     stopAria: 'Stop address',

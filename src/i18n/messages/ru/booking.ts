@@ -111,6 +111,13 @@ const booking: Catalog<typeof en> = {
     requestClassPrice: 'Заказать {vClass} · ≈ {price}',
     signInFirst: 'Перед подтверждением нужно будет войти.',
   },
+  route: {
+    title: 'Маршрут',
+    close: 'Закрыть',
+    swap: 'Поменять местами',
+    suggestions: 'Варианты',
+    km: 'км',
+  },
   places: {
     stop: 'Остановка',
     stopAria: 'Адрес остановки',
