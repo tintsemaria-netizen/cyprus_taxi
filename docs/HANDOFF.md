@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-15 — Removed the "BETA · TEST SERVICE" banner from the passenger app
+- At the user's request, the DemoBanner was removed from BookingApp and its component deleted.
+- The `auth.demoBanner` strings are left in the catalogs, unused.
+- Note: SPEC §15 asked for a conspicuous test-service banner. The user explicitly overrode that for the client version.
+
 ## 2026-11-15 — Passenger rating defaults to 5 stars
 - RateTripModal (inline on /track and the rides modal) now starts at 5 stars; positive tags are shown immediately.
 - Playwright (local): a COMPLETED ride's /track page showed 5 stars checked; no page errors.

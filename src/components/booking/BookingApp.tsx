@@ -6,7 +6,6 @@ import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { PlacesInput, Selected } from './PlacesInput';
-import { DemoBanner } from '@/components/DemoBanner';
 import AutoMapPicker from './AutoMapPicker';
 import { PassengerLoginModal } from './PassengerLoginModal';
 import { AccountMenu } from './AccountMenu';
@@ -592,7 +591,6 @@ export default function BookingApp() {
 
   return (
     <div className="relative flex h-[100dvh] flex-col overflow-hidden">
-      {cfg?.demoMode && <DemoBanner />}
       {cfgError && (
         <div className="flex items-center justify-center gap-3 bg-warn/15 border-b border-warn/30 px-3 py-1.5 text-xs sm:text-xs text-warn">
           <span>{t('booking.config.loadFailed')}</span>
