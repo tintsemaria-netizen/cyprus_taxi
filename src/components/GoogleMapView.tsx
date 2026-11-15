@@ -6,7 +6,7 @@ import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { CYPRUS_BOUNDS } from '@/lib/config';
 import type { MapMarker } from './MapView';
 import { fitKeyOf } from './mapFit';
-import { vehicleMarkerEl, orientVehicle, bearing, personMarkerEl, pickupPinEl } from './carMarker';
+import { vehicleMarkerEl, orientVehicle, bearing, personMarkerEl, pickupPinEl, navArrowEl } from './carMarker';
 import { distanceM } from '@/lib/gpsFilter';
 import { useIdleReturn } from './useIdleReturn';
 
@@ -60,6 +60,11 @@ function centerOnPoint(el: HTMLElement): HTMLElement {
 }
 
 function markerEl(mk: MapMarker): HTMLElement {
+  if (mk.kind === 'vehicle' && mk.nav) {
+    const el = navArrowEl({ moving: mk.moving, stale: mk.stale, title: mk.label });
+    el.dataset.sig = 'nav';
+    return centerOnPoint(el);
+  }
   if (mk.kind === 'vehicle') {
     const el = vehicleMarkerEl({ state: mk.self ? 'self' : mk.busy ? 'busy' : 'available', stale: mk.stale, title: mk.label || 'Your driver', tag: mk.tag });
     el.dataset.sig = `${mk.busy ? 1 : 0}|${mk.tag ?? ''}`;
@@ -200,7 +205,13 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       }
       marker.title = mk.label ?? '';
       // Re-render a vehicle whose plate tag or busy state changed (staff fleet map).
-      if (mk.kind === 'vehicle' && marker.content && (marker.content as HTMLElement).dataset.sig !== `${mk.busy ? 1 : 0}|${mk.tag ?? ''}`) marker.content = markerEl(mk);
+      const sig = mk.nav ? 'nav' : `${mk.busy ? 1 : 0}|${mk.tag ?? ''}`;
+      if (mk.kind === 'vehicle' && marker.content && (marker.content as HTMLElement).dataset.sig !== sig) {
+        marker.content = markerEl(mk);
+        if (mk.heading != null) orientVehicle(marker.content as HTMLElement, map.getHeading?.() ?? 0, mk.heading);
+      }
+      // Arrow: pulse only while standing still (toggle in place — no re-create, no animation restart).
+      if (mk.nav && marker.content) (marker.content as HTMLElement).classList.toggle('ily-moving', !!mk.moving);
       if (marker.content) (marker.content as HTMLElement).style.opacity = mk.stale ? '0.5' : '1';
       const from = posMap.current.get(mk.id) ?? { lat: mk.lat, lng: mk.lng };
       const moved = Math.abs(from.lat - mk.lat) > 1e-7 || Math.abs(from.lng - mk.lng) > 1e-7;

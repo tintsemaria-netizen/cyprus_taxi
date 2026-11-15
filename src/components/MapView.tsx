@@ -5,7 +5,7 @@ import type * as maplibregl from 'maplibre-gl';
 import { loadMaplibre } from '@/lib/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { publicMapConfig } from '@/lib/config';
-import { vehicleMarkerEl, personMarkerEl, orientVehicle, pickupPinEl } from './carMarker';
+import { vehicleMarkerEl, personMarkerEl, orientVehicle, pickupPinEl, navArrowEl } from './carMarker';
 import { useIdleReturn } from './useIdleReturn';
 import { fitKeyOf } from './mapFit';
 
@@ -24,6 +24,10 @@ export interface MapMarker {
   self?: boolean;
   /** Known direction of travel (compass degrees) for a vehicle, e.g. the route bearing. */
   heading?: number;
+  /** Draw the own vehicle as a navigation arrow (driver on an order). */
+  nav?: boolean;
+  /** Vehicle is driving (the arrow's standing-still pulse is hidden). */
+  moving?: boolean;
 }
 
 interface Props {
@@ -145,7 +149,10 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       markerObjs.current = [];
       for (const mk of markers) {
         let el: HTMLElement;
-        if (mk.kind === 'vehicle') {
+        if (mk.kind === 'vehicle' && mk.nav) {
+          el = navArrowEl({ moving: mk.moving, stale: mk.stale, title: mk.label });
+          if (mk.heading != null) orientVehicle(el, map.getBearing(), mk.heading);
+        } else if (mk.kind === 'vehicle') {
           el = vehicleMarkerEl({ state: mk.self ? 'self' : mk.busy ? 'busy' : 'available', stale: mk.stale, title: mk.label || 'Your driver', tag: mk.tag });
           el.classList.add('ily-vehicle');
           if (mk.heading != null) orientVehicle(el, map.getBearing(), mk.heading);

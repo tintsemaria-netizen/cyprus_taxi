@@ -115,6 +115,41 @@ export function vehicleMarkerEl(opts: {
   return el;
 }
 
+/**
+ * Navigation arrow (2026-11-15): the driver's OWN position while on an order. A rounded arrow in a
+ * darker IL-Y lime with a white outline, rotated like the car (same `.car svg > g` structure, so
+ * orientVehicle works unchanged). While standing still a translucent circle pulses around it; the
+ * circle disappears while driving (`ily-moving` class).
+ */
+const NAV_ARROW_CSS = `@keyframes ilyPulse{0%{transform:scale(.55);opacity:.75}70%{transform:scale(1);opacity:.18}100%{transform:scale(1);opacity:0}}
+.ily-nav-pulse{position:absolute;inset:0;border-radius:50%;background:rgba(127,166,32,.30);border:1.5px solid rgba(127,166,32,.45);animation:ilyPulse 1.8s ease-out infinite;transition:opacity .3s}
+.ily-moving .ily-nav-pulse{animation:none;opacity:0}`;
+function ensureNavArrowCss() {
+  if (typeof document === 'undefined' || document.getElementById('ily-nav-arrow-css')) return;
+  const st = document.createElement('style');
+  st.id = 'ily-nav-arrow-css';
+  st.textContent = NAV_ARROW_CSS;
+  document.head.appendChild(st);
+}
+export function navArrowEl(opts: { size?: number; moving?: boolean; stale?: boolean; title?: string } = {}): HTMLElement {
+  ensureNavArrowCss();
+  const { size = 96, moving = false, stale = false, title } = opts;
+  const el = document.createElement('div');
+  el.style.cssText = `position:relative;width:${size}px;height:${size}px;opacity:${stale ? 0.55 : 1};z-index:1000;pointer-events:none`;
+  if (moving) el.classList.add('ily-moving');
+  const arrow = Math.round(size * 0.44);
+  el.innerHTML = `<div class="ily-nav-pulse"></div>
+  <div class="car" style="position:absolute;left:50%;top:50%;width:${arrow}px;height:${Math.round(arrow * 1.1)}px;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))">
+    <svg viewBox="0 0 40 44" width="100%" height="100%" aria-hidden="true" style="overflow:visible"><g>
+      <path d="M20 5.5c1.1 0 2 .7 2.5 1.7l12.2 27.6c.9 2.1-1.1 4.2-3.3 3.5L21.3 35a4.3 4.3 0 0 0-2.6 0L8.6 38.3c-2.2.7-4.2-1.4-3.3-3.5L17.5 7.2c.5-1 1.4-1.7 2.5-1.7z" fill="#7FA620" stroke="#ffffff" stroke-width="2.6" stroke-linejoin="round"/>
+      <path d="M20 9.5 29 32" stroke="#A8D43A" stroke-width="1.4" stroke-linecap="round" opacity=".7"/>
+    </g></svg>
+  </div>`;
+  el.classList.add('ily-vehicle');
+  if (title) el.title = title;
+  return el;
+}
+
 /** Update an existing vehicle marker's heading in place (no re-create / flicker). */
 /**
  * Point a car along its direction of travel ON SCREEN (2026-11-15 fix). Marker content is drawn

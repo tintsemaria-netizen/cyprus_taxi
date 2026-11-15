@@ -115,6 +115,22 @@ export function DriverNavigation(props: {
   const progress = useMemo(() => (route && pos ? locate(route.path, cum, pos, segRef.current) : null), [route, cum, pos]);
   useEffect(() => { if (progress) segRef.current = progress.seg; }, [progress]);
 
+  // Driving vs standing still (arrow pulse): moved ≥ 10 m within the last 8 s of GPS samples.
+  const samples = useRef<{ p: LatLng; t: number }[]>([]);
+  const [moving, setMoving] = useState(false);
+  useEffect(() => {
+    if (!pos) return;
+    const now = Date.now();
+    samples.current = [...samples.current.filter((s) => now - s.t <= 8000), { p: pos, t: now }];
+    const first = samples.current[0];
+    setMoving(distM(first.p, pos) >= 10);
+  }, [pos]);
+  useEffect(() => {
+    // No new fixes for a while → the car is standing (GPS often stops reporting when still).
+    if (!moving) return;
+    const id = setTimeout(() => setMoving(false), 10000);
+    return () => clearTimeout(id);
+  }, [moving, pos]);
   // Direction of travel from movement when off the route line (or no route yet).
   const lastPosRef = useRef<LatLng | null>(null);
   useEffect(() => {
@@ -184,7 +200,8 @@ export function DriverNavigation(props: {
   const follow = following && camCenter && !waitingAtPickup ? { lat: camCenter.lat, lng: camCenter.lng, heading, zoom: 17, tilt: 45 } : null;
   const markers: MapMarker[] = [];
   // The own car points along the route/travel heading (same heading the camera uses).
-  if (pos) markers.push({ id: 'me', lat: pos.lat, lng: pos.lng, kind: 'vehicle', self: true, heading, label: t('driver.map.you') });
+  // On an order the own position is a navigation arrow (pulses while standing still).
+  if (pos) markers.push({ id: 'me', lat: pos.lat, lng: pos.lng, kind: 'vehicle', self: true, nav: true, moving, heading, label: t('driver.map.you') });
   // Only the CURRENT target is on the map (2026-11-15): on the way to / waiting at the pickup the
   // driver sees just the pickup point — not the whole trip (the map would zoom out to fit it).
   if (leg === 'pickup') markers.push({ id: 'pk', lat: trip.pickup.lat, lng: trip.pickup.lng, kind: 'pickup', label: t('driver.map.pickup') });

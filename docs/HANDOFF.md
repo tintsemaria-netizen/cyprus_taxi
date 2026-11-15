@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-15 — Driver on an order: navigation arrow with a standing-still pulse
+- New `navArrowEl` in carMarker.ts: a rounded arrow in darker IL-Y lime (#7FA620) with a white outline. It uses the same `.car svg > g` rotation as the car, so `orientVehicle` and map-rotation handling work unchanged.
+  - A translucent lime circle pulses around it (CSS keyframes injected once).
+  - The class `ily-moving` hides the pulse.
+- `MapMarker.nav` / `MapMarker.moving` (Google + MapLibre). Google toggles `ily-moving` in place (no re-create).
+- DriverNavigation: the own marker is `nav: true`. `moving` means ≥10 m in the last 8 s of GPS; it falls back to standing after 10 s without fixes. Off an order the driver home map keeps the car.
+- Playwright (local, EN_ROUTE): standing → pulse animation running; after 6 GPS moves → `ily-moving`, no animation; no errors.
+
 ## 2026-11-15 — New person marker and pickup pin
 - `personMarkerEl` redrawn from the user's reference: a man in a shirt and tie raising his hand, grey two-tone outline on a light rounded badge with a lime border, 42 px.
   - Shown only while the passenger's app is open: on their own map from live GPS; on the driver's map only when the shared position is under 60 s old (`SHOW_MAX_AGE_MS`).
