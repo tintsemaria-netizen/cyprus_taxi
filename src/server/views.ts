@@ -116,8 +116,11 @@ export async function trackingView(bookingId: string) {
   }
   const waiting = booking.status === 'ARRIVED' ? await prisma.waitingSession.findUnique({ where: { bookingId: booking.id } }) : null;
   const fareRec = booking.status === 'COMPLETED' ? await prisma.fare.findUnique({ where: { bookingId: booking.id } }) : null;
+  // Passenger's own rating of this finished ride (stars), so the finished screen can ask once.
+  const myRating = booking.status === 'COMPLETED' ? (await prisma.tripRating.findUnique({ where: { bookingId: booking.id }, select: { stars: true } }))?.stars ?? null : null;
 
   return {
+    myRating,
     reference: booking.reference,
     status: booking.status,
     revision: booking.revision,

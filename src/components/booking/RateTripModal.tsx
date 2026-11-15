@@ -12,7 +12,7 @@ import { useT } from '@/i18n/I18nProvider';
 const POSITIVE = ['clean_car', 'safe_driving', 'on_time', 'friendly', 'smooth_ride', 'great_route'] as const;
 const CONSTRUCTIVE = ['late', 'unsafe_driving', 'rude', 'dirty_car', 'wrong_route', 'hard_to_find'] as const;
 
-export function RateTripModal({ rideId, onClose, onDone }: { rideId: string; onClose: () => void; onDone: (stars: number) => void }) {
+export function RateTripModal({ rideId, onClose, onDone, postUrl, inline }: { rideId?: string; onClose?: () => void; onDone: (stars: number) => void; postUrl?: string; inline?: boolean }) {
   const { t, tp, tError } = useT();
   const [stars, setStars] = useState(0);
   const [hover, setHover] = useState(0);
@@ -38,16 +38,15 @@ export function RateTripModal({ rideId, onClose, onDone }: { rideId: string; onC
     if (stars < 1) { setErr(t('rides.rate.pickStars')); return; }
     setBusy(true); setErr(null);
     try {
-      await api(`/passenger/rides/${rideId}/rating`, { method: 'POST', body: { stars, tags, comment: comment.trim() || undefined } });
+      await api(postUrl ?? `/passenger/rides/${rideId}/rating`, { method: 'POST', body: { stars, tags, comment: comment.trim() || undefined } });
       onDone(stars);
     } catch (e) {
       setErr(tError(e));
     } finally { setBusy(false); }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={onClose}>
-      <div className="card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+  const content = (
+    <>
         <h2 className="text-lg font-bold">{t('rides.rate.title')}</h2>
         <p className="mt-1 text-sm text-muted">{t('rides.rate.subtitle')}</p>
 
@@ -97,8 +96,14 @@ export function RateTripModal({ rideId, onClose, onDone }: { rideId: string; onC
         {err && <p className="mt-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}
 
         <button className="btn-primary mt-4 w-full" disabled={busy || stars < 1} onClick={submit}>{busy ? t('rides.rate.submitting') : t('rides.rate.submit')}</button>
-        <button className="mt-2 block w-full text-center text-xs text-muted hover:text-ink" onClick={onClose}>{t('rides.rate.notNow')}</button>
-      </div>
+        {!inline && <button className="mt-2 block w-full text-center text-xs text-muted hover:text-ink" onClick={onClose}>{t('rides.rate.notNow')}</button>}
+    </>
+  );
+  // inline: the same card embedded in the finished-ride screen (no overlay, no «Не сейчас»).
+  if (inline) return <div className="rounded-[16px] border border-accent/40 bg-accent/5 p-4">{content}</div>;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={onClose}>
+      <div className="card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>{content}</div>
     </div>
   );
 }

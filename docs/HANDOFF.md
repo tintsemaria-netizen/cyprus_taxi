@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-15 — Finished ride: map on the destination + 5-star rating on the track screen
+- TrackApp: when COMPLETED, the map marker/fit is the destination (as during IN_PROGRESS), not the pickup.
+- 5-star rating right on the finished screen. `RateTripModal` gained `inline` and `postUrl` props: stars, then tags (positive for 4–5, constructive for 1–3) and an optional comment.
+- New `POST /api/v1/tracking/rating`: FULL tracking session only; rates for the booking's passenger account via `rateTrip`. `trackingView` returns `myRating`; once rated, the screen shows «Ваша оценка: ★★★★★».
+- Playwright check (local, completed test ride): the map shows the destination marker, not the pickup; rated 5★ + «Вовремя»; after reload it is still rated and the card is gone; no errors.
+
 ## 2026-11-15 — Address rows: ≡ handles on the right; × reset in the top-right
 - Drag handles moved to the right of each row (after the stop's remove ×).
 - New × (top-right of the address block, `resetRoute`) appears once the route has been touched. It clears the destination and stop, closes «Откуда» (only «Куда» left) and restores the auto-detected pickup (`autoPickupSaved`). i18n `booking.form.resetRoute`.

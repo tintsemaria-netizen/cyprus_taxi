@@ -8,6 +8,7 @@ import { ChatPanel } from '@/components/ChatPanel';
 import { NotifyToggle } from '@/components/NotifyToggle';
 import { useLiveLocation } from '@/components/useLiveLocation';
 import { ShareLocationToggle } from './ShareLocationToggle';
+import { RateTripModal } from '@/components/booking/RateTripModal';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { formatFlight } from '@/lib/flight';
@@ -18,6 +19,7 @@ interface TrackView {
   flightNumber?: string | null;
   confirmedDriver?: null | { name: string; make: string; model: string; color: string; plate: string; rating: { average: number; count: number } | null };
   reference: string;
+  myRating?: number | null;
   status: string;
   revision: number;
   scheduledAt: string | null;
@@ -211,6 +213,7 @@ export default function TrackApp() {
   // pickup (2026-11-15). Asking the browser only happens once sharing is switched on.
   const prePickup = view?.status === 'ASSIGNED' || view?.status === 'EN_ROUTE' || view?.status === 'ARRIVED';
   const [wantLoc, setWantLoc] = useState(false);
+  const [ratedNow, setRatedNow] = useState<number | null>(null); // 5-star rating left on this screen
   const myLive = useLiveLocation(view?.status !== 'IN_PROGRESS', wantLoc);
 
   // Tick the pickup-waiting timer once per second while the driver is waiting.
@@ -274,7 +277,8 @@ export default function TrackApp() {
   const markers: MapMarker[] = [];
   // Before pickup, anchor on the pickup; during the trip, anchor on the destination.
   if (view.stop && !view.stop.departedAt) markers.push({ id: 's', lat: view.stop.lat, lng: view.stop.lng, kind: 'stop', label: view.stop.label });
-  if (view.status === 'IN_PROGRESS') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
+  // During the trip and after it (2026-11-15) the map stays on the destination, not the pickup.
+  if (view.status === 'IN_PROGRESS' || view.status === 'COMPLETED') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
   else markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label });
   if (myLive && view.status !== 'IN_PROGRESS') markers.push({ id: 'me', lat: myLive.lat, lng: myLive.lng, kind: 'person', label: t('booking.youAreHere') });
   if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: t('track.yourDriver'), stale: liveLocation.freshness === 'stale' });
@@ -458,6 +462,17 @@ export default function TrackApp() {
 
                 {terminal && (
                   <div className="mt-4">
+                    {/* Rate the driver right on the finished screen (2026-11-15): 5 stars + optional tags/comment. */}
+                    {view.status === 'COMPLETED' && (
+                      (ratedNow ?? view.myRating) ? (
+                        <div className="mb-3 flex items-center justify-between rounded-[12px] border border-edge bg-elevated px-3 py-2 text-sm">
+                          <span className="text-muted">{t('rides.receipt.yourRating')}</span>
+                          <span className="text-lg text-accent">{'★'.repeat((ratedNow ?? view.myRating)!)}<span className="text-muted/40">{'★'.repeat(5 - (ratedNow ?? view.myRating)!)}</span></span>
+                        </div>
+                      ) : (
+                        <div className="mb-3"><RateTripModal inline postUrl="/tracking/rating" onDone={(s) => setRatedNow(s)} /></div>
+                      )
+                    )}
                     {view.status === 'COMPLETED' && view.receipt ? (
                       <div className="rounded-[12px] border border-edge bg-elevated p-3 text-sm">
                         <div className="mb-2 font-semibold">{t('track.receiptTitle')}</div>
