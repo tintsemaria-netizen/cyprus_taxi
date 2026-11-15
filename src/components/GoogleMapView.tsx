@@ -6,7 +6,8 @@ import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { CYPRUS_BOUNDS } from '@/lib/config';
 import type { MapMarker } from './MapView';
 import { fitKeyOf } from './mapFit';
-import { vehicleMarkerEl, setVehicleHeading, bearing, personMarkerEl } from './carMarker';
+import { vehicleMarkerEl, orientVehicle, bearing, personMarkerEl } from './carMarker';
+import { distanceM } from '@/lib/gpsFilter';
 import { useIdleReturn } from './useIdleReturn';
 
 interface Props {
@@ -62,6 +63,7 @@ function markerEl(mk: MapMarker): HTMLElement {
   if (mk.kind === 'vehicle') {
     const el = vehicleMarkerEl({ state: mk.self ? 'self' : mk.busy ? 'busy' : 'available', stale: mk.stale, title: mk.label || 'Your driver', tag: mk.tag });
     el.dataset.sig = `${mk.busy ? 1 : 0}|${mk.tag ?? ''}`;
+    el.classList.add('ily-vehicle');
     return centerOnPoint(el);
   }
   if (mk.kind === 'person') return centerOnPoint(personMarkerEl({ title: mk.label, stale: mk.stale }));
@@ -131,6 +133,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
         }
         mapRef.current = map;
         map.addListener('dragstart', () => { if (followRef.current) breakRef.current?.(); });
+        // Keep cars pointing along their travel direction while the map rotates (heading-up nav).
+        map.addListener('heading_changed', () => { const h = map.getHeading?.() ?? 0; containerRef.current?.querySelectorAll<HTMLElement>('.ily-vehicle').forEach((el) => orientVehicle(el, h)); });
         // The map may be created before its (mobile/flex) container has its final size,
         // which leaves it painting only the background. Nudge a resize + recentre when
         // the container settles and on any later size change.
@@ -183,6 +187,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       let marker = markerMap.current.get(mk.id);
       if (!marker) {
         marker = new g.marker.AdvancedMarkerElement({ map, position: { lat: mk.lat, lng: mk.lng }, content: markerEl(mk), title: mk.label, ...(mk.self ? { zIndex: 1000 } : mk.kind === 'person' ? { zIndex: 900 } : {}) });
+        if (mk.kind === 'vehicle' && mk.heading != null && marker.content) orientVehicle(marker.content as HTMLElement, map.getHeading?.() ?? 0, mk.heading);
         markerMap.current.set(mk.id, marker);
         posMap.current.set(mk.id, { lat: mk.lat, lng: mk.lng });
         continue;
@@ -197,8 +202,13 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       if (prev) { cancelAnimationFrame(prev); animMap.current.delete(mk.id); }
       if (mk.kind === 'vehicle' && moved) {
         const to = { lat: mk.lat, lng: mk.lng };
-        // Point the car in its direction of travel.
-        if (marker.content) setVehicleHeading(marker.content as HTMLElement, bearing(from, to));
+        // Point the car along its travel direction relative to the (possibly rotated) map. A known
+        // route heading wins; otherwise use the movement, ignoring GPS jitter under 4 m.
+        const mapHeading = mapRef.current?.getHeading?.() ?? 0;
+        if (marker.content) {
+          if (mk.heading != null) orientVehicle(marker.content as HTMLElement, mapHeading, mk.heading);
+          else if (distanceM(from, to) >= 4) orientVehicle(marker.content as HTMLElement, mapHeading, bearing(from, to));
+        }
         const start = performance.now();
         const dur = 900; // slightly under the ~5s sample cadence
         const m = marker;

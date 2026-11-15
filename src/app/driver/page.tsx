@@ -15,6 +15,7 @@ import { formatFlight } from '@/lib/flight';
 import { useT, MsgKey } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 import { StaffPasswordForm } from '@/components/StaffPasswordForm';
+import { RatePassengerSheet } from '@/components/driver/RatePassengerSheet';
 
 export const dynamic = 'force-dynamic';
 
@@ -239,15 +240,23 @@ function Driver() {
     try { await api(`/driver/offers/${id}/reject`, { method: 'POST' }); } catch { /* ignore */ }
     finally { setOffer(null); setOfferBusy(false); }
   }
+  // After «Завершить окончательно»: ask the driver to rate the passenger (2026-11-15).
+  const [rateFor, setRateFor] = useState<{ bookingId: string; name: string } | null>(null);
   async function tripAction(path: string, body: Record<string, unknown>, opts?: { stopGps?: boolean }) {
     if (!data?.trip) return;
-    try { await api(`/driver/bookings/${data.trip.bookingId}/${path}`, { method: 'POST', body: { expectedRevision: data.trip.revision, ...body } }); if (opts?.stopGps) stopGps(); setStartCode(''); await load(); await loadDash(); }
+    const done = data.trip;
+    try {
+      await api(`/driver/bookings/${done.bookingId}/${path}`, { method: 'POST', body: { expectedRevision: done.revision, ...body } });
+      if (path === 'complete') setRateFor({ bookingId: done.bookingId, name: done.passengerName }); // then rate the passenger
+      if (opts?.stopGps) stopGps(); setStartCode(''); await load(); await loadDash();
+    }
     catch (e) { if (e instanceof ApiRequestError) setBanner(tErrRef.current(e)); await load(); }
   }
 
 
   if (!data) return <div className="p-8 text-muted">{t('common.loading')}</div>;
   const trip = data.trip;
+  if (!trip && rateFor) return <RatePassengerSheet bookingId={rateFor.bookingId} passengerName={rateFor.name} onDone={() => setRateFor(null)} />;
   const offerSecs = offer ? Math.max(0, Math.ceil(((offer.localDeadline ?? new Date(offer.expiresAt).getTime()) - nowMs) / 1000)) : 0;
 
   // An accepted ride takes over the whole screen: navigation + the one action for the stage, no tabs.

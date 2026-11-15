@@ -1,5 +1,27 @@
 # Session handoff
 
+## 2026-11-15 — Driver navigation: car faces forward, collapsible panel, fare check before completing, driver rates passenger
+- Car orientation:
+  - `orientVehicle(el, mapHeading, bearing)` in carMarker.ts: the car rotation is the compass bearing minus the map's heading (marker content is screen-space, the nav map is heading-up).
+  - Re-applied on Google `heading_changed` and MapLibre `rotate` (class `.ily-vehicle`). `MapMarker.heading`: the own car in navigation uses the route/travel heading.
+  - Google ignores sub-4 m GPS jitter when deriving a bearing.
+- DriverNavigation layout:
+  - The info panel (ETA, target, passenger, waiting, quick buttons, chat, details) collapses to ~64 px via the handle (tap or swipe).
+  - The stage action buttons are a separate always-visible action bar below it.
+- Close-out:
+  - «Завершить поездку» opens `FarePreviewSheet`, which reads `GET /api/v1/driver/bookings/[id]/fare-preview`: estimate + pickup waiting + stop waiting = total, with a note that the meter is final for regulated rides.
+  - Only «Завершить поездку окончательно» calls complete; «Назад» returns to navigation.
+- Driver rates the passenger:
+  - After completion, `RatePassengerSheet` asks for 1–5★ plus an optional comment (`POST /api/v1/driver/bookings/[id]/rate-passenger`). New table `PassengerRating`, migration `20261115030000_passenger_rating`. Once per ride, completing driver only, COMPLETED only.
+  - Admin «Клиенты» shows ★ average (count).
+- Server code: `src/server/trip-close.ts`. Tests: `tests/trip-close.db.test.ts` (the preview equals the recorded waiting; rating rules).
+- Playwright check (local, driver andreas, booking with a stop):
+  - car rotation ≈0° on the heading-up map;
+  - the panel collapses while the action stays visible;
+  - the fare sheet appears while still IN_PROGRESS, and «окончательно» moves it to COMPLETED;
+  - rated the passenger 4★;
+  - no errors.
+
 ## 2026-11-15 — Finished ride: map on the destination + 5-star rating on the track screen
 - TrackApp: when COMPLETED, the map marker/fit is the destination (as during IN_PROGRESS), not the pickup.
 - 5-star rating right on the finished screen. `RateTripModal` gained `inline` and `postUrl` props: stars, then tags (positive for 4–5, constructive for 1–3) and an optional comment.

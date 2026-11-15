@@ -70,6 +70,7 @@ function Passengers() {
                 </span>
               </span>
               <span className="flex flex-wrap gap-1 text-xs">
+                {p.driverRating && <span className="chip !text-accent" title={t('staff.pax.driverRating', { n: p.driverRating.count })}>★ {p.driverRating.average.toFixed(1)} ({p.driverRating.count})</span>}
                 <span className="chip">{t('staff.pax.rides', { n: p.rides })}</span>
                 {p.completed > 0 && <span className="chip !text-accent">{t('staff.pax.completed', { n: p.completed })}</span>}
                 {p.canceled > 0 && <span className="chip !text-danger">{t('staff.pax.canceled', { n: p.canceled })}</span>}

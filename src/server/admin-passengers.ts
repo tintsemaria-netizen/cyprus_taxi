@@ -1,3 +1,4 @@
+import { passengerRatingSummary } from '@/server/trip-close';
 import { randomInt } from 'node:crypto';
 import { prisma } from '@/lib/db';
 
@@ -5,6 +6,8 @@ import { prisma } from '@/lib/db';
 export interface PassengerRow {
   id: string; name: string | null; phone: string | null; email: string | null; createdAt: string;
   rides: number; completed: number; canceled: number; lastRideAt: string | null; lastSeenAt: string | null;
+  /** Average of drivers' 1–5 star ratings of this passenger (2026-11-15). */
+  driverRating: { average: number; count: number } | null;
 }
 
 export async function listPassengers(q = '', limit = 200): Promise<{ total: number; passengers: PassengerRow[] }> {
@@ -26,6 +29,7 @@ export async function listPassengers(q = '', limit = 200): Promise<{ total: numb
     prisma.booking.groupBy({ by: ['passengerId'], where: { passengerId: { in: ids } }, _max: { createdAt: true } }),
     prisma.passengerSession.groupBy({ by: ['passengerId'], where: { passengerId: { in: ids } }, _max: { createdAt: true } }),
   ]) : [[], [], []];
+  const ratings = await passengerRatingSummary(ids);
   return {
     total,
     passengers: list.map((p) => {
@@ -37,6 +41,7 @@ export async function listPassengers(q = '', limit = 200): Promise<{ total: numb
         id: p.id, name: p.name, phone: p.phone, email: p.email, createdAt: p.createdAt.toISOString(),
         rides: count(), completed: count('COMPLETED'), canceled: count('CANCELED'),
         lastRideAt: lr ? lr.toISOString() : null, lastSeenAt: ls ? ls.toISOString() : null,
+        driverRating: ratings.get(p.id) ?? null,
       };
     }),
   };

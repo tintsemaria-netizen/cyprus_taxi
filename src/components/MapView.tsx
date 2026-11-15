@@ -5,7 +5,7 @@ import type * as maplibregl from 'maplibre-gl';
 import { loadMaplibre } from '@/lib/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { publicMapConfig } from '@/lib/config';
-import { vehicleMarkerEl, personMarkerEl } from './carMarker';
+import { vehicleMarkerEl, personMarkerEl, orientVehicle } from './carMarker';
 import { useIdleReturn } from './useIdleReturn';
 import { fitKeyOf } from './mapFit';
 
@@ -22,6 +22,8 @@ export interface MapMarker {
   busy?: boolean;
   /** The viewer's own car (driver app): darker colour, drawn above other cars. */
   self?: boolean;
+  /** Known direction of travel (compass degrees) for a vehicle, e.g. the route bearing. */
+  heading?: number;
 }
 
 interface Props {
@@ -110,6 +112,8 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
           console.warn('map error', e?.error?.message);
         });
         map.on('load', () => { if (!cancelled) setReady(true); });
+        // Keep cars pointing along their travel direction while the map rotates (heading-up nav).
+        map.on('rotate', () => { const b = map!.getBearing(); document.querySelectorAll<HTMLElement>('.ily-vehicle').forEach((el) => orientVehicle(el, b)); });
         map.on('dragstart', () => { if (followRef.current) breakRef.current?.(); });
         if (interactive) {
           map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'bottom-right');
@@ -141,6 +145,8 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         let el: HTMLElement;
         if (mk.kind === 'vehicle') {
           el = vehicleMarkerEl({ state: mk.self ? 'self' : mk.busy ? 'busy' : 'available', stale: mk.stale, title: mk.label || 'Your driver', tag: mk.tag });
+          el.classList.add('ily-vehicle');
+          if (mk.heading != null) orientVehicle(el, map.getBearing(), mk.heading);
         } else if (mk.kind === 'person') {
           el = personMarkerEl({ title: mk.label, stale: mk.stale });
         } else {

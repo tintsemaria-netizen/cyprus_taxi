@@ -116,6 +116,19 @@ export function vehicleMarkerEl(opts: {
 }
 
 /** Update an existing vehicle marker's heading in place (no re-create / flicker). */
+/**
+ * Point a car along its direction of travel ON SCREEN (2026-11-15 fix). Marker content is drawn
+ * in screen space, but the navigation map is rotated heading-up, so the car's rotation must be
+ * its compass bearing minus the map's own heading — otherwise it lies sideways across the road.
+ * The compass bearing is remembered on the element so map rotations can re-apply it.
+ */
+export function orientVehicle(el: HTMLElement, mapHeading: number, bearingDeg?: number): void {
+  if (bearingDeg != null && Number.isFinite(bearingDeg)) el.dataset.bearing = String(bearingDeg);
+  const b = Number(el.dataset.bearing);
+  if (!Number.isFinite(b)) return;
+  setVehicleHeading(el, ((b - mapHeading) % 360 + 360) % 360);
+}
+
 export function setVehicleHeading(el: HTMLElement, heading: number): void {
   const g = el.querySelector('.car svg > g') as SVGGElement | null;
   if (g) g.setAttribute('transform', `rotate(${heading} 20 22)`);

@@ -25,6 +25,7 @@ const staff = {
     noName: '(no name)', since: 'registered {date}', lastLogin: 'last sign-in {date}',
     rides: 'rides: {n}', completed: 'completed: {n}', canceled: 'canceled: {n}', noRides: 'No rides yet.',
     more: 'Showing the newest {n}. Use search to find others.',
+    driverRating: 'Rating of this client by drivers ({n})',
     lastLoginLabel: 'Last sign-in',
     newPwLabel: 'New temporary password (shown once):',
     newPwHint: 'Copy it with the button below, or type it exactly — including the dashes.',

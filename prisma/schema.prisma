@@ -467,6 +467,7 @@ model Booking {
   stopWaitStartedAt DateTime?
   stopDepartedAt    DateTime?
   stopWaitCents     Int?
+  passengerRating   PassengerRating?
   requestedAt    DateTime      @default(now())
   scheduledAt    DateTime?
   status         BookingStatus @default(REQUESTED)
@@ -811,4 +812,18 @@ model PreAssignment {
   @@index([bookingId])
   @@index([driverId, status, pickupAt])
   @@index([status, pickupAt])
+}
+
+// Driver's 1–5 star rating of the passenger after a completed ride (2026-11-15). One per booking.
+model PassengerRating {
+  id          String   @id @default(uuid())
+  booking     Booking  @relation(fields: [bookingId], references: [id])
+  bookingId   String   @unique
+  driverId    String
+  passengerId String?
+  stars       Int
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  @@index([passengerId])
 }

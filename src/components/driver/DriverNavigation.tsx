@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { ChatPanel } from '@/components/ChatPanel';
+import { FarePreviewSheet } from './FarePreviewSheet';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { api } from '@/lib/api-client';
 import { formatFlight } from '@/lib/flight';
@@ -52,6 +53,10 @@ export function DriverNavigation(props: {
   const [routeState, setRouteState] = useState<'loading' | 'ok' | 'unavailable'>('loading');
   const [following, setFollowing] = useState(true);
   const [details, setDetails] = useState(false);
+  // Info panel open/collapsed (2026-11-15): tap the handle or swipe it up/down.
+  const [panelOpen, setPanelOpen] = useState(true);
+  const swipeY = useRef<number | null>(null);
+  const swiped = useRef(false);
   const [ask, setAsk] = useState<'complete' | 'release' | null>(null);
   const [muted, setMuted] = useState(false);
   const [clock, setClock] = useState(0); // for the arrival time; refreshed every 15 s
@@ -167,7 +172,8 @@ export function DriverNavigation(props: {
   const camCenter = camPoint ? offsetPoint(camPoint, heading, 110) : null;
   const follow = following && camCenter && !waitingAtPickup ? { lat: camCenter.lat, lng: camCenter.lng, heading, zoom: 17, tilt: 45 } : null;
   const markers: MapMarker[] = [];
-  if (pos) markers.push({ id: 'me', lat: pos.lat, lng: pos.lng, kind: 'vehicle', self: true, label: t('driver.map.you') });
+  // The own car points along the route/travel heading (same heading the camera uses).
+  if (pos) markers.push({ id: 'me', lat: pos.lat, lng: pos.lng, kind: 'vehicle', self: true, heading, label: t('driver.map.you') });
   if (leg === 'pickup') markers.push({ id: 'pk', lat: trip.pickup.lat, lng: trip.pickup.lng, kind: 'pickup', label: t('driver.map.pickup') });
   if (stop && leg !== 'dropoff') markers.push({ id: 'st', lat: stop.lat, lng: stop.lng, kind: 'stop', label: t('driver.map.stop') });
   if (leg !== 'pickup' || !stop) markers.push({ id: 'dp', lat: trip.dropoff.lat, lng: trip.dropoff.lng, kind: 'dropoff', label: t('driver.map.destination') });
@@ -250,7 +256,14 @@ export function DriverNavigation(props: {
       </div>
 
       {/* Bottom sheet */}
-      <div className="relative z-10 max-h-[60vh] overflow-y-auto rounded-t-[18px] border-t border-edge bg-elevated px-4 pt-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}>
+      {/* Info panel: collapses to the summary line (handle tap or swipe), the action bar below stays. */}
+      <div className="relative z-10 rounded-t-[18px] border-t border-edge bg-elevated">
+        <button type="button" aria-expanded={panelOpen} aria-label={panelOpen ? t('booking.sheet.collapse') : t('booking.sheet.expand')}
+          onClick={() => { if (!swiped.current) setPanelOpen((o) => !o); swiped.current = false; }}
+          onPointerDown={(e) => { swipeY.current = e.clientY; }}
+          onPointerUp={(e) => { if (swipeY.current == null) return; const dy = e.clientY - swipeY.current; swipeY.current = null; if (Math.abs(dy) > 25) { swiped.current = true; setPanelOpen(dy < 0); } }}
+          className="flex w-full touch-none justify-center pb-1 pt-2"><span className="h-1.5 w-12 rounded-full bg-edge-strong" /></button>
+        <div className={`${panelOpen ? 'max-h-[45vh]' : 'max-h-[64px]'} overflow-y-auto px-4 pb-2 transition-[max-height] duration-300`}>
         {!gps.active && (
           <div className="mb-3 rounded-[12px] border border-warn/40 bg-warn/10 p-3 text-sm">
             <div className="font-semibold text-warn">{t('driver.navigation.gpsOffTitle')}</div>
@@ -285,26 +298,6 @@ export function DriverNavigation(props: {
         {stop && leg === 'pickup' && <div className="mt-1 text-sm"><span className="text-muted">{t('driver.stop.via')}</span> <span className="font-medium">{stop.label}</span></div>}
         {stopNode && <div className="mt-2 rounded-[12px] border border-edge bg-page p-3 text-sm">{stopNode}</div>}
 
-        {/* The one action for this stage */}
-        <div className="mt-3 space-y-2">
-          {trip.status === 'ASSIGNED' && <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => props.onTripAction('status', { to: 'EN_ROUTE' })}>{t('driver.trip.onTheWay')}</button>}
-          {trip.status === 'EN_ROUTE' && <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => props.onTripAction('arrive', {})}>{t('driver.trip.arrived')}</button>}
-          {trip.status === 'ARRIVED' && (
-            <div className="flex gap-2">
-              <input inputMode="numeric" maxLength={4} aria-label={t('driver.trip.startCodePlaceholder')} placeholder={t('driver.trip.startCodePlaceholder')} value={startCode} onChange={(e) => setStartCode(e.target.value.replace(/\D/g, '').slice(0, 4))} className="min-w-0 flex-1 rounded-[12px] border border-edge bg-page px-3 py-2.5 text-center font-mono text-lg tracking-[0.4em]" />
-              <button className="btn-primary min-h-[52px] shrink-0 px-4" disabled={startCode.length !== 4} onClick={() => props.onTripAction('start', { code: startCode })}>{t('driver.trip.startTrip')}</button>
-            </div>
-          )}
-          {leg === 'stop' && !atStop && <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => props.onTripAction('stop', { action: 'arrived' })}>{t('driver.stop.arrived')}</button>}
-          {atStop && (
-            <>
-              {!stop?.waitStartedAt && <button className="btn-ghost min-h-[48px] w-full !border-warn/60 text-base !text-warn" onClick={() => props.onTripAction('stop', { action: 'wait' })}>⏱ {t('driver.stop.startWaiting')}</button>}
-              <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => props.onTripAction('stop', { action: 'continue' })}>{t('driver.stop.continue')}</button>
-            </>
-          )}
-          {trip.status === 'IN_PROGRESS' && leg === 'dropoff' && <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => setAsk('complete')}>{t('driver.trip.completeTrip')}</button>}
-        </div>
-
         <div className="mt-2 grid grid-cols-3 gap-2">
           <a href={`tel:${trip.passengerPhone}`} className="btn-ghost !min-h-[44px] !py-2 text-sm">{t('driver.trip.call')}</a>
           <a href={externalHref} target="_blank" rel="noreferrer" className="btn-ghost !min-h-[44px] !py-2 text-sm">{t('driver.navigation.googleMaps')}</a>
@@ -323,11 +316,31 @@ export function DriverNavigation(props: {
             {['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(trip.status) && <button className="btn-ghost min-h-[44px] w-full border border-danger/40 !text-danger" onClick={() => setAsk('release')}>{t('driver.trip.release')}</button>}
           </div>
         )}
+        </div>
+      </div>
+      {/* Action bar: the one action for this stage — separate from the panel, always visible. */}
+      <div className="relative z-10 space-y-2 border-t border-edge bg-page px-4 pt-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}>
+          {trip.status === 'ASSIGNED' && <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => props.onTripAction('status', { to: 'EN_ROUTE' })}>{t('driver.trip.onTheWay')}</button>}
+          {trip.status === 'EN_ROUTE' && <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => props.onTripAction('arrive', {})}>{t('driver.trip.arrived')}</button>}
+          {trip.status === 'ARRIVED' && (
+            <div className="flex gap-2">
+              <input inputMode="numeric" maxLength={4} aria-label={t('driver.trip.startCodePlaceholder')} placeholder={t('driver.trip.startCodePlaceholder')} value={startCode} onChange={(e) => setStartCode(e.target.value.replace(/\D/g, '').slice(0, 4))} className="min-w-0 flex-1 rounded-[12px] border border-edge bg-page px-3 py-2.5 text-center font-mono text-lg tracking-[0.4em]" />
+              <button className="btn-primary min-h-[52px] shrink-0 px-4" disabled={startCode.length !== 4} onClick={() => props.onTripAction('start', { code: startCode })}>{t('driver.trip.startTrip')}</button>
+            </div>
+          )}
+          {leg === 'stop' && !atStop && <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => props.onTripAction('stop', { action: 'arrived' })}>{t('driver.stop.arrived')}</button>}
+          {atStop && (
+            <>
+              {!stop?.waitStartedAt && <button className="btn-ghost min-h-[48px] w-full !border-warn/60 text-base !text-warn" onClick={() => props.onTripAction('stop', { action: 'wait' })}>⏱ {t('driver.stop.startWaiting')}</button>}
+              <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => props.onTripAction('stop', { action: 'continue' })}>{t('driver.stop.continue')}</button>
+            </>
+          )}
+          {trip.status === 'IN_PROGRESS' && leg === 'dropoff' && <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => setAsk('complete')}>{t('driver.trip.completeTrip')}</button>}
       </div>
 
       {ask === 'complete' && (
-        <ConfirmSheet title={t('driver.trip.completeTitle')} body={t('driver.trip.completeBody', { name: trip.passengerName })} confirmLabel={t('driver.trip.completeTrip')}
-          onConfirm={() => { setAsk(null); props.onTripAction('complete', {}, { stopGps: true }); }} onCancel={() => setAsk(null)} cancelLabel={t('driver.trip.notYet')} />
+        <FarePreviewSheet bookingId={trip.bookingId} passengerName={trip.passengerName}
+          onConfirm={() => { setAsk(null); props.onTripAction('complete', {}, { stopGps: true }); }} onCancel={() => setAsk(null)} />
       )}
       {ask === 'release' && (
         <ConfirmSheet title={t('driver.trip.releaseTitle')} body={t('driver.trip.releaseBody')} confirmLabel={t('driver.trip.releaseConfirm')} danger
