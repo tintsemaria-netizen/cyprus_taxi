@@ -1,5 +1,14 @@
 # Session handoff
 
+## 2026-11-15 — ErrorFocus: every repeated attempt points at the unfixed error
+**Problem:** ErrorFocus only reacted to NEW errors. A second «Заказать» with the same missing phone did nothing (user report).
+
+**Fix:**
+- After a PROCEED press (`button[type=submit]`, `input[type=submit]`, `.btn-primary`, or a form submit), if no new error appeared within 300 ms, the first existing visible error is scrolled to the centre, its field is focused, and the field briefly shakes (`.ily-err-shake` in globals.css).
+- Other clicks keep the old behaviour (new errors only), so the page doesn't jump on unrelated taps.
+
+**Check:** Playwright (local, iPhone 13, booking without a phone): the form is scrolled back to the top before each of 3 attempts; every attempt brought the phone field into view and focused it; no errors.
+
 ## 2026-11-15 — × on the finished-ride sheet
 - TrackApp: when the ride is COMPLETED or CANCELED, a × (48 px, top-right corner of the sheet, same style as the booking reset ×) links to «/», the new-booking start.
 - New key `track.closeToStart` (en/ru/el).
