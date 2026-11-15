@@ -6,7 +6,7 @@ import { useT } from '@/i18n/I18nProvider';
 import type { Selected } from './PlacesInput';
 
 // Full-screen route editor (2026-11-15). Opens when the passenger starts typing an address.
-// A light screen so the addresses and suggestions are easy to read: the route box at the top
+// A clean full screen (app dark theme) so the addresses and suggestions are easy to read: the route box at the top
 // (from → [stop] → to, joined by a line), «+» (add a stop) and «⇅» (swap), then a compact list —
 // saved/recent places with their distance while the field is empty, search results while typing.
 // Own IL-Y design (lime dots, graphite text); not a copy of any other app.
@@ -47,9 +47,8 @@ function twoLines(label: string): [string, string] {
   return i > 0 ? [label.slice(0, i), label.slice(i + 1).trim()] : [label, ''];
 }
 
-const INK = '#16201B';
-const MUTED = '#6B7570';
-const LINE = '#E4E8E6';
+// Dark IL-Y theme (2026-11-15: the user asked to drop the white background).
+const LIME = '#C8FF46';
 
 export function RouteEditor(p: Props) {
   const { t, locale } = useT();
@@ -127,13 +126,13 @@ export function RouteEditor(p: Props) {
     : [];
 
   const dot = (slot: RouteSlot) => slot === 'p'
-    ? <span className="block h-3.5 w-3.5 rounded-full border-[3px]" style={{ borderColor: INK, background: '#C8FF46' }} />
+    ? <span className="block h-3.5 w-3.5 rounded-full border-[3px] bg-page" style={{ borderColor: LIME }} />
     : slot === 's'
-      ? <span className="block h-3 w-3 rounded-[3px]" style={{ background: '#FFC83D', border: `2px solid ${INK}` }} />
-      : <span className="block h-3.5 w-3.5 rounded-full" style={{ background: INK, boxShadow: '0 0 0 3px #C8FF46 inset' }} />;
+      ? <span className="block h-3 w-3 rounded-[3px]" style={{ background: '#FFC83D' }} />
+      : <span className="block h-3.5 w-3.5 rounded-full" style={{ background: LIME }} />;
 
   const icon = (k: 'home' | 'work' | 'recent' | 'pin') => (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke={MUTED} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" className="text-muted" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       {k === 'recent' && (<><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>)}
       {k === 'home' && (<path d="M4 11.5 12 5l8 6.5M6.5 10v8.5h11V10" />)}
       {k === 'work' && (<><rect x="4" y="8" width="16" height="11" rx="2" /><path d="M9 8V6.5A1.5 1.5 0 0 1 10.5 5h3A1.5 1.5 0 0 1 15 6.5V8" /></>)}
@@ -145,22 +144,22 @@ export function RouteEditor(p: Props) {
   const aria = (s: RouteSlot) => s === 'p' ? t('booking.places.pickupAria') : s === 's' ? t('booking.places.stopAria') : t('booking.places.destinationAria');
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col sm:inset-auto sm:bottom-4 sm:left-4 sm:top-4 sm:w-[380px] sm:overflow-hidden sm:rounded-[18px] sm:shadow-2xl" style={{ background: '#FFFFFF', color: INK, paddingTop: 'env(safe-area-inset-top)' }}
+    <div className="absolute inset-0 z-50 flex flex-col bg-page text-ink sm:inset-auto sm:bottom-4 sm:left-4 sm:top-4 sm:w-[380px] sm:overflow-hidden sm:rounded-[18px] sm:border sm:border-edge sm:shadow-2xl" style={{ paddingTop: 'env(safe-area-inset-top)' }}
       role="dialog" aria-modal="true" aria-label={t('booking.route.title')} data-testid="route-editor">
       {/* Top bar */}
       <div className="relative flex h-14 shrink-0 items-center justify-center px-3">
         <button type="button" onClick={p.onClose} aria-label={t('booking.route.close')}
-          className="absolute left-2 flex h-11 w-11 items-center justify-center rounded-full text-[30px] leading-none hover:bg-black/5" style={{ color: INK }}>×</button>
+          className="absolute left-2 flex h-11 w-11 items-center justify-center rounded-full text-[30px] leading-none text-ink hover:bg-white/5">×</button>
         <h2 className="text-lg font-bold">{t('booking.route.title')}</h2>
       </div>
 
       {/* Route box + side actions */}
       <div className="flex shrink-0 items-stretch gap-2 px-3 pb-2">
-        <div className="relative min-w-0 flex-1 rounded-[16px] border-2 px-3" style={{ borderColor: INK }}>
+        <div className="relative min-w-0 flex-1 rounded-[16px] border border-edge-strong bg-elevated px-3">
           {/* connector line between the dots */}
-          <span aria-hidden className="absolute left-[19px] w-[2px]" style={{ top: 26, height: (p.rows.length - 1) * 53, background: INK }} />
+          <span aria-hidden className="absolute left-[19px] w-[2px]" style={{ top: 26, height: (p.rows.length - 1) * 53, background: 'rgba(200,255,70,0.45)' }} />
           {p.rows.map((r, i) => (
-            <div key={r.slot} className="relative flex items-center gap-3" style={{ borderTop: i ? `1px solid ${LINE}` : undefined, marginLeft: 0 }}>
+            <div key={r.slot} className="relative flex items-center gap-3" style={{ borderTop: i ? '1px solid rgba(255,255,255,0.08)' : undefined }}>
               <span className="relative z-10 flex w-4 justify-center">{dot(r.slot)}</span>
               <input
                 ref={(el) => { inputs.current[r.slot] = el; }}
@@ -171,18 +170,18 @@ export function RouteEditor(p: Props) {
                 aria-label={aria(r.slot)}
                 autoComplete="off"
                 enterKeyHint="search"
-                className="h-[52px] min-w-0 flex-1 bg-transparent text-[17px] outline-none placeholder:text-[#9AA39E]"
-                style={{ color: INK, fontWeight: active === r.slot ? 600 : 400, outline: 'none', boxShadow: 'none', border: 0 }}
+                className="h-[52px] min-w-0 flex-1 bg-transparent text-[17px] text-ink outline-none placeholder:text-muted"
+                style={{ fontWeight: active === r.slot ? 600 : 400, outline: 'none', boxShadow: 'none', border: 0 }}
               />
               {active === r.slot && (
                 <button type="button" onClick={() => p.onPickOnMap(r.slot)} aria-label={t('booking.form.onMap')} title={t('booking.form.onMap')}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]" style={{ background: '#F1F4F2' }}>
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={INK} strokeWidth="1.9" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="6.5" /><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4" /><circle cx="12" cy="12" r="1.6" fill={INK} /></svg>
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-page text-accent">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="6.5" /><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4" /><circle cx="12" cy="12" r="1.6" fill="currentColor" /></svg>
                 </button>
               )}
               {r.slot === 's' && (
                 <button type="button" onClick={() => { p.onRemoveStop(); setActive('d'); }} aria-label={t('booking.form.removeStop')}
-                  className="flex h-9 w-8 shrink-0 items-center justify-center text-[22px]" style={{ color: MUTED }}>×</button>
+                  className="flex h-9 w-8 shrink-0 items-center justify-center text-[22px] text-muted hover:text-danger">×</button>
               )}
             </div>
           ))}
@@ -190,35 +189,35 @@ export function RouteEditor(p: Props) {
         <div className="flex w-10 shrink-0 flex-col items-center justify-around">
           {p.canAddStop && (
             <button type="button" onClick={() => { p.onAddStop(); setActive('s'); }} aria-label={t('booking.form.addStop')} title={t('booking.form.addStop')}
-              className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-black/5">
-              <svg viewBox="0 0 24 24" width="24" height="24" stroke={INK} strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
+              className="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-white/5">
+              <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
             </button>
           )}
           <button type="button" onClick={p.onSwap} aria-label={t('booking.route.swap')} title={t('booking.route.swap')}
-            className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-black/5">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke={INK} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M8 4v15M4.5 7.5 8 4l3.5 3.5M16 20V5M12.5 16.5 16 20l3.5-3.5" /></svg>
+            className="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-white/5">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M8 4v15M4.5 7.5 8 4l3.5 3.5M16 20V5M12.5 16.5 16 20l3.5-3.5" /></svg>
           </button>
         </div>
       </div>
 
       {/* Suggestions */}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-6" role="listbox" aria-label={t('booking.route.suggestions')}>
-        {status === 'loading' && <p className="px-2 py-3 text-sm" style={{ color: MUTED }}>{t('booking.places.searching')}</p>}
-        {status === 'none' && <p className="px-2 py-3 text-sm" style={{ color: MUTED }}>{t('booking.places.none')}</p>}
-        {status === 'unavailable' && <p className="px-2 py-3 text-sm text-[#9A6B00]">{t('booking.places.unavailable')}</p>}
+        {status === 'loading' && <p className="px-2 py-3 text-sm text-muted">{t('booking.places.searching')}</p>}
+        {status === 'none' && <p className="px-2 py-3 text-sm text-muted">{t('booking.places.none')}</p>}
+        {status === 'unavailable' && <p className="px-2 py-3 text-sm text-warn">{t('booking.places.unavailable')}</p>}
         {(showSaved ? saved : results).map((r, i) => {
           const [main, sub] = 'name' in r && r.name ? [r.name, r.label] : twoLines(r.label);
           const second = 'secondary' in r && r.secondary ? r.secondary : sub;
           const dist = p.origin && typeof r.lat === 'number' && typeof r.lng === 'number' ? km(p.origin, { lat: r.lat, lng: r.lng }) : null;
           return (
             <button key={`${r.label}-${i}`} type="button" role="option" aria-selected={false} onClick={() => void pick(r)}
-              className="flex w-full items-center gap-3 px-2 py-3 text-left active:bg-black/5" style={{ borderBottom: `1px solid ${LINE}` }}>
+              className="flex w-full items-center gap-3 border-b border-edge px-2 py-3 text-left hover:bg-white/5 active:bg-white/5">
               <span className="shrink-0">{icon('icon' in r ? r.icon : 'pin')}</span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[16px] font-medium" style={{ color: INK }}>{main}</span>
-                {second && <span className="block truncate text-[14px]" style={{ color: MUTED }}>{second}</span>}
+                <span className="block truncate text-[16px] font-medium text-ink">{main}</span>
+                {second && <span className="block truncate text-[14px] text-muted">{second}</span>}
               </span>
-              {dist && <span className="shrink-0 text-[14px]" style={{ color: MUTED }}>{Number(dist).toLocaleString(locale)} {t('booking.route.km')}</span>}
+              {dist && <span className="shrink-0 text-[14px] text-muted">{Number(dist).toLocaleString(locale)} {t('booking.route.km')}</span>}
             </button>
           );
         })}

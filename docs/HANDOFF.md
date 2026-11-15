@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-15 — Route editor back to the app's dark theme
+- At the user's request the white background was dropped. RouteEditor now uses the theme classes (bg-page / bg-elevated / text-ink / text-muted / border-edge).
+- Dots: lime ring (from), amber square (stop), lime disc (to). The connector line is translucent lime and the map-pick button lime.
+- Layout and behaviour unchanged.
+- Playwright (local, iPhone 13): same flow as before (open, recent with km, search, add/remove stop, pick → price, swap, close); no errors; screenshots reviewed.
+
 ## 2026-11-15 — Full-screen route editor (light), recent places moved out of the sheet
 **Request:** typing an address was cramped and the suggestions took too much space. The user wanted a «Маршрут» screen like the reference app (white background) — similar but not a copy — and the recent places removed from the initial sheet.
 
