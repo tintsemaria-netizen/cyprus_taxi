@@ -6,6 +6,7 @@ const booking = {
   },
   currentLocation: 'Current location',
   form: {
+    resetRoute: 'Clear the route',
     onMap: 'On map',
     addStop: 'Add a stop',
     removeStop: 'Remove stop',

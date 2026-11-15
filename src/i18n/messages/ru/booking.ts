@@ -9,6 +9,7 @@ const booking: Catalog<typeof en> = {
   },
   currentLocation: 'Текущее местоположение',
   form: {
+    resetRoute: 'Сбросить маршрут',
     onMap: 'На карте',
     addStop: 'Добавить остановку',
     removeStop: 'Убрать остановку',

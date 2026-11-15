@@ -93,6 +93,16 @@ export default function BookingApp() {
   // (first = from, middle = stop, last = to).
   const rowEls = useRef<(HTMLDivElement | null)[]>([]);
   const [rowDrag, setRowDrag] = useState<{ index: number; startY: number; dy: number; mids: number[] } | null>(null);
+  // × in the top-right corner: back to the initial state — only «Куда», pickup = auto location.
+  function resetRoute() {
+    setDropoff(null); setDropoffText('');
+    setStop(null); setStopText(''); setHasStop(false);
+    const saved = autoPickupSaved.current;
+    if (saved) { setPickup(saved.sel); setPickupText(saved.text); setAutoPickup(true); }
+    else { setPickup(null); setPickupText(''); setAutoPickup(false); }
+    setErrors({});
+    setAddrOpen(false);
+  }
   function onDragStart(e: React.PointerEvent, index: number) {
     e.currentTarget.setPointerCapture(e.pointerId);
     const mids = slots.map((_, i) => { const r = rowEls.current[i]?.getBoundingClientRect(); return r ? r.top + r.height / 2 : 0; });
@@ -118,6 +128,8 @@ export default function BookingApp() {
   // Passenger's detected location (for centring the map + defaulting the pickup).
   const [myLoc, setMyLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [autoPickup, setAutoPickup] = useState(false); // pickup was auto-set from geolocation
+  // The auto-detected pickup, kept so the × reset can restore it (2026-11-15).
+  const autoPickupSaved = useRef<{ sel: Selected; text: string } | null>(null);
   // Task 014: passenger account + mandatory login before booking + destination history.
   const [passenger, setPassenger] = useState<{ phone: string | null; name?: string; email?: string | null } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
@@ -198,6 +210,7 @@ export default function BookingApp() {
         setPickup({ lat, lng, label: label ?? translate('en', 'booking.currentLocation') });
         setPickupText(label ?? t('booking.currentLocation'));
         setAutoPickup(true);
+        autoPickupSaved.current = { sel: { lat, lng, label: label ?? translate('en', 'booking.currentLocation') }, text: label ?? t('booking.currentLocation') };
       },
       () => { /* denied / unavailable → keep the island view + manual selection */ },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
@@ -693,7 +706,11 @@ export default function BookingApp() {
                     {/* Addresses (2026-11-15): only «Куда» at first; touching it reveals «Откуда» (auto-filled
                         from the device) above it. Each field has «На карте» on the right; one optional stop;
                         the rows can be dragged up/down to change the order of the route. */}
-                    <div className="space-y-2">
+                    <div className="relative space-y-2">
+                      {(addrOpen || dropoff || dropoffText) && (
+                        <button type="button" aria-label={t('booking.form.resetRoute')} title={t('booking.form.resetRoute')} onClick={resetRoute}
+                          className="absolute -top-1 right-0 z-10 flex h-7 w-7 items-center justify-center rounded-full text-lg text-muted hover:bg-elevated hover:text-ink">×</button>
+                      )}
                       {(addrOpen ? slots : (['d'] as Slot[])).map((slot, i, arr) => {
                         const kind: 'From' | 'Stop' | 'To' = !addrOpen ? 'To' : i === 0 ? 'From' : i === arr.length - 1 ? 'To' : 'Stop';
                         const v = slotGet(slot);
@@ -701,11 +718,6 @@ export default function BookingApp() {
                         return (
                           <div key={slot} ref={(el) => { rowEls.current[i] = el; }} className={`flex items-end gap-1.5 ${dragging ? 'relative z-20 opacity-90' : ''}`}
                             style={dragging && rowDrag ? { transform: `translateY(${rowDrag.dy}px)` } : undefined}>
-                            {addrOpen && (
-                              <button type="button" aria-label={t('booking.form.dragToReorder')}
-                                onPointerDown={(e) => onDragStart(e, i)} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}
-                                className="mb-1 flex h-10 w-7 shrink-0 cursor-grab touch-none select-none items-center justify-center rounded-[8px] text-lg text-muted hover:bg-elevated">≡</button>
-                            )}
                             <div className="min-w-0 flex-1">
                               <PlacesInput
                                 kind={kind}
@@ -721,6 +733,11 @@ export default function BookingApp() {
                             {slot === 's' && (
                               <button type="button" aria-label={t('booking.form.removeStop')} onClick={() => { setHasStop(false); setStop(null); setStopText(''); }}
                                 className="mb-1 flex h-10 w-8 shrink-0 items-center justify-center rounded-[8px] text-lg text-muted hover:bg-elevated hover:text-danger">×</button>
+                            )}
+                            {addrOpen && (
+                              <button type="button" aria-label={t('booking.form.dragToReorder')}
+                                onPointerDown={(e) => onDragStart(e, i)} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}
+                                className="mb-1 flex h-10 w-7 shrink-0 cursor-grab touch-none select-none items-center justify-center rounded-[8px] text-lg text-muted hover:bg-elevated">≡</button>
                             )}
                           </div>
                         );

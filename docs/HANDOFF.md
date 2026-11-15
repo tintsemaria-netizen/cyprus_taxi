@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-15 — Address rows: ≡ handles on the right; × reset in the top-right
+- Drag handles moved to the right of each row (after the stop's remove ×).
+- New × (top-right of the address block, `resetRoute`) appears once the route has been touched. It clears the destination and stop, closes «Откуда» (only «Куда» left) and restores the auto-detected pickup (`autoPickupSaved`). i18n `booking.form.resetRoute`.
+- Playwright check: handle is right of the field; after × only «Куда» remains and it is empty; no errors.
+
 ## 2026-11-15 — Stop waiting priced like the taximeter
 - Owner decision: paid waiting at the stop is calculated the same way as the taximeter's waiting and added on top of the fare.
 - `meterWaitingCents(start, end)` in `src/lib/tariff.ts`: urban waiting tariff €17.00/h day (06:01–20:30) and €19.00/h night (20:31–06:00), Europe/Nicosia. Accrued per second, split at the minute boundaries, rounded once.
