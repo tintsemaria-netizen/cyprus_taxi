@@ -1,5 +1,16 @@
 # Session handoff
 
+## 2026-11-15 — Scroll to the first error after a blocked step (app-wide)
+- New `src/components/ErrorFocus.tsx`, mounted once in the root layout. On a button click or form submit it snapshots the visible error elements (`.border-danger`, `[aria-invalid=true]`, `.text-danger`, `[role=alert]`).
+- If a NEW error appears within 2.5 s, it smooth-scrolls the first one (document order) to the centre and focuses its field. This works inside nested scroll containers such as the booking sheet.
+- Ignored: buttons/links, map internals, `[data-no-error-focus]`. Live validation while typing never scrolls, because only errors appearing after a user action count.
+- BookingApp.validate also expands a collapsed mobile sheet when there are errors.
+- Playwright (local):
+  - booking with a missing phone (form scrolled to the top) → the phone field is scrolled into view and focused;
+  - /login with a wrong password → the error is in view;
+  - no errors.
+- Note: some forms disable the button until valid (e.g. /register «Продолжить»); they show no error, so there is nothing to scroll to.
+
 ## 2026-11-15 — Passenger's live position for the driver: near the pickup only, every 2 s, gone when the app closes
 **Purpose:** the passenger's ACTUAL position (not the pickup point), so the driver can find someone who set a wrong pickup.
 

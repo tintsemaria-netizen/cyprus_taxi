@@ -485,6 +485,8 @@ export default function BookingApp() {
     if (when === 'SCHEDULE' && !scheduledAt) e.scheduledAt = t('booking.validation.scheduledAt');
     if (effPax < 1 || effPax > maxPax) e.pax = tp('booking.validation.paxRange', maxPax);
     setErrors(e);
+    // Open a collapsed sheet so the highlighted field is reachable (ErrorFocus scrolls to it).
+    if (Object.keys(e).length && collapsed) setCollapsed(false);
     return Object.keys(e).length === 0;
   }
 
