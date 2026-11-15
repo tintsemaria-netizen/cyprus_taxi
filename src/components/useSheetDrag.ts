@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 // Bottom sheet over a map (2026-11-15): drag the WHOLE panel, not only the handle — same feel as
 // the passenger booking sheet. Collapsed: any vertical swipe on the panel moves it. Open: a
@@ -14,11 +14,15 @@ export function useSheetDrag(opts: {
   scrollRef?: React.RefObject<HTMLElement | null>;
 }) {
   const { open, setOpen, scrollRef } = opts;
-  const panelRef = useRef<HTMLDivElement | null>(null);
+  // Callback ref kept in state: the panel often mounts AFTER the first render (e.g. the tracking
+  // page shows a loader first). A plain ref would leave the listeners unattached (bug 2026-11-15:
+  // the passenger track sheet only moved by its handle).
+  const [panelEl, setPanelEl] = useState<HTMLDivElement | null>(null);
+  const panelRef = useCallback((el: HTMLDivElement | null) => setPanelEl(el), []);
   const [offset, setOffset] = useState<number | null>(null);
 
   useEffect(() => {
-    const el = panelRef.current;
+    const el = panelEl;
     if (!el) return;
     let s: { y: number; mode: 'drag' | 'scroll' | null; inScroll: boolean } | null = null;
     const pullUpMax = 60; // rubber-band room when lifting a collapsed panel
@@ -66,7 +70,7 @@ export function useSheetDrag(opts: {
       el.removeEventListener('touchend', onEnd);
       el.removeEventListener('touchcancel', onEnd);
     };
-  }, [open, setOpen, scrollRef]);
+  }, [open, setOpen, scrollRef, panelEl]);
 
   const style: React.CSSProperties = offset != null
     ? { transform: `translateY(${offset}px)`, transition: 'none' }

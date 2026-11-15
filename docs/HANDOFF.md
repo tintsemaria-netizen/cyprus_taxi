@@ -1,5 +1,18 @@
 # Session handoff
 
+## 2026-11-15 — Fix: passenger track sheet could only be moved by its handle
+**Cause:** `useSheetDrag` used a plain ref and attached its touch listeners in an effect keyed on `open`. TrackApp renders a loader first, so the panel mounted later and the effect never re-ran.
+- At IN_PROGRESS the auto-collapse changed `open` and attached the listeners by luck.
+- At ASSIGNED / EN_ROUTE / ARRIVED the panel only moved by its handle (user's iPhone screenshot at «Водитель на месте»).
+
+**Fix:** the panel ref is now a callback ref stored in state, and the effect depends on the element.
+
+**Check:** Playwright CDP touch (local, ARRIVED):
+- swipe down on the driver card → collapsed;
+- swipe up → open;
+- swipe down on the body at top → collapsed;
+- no errors.
+
 ## 2026-11-15 — Scroll to the first error after a blocked step (app-wide)
 - New `src/components/ErrorFocus.tsx`, mounted once in the root layout. On a button click or form submit it snapshots the visible error elements (`.border-danger`, `[aria-invalid=true]`, `.text-danger`, `[role=alert]`).
 - If a NEW error appears within 2.5 s, it smooth-scrolls the first one (document order) to the centre and focuses its field. This works inside nested scroll containers such as the booking sheet.
