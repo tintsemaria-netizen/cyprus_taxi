@@ -1,5 +1,20 @@
 # Session handoff
 
+## 2026-11-15 — Collapsed sheet with a chosen route: addresses + order button (no «Куда едем?»)
+**Collapsed peek with a route (`peekRoute` = mobile + collapsed + pickup & dropoff + form step):**
+- the eyebrow/title are hidden;
+- the route box (`data-route-box`) and the sticky «Заказать … · ≈ price» footer are shown.
+- Peak height = handle + content padding + route box + 14 px + footer (its safe-area padding excluded, since the card adds the inset).
+- Expanding brings the title back.
+
+**Bug fixed:** the sheet's `onFocusCapture` expanded the sheet for ANY focus. On Android/Chromium the handle (tabIndex 0) takes focus after a tap, so tapping the handle to collapse re-expanded it immediately. Now only an editable form field (`input:not([readonly]), textarea, select`) expands it.
+
+**Check:** Playwright (local, iPhone 13 + SE):
+- route chosen and collapsed → card 236 px, no title, route box fully visible, «Заказать Comfort · ≈ 9,50 €» visible;
+- handle tap → expanded with the title;
+- handle collapse/expand toggles both ways;
+- no errors.
+
 ## 2026-11-15 — Two points: ⇅ swap; with a stop: drag ≡ (editor + sheet)
 - **RouteEditor:**
   - 2 points → «+» and ⇅;

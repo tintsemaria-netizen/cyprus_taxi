@@ -323,14 +323,28 @@ export default function BookingApp() {
   // Collapsed peek height = up to the bottom of the «Куда» field + a margin, measured (2026-11-15):
   // a fixed 170 px cut the field off on phones without a bottom safe area, and the half-visible
   // field was then hidden entirely (useHideClipped) — the passenger could not tap it.
+  // With a complete route (2026-11-15) the collapsed sheet shows the route box (both addresses)
+  // and the order button with the price instead of «Куда едем?» — measured the same way.
+  const routeReady = !!pickup && !!dropoff;
+  const peekRoute = isMobile && collapsed && routeReady && step === 'form';
+  const footerRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const box = contentRef.current, sheet = sheetRef.current;
     if (!isMobile || !box || !sheet) return;
     const measure = () => {
       if (box.scrollTop > 0) return;
-      const inp = box.querySelector('input[readonly][aria-label]');
-      if (!inp) return;
-      const h = Math.round(inp.getBoundingClientRect().bottom - sheet.getBoundingClientRect().top + 14);
+      let h: number;
+      const routeBox = routeReady ? (box.querySelector('[data-route-box]') as HTMLElement | null) : null;
+      if (routeBox) {
+        const padTop = parseFloat(getComputedStyle(box).paddingTop) || 0;
+        const f = footerRef.current;
+        const footer = f ? f.offsetHeight - (parseFloat(getComputedStyle(f).paddingBottom) || 0) + 12 : 76;
+        h = Math.round(box.getBoundingClientRect().top - sheet.getBoundingClientRect().top + padTop + routeBox.offsetHeight + 14 + footer);
+      } else {
+        const inp = box.querySelector('input[readonly][aria-label]');
+        if (!inp) return;
+        h = Math.round(inp.getBoundingClientRect().bottom - sheet.getBoundingClientRect().top + 14);
+      }
       const next = Math.max(150, Math.min(Math.round(window.innerHeight * 0.6), h));
       setPeekPx((p) => (Math.abs(p - next) > 2 ? next : p));
     };
@@ -340,7 +354,7 @@ export default function BookingApp() {
     if (first) ro.observe(first);
     window.addEventListener('resize', measure);
     return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
-  }, [isMobile, step]);
+  }, [isMobile, step, routeReady]);
   useHideClipped(contentRef, isMobile && (collapsed || dragH != null));
   useEffect(() => {
     const el = contentRef.current;
@@ -740,7 +754,9 @@ export default function BookingApp() {
               ref={sheetRef}
               className={`card pointer-events-auto relative flex flex-col overflow-hidden sm:max-h-full ${isMobile ? 'rounded-b-none' : ''} ${isMobile && dragH == null ? 'transition-[height] duration-300 ease-out' : ''}`}
               style={isMobile ? { height: dragH != null ? `${dragH}px` : collapsed ? `calc(${peekPx}px + env(safe-area-inset-bottom))` : '100%' } : undefined}
-              onFocusCapture={() => { if (isMobile && collapsed) setCollapsed(false); }}
+              // Only a focused FORM FIELD expands a collapsed sheet. The handle itself is focusable, and
+              // its focus after a tap re-expanded the sheet right after the tap collapsed it (2026-11-15).
+              onFocusCapture={(e) => { if (isMobile && collapsed && (e.target as HTMLElement).matches('input:not([readonly]), textarea, select')) setCollapsed(false); }}
             >
               {/* Reset the route (2026-11-15): in the sheet's top-right corner, twice the old size. */}
               {step === 'form' && !collapsed && (addrOpen || dropoff || dropoffText) && (
@@ -797,8 +813,8 @@ export default function BookingApp() {
                         <div className="truncate text-xs text-muted">{soonRide.pickup} → {soonRide.dropoff}</div>
                       </button>
                     )}
-                    <p className="label">{t('booking.form.eyebrow')}</p>
-                    <h1 className="mb-4 mt-1 text-2xl font-bold">{t('booking.form.title')}</h1>
+                    {!peekRoute && <p className="label">{t('booking.form.eyebrow')}</p>}
+                    {!peekRoute && <h1 className="mb-4 mt-1 text-2xl font-bold">{t('booking.form.title')}</h1>}
 
                     {flash && <p role="status" className="mb-3 rounded-[12px] border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">{flash}</p>}
                     {banner && <p className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{banner}</p>}
@@ -813,7 +829,7 @@ export default function BookingApp() {
                       return (
                         <div>
                           <div className="flex items-center gap-1.5">
-                          <div className={`relative min-w-0 flex-1 rounded-[14px] border bg-elevated px-3 ${anyErr.length ? 'border-danger' : 'border-edge-strong'}`}>
+                          <div data-route-box className={`relative min-w-0 flex-1 rounded-[14px] border bg-elevated px-3 ${anyErr.length ? 'border-danger' : 'border-edge-strong'}`}>
                             {shown.length > 1 && <span aria-hidden className="absolute left-[19px] w-[2px]" style={{ top: 26, height: (shown.length - 1) * 53, background: 'rgba(200,255,70,0.45)' }} />}
                             {shown.map((slot, i) => {
                               const v = slotGet(slot);
@@ -1034,9 +1050,10 @@ export default function BookingApp() {
                   )
                 )}
               </div>
-              {step === 'form' && !collapsed && (
-                // Sticky call to action: always visible without scrolling the form (2026-10-01 audit).
-                <div className="border-t border-edge p-3 sm:p-4" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+              {step === 'form' && (!collapsed || peekRoute) && (
+                // Sticky call to action: always visible without scrolling the form (2026-10-01 audit);
+                // also in the collapsed sheet once the route is set (2026-11-15).
+                <div ref={footerRef} className="shrink-0 border-t border-edge p-3 sm:p-4" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
                   <button className="btn-primary w-full" onClick={toReview}>
                     {pickup && dropoff
                       ? (quote
