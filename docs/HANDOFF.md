@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-15 — × on the finished-ride sheet
+- TrackApp: when the ride is COMPLETED or CANCELED, a × (48 px, top-right corner of the sheet, same style as the booking reset ×) links to «/», the new-booking start.
+- New key `track.closeToStart` (en/ru/el).
+- Playwright (local, COMPLETED ride): × at 7 px from the corner; tap → «/» with «Куда едем?»; no errors.
+- Test helper (local only): /tmp/ui/mkdone.ts creates a completed ride. The driver must be moved to the pickup before `arriveAtPickup`.
+
 ## 2026-11-15 — iPhone keyboard pushed the header under the status bar
 **Cause:** with the keyboard open, iOS shrinks and pans the visual viewport, while the `fixed inset-0` app root stays on the layout viewport. The header ended up under the time/battery (user's screenshot).
 

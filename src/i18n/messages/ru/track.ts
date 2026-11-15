@@ -14,6 +14,7 @@ const track: Catalog<typeof en> = {
   unreachableTitle: 'Нет связи с сервером',
   unreachableBody: 'Проверьте подключение и попробуйте снова. Ваш заказ сохранён.',
   bookNewRide: 'Заказать новую поездку',
+  closeToStart: 'Закрыть',
   bookAnother: 'Заказать ещё поездку',
   yourDriver: 'Ваш водитель',
   etaApprox: '{min} (примерно)',

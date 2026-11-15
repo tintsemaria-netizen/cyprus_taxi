@@ -11,6 +11,7 @@ const track = {
   unreachableTitle: 'Can’t reach the server',
   unreachableBody: 'Check your connection and try again. Your booking is safe.',
   bookNewRide: 'Book a new ride',
+  closeToStart: 'Close',
   bookAnother: 'Book another ride',
   yourDriver: 'Your driver',
   etaApprox: '{min} (approx.)',

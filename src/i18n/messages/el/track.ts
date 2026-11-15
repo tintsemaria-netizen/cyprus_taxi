@@ -14,6 +14,7 @@ const track: Catalog<typeof en> = {
   unreachableTitle: 'Δεν υπάρχει σύνδεση με τον διακομιστή',
   unreachableBody: 'Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά. Η κράτησή σας είναι ασφαλής.',
   bookNewRide: 'Κλείστε νέα διαδρομή',
+  closeToStart: 'Κλείσιμο',
   bookAnother: 'Κλείστε άλλη διαδρομή',
   yourDriver: 'Ο οδηγός σας',
   etaApprox: '{min} (περίπου)',

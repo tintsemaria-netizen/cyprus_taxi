@@ -336,7 +336,12 @@ export default function TrackApp() {
         {/* bottom sheet */}
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end sm:block">
           <div className="pointer-events-auto w-full sm:absolute sm:bottom-4 sm:left-4 sm:w-[400px]">
-            <div ref={sheetDrag.panelRef} data-testid="track-sheet" className="card flex max-h-[78dvh] flex-col overflow-hidden sm:max-h-[calc(100dvh-7rem)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }}>
+            <div ref={sheetDrag.panelRef} data-testid="track-sheet" className="card relative flex max-h-[78dvh] flex-col overflow-hidden sm:max-h-[calc(100dvh-7rem)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }}>
+              {/* Finished ride (2026-11-15): × in the top-right corner returns to the start (new booking). */}
+              {(view.status === 'COMPLETED' || view.status === 'CANCELED') && (
+                <a href="/" aria-label={t('track.closeToStart')} title={t('track.closeToStart')}
+                  className="absolute right-1.5 top-1.5 z-20 flex h-12 w-12 items-center justify-center rounded-full text-[36px] leading-none text-muted hover:bg-page/60 hover:text-ink">×</a>
+              )}
               <button type="button" aria-expanded={sheetOpen} aria-label={sheetOpen ? t('booking.sheet.collapse') : t('booking.sheet.expand')}
                 onClick={() => { if (!sheetSwiped.current) setSheetOpen((o) => !o); sheetSwiped.current = false; }}
                 onPointerDown={(e) => { sheetSwipeY.current = e.clientY; }}
