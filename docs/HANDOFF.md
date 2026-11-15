@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-15 — New person marker and pickup pin
+- `personMarkerEl` redrawn from the user's reference: a man in a shirt and tie raising his hand, grey two-tone outline on a light rounded badge with a lime border, 42 px.
+  - Shown only while the passenger's app is open: on their own map from live GPS; on the driver's map only when the shared position is under 60 s old (`SHOW_MAX_AGE_MS`).
+  - ShareLocationToggle now re-sends the last fix every 10 s while the page is visible (heartbeat), so a passenger standing still doesn't vanish, and nothing is sent while hidden or closed.
+- New `pickupPinEl`: a needle with a round lime head (#C8FF46). The tip is the point (Google default bottom anchor; MapLibre `anchor: 'bottom'`). It is used for every `pickup` marker (passenger, driver, admin).
+- Playwright (local): booking map shows the pin and person; driver map (EN_ROUTE with fresh passenger location) shows the pin and person; no errors.
+
 ## 2026-11-15 — Driver map shows only the current target
 - DriverNavigation markers: on the way to or waiting at the pickup, only the pickup (plus own car and the opted-in passenger) is shown. Before, the destination marker was included and the map zoomed out to the whole route; the user's screenshot showed «Ожидание» framing Limassol–Larnaca.
 - Stop leg → only the stop; dropoff leg → only the destination.

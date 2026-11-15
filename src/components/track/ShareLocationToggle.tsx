@@ -22,9 +22,19 @@ export function ShareLocationToggle({ active, loc, onWantLocation }: { active: b
   }, []);
   useEffect(() => { onWantLocation(on && active); }, [on, active, onWantLocation]);
 
+  // Heartbeat: re-send the last fix every SEND_EVERY_MS while the app is open and visible, so the
+  // driver keeps seeing the passenger even when they stand still (no new GPS events). When the
+  // app is closed/hidden nothing is sent and the driver's marker disappears after 60 s.
+  const [beat, setBeat] = useState(0);
+  useEffect(() => {
+    if (!on || !active) return;
+    const id = setInterval(() => { if (document.visibilityState === 'visible') setBeat((n) => n + 1); }, SEND_EVERY_MS);
+    return () => clearInterval(id);
+  }, [on, active]);
+
   // Send while on and before pickup; stop (and delete on the server) when switched off or picked up.
   useEffect(() => {
-    if (on && active && loc && Date.now() - lastSent.current >= SEND_EVERY_MS) {
+    if (on && active && loc && document.visibilityState === 'visible' && Date.now() - lastSent.current >= SEND_EVERY_MS - 500) {
       lastSent.current = Date.now();
       wasOn.current = true;
       void api('/tracking/location', { method: 'POST', body: { lat: loc.lat, lng: loc.lng, accuracyM: Math.round(loc.accuracyM) } }).catch(() => { /* next fix retries */ });
@@ -34,7 +44,7 @@ export function ShareLocationToggle({ active, loc, onWantLocation }: { active: b
       lastSent.current = 0;
       void api('/tracking/location', { method: 'DELETE' }).catch(() => { /* worker purges anyway */ });
     }
-  }, [on, active, loc]);
+  }, [on, active, loc, beat]);
 
   if (!active) return null;
   function toggle() {

@@ -146,22 +146,53 @@ export function bearing(from: { lat: number; lng: number }, to: { lat: number; l
 }
 
 /**
- * "You are here" person marker (2026-11-15): a blue disc with a simple standing-figure pictogram
- * and a soft halo. Used for the passenger's live position on their own map and, when the
- * passenger chooses to share it, on the driver's map before pickup. Centred on its point.
+ * "You are here" person marker (2026-11-15, user-supplied style): a man in a shirt and tie raising
+ * his hand, drawn in two grey outline tones on a light rounded badge. Shown for the passenger's
+ * live position only while the app is open (own map: live GPS; driver's map: shared position
+ * younger than 60 s). Centred on its point.
  */
 export function personMarkerEl(opts: { title?: string; size?: number; stale?: boolean } = {}): HTMLElement {
-  const { title, size = 34, stale = false } = opts;
+  const { title, size = 42, stale = false } = opts;
   const el = document.createElement('div');
   el.style.cssText =
     `width:${size}px;height:${size}px;opacity:${stale ? 0.55 : 1};` +
-    'filter:drop-shadow(0 2px 3px rgba(0,0,0,0.45));z-index:900;transition:opacity .2s ease';
-  el.innerHTML = `<svg viewBox="0 0 34 34" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <circle cx="17" cy="17" r="16" fill="rgba(76,154,255,0.22)"/>
-    <circle cx="17" cy="17" r="12" fill="#4C9AFF" stroke="#ffffff" stroke-width="2.4"/>
-    <circle cx="17" cy="11.6" r="2.6" fill="#ffffff"/>
-    <path d="M13.2 22.6v-4.3q0-3.2 3.8-3.2t3.8 3.2v4.3h-1.9v3.4h-3.8v-3.4z" fill="#ffffff"/>
+    'filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));z-index:900;transition:opacity .2s ease';
+  el.innerHTML = `<svg viewBox="0 0 48 48" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="1.5" y="1.5" width="45" height="45" rx="11" fill="#F6F6F6" stroke="#C8FF46" stroke-width="2"/>
+    <g stroke-width="2.2">
+      <path d="M14.6 16.2C14.4 10.8 17.6 7.4 21.6 7.4c4.2 0 7.2 3 7 8.4" stroke="#A9A9A9"/>
+      <path d="M14.8 15.4c2.6.3 5-1.4 6.2-3.8 1.4 2.4 4.2 3.8 7.6 3.8" stroke="#A9A9A9"/>
+      <path d="M15.4 16.6v2.6c0 3.8 2.7 6.6 6.2 6.6s6.2-2.8 6.2-6.6v-2.6" stroke="#A9A9A9"/>
+      <path d="M15.3 17.4c-1.9-.2-2.6 2.9-.1 3.5M27.9 17.4c1.9-.2 2.6 2.9.1 3.5" stroke="#A9A9A9"/>
+      <path d="M18.8 25.2v3.2M24.4 25.2v3.2" stroke="#7A7A7A"/>
+      <path d="M18.8 28.4l-2.3 2.4 4.1 3 1-2.4 1 2.4 4.1-3-2.3-2.4" stroke="#7A7A7A"/>
+      <path d="M21.6 31.4l-1.8 9.6M21.6 31.4l1.8 9.6" stroke="#A9A9A9"/>
+      <path d="M16.5 30.8l-4.4 1.2C9.8 32.7 8.4 34.6 8.4 37v4M12.6 37v4" stroke="#7A7A7A"/>
+      <path d="M26.7 30.8l7-1.9V15.6M40 15.6v15.2l-6.2 3.6v6.6" stroke="#7A7A7A"/>
+      <path d="M33.4 15.6V8.7c0-1 .8-1.8 1.8-1.8h3c1 0 1.8.8 1.8 1.8v6.9z" stroke="#A9A9A9"/>
+      <path d="M35.8 7v3.6M37.8 7v3.6" stroke="#A9A9A9" stroke-width="1.7"/>
+    </g>
   </svg>`;
   if (title) el.title = title;
+  return el;
+}
+
+/**
+ * Pickup marker (2026-11-15): a pin — a thin needle with a round head in the IL-Y lime.
+ * The element's BOTTOM-CENTRE is the exact point (needle tip): Google anchors there by default;
+ * MapLibre must use anchor 'bottom'.
+ */
+export function pickupPinEl(opts: { title?: string; stale?: boolean } = {}): HTMLElement {
+  const el = document.createElement('div');
+  el.style.cssText = `width:26px;height:44px;opacity:${opts.stale ? 0.55 : 1};filter:drop-shadow(0 2px 3px rgba(0,0,0,0.5));pointer-events:auto`;
+  el.innerHTML = `<svg viewBox="0 0 26 44" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <ellipse cx="13" cy="42.6" rx="3.4" ry="1.3" fill="rgba(0,0,0,0.35)"/>
+    <path d="M13 20v22.4" stroke="#E8ECEA" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M13 20v22.4" stroke="#8A9490" stroke-width="0.8" stroke-linecap="round" transform="translate(0.6 0)"/>
+    <circle cx="13" cy="12" r="10.5" fill="#C8FF46" stroke="#0d1608" stroke-width="1.6"/>
+    <circle cx="9.6" cy="8.6" r="3" fill="#ffffff" opacity="0.55"/>
+  </svg>`;
+  el.classList.add('ily-pickup-pin');
+  if (opts.title) el.title = opts.title;
   return el;
 }

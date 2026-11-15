@@ -5,7 +5,7 @@ import type * as maplibregl from 'maplibre-gl';
 import { loadMaplibre } from '@/lib/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { publicMapConfig } from '@/lib/config';
-import { vehicleMarkerEl, personMarkerEl, orientVehicle } from './carMarker';
+import { vehicleMarkerEl, personMarkerEl, orientVehicle, pickupPinEl } from './carMarker';
 import { useIdleReturn } from './useIdleReturn';
 import { fitKeyOf } from './mapFit';
 
@@ -151,6 +151,8 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
           if (mk.heading != null) orientVehicle(el, map.getBearing(), mk.heading);
         } else if (mk.kind === 'person') {
           el = personMarkerEl({ title: mk.label, stale: mk.stale });
+        } else if (mk.kind === 'pickup') {
+          el = pickupPinEl({ title: mk.label, stale: mk.stale });
         } else {
           el = document.createElement('div');
           el.style.width = '18px';
@@ -162,7 +164,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
           el.style.opacity = mk.stale ? '0.5' : '1';
           el.title = mk.label || mk.kind;
         }
-        const marker = new maplibre.Marker({ element: el }).setLngLat([mk.lng, mk.lat]).addTo(map);
+        const marker = new maplibre.Marker({ element: el, anchor: mk.kind === 'pickup' ? 'bottom' : 'center' }).setLngLat([mk.lng, mk.lat]).addTo(map);
         if (mk.self) marker.getElement().style.zIndex = '1000';
         markerObjs.current.push(marker);
       }
