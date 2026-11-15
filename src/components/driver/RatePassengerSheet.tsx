@@ -7,7 +7,7 @@ import { useT } from '@/i18n/I18nProvider';
 // After the ride (2026-11-15): the driver rates the passenger 1–5 stars (optional comment).
 export function RatePassengerSheet({ bookingId, passengerName, onDone }: { bookingId: string; passengerName: string; onDone: () => void }) {
   const { t, tp, tError } = useT();
-  const [stars, setStars] = useState(0);
+  const [stars, setStars] = useState(5);
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);

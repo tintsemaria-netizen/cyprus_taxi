@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-15 — Driver navigation: info sheet floats over the map; separate action button; rating defaults to 5
+- DriverNavigation: the map now fills the screen. Recenter, the stage action (On my way / Arrived / start code / stop actions / Complete trip) and the info sheet are an absolute overlay at the bottom.
+- The action is a separate floating bar above the info sheet.
+- The sheet collapses by itself when the status becomes IN_PROGRESS (also starts collapsed if opened mid-trip). Handle tap/swipe toggles it manually.
+- RatePassengerSheet is preselected to 5 stars.
+- Playwright (local, iPhone 13, andreas): sheet open at ARRIVED → collapsed after the start code; actions above the sheet, map under the sheet; tap expands; complete → fare preview → rating shows 5 preselected; no page errors.
+
 ## 2026-11-15 — Passenger tracking: collapsible info sheet; close car follow during the trip
 - TrackApp sheet has a handle (tap or swipe). Collapsed shows only the pinned header (status + driver/plate); the body (route, chat, share, details) is hidden.
 - It collapses by itself when the status becomes IN_PROGRESS and re-opens on ARRIVED, COMPLETED or CANCELED.

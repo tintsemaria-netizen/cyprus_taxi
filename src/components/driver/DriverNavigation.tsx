@@ -54,7 +54,10 @@ export function DriverNavigation(props: {
   const [following, setFollowing] = useState(true);
   const [details, setDetails] = useState(false);
   // Info panel open/collapsed (2026-11-15): tap the handle or swipe it up/down.
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(trip.status !== 'IN_PROGRESS');
+  // The info panel folds itself away the moment the ride starts (manual tap/swipe still works).
+  const prevStatus = useRef(trip.status);
+  useEffect(() => { if (trip.status !== prevStatus.current) { if (trip.status === 'IN_PROGRESS') setPanelOpen(false); prevStatus.current = trip.status; } }, [trip.status]);
   const swipeY = useRef<number | null>(null);
   const swiped = useRef(false);
   const [ask, setAsk] = useState<'complete' | 'release' | null>(null);
@@ -246,24 +249,44 @@ export function DriverNavigation(props: {
       {/* Map */}
       <div className="relative min-h-0 flex-1">
         <AutoMapView markers={markers} route={routeLine} center={pos ?? target} zoom={15} interactive className="h-full w-full"
-          follow={follow} onFollowBreak={() => setFollowing(false)} idleReturnMs={4000} onIdleReturn={() => setFollowing(true)} fitPadding={{ top: 60, right: 50, bottom: 60, left: 50 }} />
+          follow={follow} onFollowBreak={() => setFollowing(false)} idleReturnMs={4000} onIdleReturn={() => setFollowing(true)} fitPadding={{ top: 60, right: 50, bottom: panelOpen ? 380 : 200, left: 50 }} />
         <div className="absolute right-3 top-3 flex flex-col gap-2">
           <button onClick={toggleMute} className="flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-lg" aria-label={muted ? t('driver.navigation.unmute') : t('driver.navigation.mute')} aria-pressed={muted}>{muted ? '🔇' : '🔊'}</button>
         </div>
-        {!following && !waitingAtPickup && pos && (
-          <button onClick={() => setFollowing(true)} className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-accent bg-page/95 px-4 py-2 text-sm font-semibold text-accent">{t('driver.navigation.recenter')}</button>
-        )}
       </div>
 
-      {/* Bottom sheet */}
-      {/* Info panel: collapses to the summary line (handle tap or swipe), the action bar below stays. */}
-      <div className="relative z-10 rounded-t-[18px] border-t border-edge bg-elevated">
+      {/* Overlay over the map: recenter, then the stage action (its own floating bar), then the info sheet. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col" data-testid="nav-overlay">
+        {!following && !waitingAtPickup && pos && (
+          <button onClick={() => setFollowing(true)} className="pointer-events-auto mx-auto mb-2 rounded-full border border-accent bg-page/95 px-4 py-2 text-sm font-semibold text-accent">{t('driver.navigation.recenter')}</button>
+        )}
+      {/* Action bar: the one action for this stage — separate, above the info sheet, always visible. */}
+      <div className="pointer-events-auto space-y-2 px-3 pb-2" data-testid="nav-actions">
+          {trip.status === 'ASSIGNED' && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('status', { to: 'EN_ROUTE' })}>{t('driver.trip.onTheWay')}</button>}
+          {trip.status === 'EN_ROUTE' && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('arrive', {})}>{t('driver.trip.arrived')}</button>}
+          {trip.status === 'ARRIVED' && (
+            <div className="flex gap-2 rounded-[14px] bg-page/95 p-2 shadow-lg">
+              <input inputMode="numeric" maxLength={4} aria-label={t('driver.trip.startCodePlaceholder')} placeholder={t('driver.trip.startCodePlaceholder')} value={startCode} onChange={(e) => setStartCode(e.target.value.replace(/\D/g, '').slice(0, 4))} className="min-w-0 flex-1 rounded-[12px] border border-edge bg-page px-3 py-2.5 text-center font-mono text-lg tracking-[0.4em]" />
+              <button className="btn-primary min-h-[52px] shrink-0 px-4" disabled={startCode.length !== 4} onClick={() => props.onTripAction('start', { code: startCode })}>{t('driver.trip.startTrip')}</button>
+            </div>
+          )}
+          {leg === 'stop' && !atStop && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('stop', { action: 'arrived' })}>{t('driver.stop.arrived')}</button>}
+          {atStop && (
+            <>
+              {!stop?.waitStartedAt && <button className="btn-ghost min-h-[48px] w-full !border-warn/60 bg-page/95 text-base !text-warn shadow-lg" onClick={() => props.onTripAction('stop', { action: 'wait' })}>⏱ {t('driver.stop.startWaiting')}</button>}
+              <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('stop', { action: 'continue' })}>{t('driver.stop.continue')}</button>
+            </>
+          )}
+          {trip.status === 'IN_PROGRESS' && leg === 'dropoff' && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => setAsk('complete')}>{t('driver.trip.completeTrip')}</button>}
+      </div>
+      {/* Info sheet: collapses to the summary line (handle tap or swipe). */}
+      <div className="pointer-events-auto rounded-t-[18px] border-t border-edge bg-elevated shadow-[0_-6px_20px_rgba(0,0,0,0.35)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} data-testid="nav-sheet">
         <button type="button" aria-expanded={panelOpen} aria-label={panelOpen ? t('booking.sheet.collapse') : t('booking.sheet.expand')}
           onClick={() => { if (!swiped.current) setPanelOpen((o) => !o); swiped.current = false; }}
           onPointerDown={(e) => { swipeY.current = e.clientY; }}
           onPointerUp={(e) => { if (swipeY.current == null) return; const dy = e.clientY - swipeY.current; swipeY.current = null; if (Math.abs(dy) > 25) { swiped.current = true; setPanelOpen(dy < 0); } }}
           className="flex w-full touch-none justify-center pb-1 pt-2"><span className="h-1.5 w-12 rounded-full bg-edge-strong" /></button>
-        <div className={`${panelOpen ? 'max-h-[45vh]' : 'max-h-[64px]'} overflow-y-auto px-4 pb-2 transition-[max-height] duration-300`}>
+        <div className={`${panelOpen ? 'max-h-[45vh] overflow-y-auto' : 'max-h-[64px] overflow-hidden'} px-4 pb-2 transition-[max-height] duration-300`}>
         {!gps.active && (
           <div className="mb-3 rounded-[12px] border border-warn/40 bg-warn/10 p-3 text-sm">
             <div className="font-semibold text-warn">{t('driver.navigation.gpsOffTitle')}</div>
@@ -318,24 +341,6 @@ export function DriverNavigation(props: {
         )}
         </div>
       </div>
-      {/* Action bar: the one action for this stage — separate from the panel, always visible. */}
-      <div className="relative z-10 space-y-2 border-t border-edge bg-page px-4 pt-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}>
-          {trip.status === 'ASSIGNED' && <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => props.onTripAction('status', { to: 'EN_ROUTE' })}>{t('driver.trip.onTheWay')}</button>}
-          {trip.status === 'EN_ROUTE' && <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => props.onTripAction('arrive', {})}>{t('driver.trip.arrived')}</button>}
-          {trip.status === 'ARRIVED' && (
-            <div className="flex gap-2">
-              <input inputMode="numeric" maxLength={4} aria-label={t('driver.trip.startCodePlaceholder')} placeholder={t('driver.trip.startCodePlaceholder')} value={startCode} onChange={(e) => setStartCode(e.target.value.replace(/\D/g, '').slice(0, 4))} className="min-w-0 flex-1 rounded-[12px] border border-edge bg-page px-3 py-2.5 text-center font-mono text-lg tracking-[0.4em]" />
-              <button className="btn-primary min-h-[52px] shrink-0 px-4" disabled={startCode.length !== 4} onClick={() => props.onTripAction('start', { code: startCode })}>{t('driver.trip.startTrip')}</button>
-            </div>
-          )}
-          {leg === 'stop' && !atStop && <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => props.onTripAction('stop', { action: 'arrived' })}>{t('driver.stop.arrived')}</button>}
-          {atStop && (
-            <>
-              {!stop?.waitStartedAt && <button className="btn-ghost min-h-[48px] w-full !border-warn/60 text-base !text-warn" onClick={() => props.onTripAction('stop', { action: 'wait' })}>⏱ {t('driver.stop.startWaiting')}</button>}
-              <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => props.onTripAction('stop', { action: 'continue' })}>{t('driver.stop.continue')}</button>
-            </>
-          )}
-          {trip.status === 'IN_PROGRESS' && leg === 'dropoff' && <button className="btn-primary min-h-[52px] w-full text-base" onClick={() => setAsk('complete')}>{t('driver.trip.completeTrip')}</button>}
       </div>
 
       {ask === 'complete' && (
