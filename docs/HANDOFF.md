@@ -1,5 +1,14 @@
 # Session handoff
 
+## 2026-11-15 — iPhone status bar overlapped the header (safe-area top)
+- The apps use `viewportFit: cover` + `statusBarStyle: black-translucent`. Installed on a notched or Dynamic Island iPhone (e.g. 16 Pro Max), page headers were drawn under the time/battery.
+- Every top header now adds `env(safe-area-inset-top)` to its top padding:
+  - PassengerTopBar, BookingApp header, StaffShell header (driver + admin), /share header;
+  - driver home top overlay: top = 64px + inset;
+  - /dispatch grid height subtracts the inset.
+- Already handled before: DriverNavigation banner and the map pickers.
+- Playwright with CDP `Emulation.setSafeAreaInsetsOverride` (top 62, 440×956, local): header padding 70–72 px; logo starts below the status-bar zone on /, /account, /track, /driver, /dispatch.
+
 ## 2026-11-15 — Multi-device UI audit + responsive fixes
 **Audit:** Playwright, 11 viewports (280 Fold, 320, 375, 390, 412, 430, 844×390 landscape phone, 768 iPad mini, 1180 iPad landscape, 1280, 1920) × 24 pages (anon, passenger, driver, admin) = 264 page renders.
 - Checks: horizontal overflow, off-screen controls, controls covered by other elements (elementFromPoint), clipped text, page errors; plus visual review of screenshots.

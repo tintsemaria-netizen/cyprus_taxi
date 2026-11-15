@@ -72,7 +72,7 @@ function Dispatch() {
   const markers: MapMarker[] = fleet.map((f) => ({ id: f.driverId, lat: f.lat, lng: f.lng, kind: 'vehicle', label: f.plate ? `${f.plate} · ${f.name}` : f.name, tag: f.plate ?? f.name, busy: !!f.booking, stale: f.freshness !== 'fresh' }));
 
   return (
-    <div className="grid h-[calc(100dvh-49px)] grid-cols-1 lg:grid-cols-[minmax(380px,460px)_1fr]">
+    <div className="grid h-[calc(100dvh-49px-env(safe-area-inset-top))] grid-cols-1 lg:grid-cols-[minmax(380px,460px)_1fr]">
       {/* Queue column */}
       <div className={`flex flex-col border-r border-edge ${tab === 'map' ? 'hidden lg:flex' : 'flex'}`}>
         <div className="border-b border-edge p-3">

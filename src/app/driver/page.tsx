@@ -335,7 +335,7 @@ function HomeSection(props: {
         fitPadding={offer && !trip ? sheetFitPadding() : undefined} />
 
       {/* Top: status + messages */}
-      <div className="pointer-events-none fixed inset-x-0 top-[64px] z-10 mx-auto flex max-w-lg flex-col items-start gap-2 px-3 pt-2">
+      <div style={{ top: 'calc(64px + env(safe-area-inset-top))' }} className="pointer-events-none fixed inset-x-0 z-10 mx-auto flex max-w-lg flex-col items-start gap-2 px-3 pt-2">
         {/* No status pill (2026-11-13): the Go online / offline button already shows the state. */}
         <div className="flex w-full items-start justify-end gap-2">
         {/* Today's recorded earnings as a figure over the map; tap → Profile › Earnings. */}
