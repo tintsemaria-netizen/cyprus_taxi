@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-16 — Driver nav: bare chat / Google Maps icons
+Removed the round plate, border and shadow around the chat and Google Maps buttons; only the icon is left (💬 40 px, Google pin 48 px). A drop-shadow keeps the icons readable on light maps. The tap targets stay 58 px. Playwright (local): positions unchanged, no errors.
+
 ## 2026-11-16 — Driver nav: map buttons raised by three button heights
 **Change:** the chat and Google Maps column now has a bottom margin of 182 px instead of 8 px, so both buttons sit 174 px (3 × 58 px) higher. Sizes and the 116 px gap between them are unchanged.
 

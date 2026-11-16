@@ -293,14 +293,14 @@ export function DriverNavigation(props: {
         {/* Bottom-right column (2026-11-15): chat two icons above Google Maps; both 20 % smaller (58 px). */}
         <div className="pointer-events-none mb-[182px] flex flex-col items-end gap-0 px-3">
           <button type="button" onClick={() => setChatOpen(true)} aria-label={t('driver.navigation.chat')} title={t('driver.navigation.chat')}
-            className="pointer-events-auto relative flex h-[58px] w-[58px] items-center justify-center rounded-full border border-edge bg-page/95 text-[30px] shadow-lg">
+            className="pointer-events-auto relative flex h-[58px] w-[58px] items-center justify-center text-[40px] [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.55))]">
             💬
             {chatUnread > 0 && <span className="absolute -right-1 -top-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-bold text-[#10191C]">{chatUnread > 9 ? '9+' : chatUnread}</span>}
           </button>
           <div className="h-[58px]" aria-hidden />
           <a href={externalHref} target="_blank" rel="noreferrer" aria-label={t('driver.navigation.googleMaps')} title={t('driver.navigation.googleMaps')}
-            className="pointer-events-auto flex h-[58px] w-[58px] items-center justify-center rounded-full border border-edge bg-white shadow-lg">
-            <svg viewBox="0 0 24 24" width="35" height="35" aria-hidden>
+            className="pointer-events-auto flex h-[58px] w-[58px] items-center justify-center [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.55))]">
+            <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden>
               <path d="M12 2.2c-3.9 0-7 3-7 6.9 0 5.1 7 12.7 7 12.7s7-7.6 7-12.7c0-3.9-3.1-6.9-7-6.9z" fill="#34A853" />
               <path d="M12 2.2c-2.2 0-4.1 1-5.4 2.5L12 10.1l5.4-5.4C16.1 3.2 14.2 2.2 12 2.2z" fill="#4285F4" />
               <path d="M6.6 4.7A6.9 6.9 0 0 0 5 9.1c0 1.3.4 2.7 1 4l6-6z" fill="#EA4335" />
