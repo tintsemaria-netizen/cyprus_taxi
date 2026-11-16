@@ -2,7 +2,7 @@
 
 import { useKeyboardViewport } from '@/components/useKeyboardViewport';
 import { PassengerTopBar } from '@/components/PassengerTopBar';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
 import { ChatPanel } from '@/components/ChatPanel';
@@ -47,11 +47,6 @@ interface TrackView {
   timeline: { type: string; at: string; status: string | null }[];
 }
 
-const TIMELINE_KEYS = new Set([
-  'CREATED', 'SCHEDULED_PROMOTED', 'RESEARCH', 'SEARCH_REPAIRED', 'REMATCH', 'OFFERED', 'OFFER_ACCEPTED', 'ASSIGNED', 'REASSIGNED',
-  'UNASSIGNED', 'ARRIVED', 'TRIP_STARTED', 'COMPLETED', 'NO_DRIVER', 'CANCELED', 'TERMINATED', 'STATUS_SEARCHING', 'STATUS_NO_DRIVER',
-  'STATUS_ASSIGNED', 'STATUS_EN_ROUTE', 'STATUS_ARRIVED', 'STATUS_IN_PROGRESS', 'STATUS_COMPLETED', 'STATUS_CANCELED',
-]);
 const STATUS_KEYS = new Set(['REQUESTED', 'SEARCHING', 'NO_DRIVER', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELED']);
 
 // Render a translated template whose {slot} placeholder is a React node (e.g. a styled span).
@@ -65,7 +60,6 @@ export default function TrackApp() {
   const [view, setView] = useState<TrackView | null>(null);
   const [phase, setPhase] = useState<'loading' | 'ready' | 'noauth' | 'error'>('loading');
   const [reconnecting, setReconnecting] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -236,6 +230,18 @@ export default function TrackApp() {
   const sheetSwiped = useRef(false);
   const sheetBodyRef = useRef<HTMLDivElement | null>(null);
   const sheetDrag = useSheetDrag({ open: sheetOpen, setOpen: setSheetOpen, scrollRef: sheetBodyRef });
+  // The map runs under the sheet: frame points in the part ABOVE it (2026-11-16), so the pulsing
+  // pickup pin sits in the middle of what the passenger actually sees while we search.
+  const [sheetEl, setSheetEl] = useState<HTMLDivElement | null>(null);
+  const [sheetH, setSheetH] = useState(0);
+  const sheetRef = useCallback((el: HTMLDivElement | null) => { sheetDrag.panelRef(el); setSheetEl(el); }, [sheetDrag.panelRef]);
+  useEffect(() => {
+    if (!sheetEl) return;
+    const ro = new ResizeObserver(() => setSheetH(Math.round(sheetEl.getBoundingClientRect().height)));
+    ro.observe(sheetEl);
+    return () => ro.disconnect();
+  }, [sheetEl]);
+  const mapPad = useMemo(() => ({ top: 72, right: 40, bottom: sheetH + 24, left: 40 }), [sheetH]);
   const prevStatus = useRef<string | null>(null);
   useEffect(() => {
     const st = view?.status ?? null;
@@ -334,6 +340,7 @@ export default function TrackApp() {
       <div className="relative flex-1">
         <div className="absolute inset-0">
           <AutoMapView markers={markers} route={routeLine.length ? routeLine : undefined} center={view.pickup} zoom={12} interactive className="h-full w-full"
+            fitPadding={mapPad} focus={view.status === 'SEARCHING' ? view.pickup : null} focusZoom={view.status === 'SEARCHING' ? 16 : undefined}
             follow={carFollow} onFollowBreak={() => setFollowCar(false)} idleReturnMs={4000} onIdleReturn={() => setFollowCar(true)} />
         </div>
 
@@ -365,7 +372,7 @@ export default function TrackApp() {
               </div>
             )}
             {shareMsg && <p role="status" className="absolute bottom-full left-3 mb-3 rounded-full bg-page/95 px-3 py-1.5 text-xs text-muted shadow">{shareMsg}</p>}
-            <div ref={sheetDrag.panelRef} data-testid="track-sheet" className="card relative flex max-h-[78dvh] flex-col overflow-hidden sm:max-h-[calc(100dvh-7rem)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }}>
+            <div ref={sheetRef} data-testid="track-sheet" className="card relative flex max-h-[78dvh] flex-col overflow-hidden sm:max-h-[calc(100dvh-7rem)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }}>
               {/* Finished ride (2026-11-15): × in the top-right corner returns to the start (new booking). */}
               {(view.status === 'COMPLETED' || view.status === 'CANCELED') && (
                 <a href="/" aria-label={t('track.closeToStart')} title={t('track.closeToStart')}
@@ -485,24 +492,6 @@ export default function TrackApp() {
                     )}
                     {view.vehicle && (
                       <ChatPanel listUrl="/tracking/messages" postUrl="/tracking/messages" pushUrl="/tracking/push" me="PASSENGER" peerLabel="driver" />
-                    )}
-                    <button className="w-full text-sm text-muted hover:text-ink" onClick={() => setShowDetails((s) => !s)}>
-                      {showDetails ? t('track.hideDetails') : t('track.showDetails')}
-                    </button>
-                    {showDetails && (
-                      <div className="rounded-[12px] border border-edge bg-elevated p-3 text-xs text-muted">
-                        <div>{rich(t('track.reference', { ref: SLOT }), <span className="font-mono text-ink">{view.reference}</span>)}</div>
-                        <div className="mt-1">{t('track.classLine', { vClass: view.vClass === 'COMFORT' || view.vClass === 'XL' ? t(`common.vClass.${view.vClass}`) : view.vClass, passengers: tp('common.passengers', view.passengerCount) })}</div>
-                        <div className="mt-1">{t('track.fareLine', { fare: view.fareCents != null ? t('track.fareMetered', { amount: fmt.money(view.fareCents) }) : view.fareWording })}</div>
-                        <ul className="mt-2 space-y-1">
-                          {view.timeline.map((ev, i) => (
-                            <li key={i}>{t('track.timelineEntry', {
-                              event: TIMELINE_KEYS.has(ev.type) ? t(`track.timeline.${ev.type}` as MsgKey) : ev.type.replace(/_/g, ' ').toLowerCase(),
-                              time: fmt.time(ev.at),
-                            })}</li>
-                          ))}
-                        </ul>
-                      </div>
                     )}
                     {view.canRetry && (
                       <button className="btn-primary w-full" onClick={retry} disabled={retrying}>

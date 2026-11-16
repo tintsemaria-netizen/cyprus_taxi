@@ -189,8 +189,9 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         const b = new maplibre.LngLatBounds();
         markers.forEach((m) => b.extend([m.lng, m.lat]));
         map.fitBounds(b, { padding: fitPadding ?? 70, maxZoom: 12, duration: 400 });
-      } else if (markers.length === 1) {
-        map.easeTo({ center: [markers[0].lng, markers[0].lat], zoom: 12, duration: 400 });
+      } else if (markers.length === 1 && !focus) {
+        // A focus point owns the camera when given (it runs first; this async fit must not undo it).
+        map.easeTo({ center: [markers[0].lng, markers[0].lat], zoom: 12, duration: 400, ...(fitPadding ? { padding: fitPadding } : {}) });
       }
     })();
     // fitPadding is layout-only: re-fitting when it changes identity would fight the user's panning.
@@ -217,12 +218,15 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
 
   // Zoom to a focus point (e.g. the passenger's detected location), once per change.
   const focusKey = focus ? `${focus.lat.toFixed(5)},${focus.lng.toFixed(5)}` : '';
+  // Re-centre when the visible area changes (e.g. the sheet under the map grew or shrank).
+  const padKey = fitPadding ? `${fitPadding.top},${fitPadding.right},${fitPadding.bottom},${fitPadding.left}` : '';
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready || !focus || followRef.current || idle.active.current) return;
-    map.easeTo({ center: [focus.lng, focus.lat], zoom: focusZoom, duration: 500 });
+    // Centre in the visible area (between overlays / above a sheet) — fitPadding, 2026-11-16.
+    map.easeTo({ center: [focus.lng, focus.lat], zoom: focusZoom, duration: 500, ...(fitPadding ? { padding: fitPadding } : {}) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusKey, ready, idle.returnTick]);
+  }, [focusKey, ready, idle.returnTick, padKey]);
 
   const followKey = follow ? `${follow.lat.toFixed(6)},${follow.lng.toFixed(6)},${Math.round(follow.heading)},${follow.zoom ?? 17},${follow.tilt ?? 45}` : '';
   useEffect(() => {

@@ -287,6 +287,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   // Zoom to a focus point (the passenger's detected location) once it resolves, unless a
   // full 2-stop route is already framed.
   const focusKey = focus ? `${focus.lat.toFixed(5)},${focus.lng.toFixed(5)}` : '';
+  // Re-centre when the visible area changes (e.g. the sheet under the map grew or shrank).
+  const padKey = fitPadding ? `${fitPadding.top},${fitPadding.right},${fitPadding.bottom},${fitPadding.left}` : '';
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
     if (!map || !g || !ready || !focus || markers.length >= 2 || followRef.current || idle.active.current) return;
@@ -294,7 +296,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     if (focusZoom != null) centerPointAt(map, focus.lat, focus.lng, fpad, focusZoom);
     else framePoint(map, g, focus.lat, focus.lng, fpad);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusKey, ready, idle.returnTick]);
+  }, [focusKey, ready, idle.returnTick, padKey]);
 
   // Navigation camera: ease centre + heading toward the latest fix (shortest way round).
   const followKey = follow ? `${follow.lat.toFixed(6)},${follow.lng.toFixed(6)},${Math.round(follow.heading)},${follow.zoom ?? 17},${follow.tilt ?? 45}` : '';

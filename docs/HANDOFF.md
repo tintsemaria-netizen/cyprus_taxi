@@ -1,5 +1,19 @@
 # Session handoff
 
+## 2026-11-16 — Tracking: trip details removed; searching pin centred above the sheet
+**Details removed:** the «Показать/Скрыть детали» box (reference, class, «≈» fare, timeline) is gone from the tracking sheet, along with the unused `TIMELINE_KEYS`.
+
+**Pin centring:** the map runs under the sheet.
+- TrackApp measures the sheet with a ResizeObserver and passes `fitPadding` = { top 72, sides 40, bottom sheetH + 24 }.
+- While SEARCHING it also passes focus = pickup at focusZoom 16, so the pulsing pin sits in the middle of the visible map.
+
+**Map views:**
+- Google and MapView focus effects re-centre when the padding changes (`padKey`).
+- MapView focus now uses the padding.
+- MapView's async single-marker fit no longer overrides a focus point; it was undoing the centring.
+
+**Check:** Playwright (local MapLibre), searching ride: pin y183 vs visible-area middle y181 (sheet top 302); no «детали»; no errors.
+
 ## 2026-11-16 — Review: no «Когда: Сейчас» and no «Стоимость» rows
 **Review screen:**
 - The «Когда» row is shown only for a scheduled ride.
