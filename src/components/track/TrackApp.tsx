@@ -183,6 +183,15 @@ export default function TrackApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeKey]);
 
+  // Optional trip-start code (2026-11-16): off by default, the passenger switches it on/off here.
+  const [codeBusy, setCodeBusy] = useState(false);
+  async function toggleStartCode(enabled: boolean) {
+    setCodeBusy(true); setActionError(null);
+    try { await api('/tracking/start-code', { method: 'POST', body: { enabled } }); await load(); }
+    catch (e) { setActionError(e instanceof ApiRequestError ? tError(e) : t('track.startCodeFailed')); }
+    finally { setCodeBusy(false); }
+  }
+
   async function cancel() {
     if (!view) return;
     setCancelling(true); setActionError(null);
@@ -412,11 +421,24 @@ export default function TrackApp() {
                   </div>
                 ) : null /* searching: the pulsing pin on the map says it — no «Закрепляем…» box (2026-11-15) */}
 
-                {/* start code — shown to the driver at pickup */}
-                {view.startCode && (
-                  <div className="mt-3 flex items-center justify-between gap-3 rounded-[12px] border border-accent/50 bg-accent/10 px-3 py-2">
-                    <div className="text-xs text-muted">{t('track.startCodeHint')}</div>
-                    <div className="font-mono text-2xl font-bold tracking-[0.3em] text-accent" aria-label={t('track.startCodeAria', { code: view.startCode.split('').join(' ') })}>{view.startCode}</div>
+                {/* Optional start code (2026-11-16): a switch once a car is on its way; when on, the code
+                    to tell the driver. Off = the driver starts the trip without a code. */}
+                {['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(view.status) && (
+                  <div className={`mt-3 rounded-[12px] border px-3 py-2 ${view.startCode ? 'border-accent/50 bg-accent/10' : 'border-edge'}`}>
+                    <label className="flex cursor-pointer items-center justify-between gap-3">
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold">🔒 {t('track.startCodeToggle')}</span>
+                        <span className="block text-xs text-muted">{view.startCode ? t('track.startCodeHint') : t('track.startCodeToggleHint')}</span>
+                      </span>
+                      <input type="checkbox" role="switch" className="peer sr-only" checked={!!view.startCode} disabled={codeBusy}
+                        onChange={(e) => toggleStartCode(e.target.checked)} data-testid="start-code-switch" />
+                      <span aria-hidden className={`relative h-7 w-12 shrink-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent ${view.startCode ? 'bg-accent' : 'bg-edge'} ${codeBusy ? 'opacity-60' : ''}`}>
+                        <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${view.startCode ? 'left-[22px]' : 'left-0.5'}`} />
+                      </span>
+                    </label>
+                    {view.startCode && (
+                      <div className="mt-1 text-center font-mono text-3xl font-bold tracking-[0.3em] text-accent" aria-label={t('track.startCodeAria', { code: view.startCode.split('').join(' ') })}>{view.startCode}</div>
+                    )}
                   </div>
                 )}
               </div>

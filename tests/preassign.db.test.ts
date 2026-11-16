@@ -140,7 +140,7 @@ describe('conversion near pickup', () => {
     expect(r.converted).toBe(1);
     const after = (await prisma.booking.findUnique({ where: { id: b.id } }))!;
     expect(after.status).toBe('ASSIGNED');
-    expect(after.startCode).toMatch(/^\d{4}$/);
+    expect(after.startCode).toBeNull(); // optional since 2026-11-16 — the passenger switches it on
     expect((await prisma.assignment.findFirst({ where: { activeBookingId: b.id } }))!.driverId).toBe(d);
     expect((await prisma.preAssignment.findFirst({ where: { bookingId: b.id } }))!.status).toBe('CONVERTED');
   });

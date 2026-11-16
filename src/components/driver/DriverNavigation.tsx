@@ -22,7 +22,7 @@ import { bearingDeg, cumulative, distM, locate, maneuverIcon, nextStep, offsetPo
 export interface NavTrip {
   bookingId: string; reference: string; status: string;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string };
-  payment?: 'CASH' | 'CARD'; passengerName: string; passengerRating?: { average: number; count: number } | null; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; luggageCount?: number; vClass: string;
+  payment?: 'CASH' | 'CARD'; startCodeRequired?: boolean; passengerName: string; passengerRating?: { average: number; count: number } | null; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; luggageCount?: number; vClass: string;
   waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
   /** Passenger's live position, only if they chose to share it, only before pickup (2026-11-15). */
   passengerLocation?: { lat: number; lng: number; accuracyM: number; ageSec: number } | null;
@@ -313,7 +313,9 @@ export function DriverNavigation(props: {
       <div className="pointer-events-auto space-y-2 px-3 pb-2" data-testid="nav-actions">
           {trip.status === 'ASSIGNED' && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('status', { to: 'EN_ROUTE' })}>{t('driver.trip.onTheWay')}</button>}
           {trip.status === 'EN_ROUTE' && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('arrive', {})}>{t('driver.trip.arrived')}</button>}
-          {trip.status === 'ARRIVED' && (
+          {/* Start: one tap, or the passenger's 4-digit code when they switched one on (optional since 2026-11-16). */}
+          {trip.status === 'ARRIVED' && !trip.startCodeRequired && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('start', {})}>{t('driver.trip.startTrip')}</button>}
+          {trip.status === 'ARRIVED' && trip.startCodeRequired && (
             <div className="flex gap-2 rounded-[14px] bg-page/95 p-2 shadow-lg">
               <input inputMode="numeric" maxLength={4} aria-label={t('driver.trip.startCodePlaceholder')} placeholder={t('driver.trip.startCodePlaceholder')} value={startCode} onChange={(e) => setStartCode(e.target.value.replace(/\D/g, '').slice(0, 4))} className="min-w-0 flex-1 rounded-[12px] border border-edge bg-page px-3 py-2.5 text-center font-mono text-lg tracking-[0.4em]" />
               <button className="btn-primary min-h-[52px] shrink-0 px-4" disabled={startCode.length !== 4} onClick={() => props.onTripAction('start', { code: startCode })}>{t('driver.trip.startTrip')}</button>

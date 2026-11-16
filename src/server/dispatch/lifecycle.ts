@@ -146,7 +146,8 @@ export async function arriveAtPickup(bookingId: string, driverId: string, expect
   return r; // passenger arrival notification is enqueued inside finalizeArrival (atomic)
 }
 
-// ARRIVED → IN_PROGRESS, gated by the passenger's start code.
+// ARRIVED → IN_PROGRESS. Gated by the start code only when the passenger switched one on
+// (optional since 2026-11-16); without a code the driver starts with one tap.
 export async function startTrip(bookingId: string, driverId: string, expectedRevision: number, code: string): Promise<LifeResult> {
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
@@ -155,7 +156,7 @@ export async function startTrip(bookingId: string, driverId: string, expectedRev
     if (b.revision !== expectedRevision) return err(409, 'CONFLICT', 'The booking changed. Refresh and retry.');
     if (b.status !== 'ARRIVED') return err(409, 'BAD_STATE', 'You can only start after arriving.');
     if (!(await activeAssignmentFor(tx, bookingId, driverId))) return err(403, 'FORBIDDEN', 'Not your assignment.');
-    if (!b.startCode || code.trim() !== b.startCode) return err(422, 'BAD_START_CODE', 'Incorrect start code. Ask the passenger for their 4-digit code.');
+    if (b.startCode && code.trim() !== b.startCode) return err(422, 'BAD_START_CODE', 'Incorrect start code. Ask the passenger for their 4-digit code.');
     return finalizeStart(tx, bookingId, { type: 'DRIVER', id: driverId });
   });
 }

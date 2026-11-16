@@ -11,8 +11,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   let body: { expectedRevision?: number; code?: string };
   try { body = await req.json(); } catch { return Errors.validation({ _: 'Invalid JSON body.' }); }
   if (typeof body.expectedRevision !== 'number') return Errors.validation({ expectedRevision: 'Required.' });
-  if (typeof body.code !== 'string' || !/^\d{4}$/.test(body.code.trim())) return Errors.validation({ code: 'Enter the passenger’s 4-digit code.' });
-  const r = await startTrip(id, ctx.driver.id, body.expectedRevision, body.code);
+  // The code is optional (only when the passenger switched one on); startTrip checks it.
+  if (body.code != null && (typeof body.code !== 'string' || !/^\d{0,4}$/.test(body.code.trim()))) return Errors.validation({ code: 'Enter the passenger’s 4-digit code.' });
+  const r = await startTrip(id, ctx.driver.id, body.expectedRevision, body.code ?? '');
   if (!r.ok) return apiError(r.status, r.code, r.message);
   return apiOk({ ok: true, status: r.status, revision: r.revision });
 }

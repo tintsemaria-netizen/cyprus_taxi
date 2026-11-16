@@ -14,6 +14,7 @@ import { createBooking } from '@/server/bookings';
 import { assignBooking, changeStatus } from '@/server/assignments';
 import { createShareGrant, resolveShareToken, exchangeToken, createGrant } from '@/lib/tracking';
 import { shareView, trackingView, PUBLIC_RATING_MIN_COUNT } from '@/server/views';
+import { passengerSetStartCode } from '@/server/passenger-start-code';
 import type { CreateBookingInput } from '@/lib/validation';
 
 const marina = { lat: 34.6706, lng: 33.0413, label: 'Limassol Marina' };
@@ -65,6 +66,7 @@ describe('read-only share link', () => {
 
   it('the shared view never contains the start code or any phone number', async () => {
     const t = await assigned();
+    await passengerSetStartCode(t.bookingId, true);
     const full = await trackingView(t.bookingId);
     expect(full!.startCode).toMatch(/^\d{4}$/); // the private view has it…
     const v = await shareView(t.bookingId);

@@ -225,6 +225,8 @@ export async function driverCurrentTrip(driverId: string) {
       // How the passenger pays (2026-11-15). Today every ride is paid to the driver in cash (no
       // card option at booking yet); 'CARD' is reserved for when card payment is added.
       payment: 'CASH' as 'CASH' | 'CARD',
+      // The passenger switched a start code on (2026-11-16): the driver must ask for it. Never the code itself.
+      startCodeRequired: !!b.startCode,
       note: b.note,
       flightNumber: b.flightNumber,
       passengerCount: b.passengerCount,

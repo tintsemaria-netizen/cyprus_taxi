@@ -1,5 +1,25 @@
 # Session handoff
 
+## 2026-11-16 — Trip-start code is optional (passenger switch)
+**Default:** a ride has no start code. Assignment no longer generates one; the driver starts with a single «Начать поездку» tap.
+
+**Passenger switch:** on the tracking screen, from ASSIGNED to ARRIVED (once a car is on its way), there is a «🔒 Код начала поездки» switch.
+- On: the server generates a 4-digit code, shown large under the switch.
+- Off: the code is cleared.
+- API: `POST /api/v1/tracking/start-code {enabled}` (full tracking session only, rate-limited).
+- Server: `src/server/passenger-start-code.ts`. It locks the booking row, allows changes only before IN_PROGRESS, bumps the revision, logs a START_CODE_ON or START_CODE_OFF event, and pushes a notice to the assigned driver.
+
+**Driver:**
+- The trip view has `startCodeRequired`; the code itself is never sent to the driver.
+- When it is true, the start bar shows the code field as before. When false, it shows a single start button.
+- `startTrip` checks the code only when one is set. The start route accepts an empty or absent code.
+
+**Tests:** `lifecycle.db` adds the default-off/toggle/event test and the no-code one-tap start plus BAD_STATE after start; the full journey switches the code on first. `preassign` and `share-trip` are updated. 230 passed.
+
+**Playwright (local):**
+- Passenger switch off → on shows code 1522.
+- Driver at ARRIVED: code on shows the field; the passenger switches it off; after a reload the driver sees one button, and tapping it starts the trip.
+
 ## 2026-11-16 — Driver home map 15 % farther
 The waiting-for-orders zoom is now 13.77 instead of 14. log2(1/0.85) ≈ 0.23, so the view shows about 15 % more. It is still exact and centred on the car.
 

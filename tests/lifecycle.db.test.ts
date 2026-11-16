@@ -9,6 +9,7 @@ import { prisma } from '@/lib/db';
 import { createBooking } from '@/server/bookings';
 import { assignBooking, changeStatus } from '@/server/assignments';
 import { arriveAtPickup, startTrip, completeTrip, driverCancelPrePickup } from '@/server/dispatch/lifecycle';
+import { passengerSetStartCode } from '@/server/passenger-start-code';
 import { runOnce } from '@/server/dispatch/worker';
 import type { CreateBookingInput } from '@/lib/validation';
 
@@ -71,10 +72,27 @@ beforeEach(async () => {
 });
 
 describe('M3 trip lifecycle', () => {
-  it('assignment issues a 4-digit start code', async () => {
+  it('assignment issues no start code by default; the passenger can switch one on and off', async () => {
     const { bookingId } = await assignedBooking('Andreas');
-    const b = await prisma.booking.findUnique({ where: { id: bookingId } });
-    expect(b!.startCode).toMatch(/^\d{4}$/);
+    expect((await prisma.booking.findUnique({ where: { id: bookingId } }))!.startCode).toBeNull();
+    const on = await passengerSetStartCode(bookingId, true);
+    expect(on.ok && on.startCode).toMatch(/^\d{4}$/);
+    expect((await prisma.booking.findUnique({ where: { id: bookingId } }))!.startCode).toMatch(/^\d{4}$/);
+    const off = await passengerSetStartCode(bookingId, false);
+    expect(off.ok && off.startCode).toBeNull();
+    expect(await prisma.bookingEvent.count({ where: { bookingId, type: { in: ['START_CODE_ON', 'START_CODE_OFF'] } } })).toBe(2);
+  });
+
+  it('without a code the driver starts with one tap; the code cannot be changed once the trip started', async () => {
+    const t = await assignedBooking('Andreas', 20);
+    let rev = t.revision;
+    const er = await changeStatus({ bookingId: t.bookingId, to: 'EN_ROUTE', expectedRevision: rev, actor: 'DRIVER', driverId: t.driverId, actorId: 'u' });
+    if (er.ok) rev = er.revision;
+    const ar = await arriveAtPickup(t.bookingId, t.driverId, rev); if (ar.ok) rev = ar.revision;
+    const st = await startTrip(t.bookingId, t.driverId, rev, '');
+    expect(st.ok).toBe(true);
+    const late = await passengerSetStartCode(t.bookingId, true);
+    expect(late.ok).toBe(false); if (!late.ok) expect(late.code).toBe('BAD_STATE');
   });
 
   it('full journey: en route → arrive → start(code) → complete + immutable fare', async () => {
@@ -88,7 +106,9 @@ describe('M3 trip lifecycle', () => {
     expect((await prisma.booking.findUnique({ where: { id: t.bookingId } }))!.status).toBe('ARRIVED');
     expect(await prisma.waitingSession.findUnique({ where: { bookingId: t.bookingId } })).not.toBeNull();
 
-    const code = (await prisma.booking.findUnique({ where: { id: t.bookingId } }))!.startCode!;
+    const on = await passengerSetStartCode(t.bookingId, true); // passenger switched the code on
+    const code = on.ok ? on.startCode! : '';
+    rev = (await prisma.booking.findUnique({ where: { id: t.bookingId } }))!.revision;
     const bad = await startTrip(t.bookingId, t.driverId, rev, '0000' === code ? '1111' : '0000');
     expect(bad.ok).toBe(false); if (!bad.ok) expect(bad.code).toBe('BAD_START_CODE');
 
