@@ -1,5 +1,17 @@
 # Session handoff
 
+## 2026-11-16 — Tracking: code and location switches side by side, frameless
+**Layout:** the «Код подтверждения» switch moved from under the driver card down to the actions area. It sits in a two-column row next to «Показать водителю, где я» (pre-pickup statuses only). Neither has a frame.
+
+**Each column:**
+- a label, then the switch under it;
+- code: the 4 digits under the switch when it is on;
+- location: «Определяем…» only while waiting for a fix.
+
+**ShareLocationToggle:** now compact. It is `role=switch` with `aria-checked`. The 🧍 icon and the hint line are gone; the location switch stays blue.
+
+**Check:** Playwright (local): both switches on the same row (172 px each), both toggle on, code shown, no errors.
+
 ## 2026-11-16 — Start-code switch simplified
 The passenger block is now just three things, per the user:
 - the label «Код подтверждения» on top (en «Confirmation code», el «Κωδικός επιβεβαίωσης»);

@@ -421,24 +421,6 @@ export default function TrackApp() {
                   </div>
                 ) : null /* searching: the pulsing pin on the map says it — no «Закрепляем…» box (2026-11-15) */}
 
-                {/* Optional start code (2026-11-16): a switch once a car is on its way; when on, the code
-                    to tell the driver. Off = the driver starts the trip without a code. */}
-                {['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(view.status) && (
-                  <div className={`mt-3 rounded-[12px] border px-3 py-2 ${view.startCode ? 'border-accent/50 bg-accent/10' : 'border-edge'}`}>
-                    {/* Just the label above, the switch, and the code under it (2026-11-16). */}
-                    <label className="flex cursor-pointer flex-col items-start gap-2">
-                      <span className="text-sm font-semibold">{t('track.startCodeToggle')}</span>
-                      <input type="checkbox" role="switch" className="peer sr-only" checked={!!view.startCode} disabled={codeBusy}
-                        onChange={(e) => toggleStartCode(e.target.checked)} data-testid="start-code-switch" />
-                      <span aria-hidden className={`relative h-7 w-12 shrink-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent ${view.startCode ? 'bg-accent' : 'bg-edge'} ${codeBusy ? 'opacity-60' : ''}`}>
-                        <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${view.startCode ? 'left-[22px]' : 'left-0.5'}`} />
-                      </span>
-                    </label>
-                    {view.startCode && (
-                      <div className="mt-2 text-left font-mono text-3xl font-bold tracking-[0.3em] text-accent" aria-label={t('track.startCodeAria', { code: view.startCode.split('').join(' ') })}>{view.startCode}</div>
-                    )}
-                  </div>
-                )}
               </div>
               <div ref={sheetBodyRef} className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pt-3 sm:p-5 sm:pt-3 ${sheetOpen ? '' : 'hidden'}`}>
                 {actionError && <p role="alert" className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{actionError}</p>}
@@ -478,7 +460,26 @@ export default function TrackApp() {
                 {/* actions */}
                 {!terminal && (
                   <div className="mt-4 space-y-2">
-                    <ShareLocationToggle active={prePickup} loc={myLive} onWantLocation={setWantLoc} />
+                    {/* Side by side, no frames (2026-11-16): «show the driver where I am» and the optional
+                        confirmation code — each a label, a switch under it, and (code) the digits under that. */}
+                    {prePickup && (
+                      <div className="grid grid-cols-2 items-start gap-3 py-1">
+                        <ShareLocationToggle active={prePickup} loc={myLive} onWantLocation={setWantLoc} />
+                        <div>
+                          <label className="flex cursor-pointer flex-col items-start gap-2">
+                            <span className="text-sm font-semibold">{t('track.startCodeToggle')}</span>
+                            <input type="checkbox" role="switch" className="peer sr-only" checked={!!view.startCode} disabled={codeBusy}
+                              onChange={(e) => toggleStartCode(e.target.checked)} data-testid="start-code-switch" />
+                            <span aria-hidden className={`relative h-7 w-12 shrink-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent ${view.startCode ? 'bg-accent' : 'bg-edge'} ${codeBusy ? 'opacity-60' : ''}`}>
+                              <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${view.startCode ? 'left-[22px]' : 'left-0.5'}`} />
+                            </span>
+                          </label>
+                          {view.startCode && (
+                            <div className="mt-2 font-mono text-3xl font-bold tracking-[0.3em] text-accent" aria-label={t('track.startCodeAria', { code: view.startCode.split('').join(' ') })}>{view.startCode}</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {view.vehicle?.phone && (
                       <a href={`tel:${view.vehicle.phone}`} className="btn-primary w-full">{t('track.callDriver')}</a>
                     )}

@@ -64,16 +64,15 @@ export function ShareLocationToggle({ active, loc, onWantLocation }: { active: b
     try { sessionStorage.setItem(KEY, next ? '1' : '0'); } catch { /* ignore */ }
   }
   return (
-    <button type="button" onClick={toggle} aria-pressed={on}
-      className={`flex w-full items-center gap-3 rounded-[14px] border px-3 py-2.5 text-left text-sm ${on ? 'border-[#4C9AFF] bg-[#4C9AFF]/10' : 'border-edge'}`}>
-      <span className="text-lg" aria-hidden="true">🧍</span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-medium">{on ? t('track.shareLoc.on') : t('track.shareLoc.off')}</span>
-        <span className="block text-xs text-muted">{on && !loc ? t('track.shareLoc.waiting') : t('track.shareLoc.hint')}</span>
+    // Compact, frameless (2026-11-16): label, the switch under it, a short status line under that.
+    // Sits in a two-column row next to the confirmation-code switch.
+    <button type="button" role="switch" onClick={toggle} aria-checked={on} data-testid="share-loc-switch"
+      className="flex w-full flex-col items-start gap-2 text-left">
+      <span className="text-sm font-semibold">{on ? t('track.shareLoc.on') : t('track.shareLoc.off')}</span>
+      <span className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${on ? 'bg-[#4C9AFF]' : 'bg-edge'}`}>
+        <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? 'left-[22px]' : 'left-0.5'}`} />
       </span>
-      <span className={`h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors ${on ? 'bg-[#4C9AFF]' : 'bg-edge'}`}>
-        <span className={`block h-5 w-5 rounded-full bg-white transition-transform ${on ? 'translate-x-5' : ''}`} />
-      </span>
+      {on && !loc && <span className="text-xs text-muted">{t('track.shareLoc.waiting')}</span>}
     </button>
   );
 }
