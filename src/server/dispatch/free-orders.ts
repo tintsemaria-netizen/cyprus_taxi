@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { blockedPassengerIdsForDriver, isPairBlocked } from './blocked-pairs';
 import { Prisma } from '@prisma/client';
 import { config } from '@/lib/config';
 import { haversineMeters } from '@/lib/geo';
@@ -67,6 +68,9 @@ export async function listFreeOrders(driverId: string, now: Date = new Date()): 
     orderBy: { openedAt: 'asc' },
     take: 50,
   });
+  // Never show a passenger this driver is blocked with (1-star either way, blocked-pairs.ts).
+  const blockedPax = await blockedPassengerIdsForDriver(driverId);
+  if (blockedPax.size) jobs.splice(0, jobs.length, ...jobs.filter((j) => !j.booking.passengerId || !blockedPax.has(j.booking.passengerId)));
   const here = driver.location ? { lat: driver.location.lat, lng: driver.location.lng } : null;
   return jobs
     .map(({ booking: b, openedAt, deadlineAt }) => ({
@@ -160,6 +164,7 @@ export async function claimFreeOrder(bookingId: string, driverId: string, now: D
       const vehicle = binding?.vehicle;
       if (!vehicle || !vehicle.active) return err(409, 'NO_VEHICLE', 'No vehicle is assigned to you.');
       if (!vehicleFits(vehicle, booking)) return err(409, 'VEHICLE_INELIGIBLE', 'Your vehicle does not fit this ride.');
+      if (await isPairBlocked(driverId, booking.passengerId, tx)) return err(409, 'ORDER_GONE', 'This ride is no longer available.');
 
       await createAssignment(tx, booking, driver, vehicle, 'SYSTEM', 'free-order claim');
       await tx.dispatchJob.deleteMany({ where: { bookingId } });

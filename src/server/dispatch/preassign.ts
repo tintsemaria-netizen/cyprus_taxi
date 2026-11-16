@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { blockedPassengerIdsForDriver, isPairBlocked } from './blocked-pairs';
 import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { canWork } from '@/lib/eligibility-policy';
@@ -78,10 +79,12 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
     },
     orderBy: { scheduledAt: 'asc' },
     take: 50,
-    select: { id: true, reference: true, scheduledAt: true, pickupLabel: true, dropoffLabel: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, vClass: true, passengerCount: true, fareCents: true, priceType: true, flightNumber: true, note: true },
+    select: { id: true, passengerId: true, reference: true, scheduledAt: true, pickupLabel: true, dropoffLabel: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, vClass: true, passengerCount: true, fareCents: true, priceType: true, flightNumber: true, note: true },
   });
   const gap = p.minGapMinutes * MIN;
-  const available: BoardItem[] = rows.map((b) => ({
+  // Never offer a passenger this driver is blocked with (1-star either way, blocked-pairs.ts).
+  const blockedPax = await blockedPassengerIdsForDriver(driverId);
+  const available: BoardItem[] = rows.filter((b) => !b.passengerId || !blockedPax.has(b.passengerId)).map((b) => ({
     bookingId: b.id, reference: b.reference, pickupAt: b.scheduledAt!.toISOString(),
     pickupLabel: b.pickupLabel, dropoffLabel: b.dropoffLabel, vClass: b.vClass, passengerCount: b.passengerCount,
     fareCents: b.fareCents, priceType: b.priceType, flightNumber: b.flightNumber, note: b.note,
@@ -109,6 +112,7 @@ export async function claimScheduled(driverId: string, bookingId: string, now: D
       if (!driver || !driver.active || !driver.user.active || !canWork(driver)) return fail(409, 'DRIVER_INELIGIBLE', 'Your account can’t take rides right now.');
       const vehicle = await boundVehicle(tx, driverId);
       if (!vehicle || vehicle.vClass !== b.vClass || vehicle.seats < b.passengerCount) return fail(409, 'VEHICLE_INELIGIBLE', 'Your vehicle doesn’t fit this ride.');
+      if (await isPairBlocked(driverId, b.passengerId, tx)) return fail(409, 'BOOKING_GONE', 'This ride is no longer available.');
 
       const mine = await tx.preAssignment.findMany({ where: { driverId, status: 'COMMITTED' }, select: { pickupAt: true } });
       if (mine.length >= p.maxPerDriver) return fail(409, 'LIMIT', `You can hold at most ${p.maxPerDriver} pre-booked rides.`);
@@ -186,6 +190,10 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
     const binding = vehicle ? await tx.driverVehicleBinding.findFirst({ where: { driverId: pa.driverId, vehicleId: vehicle.id, endedAt: null } }) : null;
     if (!driver || !driver.active || !driver.user.active || !canWork(driver) || !vehicle || !vehicle.active || !binding || vehicle.vClass !== b.vClass || vehicle.seats < b.passengerCount) {
       return lapse('driver or vehicle no longer eligible', 'Your confirmed driver is no longer available. We are finding you another driver automatically.', 'Your pre-booked ride was released: your account or vehicle is not eligible right now.');
+    }
+    // Blocked since the claim (a 1-star rating either way): hand it to automatic search.
+    if (await isPairBlocked(pa.driverId, b.passengerId, tx)) {
+      return lapse('pair blocked by a 1-star rating', 'We are finding you another driver automatically.', 'Your pre-booked ride was released.');
     }
     const busy = !driver.onDuty
       || !!(await tx.assignment.findFirst({ where: { activeDriverId: pa.driverId }, select: { id: true } }))

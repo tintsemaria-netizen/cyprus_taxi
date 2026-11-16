@@ -1,5 +1,25 @@
 # Session handoff
 
+## 2026-11-17 — 1-star rating blocks a driver–passenger pair for good; bigger passenger-rating sheet
+**Rule (owner):** if the driver rated the passenger 1 star (PassengerRating) or the passenger rated the driver 1 star (TripRating), the two are never matched again.
+
+**Implementation:** `src/server/dispatch/blocked-pairs.ts` (`blockedDriverIdsForPassenger`, `blockedPassengerIdsForDriver`, `isPairBlocked`; `BLOCK_STARS = 1`). It is applied:
+- before ranking, in `findBestCandidate` (auto-dispatch offers);
+- re-checked in `acceptOffer` (answers OFFER_GONE) and in `claimFreeOrder`;
+- in the free-orders list (hidden);
+- on the pre-booking board (hidden), in `claimScheduled`, and at pre-booking conversion (lapse to automatic search).
+
+Guest bookings without a passenger account have no identity, so they are not blocked. Admin manual assignment (the audited override) is not blocked.
+
+**Tests:** `tests/blocked-pairs.db.test.ts` (5):
+- passenger → driver 1★ skips the nearest driver;
+- driver → passenger 1★ skips too;
+- 2★ does not block, and other passengers are unaffected;
+- a rating that lands mid-offer makes the accept fail;
+- free orders are hidden and the claim is refused.
+
+**RatePassengerSheet (approved from a screenshot):** min-h 62dvh, 60 px stars, larger title, comment, button and skip.
+
 ## 2026-11-17 — Driver «Стоимость поездки» sheet: only a big «Итого» and a red «Завершить поездку»
 **FarePreviewSheet, per the user (shown as screenshots and approved before deploy):**
 - Title, then «Итого» centred at 44 px in accent green.

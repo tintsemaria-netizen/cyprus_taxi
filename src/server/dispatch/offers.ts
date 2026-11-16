@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { isPairBlocked } from './blocked-pairs';
 import { Prisma } from '@prisma/client';
 import { config } from '@/lib/config';
 import { createAssignment } from '@/server/assignments';
@@ -101,6 +102,7 @@ export async function acceptOffer(offerId: string, driverId: string): Promise<Of
       const driver = await tx.driver.findUnique({ where: { id: driverId }, include: { user: true } });
       if (!driver || !driver.active || !driver.user.active || !driver.onDuty || !canWork(driver)) return err(409, 'DRIVER_INELIGIBLE', 'Driver no longer eligible.');
       if (await tx.assignment.findFirst({ where: { activeDriverId: driverId } })) return err(409, 'DRIVER_BUSY', 'You already have an active trip.');
+      if (await isPairBlocked(driverId, booking.passengerId, tx)) return err(409, 'OFFER_GONE', 'This offer is no longer available.');
       const vehicle = await tx.vehicle.findUnique({ where: { id: offer.vehicleId } });
       if (!vehicle || !vehicle.active || vehicle.vClass !== booking.vClass || vehicle.seats < booking.passengerCount) return err(409, 'VEHICLE_INELIGIBLE', 'Vehicle no longer eligible.');
       const binding = await tx.driverVehicleBinding.findFirst({ where: { driverId, vehicleId: vehicle.id, endedAt: null } });

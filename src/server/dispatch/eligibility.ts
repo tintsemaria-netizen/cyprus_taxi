@@ -4,6 +4,7 @@ import { haversineMeters } from '@/lib/geo';
 import { googleConfigured, googleRoute } from '@/server/google';
 import { eligibleDriverWhere } from '@/lib/eligibility-policy';
 import { protectedDriverIds } from './preassign-core';
+import { blockedDriverIdsForPassenger } from './blocked-pairs';
 
 export const RADIUS_STAGES_KM = [3, 7, 15]; // expand search in stages (Task 012 §4.2)
 export const MAX_PICKUP_ETA_SEC = 20 * 60; // exclude candidates worse than 20 min
@@ -24,7 +25,7 @@ export interface Candidate {
 // drivers already tried. Screens spatially first, then ranks a bounded shortlist by real
 // Google driving ETA. Returns null if none eligible within the radius.
 export async function findBestCandidate(
-  booking: { pickupLat: number; pickupLng: number; vClass: 'COMFORT' | 'XL'; passengerCount: number },
+  booking: { pickupLat: number; pickupLng: number; vClass: 'COMFORT' | 'XL'; passengerCount: number; passengerId?: string | null },
   radiusKm: number,
   triedDriverIds: string[],
   etaCache: Map<string, { etaSec: number; approx: boolean; roadM?: number }> = new Map(),
@@ -32,11 +33,13 @@ export async function findBestCandidate(
   const pickup = { lat: booking.pickupLat, lng: booking.pickupLng };
 
   // Drivers already reserved by an active assignment or active offer are unavailable.
-  const [busyAssign, busyOffer, protectedIds, drivers] = await Promise.all([
+  const [busyAssign, busyOffer, protectedIds, blockedIds, drivers] = await Promise.all([
     prisma.assignment.findMany({ where: { activeDriverId: { not: null } }, select: { activeDriverId: true } }),
     prisma.driverOffer.findMany({ where: { activeDriverId: { not: null } }, select: { activeDriverId: true } }),
     // Drivers about to start a ride they pre-booked must not be pulled into a new immediate one.
     protectedDriverIds(),
+    // A 1-star rating either way blocks the pair for good (blocked-pairs.ts).
+    blockedDriverIdsForPassenger(booking.passengerId),
     prisma.driver.findMany({
       where: { onDuty: true, available: true, active: true, ...eligibleDriverWhere },
       include: { user: true, location: true, bindings: { where: { endedAt: null }, include: { vehicle: true } } },
@@ -48,7 +51,7 @@ export async function findBestCandidate(
   // Spatial + hard-eligibility prefilter.
   const prelim: { driverId: string; vehicleId: string; distanceMeters: number }[] = [];
   for (const d of drivers) {
-    if (!d.user.active || busy.has(d.id) || tried.has(d.id)) continue;
+    if (!d.user.active || busy.has(d.id) || tried.has(d.id) || blockedIds.has(d.id)) continue;
     const binding = d.bindings[0];
     if (!binding || !binding.vehicle.active) continue;
     const v = binding.vehicle;
