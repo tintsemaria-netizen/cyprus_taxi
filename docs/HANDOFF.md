@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-16 — Driver home map 15 % farther
+The waiting-for-orders zoom is now 13.77 instead of 14. log2(1/0.85) ≈ 0.23, so the view shows about 15 % more. It is still exact and centred on the car.
+
 ## 2026-11-16 — Driver home map: exact zoom 14 centred on the car
 **User report:** the 20 % closer change looked like the map was scaled up, not zoomed in on the car.
 
