@@ -291,7 +291,7 @@ export function DriverNavigation(props: {
           <button onClick={() => setFollowing(true)} className="pointer-events-auto mx-auto mb-2 rounded-full border border-accent bg-page/95 px-4 py-2 text-sm font-semibold text-accent">{t('driver.navigation.recenter')}</button>
         )}
         {/* Bottom-right column (2026-11-15): chat two icons above Google Maps; both 20 % smaller (58 px). */}
-        <div className="pointer-events-none mb-2 flex flex-col items-end gap-0 px-3">
+        <div className="pointer-events-none mb-[182px] flex flex-col items-end gap-0 px-3">
           <button type="button" onClick={() => setChatOpen(true)} aria-label={t('driver.navigation.chat')} title={t('driver.navigation.chat')}
             className="pointer-events-auto relative flex h-[58px] w-[58px] items-center justify-center rounded-full border border-edge bg-page/95 text-[30px] shadow-lg">
             💬

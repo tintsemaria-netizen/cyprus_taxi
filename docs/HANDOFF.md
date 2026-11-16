@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-16 — Driver nav: map buttons raised by three button heights
+**Change:** the chat and Google Maps column now has a bottom margin of 182 px instead of 8 px, so both buttons sit 174 px (3 × 58 px) higher. Sizes and the 116 px gap between them are unchanged.
+
+**Check:** Playwright (local): Google Maps y614 → y440, chat y498 → y324; no errors.
+
 ## 2026-11-15 — Driver nav: Google Maps right, chat two icons higher, both 20 % smaller; cash/card badge
 **Map buttons:** a right-hand column above the action button — chat 💬 (58 px), a 58 px spacer, then Google Maps (58 px, 35 px icon) at the bottom-right. The container is pointer-events-none so the map stays draggable around them (the previous full-width row blocked map gestures).
 
