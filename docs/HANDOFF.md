@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-16 — Review: no «Когда: Сейчас» and no «Стоимость» rows
+**Review screen:**
+- The «Когда» row is shown only for a scheduled ride.
+- The «Стоимость» row is gone, because the range is on the class cards and the CTA. It remains only as the «by meter» fallback when there is no quote.
+
+**Check:** Playwright (local): the review shows Подача / Куда / Имя / Телефон, then the class cards; no errors.
+
 ## 2026-11-16 — Booking shows only the ±15 % range; XL has its own price
 **Display:** passengers no longer see the «≈ total» figure. The class cards, the review row, the CTA and the price-updated banner show only `low–high` (±15 %). An upfront fare (low = high) shows one price. The form CTA «от …» uses the lowest range bottom.
 

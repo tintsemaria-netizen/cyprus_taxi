@@ -1014,11 +1014,14 @@ export default function BookingApp() {
                       <Row label={t('booking.review.pickup')} value={pickup?.label ?? '—'} dot="accent" />
                       {viaStop && <Row label={t('booking.places.stop')} value={viaStop.label} />}
                       <Row label={t('booking.review.destination')} value={dropoff?.label ?? '—'} dot="ink" />
-                      <Row label={t('booking.review.when')} value={when === 'NOW' ? t('booking.review.nowImmediate') : `${scheduledAt.replace('T', ' ')} · ${cfg?.timezone}`} />
+                      {/* «Когда» only for a scheduled ride — «Сейчас» is the default and needs no row (2026-11-16). */}
+                      {when !== 'NOW' && <Row label={t('booking.review.when')} value={`${scheduledAt.replace('T', ' ')} · ${cfg?.timezone}`} />}
                       <Row label={t('booking.review.driverAsksFor')} value={name || passenger?.name || '—'} />
                       <Row label={t('booking.review.yourPhone')} value={passenger?.phone || phone} />
                       {effNote && <Row label={t('booking.review.note')} value={effNote} />}
-                      <Row label={t('booking.review.fare')} value={quote ? t('booking.review.fareValue', { range: fmtRange(quote) }) : t('booking.review.fareByMeter')} />
+                      {/* The price range is on the class cards below — the «Стоимость» row only remains as the
+                          «by meter» fallback when no quote could be made (2026-11-16). */}
+                      {!quote && <Row label={t('booking.review.fare')} value={t('booking.review.fareByMeter')} />}
                     </div>
                     {classPicker}
                     {quote?.airport && <AirportFareNote />}
