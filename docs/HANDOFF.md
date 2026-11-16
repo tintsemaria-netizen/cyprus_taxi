@@ -1,5 +1,14 @@
 # Session handoff
 
+## 2026-11-16 — Driver home map: half-city view (zoom 13)
+**Change:** while waiting for orders, the driver home map frames about half the city around the car (zoom 13), like the user's reference screenshot, instead of street level (16).
+- New `focusZoom` prop on GoogleMapView / MapView (defaults 16 / 15, so other screens are unchanged). The single-point frame box doubles per zoom level out.
+- The passenger booking map and the trip / navigation screens are unchanged.
+
+**Not done:** the "Bolt look" (graphite base, muted roads, no POI / bus-stop icons, big district labels) needs a Cloud map style on our Map ID in the Google Cloud Console. That style is not configured yet.
+
+**Check:** tsc and eslint clean; local driver page loads without errors. Local has no Google key, so the zoom was not visually checked.
+
 ## 2026-11-16 — Driver nav: bare chat / Google Maps icons
 Removed the round plate, border and shadow around the chat and Google Maps buttons; only the icon is left (💬 40 px, Google pin 48 px). A drop-shadow keeps the icons readable on light maps. The tap targets stay 58 px. Playwright (local): positions unchanged, no errors.
 

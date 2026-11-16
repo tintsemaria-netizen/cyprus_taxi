@@ -15,6 +15,8 @@ interface Props {
   route?: [number, number][]; // [lng, lat]
   center?: { lat: number; lng: number };
   zoom?: number;
+  /** Zoom for a single point / the focus point (default 16 = street level; 13 ≈ half a city). */
+  focusZoom?: number;
   interactive?: boolean;
   onMapClick?: (p: { lat: number; lng: number }) => void;
   className?: string;
@@ -39,7 +41,8 @@ const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
 // Frame a single point into the VISIBLE area (respecting fitPadding so it isn't hidden
 // behind the booking sheet/side panel) at street-level zoom.
 function framePoint(map: any, g: any, lat: number, lng: number, pad: any, maxZoom = 16) {
-  const d = 0.006; // ~650m half-box → ~street zoom
+  // ~650m half-box → street zoom at 16; each zoom level out doubles the box (zoom 13 ≈ half a city).
+  const d = 0.006 * 2 ** Math.max(0, 16 - maxZoom);
   const b = new g.LatLngBounds();
   b.extend({ lat: lat - d, lng: lng - d });
   b.extend({ lat: lat + d, lng: lng + d });
@@ -80,7 +83,7 @@ function markerEl(mk: MapMarker): HTMLElement {
   return centerOnPoint(el);
 }
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, focusZoom = 16, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   // Reconcile markers by id (no recreation flicker) and remember each one's logical
@@ -261,7 +264,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       // Points very close together (driver waiting at the pickup): don't zoom in past street level.
       g.event.addListenerOnce(map, 'idle', () => { if (map.getZoom() > 17) map.setZoom(17); });
     } else if (markers.length === 1) {
-      framePoint(map, g, markers[0].lat, markers[0].lng, pad);
+      framePoint(map, g, markers[0].lat, markers[0].lng, pad, focusZoom);
     } else {
       const b = new g.LatLngBounds();
       b.extend({ lat: CYPRUS_BOUNDS.south, lng: CYPRUS_BOUNDS.west });
@@ -277,7 +280,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
     if (!map || !g || !ready || !focus || markers.length >= 2 || followRef.current || idle.active.current) return;
-    framePoint(map, g, focus.lat, focus.lng, fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 });
+    framePoint(map, g, focus.lat, focus.lng, fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 }, focusZoom);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusKey, ready, idle.returnTick]);
 

@@ -37,6 +37,8 @@ interface Props {
   route?: [number, number][]; // [lng, lat]
   center?: { lat: number; lng: number };
   zoom?: number;
+  /** Zoom for a single point / the focus point (default 15; 13 ≈ half a city). */
+  focusZoom?: number;
   interactive?: boolean;
   onMapClick?: (p: { lat: number; lng: number }) => void;
   className?: string;
@@ -74,7 +76,7 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, focusZoom = 15, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   // Any touch/pinch/scroll stops the navigation follow-camera at once (not only a drag) and,
   // with idleReturnMs, hands the camera back after that many ms without gestures.
@@ -218,7 +220,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready || !focus || followRef.current || idle.active.current) return;
-    map.easeTo({ center: [focus.lng, focus.lat], zoom: 15, duration: 500 });
+    map.easeTo({ center: [focus.lng, focus.lat], zoom: focusZoom, duration: 500 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusKey, ready, idle.returnTick]);
 
