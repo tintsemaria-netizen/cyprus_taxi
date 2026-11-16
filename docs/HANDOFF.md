@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-16 — Driver home map 20 % closer
+The waiting-for-orders view is now zoom 13.26 instead of 13: log2(1.2) ≈ 0.26 makes everything appear 20 % larger. Google vector maps (Map ID) and MapLibre both accept fractional zoom.
+
 ## 2026-11-16 — Driver home map: half-city view (zoom 13)
 **Change:** while waiting for orders, the driver home map frames about half the city around the car (zoom 13), like the user's reference screenshot, instead of street level (16).
 - New `focusZoom` prop on GoogleMapView / MapView (defaults 16 / 15, so other screens are unchanged). The single-point frame box doubles per zoom level out.
