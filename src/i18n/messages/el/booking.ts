@@ -112,6 +112,7 @@ const booking: Catalog<typeof en> = {
     title: 'Διαδρομή',
     close: 'Κλείσιμο',
     swap: 'Αντιστροφή',
+    clear: 'Καθαρισμός διεύθυνσης',
     suggestions: 'Προτάσεις',
     km: 'χλμ',
   },

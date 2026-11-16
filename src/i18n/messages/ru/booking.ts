@@ -117,6 +117,7 @@ const booking: Catalog<typeof en> = {
     title: 'Маршрут',
     close: 'Закрыть',
     swap: 'Поменять местами',
+    clear: 'Очистить адрес',
     suggestions: 'Варианты',
     km: 'км',
   },

@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-16 — Route editor: small × to clear the typed address
+**Change:** the active address field shows a small round × (left of the ⊕ map button) whenever it has text. Tapping it empties the field, drops the selected place, clears the suggestions and keeps focus, so the keyboard stays open.
+- New key `booking.route.clear` in ru, en and el.
+
+**Check:** Playwright (local): typed «Larnaca airp» → × → empty, still focused, typing works; no errors.
+
 ## 2026-11-16 — Tracking: trip details removed; searching pin centred above the sheet
 **Details removed:** the «Показать/Скрыть детали» box (reference, class, «≈» fare, timeline) is gone from the tracking sheet, along with the unused `TIMELINE_KEYS`.
 

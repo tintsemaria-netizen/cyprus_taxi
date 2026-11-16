@@ -109,6 +109,7 @@ const booking = {
     title: 'Route',
     close: 'Close',
     swap: 'Swap start and destination',
+    clear: 'Clear address',
     suggestions: 'Suggestions',
     km: 'km',
   },

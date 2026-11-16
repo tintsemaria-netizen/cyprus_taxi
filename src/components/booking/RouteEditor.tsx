@@ -185,6 +185,16 @@ export function RouteEditor(p: Props) {
                 className="h-[52px] min-w-0 flex-1 bg-transparent text-[17px] text-ink outline-none placeholder:text-muted"
                 style={{ fontWeight: active === r.slot ? 600 : 400, outline: 'none', boxShadow: 'none', border: 0 }}
               />
+              {/* Small × to wipe what was typed in the active field (2026-11-16) — instead of deleting
+                  it letter by letter. Keeps the keyboard open (no blur on press). */}
+              {active === r.slot && r.text !== '' && (
+                <button type="button" aria-label={t('booking.route.clear')} title={t('booking.route.clear')} data-testid={`route-clear-${r.slot}`}
+                  onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => { p.onText(r.slot, ''); if (r.sel) p.onSelect(r.slot, null); search(''); inputs.current[r.slot]?.focus({ preventScroll: true }); }}
+                  className="flex h-9 w-7 shrink-0 items-center justify-center text-muted hover:text-ink">
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden><circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.35" /><path d="M8.5 8.5l7 7M15.5 8.5l-7 7" stroke="#0E1513" strokeWidth="2.2" strokeLinecap="round" /></svg>
+                </button>
+              )}
               {active === r.slot && (
                 <button type="button" onClick={() => p.onPickOnMap(r.slot)} aria-label={t('booking.form.onMap')} title={t('booking.form.onMap')}
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-page text-accent">
