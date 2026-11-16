@@ -1,5 +1,21 @@
 # Session handoff
 
+## 2026-11-17 — Tracking: searching shows the chosen route; car on its way shows its route in lime
+**SEARCHING:**
+- The full panel again (title, route box, «Отменить заказ»); the 2026-11-16 auto-fold is reverted.
+- The map shows the pulsing pickup pin AND the destination, with the planned route line between them. `fitRoute` frames the whole line above the measured sheet; there is no focus zoom any more.
+
+**ASSIGNED / EN_ROUTE (a car appears):**
+- The sheet folds to the headline + driver card.
+- The map frames the car → pickup route in the brand lime line (#C8FF46) with `fitRoute`, re-framing as the route updates.
+
+**ARRIVED / COMPLETED / CANCELED:** open as before.
+
+**Check:** Playwright (local) with mocked routes:
+- searching: both points and the line are above the sheet (sheet top 302; markers at 286 and 133);
+- en route: car, line and pin are visible above the folded sheet (top 520);
+- no errors.
+
 ## 2026-11-17 — 1-star rating blocks a driver–passenger pair for good; bigger passenger-rating sheet
 **Rule (owner):** if the driver rated the passenger 1 star (PassengerRating) or the passenger rated the driver 1 star (TripRating), the two are never matched again.
 

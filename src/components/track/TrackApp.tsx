@@ -246,10 +246,11 @@ export default function TrackApp() {
   useEffect(() => {
     const st = view?.status ?? null;
     if (st && st !== prevStatus.current) {
-      // Searching (2026-11-16): start folded to a small panel so more of the map with the pulsing
-      // pickup pin shows; a found driver opens it again.
-      if (st === 'IN_PROGRESS' || st === 'SEARCHING') setSheetOpen(false);
-      if (st === 'COMPLETED' || st === 'CANCELED' || st === 'ARRIVED' || ((st === 'ASSIGNED' || st === 'EN_ROUTE') && prevStatus.current === 'SEARCHING')) setSheetOpen(true);
+      // Searching shows the full panel again (2026-11-17), with the chosen route framed above it.
+      // A car on its way (2026-11-17): fold to the driver card so the map shows the car's route to
+      // the pickup in our lime line, framed and followed as it updates.
+      if (st === 'IN_PROGRESS' || ((st === 'ASSIGNED' || st === 'EN_ROUTE') && prevStatus.current !== 'ASSIGNED' && prevStatus.current !== 'EN_ROUTE')) setSheetOpen(false);
+      if (st === 'COMPLETED' || st === 'CANCELED' || st === 'ARRIVED') setSheetOpen(true);
       prevStatus.current = st;
     }
   }, [view?.status]);
@@ -320,8 +321,10 @@ export default function TrackApp() {
   // Before pickup, anchor on the pickup; during the trip, anchor on the destination.
   if (view.stop && !view.stop.departedAt) markers.push({ id: 's', lat: view.stop.lat, lng: view.stop.lng, kind: 'stop', label: view.stop.label });
   // During the trip and after it (2026-11-15) the map stays on the destination, not the pickup.
-  if (view.status === 'IN_PROGRESS' || view.status === 'COMPLETED') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
-  else markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label, pulse: view.status === 'SEARCHING' });
+  // While searching (2026-11-17) both ends of the chosen route show, with the route line between.
+  const onTrip = view.status === 'IN_PROGRESS' || view.status === 'COMPLETED';
+  if (onTrip || view.status === 'SEARCHING') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
+  if (!onTrip) markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label, pulse: view.status === 'SEARCHING' });
   if (myLive && view.status !== 'IN_PROGRESS') markers.push({ id: 'me', lat: myLive.lat, lng: myLive.lng, kind: 'person', label: t('booking.youAreHere') });
   if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: t('track.yourDriver'), stale: liveLocation.freshness === 'stale' });
 
@@ -342,7 +345,7 @@ export default function TrackApp() {
       <div className="relative flex-1">
         <div className="absolute inset-0">
           <AutoMapView markers={markers} route={routeLine.length ? routeLine : undefined} center={view.pickup} zoom={12} interactive className="h-full w-full"
-            fitPadding={mapPad} focus={view.status === 'SEARCHING' ? view.pickup : null} focusZoom={view.status === 'SEARCHING' ? 16 : undefined}
+            fitPadding={mapPad} fitRoute={view.status === 'SEARCHING' || view.status === 'ASSIGNED' || view.status === 'EN_ROUTE'}
             follow={carFollow} onFollowBreak={() => setFollowCar(false)} idleReturnMs={4000} onIdleReturn={() => setFollowCar(true)} />
         </div>
 
