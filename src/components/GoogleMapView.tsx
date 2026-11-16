@@ -311,7 +311,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     if (!map || !ready || !follow || idle.active.current) return;
     if (camAnim.current) cancelAnimationFrame(camAnim.current);
     const c0 = map.getCenter?.();
-    const from = { lat: c0 ? c0.lat() : follow.lat, lng: c0 ? c0.lng() : follow.lng, heading: map.getHeading?.() ?? 0 };
+    const from = { lat: c0 ? c0.lat() : follow.lat, lng: c0 ? c0.lng() : follow.lng, heading: map.getHeading?.() ?? 0, zoom: map.getZoom?.() ?? follow.zoom ?? 17 };
     const dh = ((follow.heading - from.heading + 540) % 360) - 180;
     const far = Math.abs(from.lat - follow.lat) + Math.abs(from.lng - follow.lng) > 0.02; // > ~2 km: jump
     const zoom = follow.zoom ?? 17, tilt = follow.tilt ?? 45;
@@ -320,7 +320,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     const step = (now: number) => {
       const t = Math.min(1, (now - start) / 800);
       const e = t * (2 - t);
-      map.moveCamera({ center: { lat: from.lat + (follow.lat - from.lat) * e, lng: from.lng + (follow.lng - from.lng) * e }, heading: from.heading + dh * e, zoom, tilt });
+      // Zoom eases too (speed-dependent navigation zoom, 2026-11-17) — no jumps.
+      map.moveCamera({ center: { lat: from.lat + (follow.lat - from.lat) * e, lng: from.lng + (follow.lng - from.lng) * e }, heading: from.heading + dh * e, zoom: from.zoom + (zoom - from.zoom) * e, tilt });
       camAnim.current = t < 1 ? requestAnimationFrame(step) : null;
     };
     camAnim.current = requestAnimationFrame(step);

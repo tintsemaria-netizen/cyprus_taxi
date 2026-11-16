@@ -1,5 +1,23 @@
 # Session handoff
 
+## 2026-11-17 — Driver navigation: speed-dependent zoom
+**Behaviour:** the follow camera zooms out as the car speeds up and back in as it slows.
+- Up to 20 km/h: zoom 17 (street level).
+- 50 km/h (town): 16.3.
+- 80 km/h: 15.7.
+- 110 km/h and above (motorway): 15.
+
+**Implementation:**
+- `src/lib/nav-zoom.ts`: speed comes from the 8 s GPS window (≥ 2 s apart) and is EMA-smoothed (α 0.35, capped at 200 km/h). The zoom moves at most 0.3 levels per fix, with a 0.15 dead band so it does not pump.
+- No fix for 10 s means standing, which resets to 17.
+- The camera look-ahead scales with the zoom (110 m × 2^(17 − z)), so the car keeps its screen spot.
+- The GoogleMapView follow animation now eases zoom as well.
+- `data-nav-zoom` on the map wrapper is used by tests.
+
+**Tests:** `tests/nav-zoom.test.ts` (5).
+
+**Playwright (local), simulated GPS:** standing 17 → 50 km/h 16.3 → 110 km/h 15 → 15 km/h back to 17; no errors.
+
 ## 2026-11-17 — Booking start sheet: rows never cut; one «Куда» row at the start
 **Bug:** the collapsed sheet's peek height was measured to the FIRST readonly input only. With two rows but no full route (e.g. after opening and closing the route editor), the rows were cut and then hidden by useHideClipped. The phone showed only the title and ⇅.
 

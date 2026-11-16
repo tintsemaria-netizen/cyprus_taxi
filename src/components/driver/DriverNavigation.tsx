@@ -1,5 +1,6 @@
 'use client';
 
+import { navZoomForSpeed, nextNavZoom, smoothSpeed, NAV_ZOOM_MAX } from '@/lib/nav-zoom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { ChatPanel } from '@/components/ChatPanel';
@@ -121,17 +122,26 @@ export function DriverNavigation(props: {
   // Driving vs standing still (arrow pulse): moved ≥ 10 m within the last 8 s of GPS samples.
   const samples = useRef<{ p: LatLng; t: number }[]>([]);
   const [moving, setMoving] = useState(false);
+  // Speed-dependent zoom: out when accelerating, back in when slowing (more in on the motorway).
+  const speedRef = useRef<number | null>(null);
+  const [navZoom, setNavZoom] = useState(NAV_ZOOM_MAX);
   useEffect(() => {
     if (!pos) return;
     const now = Date.now();
     samples.current = [...samples.current.filter((s) => now - s.t <= 8000), { p: pos, t: now }];
     const first = samples.current[0];
     setMoving(distM(first.p, pos) >= 10);
+    // Speed over the sample window (≥ 2 s apart) → smoothed → camera zoom (2026-11-17).
+    const dt = (now - first.t) / 1000;
+    if (dt >= 2) {
+      speedRef.current = smoothSpeed(speedRef.current, (distM(first.p, pos) / dt) * 3.6);
+      setNavZoom((z) => nextNavZoom(z, navZoomForSpeed(speedRef.current ?? 0)));
+    }
   }, [pos]);
   useEffect(() => {
     // No new fixes for a while → the car is standing (GPS often stops reporting when still).
     if (!moving) return;
-    const id = setTimeout(() => setMoving(false), 10000);
+    const id = setTimeout(() => { setMoving(false); speedRef.current = 0; setNavZoom(NAV_ZOOM_MAX); }, 10000);
     return () => clearTimeout(id);
   }, [moving, pos]);
   // Direction of travel from movement when off the route line (or no route yet).
@@ -199,8 +209,9 @@ export function DriverNavigation(props: {
   const heading = progress && progress.offRouteM < 30 ? progress.bearing : travelHeading ?? 0;
   const camPoint = progress && progress.offRouteM < 30 ? progress.snapped : pos;
   // Aim the camera ~110 m ahead so the car sits in the lower part of the map and the road ahead shows.
-  const camCenter = camPoint ? offsetPoint(camPoint, heading, 110) : null;
-  const follow = following && camCenter && !waitingAtPickup ? { lat: camCenter.lat, lng: camCenter.lng, heading, zoom: 17, tilt: 45 } : null;
+  // The look-ahead grows with the zoom-out, so the car stays in the same spot on screen.
+  const camCenter = camPoint ? offsetPoint(camPoint, heading, 110 * 2 ** (NAV_ZOOM_MAX - navZoom)) : null;
+  const follow = following && camCenter && !waitingAtPickup ? { lat: camCenter.lat, lng: camCenter.lng, heading, zoom: navZoom, tilt: 45 } : null;
   const markers: MapMarker[] = [];
   // The own car points along the route/travel heading (same heading the camera uses).
   // On an order the own position is a navigation arrow (pulses while standing still).
@@ -277,7 +288,7 @@ export function DriverNavigation(props: {
       {props.banner && <button onClick={props.onDismissBanner} className="relative z-10 border-b border-warn/40 bg-warn/15 px-4 py-2 text-left text-sm text-warn">{props.banner}</button>}
 
       {/* Map */}
-      <div className="relative min-h-0 flex-1">
+      <div className="relative min-h-0 flex-1" data-nav-zoom={navZoom}>
         <AutoMapView markers={markers} route={routeLine} center={pos ?? target} zoom={15} interactive className="h-full w-full"
           follow={follow} onFollowBreak={() => setFollowing(false)} idleReturnMs={4000} onIdleReturn={() => setFollowing(true)} fitPadding={wide ? { top: 60, right: 50, bottom: 60, left: 470 } : { top: 60, right: 50, bottom: panelOpen ? 520 : 330, left: 50 }} />
         <div className="absolute right-3 top-3 flex flex-col gap-2">
