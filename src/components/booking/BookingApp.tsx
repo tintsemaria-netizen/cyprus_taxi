@@ -274,13 +274,25 @@ export default function BookingApp() {
     return () => { alive = false; clearInterval(t); };
   }, []);
 
+  // Review step on mobile (2026-11-16): the sheet is only as tall as its content (class cards +
+  // order button), and the route is framed in the map above it — measured, not guessed.
+  const [reviewH, setReviewH] = useState(0);
+  useEffect(() => {
+    const el = sheetRef.current;
+    if (!el || step !== 'review') { setReviewH(0); return; }
+    const ro = new ResizeObserver(() => setReviewH(Math.round(el.getBoundingClientRect().height)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [step]);
   const fitPadding = useMemo(
-    () => (vp.w < 640
+    () => (vp.w < 640 && step === 'review' && reviewH
+      ? { top: 24, right: 32, bottom: reviewH + 24, left: 32 }
+      : vp.w < 640
       // Mobile: the booking sheet covers most of the screen, so fit the island into
       // the small visible band at the top (large bottom padding).
       ? { top: 16, right: 24, bottom: collapsed ? peekPx + 24 : Math.round(vp.h * 0.62), left: 24 }
       : collapsed ? { top: 110, right: 60, bottom: 40, left: 40 } : { top: 40, right: 60, bottom: 40, left: 420 }),
-    [vp, collapsed, peekPx],
+    [vp, collapsed, peekPx, step, reviewH],
   );
 
   // Mobile bottom sheet drag (2026-11-14): full screen when open, a strip stays when collapsed.
@@ -779,7 +791,7 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-[#0e1518]" />
           ) : (
-            <AutoMapView markers={markers} route={route?.line} fleet={fleet} focus={myLoc} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} className="h-full w-full" />
+            <AutoMapView markers={markers} route={route?.line} fleet={fleet} focus={pickup && dropoff ? null : myLoc} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} className="h-full w-full" />
           )}
         </div>
 
@@ -788,7 +800,7 @@ export default function BookingApp() {
             <div
               ref={sheetRef}
               className={`card pointer-events-auto relative flex flex-col overflow-hidden sm:max-h-full ${isMobile ? 'rounded-b-none' : ''} ${isMobile && dragH == null ? 'transition-[height] duration-300 ease-out' : ''}`}
-              style={isMobile ? { height: dragH != null ? `${dragH}px` : collapsed ? `calc(${peekPx}px + env(safe-area-inset-bottom))` : '100%' } : undefined}
+              style={isMobile ? (step === 'review' && !collapsed && dragH == null ? { height: 'auto', maxHeight: '100%' } : { height: dragH != null ? `${dragH}px` : collapsed ? `calc(${peekPx}px + env(safe-area-inset-bottom))` : '100%' }) : undefined}
               // Only a focused FORM FIELD expands a collapsed sheet. The handle itself is focusable, and
               // its focus after a tap re-expanded the sheet right after the tap collapsed it (2026-11-15).
               onFocusCapture={(e) => { if (isMobile && collapsed && (e.target as HTMLElement).matches('input:not([readonly]), textarea, select')) setCollapsed(false); }}
@@ -837,7 +849,7 @@ export default function BookingApp() {
               </button>
               )}
               {(isMobile || !collapsed) && (<>
-              <div ref={contentRef} className={`min-h-0 flex-1 overscroll-contain p-4 sm:p-5 ${isMobile && collapsed ? 'overflow-hidden' : 'overflow-y-auto'}`} style={{ paddingBottom: step === 'form' ? '1rem' : 'max(1rem, env(safe-area-inset-bottom))' }}>
+              <div ref={contentRef} className={`min-h-0 flex-1 overscroll-contain p-4 sm:p-5 ${step === 'review' ? 'pt-0 sm:pt-1' : ''} ${isMobile && collapsed ? 'overflow-hidden' : 'overflow-y-auto'}`} style={{ paddingBottom: step === 'form' ? '1rem' : 'max(1rem, env(safe-area-inset-bottom))' }}>
                 {step === 'form' ? (
                   /* ---- FORM (inlined so inputs keep focus across renders) ---- */
                   <div>
@@ -992,21 +1004,15 @@ export default function BookingApp() {
                   ) : (
                   <div>
                     <button className="mb-3 text-sm text-muted hover:text-ink" onClick={() => setStep('form')}>{t('booking.review.edit')}</button>
-                    <h2 className="text-xl font-bold">{t('booking.review.title')}</h2>
                     {banner && <p className="my-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{banner}</p>}
-                    <div className="mt-4 space-y-3 text-sm">
-                      <Row label={t('booking.review.pickup')} value={pickup?.label ?? '—'} dot="accent" />
-                      {viaStop && <Row label={t('booking.places.stop')} value={viaStop.label} />}
-                      <Row label={t('booking.review.destination')} value={dropoff?.label ?? '—'} dot="ink" />
-                      {/* «Когда» only for a scheduled ride — «Сейчас» is the default and needs no row (2026-11-16). */}
-                      {when !== 'NOW' && <Row label={t('booking.review.when')} value={`${scheduledAt.replace('T', ' ')} · ${cfg?.timezone}`} />}
-                      <Row label={t('booking.review.driverAsksFor')} value={name || passenger?.name || '—'} />
-                      <Row label={t('booking.review.yourPhone')} value={passenger?.phone || phone} />
-                      {effNote && <Row label={t('booking.review.note')} value={effNote} />}
-                      {/* The price range is on the class cards below — the «Стоимость» row only remains as the
-                          «by meter» fallback when no quote could be made (2026-11-16). */}
-                      {!quote && <Row label={t('booking.review.fare')} value={t('booking.review.fareByMeter')} />}
-                    </div>
+                    {/* Review = just the class choice and the order button (2026-11-16): the route is on the map
+                        above the (now content-high) sheet. Only a scheduled time or a missing quote still gets a row. */}
+                    {(when !== 'NOW' || !quote) && (
+                      <div className="mt-1 space-y-3 text-sm">
+                        {when !== 'NOW' && <Row label={t('booking.review.when')} value={`${scheduledAt.replace('T', ' ')} · ${cfg?.timezone}`} />}
+                        {!quote && <Row label={t('booking.review.fare')} value={t('booking.review.fareByMeter')} />}
+                      </div>
+                    )}
                     {classPicker}
                     {quote?.airport && <AirportFareNote />}
                     {ambiguous ? (

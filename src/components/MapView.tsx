@@ -77,6 +77,8 @@ function demoStyle(): maplibregl.StyleSpecification {
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF' };
 
 export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, focusZoom = 15, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
+  // Re-frame / re-centre when the visible area changes (e.g. the sheet under the map grew or shrank).
+  const padKey = fitPadding ? `${fitPadding.top},${fitPadding.right},${fitPadding.bottom},${fitPadding.left}` : '';
   const containerRef = useRef<HTMLDivElement>(null);
   // Any touch/pinch/scroll stops the navigation follow-camera at once (not only a drag) and,
   // with idleReturnMs, hands the camera back after that many ms without gestures.
@@ -182,7 +184,8 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       // Fit to markers if more than one (not while the navigation camera is following). Moving
       // markers (cars, the live person) do not re-fit — only a change of the fixed points does.
       if (followRef.current || idle.active.current) return;
-      const key = `${fitKeyOf(markers)}#${idle.returnTick}`;
+      // The visible area (padding) is part of the key: a sheet that changes height re-frames (2026-11-16).
+      const key = `${fitKeyOf(markers)}#${idle.returnTick}#${fitPadding ? `${fitPadding.top},${fitPadding.bottom}` : ''}`;
       if (key === lastFit.current) return;
       lastFit.current = key;
       if (markers.length >= 2) {
@@ -194,9 +197,9 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         map.easeTo({ center: [markers[0].lng, markers[0].lat], zoom: 12, duration: 400, ...(fitPadding ? { padding: fitPadding } : {}) });
       }
     })();
-    // fitPadding is layout-only: re-fitting when it changes identity would fight the user's panning.
+    // Only a change in the padding VALUES re-fits (padKey), not a new object identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [markers, ready, idle.returnTick]);
+  }, [markers, ready, idle.returnTick, padKey]);
 
   // Live on-duty cars overlay (does not affect the fit) — same as GoogleMapView.
   useEffect(() => {
@@ -218,8 +221,6 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
 
   // Zoom to a focus point (e.g. the passenger's detected location), once per change.
   const focusKey = focus ? `${focus.lat.toFixed(5)},${focus.lng.toFixed(5)}` : '';
-  // Re-centre when the visible area changes (e.g. the sheet under the map grew or shrank).
-  const padKey = fitPadding ? `${fitPadding.top},${fitPadding.right},${fitPadding.bottom},${fitPadding.left}` : '';
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready || !focus || followRef.current || idle.active.current) return;

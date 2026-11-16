@@ -1,5 +1,16 @@
 # Session handoff
 
+## 2026-11-16 — Review step: only the class choice; the route shows on the map
+**Review content:** the review keeps «‹ Изменить», «Выберите класс» with the cards, «Заказать …» and the small auto-match note. The title «Проверьте заказ» and the Подача / Куда / Имя / Телефон / Заметка rows are gone. Only a scheduled time or the no-quote «by meter» row can still appear.
+
+**Sheet and map (mobile):**
+- The sheet is content-high (`height: auto`, max 100 %).
+- Its height is measured (ResizeObserver) into `fitPadding.bottom`, so pickup and destination are framed in the map above it.
+- The booking map no longer `focus`es the user's own location once both points are set (that re-centred and undid the route fit).
+- MapView re-fits when the padding values change (`padKey`, value-based).
+
+**Check:** Playwright (local): review shows class cards plus a CTA only; both route points are visible above the sheet; no errors.
+
 ## 2026-11-16 — Booking form: no trip-info box, no price on order buttons
 **Form:** the info box («Поездка: ≈ 13 мин · 10,1 км», night/holiday, meter note, airport note) is gone. Only an error line stays if no quote could be made. The airport note still shows on the review screen.
 
