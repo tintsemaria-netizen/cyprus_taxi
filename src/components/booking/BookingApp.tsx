@@ -111,6 +111,9 @@ export default function BookingApp() {
     setEditor(slot);
   }
   useEffect(() => { if (dropoff || stop || hasStop) setAddrOpen(true); }, [dropoff, stop, hasStop]);
+  // Start screen = one «Куда» row; both rows only once an address is chosen. Closing the route
+  // editor without choosing anything goes back to the single row (2026-11-17).
+  useEffect(() => { if (!editor && !dropoff && !stop && !hasStop && !dropoffText) setAddrOpen(false); }, [editor, dropoff, stop, hasStop, dropoffText]);
   type Slot = 'p' | 's' | 'd';
   const slots: Slot[] = hasStop ? ['p', 's', 'd'] : ['p', 'd'];
   function slotGet(s: Slot) {
@@ -368,9 +371,11 @@ export default function BookingApp() {
         const footer = f ? f.offsetHeight - (parseFloat(getComputedStyle(f).paddingBottom) || 0) + 12 : 76;
         h = Math.round(box.getBoundingClientRect().top - sheet.getBoundingClientRect().top + padTop + routeBox.offsetHeight + 14 + footer);
       } else {
-        const inp = box.querySelector('input[readonly][aria-label]');
-        if (!inp) return;
-        h = Math.round(inp.getBoundingClientRect().bottom - sheet.getBoundingClientRect().top + 14);
+        // No full route yet (2026-11-17): the whole address box must show — one «Куда» row at the
+        // start, both rows once an address is being entered (was: only the first input → rows cut).
+        const addr = (box.querySelector('[data-route-box]') ?? box.querySelector('input[readonly][aria-label]')) as HTMLElement | null;
+        if (!addr) return;
+        h = Math.round(addr.getBoundingClientRect().bottom - sheet.getBoundingClientRect().top + 16);
       }
       const next = Math.max(150, Math.min(Math.round(window.innerHeight * 0.6), h));
       setPeekPx((p) => (Math.abs(p - next) > 2 ? next : p));
@@ -381,7 +386,7 @@ export default function BookingApp() {
     if (first) ro.observe(first);
     window.addEventListener('resize', measure);
     return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
-  }, [isMobile, step, routeReady]);
+  }, [isMobile, step, routeReady, addrOpen, hasStop]);
   useHideClipped(contentRef, isMobile && (collapsed || dragH != null));
   useEffect(() => {
     const el = contentRef.current;

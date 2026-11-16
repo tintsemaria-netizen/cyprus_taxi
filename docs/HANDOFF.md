@@ -1,5 +1,18 @@
 # Session handoff
 
+## 2026-11-17 — Booking start sheet: rows never cut; one «Куда» row at the start
+**Bug:** the collapsed sheet's peek height was measured to the FIRST readonly input only. With two rows but no full route (e.g. after opening and closing the route editor), the rows were cut and then hidden by useHideClipped. The phone showed only the title and ⇅.
+
+**Fix:**
+- Without a full route, the peek is measured to the bottom of the whole `[data-route-box]`, and re-measured when `addrOpen` / `hasStop` change.
+- Closing the route editor without choosing anything returns to the single «Куда» row (`addrOpen` false when there is no dropoff, dropoff text or stop).
+
+**Check:** Playwright (local, with and without GPS):
+- start: sheet 181 px, «Пункт назначения» visible;
+- editor opened and closed: still one row, visible;
+- route chosen: 233–236 px, both rows visible;
+- no errors.
+
 ## 2026-11-16 — Canceled ride: no pill/note, «Заказать ещё раз» repeats the same ride
 **Tracking, CANCELED:** the «● ЗАКАЗ ОТМЕНЁН» map pill and the «Этот заказ отменён.» box are removed; the sheet title still says it.
 
