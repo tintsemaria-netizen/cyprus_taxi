@@ -1041,7 +1041,6 @@ export default function BookingApp() {
                       </div>
                     )}
                     {classPicker}
-                    {quote?.airport && <AirportFareNote />}
                     {ambiguous ? (
                       <div className="mt-4 rounded-[12px] border border-warn/40 bg-warn/10 p-3">
                         <p className="text-sm text-warn">{t('booking.review.ambiguousPrompt')}</p>
@@ -1113,16 +1112,6 @@ export default function BookingApp() {
   );
 }
 
-// Airport trips: official fixed fares (Road Transport Department) apply and can differ from the
-// meter estimate. Shown until the fixed-fare table is implemented (2026-10-01 audit, Stage 0.7).
-function AirportFareNote() {
-  const { t } = useT();
-  return (
-    <p className="mt-2 rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">
-      {t('booking.trip.airportNote')}
-    </p>
-  );
-}
 
 function Row({ label, value, dot }: { label: string; value: string; dot?: 'accent' | 'ink' }) {
   return (

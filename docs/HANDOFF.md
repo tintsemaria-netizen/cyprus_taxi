@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-17 — Review: airport fixed-fare warning removed
+**Change:** the yellow «Поездка в аэропорт или из аэропорта: действуют официальные фиксированные тарифы…» note under the class cards is removed, together with the `AirportFareNote` component. The `booking.trip.airportNote` key is unused but kept.
+
+**Note:** `quote.airport` is still computed server-side.
+
+**Check:** Playwright (local), route to Larnaca Airport: no note; no errors.
+
 ## 2026-11-17 — Tracking: searching shows the chosen route; car on its way shows its route in lime
 **SEARCHING:**
 - The full panel again (title, route box, «Отменить заказ»); the 2026-11-16 auto-fold is reverted.
