@@ -27,7 +27,7 @@ const track = {
   reserving: 'Reserving the nearest driver for you…',
   ratingAria: { one: 'Rated {avg} out of 5 from {count} trip', other: 'Rated {avg} out of 5 from {count} trips' },
   plateAria: 'Number plate {plate}',
-  startCodeToggle: 'Trip start code',
+  startCodeToggle: 'Confirmation code',
   startCodeToggleHint: 'The driver can start the trip only with your code',
   startCodeFailed: 'Could not change the code. Please try again.',
   startCodeHint: 'Give this code to your driver when you get in',

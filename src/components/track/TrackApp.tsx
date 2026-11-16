@@ -425,11 +425,9 @@ export default function TrackApp() {
                     to tell the driver. Off = the driver starts the trip without a code. */}
                 {['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(view.status) && (
                   <div className={`mt-3 rounded-[12px] border px-3 py-2 ${view.startCode ? 'border-accent/50 bg-accent/10' : 'border-edge'}`}>
-                    <label className="flex cursor-pointer items-center justify-between gap-3">
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold">🔒 {t('track.startCodeToggle')}</span>
-                        <span className="block text-xs text-muted">{view.startCode ? t('track.startCodeHint') : t('track.startCodeToggleHint')}</span>
-                      </span>
+                    {/* Just the label above, the switch, and the code under it (2026-11-16). */}
+                    <label className="flex cursor-pointer flex-col items-start gap-2">
+                      <span className="text-sm font-semibold">{t('track.startCodeToggle')}</span>
                       <input type="checkbox" role="switch" className="peer sr-only" checked={!!view.startCode} disabled={codeBusy}
                         onChange={(e) => toggleStartCode(e.target.checked)} data-testid="start-code-switch" />
                       <span aria-hidden className={`relative h-7 w-12 shrink-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent ${view.startCode ? 'bg-accent' : 'bg-edge'} ${codeBusy ? 'opacity-60' : ''}`}>
@@ -437,7 +435,7 @@ export default function TrackApp() {
                       </span>
                     </label>
                     {view.startCode && (
-                      <div className="mt-1 text-center font-mono text-3xl font-bold tracking-[0.3em] text-accent" aria-label={t('track.startCodeAria', { code: view.startCode.split('').join(' ') })}>{view.startCode}</div>
+                      <div className="mt-2 text-left font-mono text-3xl font-bold tracking-[0.3em] text-accent" aria-label={t('track.startCodeAria', { code: view.startCode.split('').join(' ') })}>{view.startCode}</div>
                     )}
                   </div>
                 )}

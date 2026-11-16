@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-16 — Start-code switch simplified
+The passenger block is now just three things, per the user:
+- the label «Код подтверждения» on top (en «Confirmation code», el «Κωδικός επιβεβαίωσης»);
+- the switch under it;
+- the 4-digit code under the switch (left-aligned) when the switch is on.
+
+The 🔒 and the hint texts are gone; the `startCodeHint` / `startCodeToggleHint` keys are unused but kept. Playwright (local): off → on shows the code, no errors.
+
 ## 2026-11-16 — Trip-start code is optional (passenger switch)
 **Default:** a ride has no start code. Assignment no longer generates one; the driver starts with a single «Начать поездку» tap.
 
