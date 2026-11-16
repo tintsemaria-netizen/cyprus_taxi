@@ -246,8 +246,10 @@ export default function TrackApp() {
   useEffect(() => {
     const st = view?.status ?? null;
     if (st && st !== prevStatus.current) {
-      if (st === 'IN_PROGRESS') setSheetOpen(false);
-      if (st === 'COMPLETED' || st === 'CANCELED' || st === 'ARRIVED') setSheetOpen(true);
+      // Searching (2026-11-16): start folded to a small panel so more of the map with the pulsing
+      // pickup pin shows; a found driver opens it again.
+      if (st === 'IN_PROGRESS' || st === 'SEARCHING') setSheetOpen(false);
+      if (st === 'COMPLETED' || st === 'CANCELED' || st === 'ARRIVED' || ((st === 'ASSIGNED' || st === 'EN_ROUTE') && prevStatus.current === 'SEARCHING')) setSheetOpen(true);
       prevStatus.current = st;
     }
   }, [view?.status]);
@@ -386,7 +388,21 @@ export default function TrackApp() {
               {/* Pinned: what the passenger needs at pickup (status, driver/plate, start code). */}
               <div className={`shrink-0 p-4 pb-3 pt-1 sm:p-5 sm:pb-3 sm:pt-1 ${sheetOpen ? 'border-b border-edge' : ''}`}>
                 {view.status === 'SEARCHING'
-                  ? <h1 className="text-lg font-medium leading-snug text-ink" role="status" aria-live="polite">{t('track.searchingNote')}</h1>
+                  ? <>
+                      <h1 className="text-lg font-medium leading-snug text-ink" role="status" aria-live="polite">{t('track.searchingNote')}</h1>
+                      {/* Folded searching panel: a compact route and the cancel link stay reachable. */}
+                      {!sheetOpen && (
+                        <div className="mt-2 space-y-1 text-sm" data-testid="searching-compact">
+                          <div className="flex items-center gap-2 truncate"><span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full border-2 border-accent" /><span className="truncate">{view.pickup.label}</span></div>
+                          <div className="flex items-center gap-2 truncate"><span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent" /><span className="truncate">{view.dropoff.label}</span></div>
+                          {view.canCancel && (
+                            <button type="button" className="pt-1 text-sm text-danger" onClick={() => setConfirmCancel(true)} disabled={cancelling}>
+                              {cancelling ? t('track.cancelling') : t('track.cancelBooking')}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </>
                   : <h1 className="text-xl font-bold" role="status" aria-live="polite">{headline}</h1>}
                 {view.status === 'REQUESTED' && !view.confirmedDriver && (
                   <p className="mt-1 text-sm text-muted">{t('track.scheduledNote')}</p>

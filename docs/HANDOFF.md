@@ -1,5 +1,14 @@
 # Session handoff
 
+## 2026-11-16 — Tracking: searching panel starts folded
+**Folded panel:** while SEARCHING, the passenger sheet starts collapsed (164 px instead of 363 px on an iPhone 13). It shows the title, a compact two-line route (dots + labels) and a red «Отменить заказ» link that opens the usual confirmation. Swipe or tap expands it to the full sheet.
+
+**Status changes:** going from SEARCHING to ASSIGNED or EN_ROUTE opens the sheet again.
+
+**Pin:** the pulsing pin stays centred in the bigger visible map (padding follows the sheet height).
+
+**Check:** Playwright (local): folded pin y283 vs middle 281; expanded 183 vs 181; cancel confirmation shown; no errors.
+
 ## 2026-11-16 — Route editor: small × to clear the typed address
 **Change:** the active address field shows a small round × (left of the ⊕ map button) whenever it has text. Tapping it empties the field, drops the selected place, clears the suggestions and keeps focus, so the keyboard stays open.
 - New key `booking.route.clear` in ru, en and el.
