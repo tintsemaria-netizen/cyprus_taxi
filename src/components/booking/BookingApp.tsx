@@ -13,6 +13,7 @@ import AutoMapPicker from './AutoMapPicker';
 import { PassengerLoginModal } from './PassengerLoginModal';
 import { AccountMenu } from './AccountMenu';
 import { recordVisit } from '@/lib/navTrail';
+import { BackArrow } from '@/components/BackArrow';
 import { useLiveLocation } from '@/components/useLiveLocation';
 import { nicosiaInputValue } from '@/lib/timezone';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
@@ -785,7 +786,11 @@ export default function BookingApp() {
         </div>
       )}
       <header className="z-20 flex items-center justify-between border-b border-edge bg-page/90 px-4 py-2 backdrop-blur sm:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
-        <Logo className="h-10" />
+        {/* Back arrow only where there is a step behind (2026-11-17): class choice → the form. */}
+        <div className="flex items-center gap-1">
+          {step === 'review' && <BackArrow className="-ml-2" onBack={() => setStep('form')} />}
+          <Logo className="h-10" />
+        </div>
         <div className="flex items-center gap-2">
           {/* Segmented nav styled exactly like the Now / Schedule control. When signed in the
               trailing "Login" tab is dropped in favour of the account avatar (below). */}

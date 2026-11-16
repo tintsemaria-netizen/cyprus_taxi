@@ -1,5 +1,24 @@
 # Session handoff
 
+## 2026-11-17 — Back arrow: one step back, and where it was missing
+**New component:** `src/components/BackArrow.tsx`. It goes exactly one step back: `onBack` steps inside a screen; otherwise it goes one page back in the navTrail, or to the fallback when the page was opened directly. Pages using it record themselves in the trail.
+
+**Added:**
+- `/login`: before the logo.
+- `/register`: before the logo on the form step (page back) and the code step (back to the form); none on the done screen.
+- Booking review step (class choice): in the header, back to the form with the route kept.
+
+**Unchanged / no arrow:**
+- The booking start screen has no arrow (nothing behind it).
+- PassengerTopBar pages (track, rides, account, prebookings, privacy, terms) already use the same trail back.
+
+**Check:** Playwright (local):
+- /rides → /login → arrow → /rides;
+- /login opened directly → arrow → /;
+- home has no arrow;
+- review → arrow → form with both route rows;
+- no errors.
+
 ## 2026-11-17 — Review: airport fixed-fare warning removed
 **Change:** the yellow «Поездка в аэропорт или из аэропорта: действуют официальные фиксированные тарифы…» note under the class cards is removed, together with the `AirportFareNote` component. The `booking.trip.airportNote` key is unused but kept.
 
