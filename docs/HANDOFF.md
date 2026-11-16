@@ -1,5 +1,17 @@
 # Session handoff
 
+## 2026-11-16 — Driver home map: exact zoom 14 centred on the car
+**User report:** the 20 % closer change looked like the map was scaled up, not zoomed in on the car.
+
+**Cause:** single-point framing used fitBounds on a box. A large box on a narrow phone landed below the wanted zoom, and fractional zooms (13.26) can render as scaled raster tiles.
+
+**Fix:**
+- New `centerPointAt`: `moveCamera({center, zoom})`, then `panBy` half the padding difference, so the car sits in the middle of the visible area between the overlays.
+- It is used only when `focusZoom` is passed. Other screens keep `framePoint`.
+- The driver home uses whole zoom 14, which renders sharp tiles.
+
+**Check:** tsc clean; build ok. Not visually checked (no Google key locally).
+
 ## 2026-11-16 — Driver home map 20 % closer
 The waiting-for-orders view is now zoom 13.26 instead of 13: log2(1.2) ≈ 0.26 makes everything appear 20 % larger. Google vector maps (Map ID) and MapLibre both accept fractional zoom.
 

@@ -11,7 +11,7 @@ const CYPRUS = { lat: 34.92, lng: 33.2 };
 
 // Driver home map: the driver's own car (from the live GPS fix, when sharing) and the other
 // on-duty cars (anonymised, available/busy), refreshed every 10 s while the page is visible.
-// Waiting for orders the map shows about half the city around the car (zoom 13.26 = 20 % closer than 13, 2026-11-16).
+// Waiting for orders the map shows about half the city around the car (exact zoom 14, car centred in the visible area, 2026-11-16).
 // Without a GPS fix the map shows the whole island (zoom 8) so cars on the coast stay in view.
 // `fullscreen`: the map fills the screen behind the driver Home overlays (2026-11-12); counts are
 // reported through `onCounts` so the overlay can show them as a button.
@@ -49,7 +49,7 @@ export function DriverHomeMap({ pos, fullscreen = false, onCounts, pickup = null
   if (fullscreen) {
     return (
       <div className="fixed inset-0 z-0">
-        <AutoMapView markers={markers} fleet={pickup ? [] : fleet} focus={pickup ? null : pos} focusZoom={13.26} center={pos ?? CYPRUS} zoom={pos ? 13.26 : 8} interactive idleReturnMs={4000} fitPadding={fitPadding} className="h-full w-full" />
+        <AutoMapView markers={markers} fleet={pickup ? [] : fleet} focus={pickup ? null : pos} focusZoom={14} center={pos ?? CYPRUS} zoom={pos ? 14 : 8} interactive idleReturnMs={4000} fitPadding={fitPadding} className="h-full w-full" />
       </div>
     );
   }
