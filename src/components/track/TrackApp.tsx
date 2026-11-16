@@ -349,7 +349,8 @@ export default function TrackApp() {
         {/* status pill */}
         <div className="absolute left-4 top-4 z-10 max-w-[70%]">
           {/* No pill while searching (2026-11-15): the sheet already says it, bigger. */}
-          {view.status !== 'SEARCHING' && <span className="chip !bg-page/90 !text-accent">
+          {/* No pill while searching or after a cancellation (2026-11-16): the sheet says it. */}
+          {view.status !== 'SEARCHING' && view.status !== 'CANCELED' && <span className="chip !bg-page/90 !text-accent">
             {view.status === 'EN_ROUTE' ? `● ${t('track.pillEnRoute')}` : `● ${statusLabel.toUpperCase()}`}
           </span>}
           {reconnecting && <span className="chip ml-2 !bg-page/90 !text-warn">{t('track.reconnecting')}</span>}
@@ -554,12 +555,23 @@ export default function TrackApp() {
                           <span>{view.receipt.paymentStatus === 'PENDING' ? t('track.toBeCollected') : t('track.collected')}</span>
                         </div>
                       </div>
+                    ) : view.status === 'COMPLETED' ? (
+                      <div className="rounded-[12px] border border-edge bg-elevated p-3 text-sm">{t('track.thanks')}</div>
+                    ) : null /* canceled: no «Этот заказ отменён» box (2026-11-16) — the title says it */}
+                    {view.status === 'CANCELED' ? (
+                      // Re-order the very same ride (route + stop + class); × above starts a fresh booking.
+                      <button type="button" className="btn-primary mt-3 w-full" data-testid="repeat-ride" onClick={() => {
+                        try {
+                          sessionStorage.setItem('il-y-repeat', JSON.stringify({
+                            p: view.pickup, d: view.dropoff, c: view.vClass,
+                            s: view.stop ? { lat: view.stop.lat, lng: view.stop.lng, label: view.stop.label } : null,
+                          }));
+                        } catch { /* storage blocked: falls back to an empty form */ }
+                        window.location.href = '/';
+                      }}>{t('track.repeatRide')}</button>
                     ) : (
-                      <div className="rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-                        {view.status === 'COMPLETED' ? t('track.thanks') : t('track.canceledNote')}
-                      </div>
+                      <a href="/" className="btn-primary mt-3 w-full">{t('track.bookAnother')}</a>
                     )}
-                    <a href="/" className="btn-primary mt-3 w-full">{t('track.bookAnother')}</a>
                   </div>
                 )}
               </div>

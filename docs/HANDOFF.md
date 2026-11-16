@@ -1,5 +1,17 @@
 # Session handoff
 
+## 2026-11-16 — Canceled ride: no pill/note, «Заказать ещё раз» repeats the same ride
+**Tracking, CANCELED:** the «● ЗАКАЗ ОТМЕНЁН» map pill and the «Этот заказ отменён.» box are removed; the sheet title still says it.
+
+**Repeat button:** «Заказать ещё раз» (new key `track.repeatRide`, ru/en/el).
+- It stores {pickup, dropoff, stop, class} in sessionStorage `il-y-repeat` and goes to `/`.
+- BookingApp prefills from it and, once signed in and priced, calls `toReview()`. The passenger lands on the class/order step with the same route and class.
+- If validation fails (e.g. no phone on the account), the passenger stays on the prefilled form with the error.
+
+**Unchanged:** the × still starts a fresh booking. COMPLETED keeps «Спасибо» and «Заказать ещё поездку».
+
+**Check:** Playwright (local), canceled XL ride: no pill, no note; «Заказать ещё раз» → review with XL selected and «Заказать XL»; no errors.
+
 ## 2026-11-16 — Review: whole route visible, no note under the order button
 **Review sheet:** the auto-match / tracking / pay-the-driver note under «Заказать …» is removed. Spacing is tighter («‹ Изменить» mb-1, CTA mt-4), so the sheet is lower.
 

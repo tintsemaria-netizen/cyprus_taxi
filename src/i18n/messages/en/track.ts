@@ -16,6 +16,7 @@ const track = {
   bookNewRide: 'Book a new ride',
   closeToStart: 'Close',
   bookAnother: 'Book another ride',
+  repeatRide: 'Order again',
   yourDriver: 'Your driver',
   etaApprox: '{min} (approx.)',
   meetDriver: 'Meet {name}',

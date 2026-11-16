@@ -19,6 +19,7 @@ const track: Catalog<typeof en> = {
   bookNewRide: 'Κλείστε νέα διαδρομή',
   closeToStart: 'Κλείσιμο',
   bookAnother: 'Κλείστε άλλη διαδρομή',
+  repeatRide: 'Παραγγελία ξανά',
   yourDriver: 'Ο οδηγός σας',
   etaApprox: '{min} (περίπου)',
   meetDriver: '{name} έρχεται',

@@ -77,6 +77,22 @@ export default function BookingApp() {
   useEffect(() => {
     try { const f = sessionStorage.getItem('il-y-flash'); if (f) { setFlash(f); sessionStorage.removeItem('il-y-flash'); } } catch { /* storage blocked */ }
   }, []);
+  // «Заказать ещё раз» from a canceled ride (2026-11-16): the tracking page leaves the same route +
+  // class in sessionStorage; prefill it here and go straight to the class/order step once priced.
+  const repeatPending = useRef(false);
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('il-y-repeat'); if (!raw) return;
+      sessionStorage.removeItem('il-y-repeat');
+      const r = JSON.parse(raw) as { p: Selected; d: Selected; s?: Selected | null; c?: 'COMFORT' | 'XL' };
+      if (!r?.p || !r?.d) return;
+      setPickup(r.p); setPickupText(r.p.label); setDropoff(r.d); setDropoffText(r.d.label);
+      if (r.s) { setStop(r.s); setStopText(r.s.label); setHasStop(true); }
+      if (r.c === 'XL' || r.c === 'COMFORT') setVClass(r.c);
+      repeatPending.current = true;
+    } catch { /* storage blocked / bad data: normal empty form */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [submitting, setSubmitting] = useState(false);
   const [picker, setPicker] = useState<'pickup' | 'dropoff' | 'stop' | null>(null);
   // One optional stop + the address list UX (2026-11-15).
@@ -567,6 +583,12 @@ export default function BookingApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passenger]);
 
+  useEffect(() => {
+    if (!repeatPending.current || step !== 'form' || !passenger || !quotes[vClass]) return;
+    repeatPending.current = false;
+    toReview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quotes, passenger, step, vClass]);
   function toReview() {
     if (!validate()) return;
     // Contact details come from the signed-in account, so sign in before the review step.
