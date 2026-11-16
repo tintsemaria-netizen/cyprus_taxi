@@ -1,5 +1,21 @@
 # Session handoff
 
+## 2026-11-16 — Driver GPS on Android/Samsung: clear reasons instead of silence
+**Report:** «can't turn on location» on a Samsung S26 Ultra. No real device was available, so this was emulated in Chromium with the Galaxy S24 profile and an Android 16 / SM-S948B Chrome UA.
+
+**Changes in driver `startGps` / `beginWatch`:**
+- `navigator.permissions.query('geolocation')`: when the state is `denied`, the denied help shows at once. Chrome and Samsung Internet never prompt again for a blocked site, including the auto-block after the prompt was dismissed a few times.
+- POSITION_UNAVAILABLE in coarse mode with no fix means the phone's Location switch is off. That now shows a new `driver.gps.unavailable` message instead of an endless «Поиск GPS…».
+- The `driver.gps.denied` text (ru, en, el) now has step-by-step fixes: Chrome 🔒 → Permissions → Location; Android Settings → Apps → Chrome / Samsung Internet → Permissions → Location; iPhone Safari.
+
+**Check:** emulated, local.
+- granted: «GPS включён ±8 м».
+- denied: the instructions show.
+- location off: the «включите Местоположение» message shows.
+- No errors.
+
+**Not checked:** a real S26 Ultra.
+
 ## 2026-11-16 — Review step: only the class choice; the route shows on the map
 **Review content:** the review keeps «‹ Изменить», «Выберите класс» with the cards, «Заказать …» and the small auto-match note. The title «Проверьте заказ» and the Подача / Куда / Имя / Телефон / Заметка rows are gone. Only a scheduled time or the no-quote «by meter» row can still appear.
 

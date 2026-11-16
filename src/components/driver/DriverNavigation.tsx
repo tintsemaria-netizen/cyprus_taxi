@@ -345,7 +345,7 @@ export function DriverNavigation(props: {
         {!gps.active && panelOpen && (
           <div className="mb-3 rounded-[12px] border border-warn/40 bg-warn/10 p-3 text-sm">
             <div className="font-semibold text-warn">{t('driver.navigation.gpsOffTitle')}</div>
-            {gps.error && gps.error !== 'acquiring' && <div className="mt-1 text-xs text-danger">{t(`driver.gps.${gps.error as 'denied' | 'unsupported'}`)}</div>}
+            {gps.error && gps.error !== 'acquiring' && <div className="mt-1 text-xs text-danger">{t(`driver.gps.${gps.error as 'denied' | 'unsupported' | 'unavailable'}`)}</div>}
             <button className="btn-primary mt-2 min-h-[44px] w-full" onClick={props.onStartGps}>{t('driver.gps.start')}</button>
           </div>
         )}

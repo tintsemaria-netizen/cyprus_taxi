@@ -28,7 +28,8 @@ const driver = {
     returnToTrip: 'Return →',
   },
   gps: {
-    denied: 'Location permission denied. Allow location for this site to share GPS.',
+    denied: 'Location is blocked for il-y.taxi. Android: tap 🔒 left of the address → Permissions → Location → Allow; if that does not help — phone Settings → Apps → Chrome (or Samsung Internet) → Permissions → Location → Allow. iPhone: Settings → Safari → Location → Allow. Then tap 📍 GPS again.',
+    unavailable: 'Location is switched off on the phone. Pull down the quick panel and turn on Location, then tap 📍 GPS again.',
     acquiring: 'Acquiring GPS… keep location on; a moving vehicle outdoors gets the best fix.',
     unsupported: 'Geolocation not supported on this device/browser.',
     title: 'Location sharing',

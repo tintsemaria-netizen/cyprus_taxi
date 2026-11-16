@@ -159,6 +159,9 @@ function Driver() {
       (err) => {
         if (err.code === err.PERMISSION_DENIED) { setGps((g) => ({ ...g, active: false, error: 'denied' })); stopGps(); return; }
         if (highAccuracy) { highModeRef.current = false; beginWatch(false); return; }
+        // POSITION_UNAVAILABLE even in coarse mode = the phone's own Location switch is off (common on
+        // Android/Samsung): say so instead of an endless «Поиск GPS…» (2026-11-16).
+        if (err.code === err.POSITION_UNAVAILABLE && !lastPos.current) { setGps((g) => ({ ...g, error: 'unavailable' })); return; }
         setGps((g) => ({ ...g, error: lastPos.current ? null : 'acquiring' }));
       },
       highAccuracy ? { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 } : { enableHighAccuracy: false, maximumAge: 60000, timeout: 30000 },
@@ -166,6 +169,13 @@ function Driver() {
   }
   function startGps() {
     if (!('geolocation' in navigator)) { setGps({ active: false, error: 'unsupported', last: null }); return; }
+    // Chrome/Samsung Internet never prompt again once the site is blocked (incl. the automatic block
+    // after the prompt was dismissed a few times) — show the fix-it steps right away (2026-11-16).
+    try {
+      void navigator.permissions?.query({ name: 'geolocation' as PermissionName }).then((st) => {
+        if (st.state === 'denied') setGps((g) => ({ ...g, error: 'denied' }));
+      }).catch(() => { /* not supported: the watch error tells us */ });
+    } catch { /* ignore */ }
     session.current = uuid(); seq.current = 0; setGps({ active: true, error: null, last: null, accuracyM: null });
     filterRef.current = initialFilterState(); highModeRef.current = true;
     beginWatch(true); sendTimer.current = setInterval(sendSample, 5000);
@@ -375,7 +385,7 @@ function HomeSection(props: {
           </div>
         )}
         {!offer && warning && <div className="pointer-events-auto rounded-[12px] border border-warn/40 bg-page/95 px-3 py-2 text-sm text-warn">{warning.message}{warning.action && <a href={warning.action.href} className="ml-2 underline">{warning.action.label}</a>}</div>}
-        {data.onDuty && gps.error && <div className={`pointer-events-auto rounded-[12px] border bg-page/95 px-3 py-2 text-xs ${gps.error === 'acquiring' ? 'border-warn/40 text-warn' : 'border-danger/40 text-danger'}`}>{t(`driver.gps.${gps.error as 'denied' | 'acquiring' | 'unsupported'}`)}</div>}
+        {data.onDuty && gps.error && <div className={`pointer-events-auto rounded-[12px] border bg-page/95 px-3 py-2 text-xs ${gps.error === 'acquiring' ? 'border-warn/40 text-warn' : 'border-danger/40 text-danger'}`}>{t(`driver.gps.${gps.error as 'denied' | 'acquiring' | 'unsupported' | 'unavailable'}`)}</div>}
         {data.onDuty && !gps.active && !gps.error && <div className="pointer-events-auto rounded-[12px] border border-edge bg-page/95 px-3 py-2 text-xs text-muted">{t('driver.map.noGps')}</div>}
         <InstallPrompt app="driver" className="pointer-events-auto w-full bg-page/95" />
         {/* One button per action, right-aligned under the messages (never overlapping them). */}
