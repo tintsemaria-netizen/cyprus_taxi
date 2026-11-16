@@ -9,7 +9,7 @@ const booking: Catalog<typeof en> = {
   },
   currentLocation: 'Τρέχουσα τοποθεσία',
   form: {
-    priceUpdated: 'Η τιμή ενημερώθηκε σε ≈ {price}. Ελέγξτε την και πατήστε ξανά «Παραγγελία».',
+    priceUpdated: 'Η τιμή ενημερώθηκε σε {price}. Ελέγξτε την και πατήστε ξανά «Παραγγελία».',
     resetRoute: 'Εκκαθάριση διαδρομής',
     onMap: 'Στον χάρτη',
     addStop: 'Προσθήκη στάσης',
@@ -86,7 +86,7 @@ const booking: Catalog<typeof en> = {
     yourPhone: 'Το τηλέφωνό σας',
     note: 'Σημείωση',
     fare: 'Ναύλος',
-    fareValue: '≈ {total} ({low}–{high}) · εκτίμηση ταξίμετρου',
+    fareValue: '{range} · εκτίμηση ταξίμετρου',
     fareByMeter: 'Βάσει ταξίμετρου',
     ambiguousPrompt: 'Αυτή τη νύχτα αλλάζει η ώρα και η συγκεκριμένη ώρα εμφανίζεται δύο φορές. Ποια εννοείτε;',
     ambiguousEarlier: '{time} · η πρώτη (θερινή ώρα, UTC+{offset})',
@@ -103,9 +103,9 @@ const booking: Catalog<typeof en> = {
   sheet: { collapse: 'Σύμπτυξη', expand: 'Ανάπτυξη' },
   cta: {
     request: 'Κλείστε διαδρομή',
-    requestFrom: 'Παραγγελία · από ≈ {price}',
+    requestFrom: 'Παραγγελία · από {price}',
     requestClass: 'Κράτηση {vClass}',
-    requestClassPrice: 'Κράτηση {vClass} · ≈ {price}',
+    requestClassPrice: 'Κράτηση {vClass} · {price}',
     signInFirst: 'Θα συνδεθείτε πριν από την επιβεβαίωση.',
   },
   route: {

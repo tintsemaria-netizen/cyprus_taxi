@@ -104,7 +104,7 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
   }
   const routeSource = routeAvailable ? 'traffic' : 'approx';
 
-  const est = computeMeterEstimate({ distanceMeters, passengerCount: input.passengerCount, luggageCount: input.luggageCount, at: pricingAt });
+  const est = computeMeterEstimate({ distanceMeters, passengerCount: input.passengerCount, luggageCount: input.luggageCount, at: pricingAt, vClass: input.vClass });
   const requestHash = quoteRequestHash(input);
   const expiresAt = new Date(at.getTime() + QUOTE_TTL_MS);
 

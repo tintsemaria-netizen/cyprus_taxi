@@ -3,6 +3,8 @@
 // estimate, NOT a certified taximeter amount. All money is integer cents.
 
 export const TARIFF_VERSION = 'cy-urban-2026-09-13';
+// Rule version for XL quotes: the urban meter + our XL vehicle surcharge.
+export const TARIFF_VERSION_XL = 'cy-urban-2026-09-13+xl40-2026-11-16';
 
 const TARIFF = {
   day: { initialCents: 380, perKmCents: 95 }, // 06:01–20:30
@@ -14,6 +16,11 @@ const TARIFF = {
   // Passenger surcharge on the fare (regulated): 5 pax +20%, 6 pax +40%.
   paxSurcharge: (n: number) => (n >= 6 ? 0.4 : n === 5 ? 0.2 : 0),
   estimateBandPct: 0.15, // ± band shown to the passenger (honest estimate, not exact)
+  // XL (minivan, up to 6 pax) — OUR OWN commercial setting, not a regulated figure (2026-11-16,
+  // owner's request for a separate XL price). +40 % on initial hire + distance, the same as the
+  // regulated 6-passenger surcharge. It REPLACES the passenger surcharge (never both), so a full
+  // XL costs what a 6-passenger meter fare would, and a 1–4 pax XL pays for the bigger vehicle.
+  xlPct: 0.4,
 };
 
 // Local wall-clock hour/min in Europe/Nicosia for a given instant.
@@ -76,6 +83,7 @@ export function computeMeterEstimate(params: {
   passengerCount: number;
   luggageCount?: number;
   at: Date;
+  vClass?: 'COMFORT' | 'XL';
 }): MeterEstimate {
   const night = isNightTariff(params.at);
   const holiday = isCyprusPublicHoliday(params.at);
@@ -83,8 +91,10 @@ export function computeMeterEstimate(params: {
   const km = params.distanceMeters / 1000;
   const distanceCents = Math.round(km * t.perKmCents);
   const base = t.initialCents + distanceCents;
-  const paxPct = TARIFF.paxSurcharge(params.passengerCount);
+  const xl = params.vClass === 'XL';
+  const paxPct = xl ? 0 : TARIFF.paxSurcharge(params.passengerCount);
   const paxCents = Math.round(base * paxPct);
+  const xlCents = xl ? Math.round(base * TARIFF.xlPct) : 0;
   const luggageCents = (params.luggageCount ?? 0) * TARIFF.luggagePieceCents;
   const holidayCents = holiday ? TARIFF.holidaySurchargeCents : 0;
 
@@ -92,14 +102,15 @@ export function computeMeterEstimate(params: {
     { code: 'initial', label: `Initial hire (${night ? 'night' : 'day'} tariff)`, cents: t.initialCents },
     { code: 'distance', label: `Distance ${km.toFixed(1)} km × €${(t.perKmCents / 100).toFixed(2)}/km`, cents: distanceCents },
   ];
+  if (xlCents) lines.push({ code: 'xl', label: `XL vehicle (+${Math.round(TARIFF.xlPct * 100)}%)`, cents: xlCents });
   if (paxCents) lines.push({ code: 'pax', label: `${params.passengerCount}-passenger surcharge (+${Math.round(paxPct * 100)}%)`, cents: paxCents });
   if (luggageCents) lines.push({ code: 'luggage', label: `Luggage × ${params.luggageCount}`, cents: luggageCents });
   if (holidayCents) lines.push({ code: 'holiday', label: 'Public-holiday surcharge', cents: holidayCents });
 
-  const totalCents = base + paxCents + luggageCents + holidayCents;
+  const totalCents = base + paxCents + xlCents + luggageCents + holidayCents;
   return {
     priceType: 'REGULATED_METER_ESTIMATE',
-    ruleVersion: TARIFF_VERSION,
+    ruleVersion: xl ? TARIFF_VERSION_XL : TARIFF_VERSION,
     currency: 'EUR',
     night,
     holiday,

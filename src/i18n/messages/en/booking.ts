@@ -6,7 +6,7 @@ const booking = {
   },
   currentLocation: 'Current location',
   form: {
-    priceUpdated: 'The price was updated to ≈ {price}. Check it and tap «Order» again.',
+    priceUpdated: 'The price was updated to {price}. Check it and tap «Order» again.',
     resetRoute: 'Clear the route',
     onMap: 'On map',
     addStop: 'Add a stop',
@@ -83,7 +83,7 @@ const booking = {
     yourPhone: 'Your phone',
     note: 'Note',
     fare: 'Fare',
-    fareValue: '≈ {total} ({low}–{high}) · meter estimate',
+    fareValue: '{range} · meter estimate',
     fareByMeter: 'Set by the taximeter',
     ambiguousPrompt: 'On this night the clocks change and this time occurs twice. Which one do you mean?',
     ambiguousEarlier: '{time} · earlier (summer time, UTC+{offset})',
@@ -100,9 +100,9 @@ const booking = {
   sheet: { collapse: 'Collapse', expand: 'Expand' },
   cta: {
     request: 'Request a ride',
-    requestFrom: 'Order · from ≈ {price}',
+    requestFrom: 'Order · from {price}',
     requestClass: 'Request {vClass}',
-    requestClassPrice: 'Request {vClass} · ≈ {price}',
+    requestClassPrice: 'Request {vClass} · {price}',
     signInFirst: 'You’ll sign in before confirming.',
   },
   route: {

@@ -441,6 +441,9 @@ export default function BookingApp() {
   }, [pickup, dropoff, viaStop]);
 
   // Fare estimate (server-issued quote) — recomputed when the trip inputs change.
+  // Only the ±15 % range is shown, no single «≈» figure (2026-11-16). An upfront fare (low = high) shows one price.
+  const fmtRange = (q: { rangeLowCents: number; rangeHighCents: number }) =>
+    q.rangeLowCents === q.rangeHighCents ? fmt.money(q.rangeLowCents, 'EUR') : `${fmt.money(q.rangeLowCents, 'EUR')}–${fmt.money(q.rangeHighCents, 'EUR')}`;
   interface QuoteBody { quoteId: string; priceType: string; totalCents: number; rangeLowCents: number; rangeHighCents: number; night: boolean; holiday: boolean; routeAvailable: boolean; airport?: boolean; lines: { code: string; label: string; cents: number }[]; }
   // Every class is quoted in parallel so the passenger can compare prices before choosing
   // (2026-10-01 audit). `quote` is the selected class's quote (used for booking + review).
@@ -627,7 +630,7 @@ export default function BookingApp() {
             const fresh = await api<QuoteBody>('/quote', { method: 'POST', body: quoteBody(vClass as 'COMFORT' | 'XL', max), timeoutMs: 9000 });
             setQuotes((prev) => ({ ...prev, [vClass]: fresh })); quotesAt.current = Date.now();
             if (fresh.totalCents === quote.totalCents) return submit(effOffset, fresh);
-            setBanner(t('booking.form.priceUpdated', { price: fmt.money(fresh.totalCents, 'EUR') }));
+            setBanner(t('booking.form.priceUpdated', { price: fmtRange(fresh) }));
           } catch { setBanner(tError(err)); }
           setSubmitting(false);
           return;
@@ -701,8 +704,7 @@ export default function BookingApp() {
               <span className="shrink-0 text-right">
                 {q ? (
                   <>
-                    <span className={`block font-semibold tabular-nums ${selected ? 'text-accent' : 'text-ink'}`}>≈ {eur(q.totalCents)}</span>
-                    <span className="block text-xs text-muted tabular-nums">{eur(q.rangeLowCents)}–{eur(q.rangeHighCents)}</span>
+                    <span className={`block font-semibold tabular-nums ${selected ? 'text-accent' : 'text-ink'}`}>{fmtRange(q)}</span>
                   </>
                 ) : <span className="text-xs text-muted">{quoting ? t('booking.form.pricing') : '—'}</span>}
               </span>
@@ -713,7 +715,7 @@ export default function BookingApp() {
       {errors.pax && <p className="mt-1 text-xs text-danger">{errors.pax}</p>}
     </div>
   );
-  const minQuote = Object.values(quotes).reduce<number | null>((m, q) => (q && (m == null || q.totalCents < m) ? q.totalCents : m), null);
+  const minQuote = Object.values(quotes).reduce<number | null>((m, q) => (q && (m == null || q.rangeLowCents < m) ? q.rangeLowCents : m), null);
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
@@ -1016,7 +1018,7 @@ export default function BookingApp() {
                       <Row label={t('booking.review.driverAsksFor')} value={name || passenger?.name || '—'} />
                       <Row label={t('booking.review.yourPhone')} value={passenger?.phone || phone} />
                       {effNote && <Row label={t('booking.review.note')} value={effNote} />}
-                      <Row label={t('booking.review.fare')} value={quote ? t('booking.review.fareValue', { total: eur(quote.totalCents), low: eur(quote.rangeLowCents), high: eur(quote.rangeHighCents) }) : t('booking.review.fareByMeter')} />
+                      <Row label={t('booking.review.fare')} value={quote ? t('booking.review.fareValue', { range: fmtRange(quote) }) : t('booking.review.fareByMeter')} />
                     </div>
                     {classPicker}
                     {quote?.airport && <AirportFareNote />}
@@ -1040,7 +1042,7 @@ export default function BookingApp() {
                         </div>
                       </div>
                     ) : (
-                      <button className="btn-primary mt-5 w-full" onClick={() => submit()} disabled={submitting}>{submitting ? t('booking.review.sending') : quote ? t('booking.cta.requestClassPrice', { vClass: t(`common.vClass.${vClass}`), price: eur(quote.totalCents) }) : t('booking.review.confirm')}</button>
+                      <button className="btn-primary mt-5 w-full" onClick={() => submit()} disabled={submitting}>{submitting ? t('booking.review.sending') : quote ? t('booking.cta.requestClassPrice', { vClass: t(`common.vClass.${vClass}`), price: fmtRange(quote) }) : t('booking.review.confirm')}</button>
                     )}
                     <p className="mt-2 text-center text-xs text-muted">{when === 'NOW' ? t('booking.review.autoMatchNow') : t('booking.review.autoMatchScheduled')} {t('booking.review.trackingAndPay')}</p>
                   </div>

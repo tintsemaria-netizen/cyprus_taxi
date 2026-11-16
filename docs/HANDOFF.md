@@ -1,5 +1,18 @@
 # Session handoff
 
+## 2026-11-16 — Booking shows only the ±15 % range; XL has its own price
+**Display:** passengers no longer see the «≈ total» figure. The class cards, the review row, the CTA and the price-updated banner show only `low–high` (±15 %). An upfront fare (low = high) shows one price. The form CTA «от …» uses the lowest range bottom.
+
+**XL price:** `computeMeterEstimate({vClass})` adds an `xl` line of +40 % on initial hire + distance.
+- This is OUR commercial setting, not a regulated figure; the owner asked for a separate XL price. No official Cyprus XL/minivan urban tariff was found.
+- +40 % matches the regulated 6-passenger surcharge. XL replaces the 5/6-pax surcharge (never both), so a 6-pax XL equals the regulated 6-pax meter fare.
+- XL quotes carry ruleVersion `cy-urban-2026-09-13+xl40-2026-11-16`. Comfort is unchanged.
+- Dynamic pricing (if ever on) still applies only to initial + distance.
+
+**Tests:** tariff.test has 3 XL tests (value/line/version/range, no double count with pax, Comfort unchanged). 233 passed.
+
+**Playwright (local):** Comfort 8,08–10,93 €, XL 11,31–15,29 € (×1.4), CTA «Заказать XL · 11,31 €–15,29 €».
+
 ## 2026-11-16 — Tracking: code and location switches side by side, frameless
 **Layout:** the «Код подтверждения» switch moved from under the driver card down to the actions area. It sits in a two-column row next to «Показать водителю, где я» (pre-pickup statuses only). Neither has a frame.
 

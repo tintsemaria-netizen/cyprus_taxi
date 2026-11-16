@@ -9,7 +9,7 @@ const booking: Catalog<typeof en> = {
   },
   currentLocation: 'Текущее местоположение',
   form: {
-    priceUpdated: 'Цена обновилась: ≈ {price}. Проверьте и нажмите «Заказать» ещё раз.',
+    priceUpdated: 'Цена обновилась: {price}. Проверьте и нажмите «Заказать» ещё раз.',
     resetRoute: 'Сбросить маршрут',
     onMap: 'На карте',
     addStop: 'Добавить остановку',
@@ -91,7 +91,7 @@ const booking: Catalog<typeof en> = {
     yourPhone: 'Ваш телефон',
     note: 'Комментарий',
     fare: 'Стоимость',
-    fareValue: '≈ {total} ({low}–{high}) · оценка по таксометру',
+    fareValue: '{range} · оценка по таксометру',
     fareByMeter: 'По таксометру',
     ambiguousPrompt: 'В эту ночь переводят часы, и это время наступает дважды. Какое вы имеете в виду?',
     ambiguousEarlier: '{time} · первое (летнее время, UTC+{offset})',
@@ -108,9 +108,9 @@ const booking: Catalog<typeof en> = {
   sheet: { collapse: 'Свернуть', expand: 'Развернуть' },
   cta: {
     request: 'Заказать поездку',
-    requestFrom: 'Заказать · от ≈ {price}',
+    requestFrom: 'Заказать · от {price}',
     requestClass: 'Заказать {vClass}',
-    requestClassPrice: 'Заказать {vClass} · ≈ {price}',
+    requestClassPrice: 'Заказать {vClass} · {price}',
     signInFirst: 'Перед подтверждением нужно будет войти.',
   },
   route: {
