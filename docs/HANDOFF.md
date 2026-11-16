@@ -1,5 +1,14 @@
 # Session handoff
 
+## 2026-11-17 — Driver «Стоимость поездки» sheet: only a big «Итого» and a red «Завершить поездку»
+**FarePreviewSheet, per the user (shown as screenshots and approved before deploy):**
+- Title, then «Итого» centred at 44 px in accent green.
+- Removed: the subtitle, the estimate line, the waiting lines (waiting stays included in the total), the meter note and the «Назад» button.
+- A tap on the dimmed backdrop closes the sheet instead of «Назад».
+- The confirm button is red (`bg-danger`) and reads «Завершить поездку» (el «Ολοκλήρωση διαδρομής»; en was already «Complete trip»).
+
+**Check:** Playwright (local) with a mocked preview: no back button, no wait line, backdrop closes; no errors.
+
 ## 2026-11-17 — Driver navigation: speed-dependent zoom
 **Behaviour:** the follow camera zooms out as the car speeds up and back in as it slows.
 - Up to 20 km/h: zoom 17 (street level).
