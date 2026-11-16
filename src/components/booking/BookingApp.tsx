@@ -791,7 +791,7 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-[#0e1518]" />
           ) : (
-            <AutoMapView markers={markers} route={route?.line} fleet={fleet} focus={pickup && dropoff ? null : myLoc} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} className="h-full w-full" />
+            <AutoMapView markers={markers} route={route?.line} fitRoute fleet={fleet} focus={pickup && dropoff ? null : myLoc} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} className="h-full w-full" />
           )}
         </div>
 
@@ -1003,7 +1003,7 @@ export default function BookingApp() {
                     </div>
                   ) : (
                   <div>
-                    <button className="mb-3 text-sm text-muted hover:text-ink" onClick={() => setStep('form')}>{t('booking.review.edit')}</button>
+                    <button className="mb-1 text-sm text-muted hover:text-ink" onClick={() => setStep('form')}>{t('booking.review.edit')}</button>
                     {banner && <p className="my-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{banner}</p>}
                     {/* Review = just the class choice and the order button (2026-11-16): the route is on the map
                         above the (now content-high) sheet. Only a scheduled time or a missing quote still gets a row. */}
@@ -1035,9 +1035,8 @@ export default function BookingApp() {
                         </div>
                       </div>
                     ) : (
-                      <button className="btn-primary mt-5 w-full" onClick={() => submit()} disabled={submitting}>{submitting ? t('booking.review.sending') : quote ? t('booking.cta.requestClass', { vClass: t(`common.vClass.${vClass}`) }) : t('booking.review.confirm')}</button>
+                      <button className="btn-primary mt-4 w-full" onClick={() => submit()} disabled={submitting}>{submitting ? t('booking.review.sending') : quote ? t('booking.cta.requestClass', { vClass: t(`common.vClass.${vClass}`) }) : t('booking.review.confirm')}</button>
                     )}
-                    <p className="mt-2 text-center text-xs text-muted">{when === 'NOW' ? t('booking.review.autoMatchNow') : t('booking.review.autoMatchScheduled')} {t('booking.review.trackingAndPay')}</p>
                   </div>
                   )
                 )}

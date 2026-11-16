@@ -13,6 +13,8 @@ import { useIdleReturn } from './useIdleReturn';
 interface Props {
   markers?: MapMarker[];
   route?: [number, number][]; // [lng, lat]
+  /** Frame the whole route line too, and re-frame when it changes (booking preview). */
+  fitRoute?: boolean;
   center?: { lat: number; lng: number };
   zoom?: number;
   /** Zoom for a single point / the focus point (default 16 = street level; 13 ≈ half a city). */
@@ -92,7 +94,7 @@ function markerEl(mk: MapMarker): HTMLElement {
   return centerOnPoint(el);
 }
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, focusZoom, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], focus, focusZoom, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   // Reconcile markers by id (no recreation flicker) and remember each one's logical
@@ -262,6 +264,10 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   // driver dot animates freely without the map re-fitting/zooming every GPS tick — it
   // only re-frames when the stops (pickup/dropoff) or the marker set change.
   const fitKey = fitKeyOf(markers);
+  // Re-frame / re-centre when the visible area changes (e.g. the sheet under the map grew or
+  // shrank) or the route arrives — the whole route must fit above the sheet (2026-11-16).
+  const padKey = fitPadding ? `${fitPadding.top},${fitPadding.right},${fitPadding.bottom},${fitPadding.left}` : '';
+  const routeKey = fitRoute && route && route.length ? `${route.length}:${route[0].join(',')}:${route[route.length - 1].join(',')}` : '';
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
     if (!map || !g || !ready || followRef.current || idle.active.current) return;
@@ -269,6 +275,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     if (markers.length >= 2) {
       const b = new g.LatLngBounds();
       markers.forEach((m) => b.extend({ lat: m.lat, lng: m.lng }));
+      // The drawn route can bulge outside its end points — include it so all of it shows.
+      if (fitRoute && route) route.forEach(([lng, lat]) => b.extend({ lat, lng }));
       map.fitBounds(b, pad);
       // Points very close together (driver waiting at the pickup): don't zoom in past street level.
       g.event.addListenerOnce(map, 'idle', () => { if (map.getZoom() > 17) map.setZoom(17); });
@@ -282,13 +290,11 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       map.fitBounds(b, pad);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fitKey, ready, idle.returnTick]);
+  }, [fitKey, ready, idle.returnTick, padKey, routeKey]);
 
   // Zoom to a focus point (the passenger's detected location) once it resolves, unless a
   // full 2-stop route is already framed.
   const focusKey = focus ? `${focus.lat.toFixed(5)},${focus.lng.toFixed(5)}` : '';
-  // Re-centre when the visible area changes (e.g. the sheet under the map grew or shrank).
-  const padKey = fitPadding ? `${fitPadding.top},${fitPadding.right},${fitPadding.bottom},${fitPadding.left}` : '';
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
     if (!map || !g || !ready || !focus || markers.length >= 2 || followRef.current || idle.active.current) return;

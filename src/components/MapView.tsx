@@ -37,6 +37,8 @@ interface Props {
   route?: [number, number][]; // [lng, lat]
   center?: { lat: number; lng: number };
   zoom?: number;
+  /** Frame the whole route line too (booking preview). */
+  fitRoute?: boolean;
   /** Zoom for a single point / the focus point (default 15; 13 ≈ half a city). */
   focusZoom?: number;
   interactive?: boolean;
@@ -76,7 +78,7 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fleet = [], focus, focusZoom = 15, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], focus, focusZoom = 15, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
   // Re-frame / re-centre when the visible area changes (e.g. the sheet under the map grew or shrank).
   const padKey = fitPadding ? `${fitPadding.top},${fitPadding.right},${fitPadding.bottom},${fitPadding.left}` : '';
   const containerRef = useRef<HTMLDivElement>(null);
@@ -185,13 +187,14 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       // markers (cars, the live person) do not re-fit — only a change of the fixed points does.
       if (followRef.current || idle.active.current) return;
       // The visible area (padding) is part of the key: a sheet that changes height re-frames (2026-11-16).
-      const key = `${fitKeyOf(markers)}#${idle.returnTick}#${fitPadding ? `${fitPadding.top},${fitPadding.bottom}` : ''}`;
+      const key = `${fitKeyOf(markers)}#${idle.returnTick}#${fitPadding ? `${fitPadding.top},${fitPadding.bottom}` : ''}#${fitRoute && route ? route.length : ''}`;
       if (key === lastFit.current) return;
       lastFit.current = key;
       if (markers.length >= 2) {
         const b = new maplibre.LngLatBounds();
         markers.forEach((m) => b.extend([m.lng, m.lat]));
-        map.fitBounds(b, { padding: fitPadding ?? 70, maxZoom: 12, duration: 400 });
+        if (fitRoute && route) route.forEach((p) => b.extend(p as [number, number]));
+        map.fitBounds(b, { padding: fitPadding ?? 70, maxZoom: fitRoute ? 15 : 12, duration: 400 });
       } else if (markers.length === 1 && !focus) {
         // A focus point owns the camera when given (it runs first; this async fit must not undo it).
         map.easeTo({ center: [markers[0].lng, markers[0].lat], zoom: 12, duration: 400, ...(fitPadding ? { padding: fitPadding } : {}) });
@@ -199,7 +202,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     })();
     // Only a change in the padding VALUES re-fits (padKey), not a new object identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [markers, ready, idle.returnTick, padKey]);
+  }, [markers, ready, idle.returnTick, padKey, fitRoute ? route : null]);
 
   // Live on-duty cars overlay (does not affect the fit) — same as GoogleMapView.
   useEffect(() => {

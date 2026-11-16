@@ -1,5 +1,15 @@
 # Session handoff
 
+## 2026-11-16 — Review: whole route visible, no note under the order button
+**Review sheet:** the auto-match / tracking / pay-the-driver note under «Заказать …» is removed. Spacing is tighter («‹ Изменить» mb-1, CTA mt-4), so the sheet is lower.
+
+**Map fit:**
+- GoogleMapView never re-fitted when `fitPadding` changed: its fit effect was keyed only on markers. That is why the route ran under the review sheet on the phone. It now also keys on `padKey`.
+- New opt-in `fitRoute` prop (Google + MapView), used by BookingApp only. The fit includes every route point and re-fits when the route arrives (`routeKey`).
+- Tracking and driver maps are unchanged, so a live route does not re-frame every update.
+
+**Check:** Playwright (local) with a mocked bulging route: the whole line and both points are framed above the sheet; no errors.
+
 ## 2026-11-16 — Driver GPS on Android/Samsung: clear reasons instead of silence
 **Report:** «can't turn on location» on a Samsung S26 Ultra. No real device was available, so this was emulated in Chromium with the Galaxy S24 profile and an Android 16 / SM-S948B Chrome UA.
 
