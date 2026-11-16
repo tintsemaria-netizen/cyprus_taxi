@@ -1,5 +1,16 @@
 # Session handoff
 
+## 2026-11-16 — Booking form: no trip-info box, no price on order buttons
+**Form:** the info box («Поездка: ≈ 13 мин · 10,1 км», night/holiday, meter note, airport note) is gone. Only an error line stays if no quote could be made. The airport note still shows on the review screen.
+
+**Buttons:**
+- Form CTA: «Заказать поездку», no price.
+- Review CTA: «Заказать Comfort / XL» (existing `requestClass` key), no price.
+- The ranges stay on the class cards.
+- Unused `minQuote`, `eur`, `INTL_TAG` and `locale` were removed.
+
+**Check:** Playwright (local): form has no info box; buttons read «Заказать поездку» / «Заказать Comfort» / «Заказать XL»; no errors.
+
 ## 2026-11-16 — Tracking: searching panel starts folded
 **Folded panel:** while SEARCHING, the passenger sheet starts collapsed (164 px instead of 363 px on an iPhone 13). It shows the title, a compact two-line route (dots + labels) and a red «Отменить заказ» link that opens the usual confirmation. Swipe or tap expands it to the full sheet.
 

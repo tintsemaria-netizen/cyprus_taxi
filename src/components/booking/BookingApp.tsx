@@ -18,7 +18,6 @@ import { nicosiaInputValue } from '@/lib/timezone';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
-import { INTL_TAG } from '@/i18n/config';
 import { NotifyPrompt } from '@/components/NotifyPrompt';
 
 interface PublicConfig {
@@ -46,7 +45,7 @@ const PEEK_PX = 170;
 export default function BookingApp() {
   const kbBox = useKeyboardViewport(); // keep the header below the status bar while typing (iOS)
   const router = useRouter();
-  const { t, tp, fmt, tError, locale } = useT();
+  const { t, tp, fmt, tError } = useT();
   const [cfg, setCfg] = useState<PublicConfig | null>(null);
   const [pickup, setPickup] = useState<Selected | null>(null);
   const [pickupText, setPickupText] = useState('');
@@ -498,7 +497,6 @@ export default function BookingApp() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickup, dropoff, viaStop, pax, when, scheduledAt, scheduleOffsetMin, classKeys, tError, quoteTick]);
   const quote: QuoteBody | null = quotes[vClass] ?? null;
-  const eur = (c: number) => fmt.money(c, 'EUR');
 
   // Pre-booking (2026-11-13): only a note for the driver — flight number, meeting point, bags.
   // No passenger/bag steppers: every ride is sent as 1 passenger, 0 bags (the car class covers size).
@@ -715,7 +713,6 @@ export default function BookingApp() {
       {errors.pax && <p className="mt-1 text-xs text-danger">{errors.pax}</p>}
     </div>
   );
-  const minQuote = Object.values(quotes).reduce<number | null>((m, q) => (q && (m == null || q.rangeLowCents < m) ? q.rangeLowCents : m), null);
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
@@ -952,23 +949,10 @@ export default function BookingApp() {
                       )}
                     </div>
 
-                    {pickup && dropoff && (
-                      <div className="mt-3 rounded-[12px] border border-edge bg-elevated px-3 py-2.5 text-xs text-muted">
-                        {route?.min != null && (
-                          <div>{withSlot(t('booking.trip.estimate'), 'value', <span className="text-ink font-medium">{t('booking.trip.estimateValue', { min: route.min, km: route.km != null ? new Intl.NumberFormat(INTL_TAG[locale], { maximumFractionDigits: 1 }).format(route.km) : '' })}</span>)}</div>
-                        )}
-                        {quote ? (
-                          <div className="mt-1">
-                            {quote.night && <span>{t('booking.trip.night')} · </span>}
-                            {quote.holiday && <span>{t('booking.trip.holiday')} · </span>}
-                            <span>{t('booking.trip.meterNote')}</span>
-                            {!quote.routeAvailable && <span> {t('booking.trip.approxDistance')}</span>}
-                            {quote.airport && <AirportFareNote />}
-                          </div>
-                        ) : quoteErr ? (
-                          <div className="mt-1 text-warn">{t('booking.trip.quoteFailed', { error: quoteErr })}</div>
-                        ) : null}
-                      </div>
+                    {/* No trip-info box (time / km / tariff note) on the form any more (2026-11-16) — only an
+                        error line if the price could not be calculated. */}
+                    {pickup && dropoff && !quote && quoteErr && (
+                      <div className="mt-3 text-xs text-warn">{t('booking.trip.quoteFailed', { error: quoteErr })}</div>
                     )}
 
                     {passenger && (
@@ -1045,7 +1029,7 @@ export default function BookingApp() {
                         </div>
                       </div>
                     ) : (
-                      <button className="btn-primary mt-5 w-full" onClick={() => submit()} disabled={submitting}>{submitting ? t('booking.review.sending') : quote ? t('booking.cta.requestClassPrice', { vClass: t(`common.vClass.${vClass}`), price: fmtRange(quote) }) : t('booking.review.confirm')}</button>
+                      <button className="btn-primary mt-5 w-full" onClick={() => submit()} disabled={submitting}>{submitting ? t('booking.review.sending') : quote ? t('booking.cta.requestClass', { vClass: t(`common.vClass.${vClass}`) }) : t('booking.review.confirm')}</button>
                     )}
                     <p className="mt-2 text-center text-xs text-muted">{when === 'NOW' ? t('booking.review.autoMatchNow') : t('booking.review.autoMatchScheduled')} {t('booking.review.trackingAndPay')}</p>
                   </div>
@@ -1057,9 +1041,8 @@ export default function BookingApp() {
                 // also in the collapsed sheet once the route is set (2026-11-15).
                 <div ref={footerRef} className="shrink-0 border-t border-edge p-3 sm:p-4" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
                   <button className="btn-primary w-full" onClick={toReview}>
-                    {pickup && dropoff && minQuote != null
-                      ? t('booking.cta.requestFrom', { price: eur(minQuote) })
-                      : t('booking.cta.request')}
+                    {/* No price on the order buttons (2026-11-16): the ranges are on the class cards. */}
+                    {t('booking.cta.request')}
                   </button>
                   {!passenger && pickup && dropoff && <p className="mt-2 text-center text-xs text-muted">{t('booking.cta.signInFirst')}</p>}
                 </div>
