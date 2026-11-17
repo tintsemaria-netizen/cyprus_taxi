@@ -4,6 +4,7 @@ import { I18nProvider } from '@/i18n/I18nProvider';
 import { getRequestLocale } from '@/i18n/server';
 import { RTL_LOCALES } from '@/i18n/config';
 import { PortraitLock } from '@/components/PortraitLock';
+import { IosViewportFix } from '@/components/IosViewportFix';
 import { ErrorFocus } from '@/components/ErrorFocus';
 
 export const metadata: Metadata = {
@@ -41,7 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} dir={RTL_LOCALES.includes(locale) ? 'rtl' : 'ltr'}>
       <body className="min-h-full bg-page text-ink antialiased">
-        <I18nProvider locale={locale}>{children}<PortraitLock />
+        <I18nProvider locale={locale}>{children}<PortraitLock /><IosViewportFix />
         <ErrorFocus /></I18nProvider>
       </body>
     </html>

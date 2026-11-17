@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-18 — iPhone home-screen app: empty band at the bottom (deployed, unverified on device)
+- User (iPhone Air, standalone app): dark empty band below the start sheet + extra space in it. Matches the known iOS standalone bug: after the keyboard opened once the viewport stays ~59 px shorter for the session.
+- `src/components/IosViewportFix.tsx` (in layout): iOS standalone only; on focusout / return to the app, if innerHeight is below the session peak and no field is focused, hide body for one synchronous reflow and restore it (+ inner scroll positions).
+- Needs a real-device check by the user; if the band remains, next step: inspect innerHeight vs screen height on the device.
+
 ## 2026-11-17 — Map closes in when approaching the pickup / drop-off (deployed)
 - `src/lib/nav-zoom.ts`: `navZoomForApproach` (last 600 m: 17 → 18.5, full from 80 m) + `navZoomTarget` = max(speed zoom, approach zoom); tests in tests/nav-zoom.test.ts.
 - DriverNavigation uses `navZoomTarget` with the remaining route metres (also when the car stops).
