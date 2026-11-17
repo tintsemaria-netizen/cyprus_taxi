@@ -1,5 +1,16 @@
 # Session handoff
 
+## 2026-11-17 — Quick picks under «Пункт назначения» (deployed)
+
+- Start screen (signed in, no destination yet): pills 🏠 Дом, 💼 Работа (saved → one tap sets the destination and goes to the
+  price step via the «repeat» path; not saved → dashed «＋ Дом» → `/account#places`), «••• Ещё» → opens the destination
+  route editor (all saved places + recent + search), and the last 3 distinct destinations below.
+- Collapsed-sheet height now includes the quick picks.
+- Saved places: new kind SCHOOL (API `/passenger/places` returns `school`; account «Сохранённые места» has 🎓 Школа; route editor
+  lists it). The start-screen School pill was replaced by «Ещё» at the owner's request.
+- i18n: booking.form.school/addPlace/more, auth.places.school/saveSchool, updated places subtitles — all 8 languages.
+- vitest 256 passed / 1 skipped; checked locally with Playwright.
+
 ## 2026-11-17 — No-driver state: no map pill, shorter note
 
 - TrackApp: no status pill on the map for NO_DRIVER (the sheet says it). `track.noDriverNote` without «…или отменить заказ»

@@ -23,6 +23,7 @@ const booking = {
     work: 'Work',
     school: "School",
     addPlace: "Add",
+    more: "More",
     recent: 'Recent:',
     upToPeople: 'up to {n} people',
     chooseRide: 'Choose your ride',

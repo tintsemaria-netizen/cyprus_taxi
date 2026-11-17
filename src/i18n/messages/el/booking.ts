@@ -26,6 +26,7 @@ const booking: Catalog<typeof en> = {
     work: 'Εργασία',
     school: "Σχολείο",
     addPlace: "Προσθήκη",
+    more: "Περισσότερα",
     recent: 'Πρόσφατα:',
     upToPeople: 'έως {n} άτομα',
     chooseRide: 'Επιλέξτε όχημα',

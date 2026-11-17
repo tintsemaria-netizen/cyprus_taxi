@@ -26,6 +26,7 @@ const booking: Catalog<typeof en> = {
     work: 'Работа',
     school: "Школа",
     addPlace: "Добавить",
+    more: "Ещё",
     recent: 'Недавние:',
     upToPeople: 'до {n} человек',
     chooseRide: 'Выберите класс',

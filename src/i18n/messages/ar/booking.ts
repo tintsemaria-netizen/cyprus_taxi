@@ -30,6 +30,7 @@ const booking: Catalog<typeof en> = {
     work: "العمل",
     school: "المدرسة",
     addPlace: "إضافة",
+    more: "المزيد",
     recent: "الأخيرة:",
     upToPeople: "حتى {n} أشخاص",
     chooseRide: "اختر رحلتك",

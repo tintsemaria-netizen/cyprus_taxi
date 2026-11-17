@@ -1017,7 +1017,7 @@ export default function BookingApp() {
                           {!addrOpen && passenger && !dropoff && (
                             <div className="mt-3" data-testid="quick-picks">
                               <div className="flex gap-2">
-                                {([['home', '🏠', places.home], ['work', '💼', places.work], ['school', '🎓', places.school ?? null]] as const).map(([k, ic, pl]) => (
+                                {([['home', '🏠', places.home], ['work', '💼', places.work]] as const).map(([k, ic, pl]) => (
                                   pl ? (
                                     <button key={k} type="button" data-testid={`quick-${k}`} title={pl.label} onClick={() => pickQuick(pl)}
                                       className="flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-edge-strong px-2 text-[14px] text-ink hover:border-accent/60">
@@ -1030,6 +1030,11 @@ export default function BookingApp() {
                                     </a>
                                   )
                                 ))}
+                                {/* «Ещё» (2026-11-17): the full list — every saved place, recent trips and search. */}
+                                <button type="button" data-testid="quick-more" onClick={() => openEditor('d')}
+                                  className="flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-edge-strong px-2 text-[14px] text-ink hover:border-accent/60">
+                                  <span aria-hidden className="text-muted">•••</span><span className="truncate">{t('booking.form.more')}</span>
+                                </button>
                               </div>
                               {destinations.length > 0 && (
                                 <ul className="mt-2">
