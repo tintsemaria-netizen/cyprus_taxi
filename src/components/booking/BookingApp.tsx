@@ -853,7 +853,7 @@ export default function BookingApp() {
         {mapMoved && myLoc && !picker && (
           <button type="button" aria-label={t('booking.picker.myLocation')} title={t('booking.picker.myLocation')}
             onClick={() => { setMapMoved(false); setRecenterTick((n) => n + 1); }}
-            className="absolute bottom-6 end-6 z-20 hidden h-10 items-center gap-2 rounded-full border border-white/15 bg-[#10191C]/95 px-3.5 text-[14px] text-white shadow-lg sm:flex">
+            className="absolute bottom-6 end-6 z-20 hidden h-10 items-center gap-2 rounded-full border border-white/15 bg-[#10191C]/95 px-3.5 text-[13px] text-white shadow-lg sm:flex">
             <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden className="shrink-0"><circle cx="12" cy="12" r="6" /><path d="M12 3v5M12 16v5M3 12h5M16 12h5" /></svg><span>{t('booking.picker.myLocation')}</span>
           </button>
         )}
@@ -863,7 +863,7 @@ export default function BookingApp() {
               <div className="flex shrink-0 justify-end px-3 pb-3 sm:hidden">
                 <button type="button" data-testid="map-my-location" aria-label={t('booking.picker.myLocation')} title={t('booking.picker.myLocation')}
                   onClick={() => { setMapMoved(false); setRecenterTick((n) => n + 1); }}
-                  className="pointer-events-auto flex h-10 items-center gap-2 rounded-full border border-white/15 bg-[#10191C]/95 px-3.5 text-[14px] text-white shadow-lg">
+                  className="pointer-events-auto flex h-10 items-center gap-2 rounded-full border border-white/15 bg-[#10191C]/95 px-3.5 text-[13px] text-white shadow-lg">
                   <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden className="shrink-0"><circle cx="12" cy="12" r="6" /><path d="M12 3v5M12 16v5M3 12h5M16 12h5" /></svg><span>{t('booking.picker.myLocation')}</span>
                 </button>
               </div>
@@ -921,7 +921,7 @@ export default function BookingApp() {
               </button>
               )}
               {(isMobile || !collapsed) && (<>
-              <div ref={contentRef} className={`min-h-0 flex-1 overscroll-contain p-4 sm:p-5 ${step === 'review' ? 'pt-0 sm:pt-1' : ''} ${isMobile && collapsed ? 'overflow-hidden' : 'overflow-y-auto'}`} style={{ paddingBottom: step === 'form' ? '1rem' : 'max(1rem, env(safe-area-inset-bottom))' }}>
+              <div ref={contentRef} className={`min-h-0 flex-1 overscroll-contain p-4 sm:p-5 ${step === 'review' ? 'pt-0 sm:pt-1' : step === 'form' && !addrOpen ? 'pt-1' : ''} ${isMobile && collapsed ? 'overflow-hidden' : 'overflow-y-auto'}`} style={{ paddingBottom: step === 'form' ? '1rem' : 'max(1rem, env(safe-area-inset-bottom))' }}>
                 {step === 'form' ? (
                   /* ---- FORM (inlined so inputs keep focus across renders) ---- */
                   <div>
@@ -932,8 +932,9 @@ export default function BookingApp() {
                         <div className="truncate text-xs text-muted">{soonRide.pickup} → {soonRide.dropoff}</div>
                       </button>
                     )}
-                    {!peekRoute && <p className="label">{t('booking.form.eyebrow')}</p>}
-                    {!peekRoute && <h1 className="mb-4 mt-1 text-2xl font-bold">{t('booking.form.title')}</h1>}
+                    {/* Start screen kept as compact as possible (2026-11-17) so more of the map shows. */}
+                    {!peekRoute && <p className={`label ${!addrOpen ? '!text-[11px]' : ''}`}>{t('booking.form.eyebrow')}</p>}
+                    {!peekRoute && <h1 className={!addrOpen ? 'mb-2.5 mt-0.5 text-xl font-bold' : 'mb-4 mt-1 text-2xl font-bold'}>{t('booking.form.title')}</h1>}
 
                     {flash && <p role="status" className="mb-3 rounded-[12px] border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">{flash}</p>}
                     {banner && <p className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{banner}</p>}
@@ -956,7 +957,7 @@ export default function BookingApp() {
                               const kind = !addrOpen ? 'd' : slot;
                               return (
                                 <div key={slot} ref={(el) => { rowEls.current[i] = el; }}
-                                  className={`relative flex h-[52px] items-center gap-2.5 ${i ? 'border-t border-white/[0.08]' : ''} ${dragging ? 'z-20 rounded-[10px] bg-panel opacity-95' : ''}`}
+                                  className={`relative flex ${addrOpen ? 'h-[52px]' : 'h-[44px]'} items-center gap-2.5 ${i ? 'border-t border-white/[0.08]' : ''} ${dragging ? 'z-20 rounded-[10px] bg-panel opacity-95' : ''}`}
                                   style={dragging && rowDrag ? { transform: `translateY(${rowDrag.dy}px)` } : undefined}>
                                   <span className="relative z-10 flex w-4 shrink-0 justify-center" aria-hidden>
                                     {kind === 'p' ? <span className="block h-3.5 w-3.5 rounded-full border-[3px] border-accent bg-elevated" />
@@ -1015,37 +1016,37 @@ export default function BookingApp() {
                           {/* Quick picks under «Пункт назначения» (2026-11-17): saved Home / Work / School and the
                               last three destinations — one tap sets the destination and goes on to the price. */}
                           {!addrOpen && passenger && !dropoff && (
-                            <div className="mt-3" data-testid="quick-picks">
+                            <div className="mt-2" data-testid="quick-picks">
                               <div className="flex gap-2">
                                 {([['home', '🏠', places.home], ['work', '💼', places.work]] as const).map(([k, ic, pl]) => (
                                   pl ? (
                                     <button key={k} type="button" data-testid={`quick-${k}`} title={pl.label} onClick={() => pickQuick(pl)}
-                                      className="flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-edge-strong px-2 text-[14px] text-ink hover:border-accent/60">
+                                      className="flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-full border border-edge-strong px-2 text-[13px] text-ink hover:border-accent/60">
                                       <span aria-hidden>{ic}</span><span className="truncate">{t(`booking.form.${k}`)}</span>
                                     </button>
                                   ) : (
                                     <a key={k} href="/account#places" data-testid={`quick-${k}`}
-                                      className="flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-dashed border-edge px-2 text-[14px] text-muted hover:border-accent/60">
+                                      className="flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-full border border-dashed border-edge px-2 text-[13px] text-muted hover:border-accent/60">
                                       <span aria-hidden className="text-accent">＋</span><span className="truncate">{t(`booking.form.${k}`)}</span>
                                     </a>
                                   )
                                 ))}
                                 {/* «Ещё» (2026-11-17): the full list — every saved place, recent trips and search. */}
                                 <button type="button" data-testid="quick-more" onClick={() => openEditor('d')}
-                                  className="flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-edge-strong px-2 text-[14px] text-ink hover:border-accent/60">
+                                  className="flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-full border border-edge-strong px-2 text-[13px] text-ink hover:border-accent/60">
                                   <span aria-hidden className="text-muted">•••</span><span className="truncate">{t('booking.form.more')}</span>
                                 </button>
                               </div>
                               {destinations.length > 0 && (
-                                <ul className="mt-2">
+                                <ul className="mt-1">
                                   {destinations.slice(0, 3).map((d, i) => (
                                     <li key={`${d.label}-${i}`}>
                                       <button type="button" data-testid="quick-recent" onClick={() => pickQuick(d)}
-                                        className={`flex h-12 w-full items-center gap-3 text-start ${i ? 'border-t border-white/[0.06]' : ''}`}>
-                                        <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-muted">
-                                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>
+                                        className={`flex h-10 w-full items-center gap-2.5 text-start ${i ? 'border-t border-white/[0.06]' : ''}`}>
+                                        <span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-muted">
+                                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>
                                         </span>
-                                        <span className="min-w-0 flex-1 truncate text-[15px] text-ink">{d.label}</span>
+                                        <span className="min-w-0 flex-1 truncate text-[14px] text-ink">{d.label}</span>
                                       </button>
                                     </li>
                                   ))}
