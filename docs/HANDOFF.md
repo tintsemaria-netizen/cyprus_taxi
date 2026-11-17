@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-17 — Schedule panel without «Ехать сейчас»
+
+- The «Ехать сейчас» link in the schedule panel is gone; the «Запланировать» pill toggles schedule off.
+
 ## 2026-11-17 — PARKED: receipts RU/EN (owner: «вернёмся к чекам, когда скажу»)
 
 - Ready, NOT deployed, on branch `receipt-ru-en` (pushed to origin, commit «receipts: Russian/English …»). When the owner says

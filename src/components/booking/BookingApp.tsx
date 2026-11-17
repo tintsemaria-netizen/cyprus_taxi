@@ -1074,8 +1074,7 @@ export default function BookingApp() {
                         <div className="rounded-[12px] border border-accent/40 bg-accent/5 p-3">
                           <div className="mb-2 flex items-center justify-between gap-2">
                             <span className="text-sm font-semibold text-accent">🕒 {t('booking.form.schedule')}</span>
-                            <button type="button" className="text-sm text-muted hover:text-ink" data-testid="schedule-cancel"
-                              onClick={() => { setWhen('NOW'); setScheduledAt(''); setScheduleOffsetMin(undefined); setAmbiguous(null); }}>{t('booking.form.rideNow')}</button>
+                            {/* No «Ехать сейчас» here (2026-11-17): the «Запланировать» pill above switches it off. */}
                           </div>
                           <input type="datetime-local" className={`field block w-full min-w-0 max-w-full appearance-none ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
                           <p className="mt-1 text-xs text-muted">{withSlot(t('booking.form.timezoneNote'), 'tz', <strong>{cfg?.timezone ?? 'Europe/Nicosia'}</strong>)}</p>
