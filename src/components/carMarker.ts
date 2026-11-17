@@ -160,11 +160,33 @@ export function navArrowEl(opts: { size?: number; moving?: boolean; stale?: bool
  * its compass bearing minus the map's own heading — otherwise it lies sideways across the road.
  * The compass bearing is remembered on the element so map rotations can re-apply it.
  */
+// A new travel direction turns the car smoothly (≈ 0.6 s, the short way round); a map rotation
+// alone re-draws it at once so the car stays aligned with the street while the map turns (2026-11-17).
+const turnAnim = new WeakMap<HTMLElement, number>();
 export function orientVehicle(el: HTMLElement, mapHeading: number, bearingDeg?: number): void {
-  if (bearingDeg != null && Number.isFinite(bearingDeg)) el.dataset.bearing = String(bearingDeg);
-  const b = Number(el.dataset.bearing);
-  if (!Number.isFinite(b)) return;
-  setVehicleHeading(el, ((b - mapHeading) % 360 + 360) % 360);
+  el.dataset.mapHeading = String(mapHeading);
+  const draw = () => {
+    const shown = Number(el.dataset.bearingShown);
+    const mh = Number(el.dataset.mapHeading) || 0;
+    if (Number.isFinite(shown)) setVehicleHeading(el, ((shown - mh) % 360 + 360) % 360);
+  };
+  if (bearingDeg == null || !Number.isFinite(bearingDeg)) { draw(); return; }
+  el.dataset.bearing = String(bearingDeg);
+  const from = Number(el.dataset.bearingShown);
+  if (!Number.isFinite(from) || typeof requestAnimationFrame === 'undefined') { el.dataset.bearingShown = String(bearingDeg); draw(); return; }
+  const delta = ((bearingDeg - from + 540) % 360) - 180;
+  if (Math.abs(delta) < 1) { el.dataset.bearingShown = String(bearingDeg); draw(); return; }
+  const prev = turnAnim.get(el);
+  if (prev) cancelAnimationFrame(prev);
+  const start = performance.now();
+  const step = (now: number) => {
+    const t = Math.min(1, (now - start) / 600);
+    const e = t * (2 - t);
+    el.dataset.bearingShown = String(from + delta * e);
+    draw();
+    if (t < 1) turnAnim.set(el, requestAnimationFrame(step)); else turnAnim.delete(el);
+  };
+  turnAnim.set(el, requestAnimationFrame(step));
 }
 
 export function setVehicleHeading(el: HTMLElement, heading: number): void {

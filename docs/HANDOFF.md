@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-17 — Bold rounded route line + smooth car turning (branch `smooth-route`, NOT merged)
+- `src/components/routeSmooth.ts` rounds every route bend (quadratic curve, ≤25 m cut) for display; tests/route-smooth.test.ts.
+- Route line 7 px (was 4) in GoogleMapView and MapView; the car glides along the same rounded line.
+- carMarker `orientVehicle`: new travel direction turns over 0.6 s the short way; map rotation stays instant.
+- Driver follow camera: linear over the gap between fixes (0.6–2.5 s) instead of an 800 ms ease + pause.
+- Waiting for user «заливай» before merging to main.
+
 ## 2026-11-17 — Driver ↔ passenger delay: instant status, smooth car, economical GPS kept
 
 - Owner: keep GPS/battery as is (driver sends every 5 s, passenger polls every 5 s), make the car smooth and status fast.

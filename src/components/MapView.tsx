@@ -7,6 +7,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { publicMapConfig } from '@/lib/config';
 import { vehicleMarkerEl, personMarkerEl, orientVehicle, pickupPinEl, navArrowEl } from './carMarker';
 import { useIdleReturn } from './useIdleReturn';
+import { smoothRoute } from './routeSmooth';
 import { compassEl } from './mapCompass';
 import { useT } from '@/i18n/I18nProvider';
 import { fitKeyOf } from './mapFit';
@@ -272,7 +273,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     const data: GeoJSON.Feature = {
       type: 'Feature',
       properties: {},
-      geometry: { type: 'LineString', coordinates: route ?? [] },
+      geometry: { type: 'LineString', coordinates: smoothRoute(route) ?? [] },
     };
     const src = map.getSource(id) as maplibregl.GeoJSONSource | undefined;
     if (src) {
@@ -284,7 +285,8 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         type: 'line',
         source: id,
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#C8FF46', 'line-width': 4, 'line-opacity': 0.9 },
+        // Bold line with rounded bends (2026-11-17).
+        paint: { 'line-color': '#C8FF46', 'line-width': 7, 'line-opacity': 0.95 },
       });
     }
   }, [route, ready]);

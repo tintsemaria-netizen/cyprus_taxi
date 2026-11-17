@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { CYPRUS_BOUNDS } from '@/lib/config';
 import type { MapMarker } from './MapView';
@@ -11,6 +11,7 @@ import { distanceM } from '@/lib/gpsFilter';
 import { useIdleReturn } from './useIdleReturn';
 import { useTwoFingerCamera } from './useTwoFingerCamera';
 import { glidePath } from './routeGlide';
+import { smoothRoute } from './routeSmooth';
 import { compassEl, easeHeadingToNorth } from './mapCompass';
 import { useT } from '@/i18n/I18nProvider';
 
@@ -106,8 +107,11 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const lastUpd = useRef(new Map<string, number>());
-  const routeRef = useRef(route ?? null);
-  routeRef.current = route ?? null;
+  const lastFollowAt = useRef(0);
+  // Bold route line with rounded bends (2026-11-17); the car glides along the same drawn line.
+  const shownRoute = useMemo(() => smoothRoute(route), [route]);
+  const routeRef = useRef(shownRoute);
+  routeRef.current = shownRoute;
   // Reconcile markers by id (no recreation flicker) and remember each one's logical
   // position so a vehicle marker can be tweened between GPS samples.
   const markerMap = useRef<Map<string, any>>(new Map());
@@ -355,10 +359,15 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     const far = Math.abs(from.lat - follow.lat) + Math.abs(from.lng - follow.lng) > 0.02; // > ~2 km: jump
     const zoom = follow.zoom ?? 17, tilt = follow.tilt ?? 45;
     if (far) { map.moveCamera({ center: { lat: follow.lat, lng: follow.lng }, heading: follow.heading, zoom, tilt }); return; }
+    // Linear over about the gap between fixes (2026-11-17): the camera moves steadily with the car
+    // instead of a quick ease and a pause after every GPS fix.
     const start = performance.now();
+    const gap = lastFollowAt.current ? start - lastFollowAt.current : 800;
+    lastFollowAt.current = start;
+    const dur = Math.max(600, Math.min(2500, gap));
     const step = (now: number) => {
-      const t = Math.min(1, (now - start) / 800);
-      const e = t * (2 - t);
+      const t = Math.min(1, (now - start) / dur);
+      const e = t;
       // Zoom eases too (speed-dependent navigation zoom, 2026-11-17) — no jumps.
       map.moveCamera({ center: { lat: from.lat + (follow.lat - from.lat) * e, lng: from.lng + (follow.lng - from.lng) * e }, heading: from.heading + dh * e, zoom: from.zoom + (zoom - from.zoom) * e, tilt });
       camAnim.current = t < 1 ? requestAnimationFrame(step) : null;
@@ -389,16 +398,16 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     const map = mapRef.current, g = gRef.current;
     if (!map || !g || !ready) return;
     if (polyRef.current) { polyRef.current.setMap(null); polyRef.current = null; }
-    if (route && route.length) {
+    if (shownRoute && shownRoute.length) {
       polyRef.current = new g.Polyline({
-        path: route.map(([lng, lat]) => ({ lat, lng })),
+        path: shownRoute.map(([lng, lat]) => ({ lat, lng })),
         strokeColor: '#C8FF46',
-        strokeOpacity: 0.9,
-        strokeWeight: 4,
+        strokeOpacity: 0.95,
+        strokeWeight: 7,
         map,
       });
     }
-  }, [route, ready]);
+  }, [shownRoute, ready]);
 
   if (failed) {
     return (
