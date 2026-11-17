@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-17 — Map labels: English + «street we are on» chip (branch `map-labels`, NOT merged)
+- Google Maps loader `language: 'en'` (street names in English for everyone).
+- `googleStreetName` (Geocoding result_type=route, language=en) + `GET /api/v1/places/street` (30 m grid cache, 20/min/IP).
+- `src/components/useStreetName.tsx`: hook (refresh after ~80 m and ≥8 s) + chip; on driver navigation (top) and passenger tracking EN_ROUTE/IN_PROGRESS (under the status pill).
+- Fewer labels at the normal zoom (only main roads; minor streets, shops, bus stops from z17) is a Cloud Console map-style change by the owner (keyzooms) — steps given to the user in chat; no code.
+- Preview screenshots used a mocked street name (no Google key locally). Waiting for «заливай».
 ## 2026-11-19 — Driver sub-screens get a ‹ back arrow; operator rule recorded (deployed)
 
 - StaffShell (DRIVER): `BackArrow` left of the logo while the driver page shows a sub-screen (pre-bookings, free orders); the page announces it with `il-y:driver-back-visible` and listens for `il-y:driver-back` → map. Hooks sit before StaffShell's early return.

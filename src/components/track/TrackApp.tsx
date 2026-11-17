@@ -11,6 +11,7 @@ import { RateTripModal } from '@/components/booking/RateTripModal';
 import { GoogleReviewCard } from '@/components/GoogleReviewCard';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { offRouteM, trimRoute } from '@/components/routeGlide';
+import { CarStreetChip } from '@/components/useStreetName';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { formatFlight } from '@/lib/flight';
 import { useT } from '@/i18n/I18nProvider';
@@ -399,6 +400,8 @@ export default function TrackApp() {
             fitPadding={mapPad} fitRoute={view.status === 'REQUESTED' || view.status === 'SEARCHING' || liveTrip || view.status === 'ASSIGNED' || view.status === 'EN_ROUTE' || view.status === 'IN_PROGRESS'} keepInView={liveTrip}
             idleReturnMs={4000} />
         </div>
+        {/* The street the car is on (2026-11-17): the map labels only main roads at this zoom. */}
+        <CarStreetChip pos={liveLocation} enabled={view.status === 'EN_ROUTE' || view.status === 'IN_PROGRESS'} top="top-14" />
 
         {/* status pill */}
         <div className="absolute start-4 top-4 z-10 max-w-[70%]">

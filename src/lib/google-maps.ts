@@ -27,6 +27,8 @@ export function loadGoogleMaps(): Promise<any> {
       v: 'weekly',
       libraries: 'marker',
       loading: 'async',
+      // Street and place names on the map in English for everyone (2026-11-17), like Cyprus road signs.
+      language: 'en',
     });
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`;

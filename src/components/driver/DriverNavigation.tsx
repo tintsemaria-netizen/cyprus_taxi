@@ -20,6 +20,7 @@ import EdgeShine from '@/components/EdgeShine';
 // One size for every driver action button (2026-11-18): like «Выйти на линию» — 65 % wide, 53 px,
 // round, bold, glint on the rim.
 const STAGE_BTN = 'relative mx-auto block h-[53px] w-[65%] rounded-full bg-accent text-[16px] font-bold text-[#0d1608] shadow-lg active:scale-[0.99]';
+import { CarStreetChip } from '@/components/useStreetName';
 import { bearingDeg, cumulative, distM, locate, maneuverIcon, nextStep, offsetPoint, promptBand, roundNavDistance, type LatLng, type NavStep } from '@/lib/nav';
 
 // Full-screen navigation for an accepted ride (replaces the tabbed driver UI while a trip is
@@ -307,6 +308,8 @@ export function DriverNavigation(props: {
             zoom-out that stays put. */}
         <AutoMapView markers={markers} route={routeLine} center={pos ?? target} zoom={15} interactive className="h-full w-full" keepInView routeWidth={8}
           follow={follow} onFollowBreak={() => setFollowing(false)} idleReturnMs={4000} onIdleReturn={() => setFollowing(true)} fitPadding={wide ? { top: 60, right: 50, bottom: 60, left: 470 } : { top: 60, right: 50, bottom: panelOpen ? 520 : 330, left: 50 }} />
+        {/* The street we are on (2026-11-17): the map labels only main roads at this zoom. */}
+        <CarStreetChip pos={pos} />
         <div className="absolute end-3 top-3 flex flex-col gap-2">
           <button onClick={toggleMute} className="flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-lg" aria-label={muted ? t('driver.navigation.unmute') : t('driver.navigation.mute')} aria-pressed={muted}>{muted ? '🔇' : '🔊'}</button>
         </div>

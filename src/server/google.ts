@@ -36,6 +36,18 @@ export async function googleReverse(lat: number, lng: number): Promise<{ label: 
   return null;
 }
 
+// Name of the street at a point, in English (2026-11-17): shown on the map as «the street we are on»,
+// because at the normal zoom the map itself labels only the main roads.
+export async function googleStreetName(lat: number, lng: number): Promise<string | null> {
+  const key = config.googleServerKey();
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&result_type=route&language=en&key=${key}`;
+  const d = (await fetchJson(url)) as { status?: string; results?: { address_components?: { long_name?: string; short_name?: string; types?: string[] }[] }[] };
+  if (d.status && d.status !== 'OK' && d.status !== 'ZERO_RESULTS') throw new Error(`geocode:${d.status}`);
+  const comp = d.results?.[0]?.address_components?.find((c) => (c.types ?? []).includes('route'));
+  const name = comp?.long_name || comp?.short_name || null;
+  return name && !/^unnamed/i.test(name) ? name : null;
+}
+
 // Nearest drivable spot for a point a car cannot reach (2026-11-17): a place whose map point lies
 // in the sea, a park or a pedestrian area. Reverse-geocodes to the nearest street address / road
 // and returns that location if it is within `maxM` metres (5 km covers a pin well off the coast).
