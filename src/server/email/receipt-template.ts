@@ -1,5 +1,5 @@
-// Receipt e-mail body (2026-11-17): the same content as the receipt in «My rides», in the
-// passenger's language. Plain table layout with inline styles so it renders in mail clients.
+// Receipt e-mail body (2026-11-17): short — the trip (date, class, route) and the total only, in the
+// passenger's language; the full receipt is one tap away in «My rides». Plain table layout with inline styles so it renders in mail clients.
 import type { Locale } from '@/i18n/config';
 import { INTL_TAG, RTL_LOCALES } from '@/i18n/config';
 import { tr, trPlural } from '@/i18n/translate';
@@ -19,13 +19,7 @@ export function receiptEmail(r: Receipt, locale: Locale, link: string): { subjec
   const subject = tr(locale, 'rides.email.subject', { ref: r.reference });
   const totalLabel = f.isUpfront ? tr(locale, 'rides.receipt.total') : tr(locale, 'rides.receipt.estimatedTotal');
   const total = f.totalCents != null ? money(f.totalCents) : '—';
-  const pay = f.paymentMethod === 'CASH_TO_DRIVER' ? tr(locale, 'common.payment.CASH_TO_DRIVER') : f.paymentMethod;
-  const note = f.isUpfront ? tr(locale, 'rides.receipt.noteUpfront') : tr(locale, 'rides.receipt.noteMeter');
 
-  const rows: [string, string][] = [
-    ...f.lines.map((l) => [l.label, money(l.cents)] as [string, string]),
-    ...(f.waitingCents > 0 ? [[tr(locale, 'rides.receipt.waiting'), money(f.waitingCents)] as [string, string]] : []),
-  ];
   const routeRows: [string, string][] = [
     [tr(locale, 'track.pickup'), r.pickup],
     ...(r.stop ? [[tr(locale, 'booking.places.stop'), r.stop] as [string, string]] : []),
@@ -47,17 +41,12 @@ export function receiptEmail(r: Receipt, locale: Locale, link: string): { subjec
 <div style="margin-top:4px;font-size:13px;${muted}">${esc(tr(locale, 'track.tripRef', { ref: r.reference }))} · ${esc(meta)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:18px;border-top:1px solid #e3e7e8;">
 ${routeRows.map(([k, v]) => `<tr><td style="${td}${muted}width:34%;vertical-align:top;">${esc(k)}</td><td style="${td}">${esc(v)}</td></tr>`).join('')}
-${r.driver ? `<tr><td style="${td}${muted}vertical-align:top;">${esc(tr(locale, 'rides.receipt.driver'))}</td><td style="${td}">${esc(r.driver.name)}<br><span style="${muted}font-size:13px;">${esc(r.driver.vehicle)} · ${esc(r.driver.plate)}</span></td></tr>` : ''}
 </table>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;border-top:1px solid #e3e7e8;">
-${rows.map(([k, v]) => `<tr><td style="${td}${muted}">${esc(k)}</td><td style="${tdEnd}">${esc(v)}</td></tr>`).join('')}
 <tr><td style="${td}font-weight:700;font-size:16px;border-top:1px solid #e3e7e8;padding-top:10px;">${esc(totalLabel)}</td><td style="${tdEnd}font-weight:800;font-size:20px;border-top:1px solid #e3e7e8;padding-top:10px;">${esc(total)}</td></tr>
 </table>
-<div style="margin-top:8px;font-size:12px;${muted}">${esc(note)}</div>
-<div style="margin-top:6px;font-size:13px;color:#1d2427;">${esc(tr(locale, 'track.paymentLine', { method: pay }))}</div>
 <div style="margin-top:22px;text-align:center;"><a href="${esc(link)}" style="display:inline-block;background:#C8FF46;color:#10191C;font-weight:700;font-size:15px;text-decoration:none;padding:12px 22px;border-radius:12px;">${esc(tr(locale, 'rides.email.open'))}</a></div>
 </td></tr>
-<tr><td style="padding:14px 24px 22px;font-size:11px;line-height:1.5;${muted}text-align:${align};border-top:1px solid #eef1f2;">${esc(tr(locale, 'rides.email.footer'))}</td></tr>
 </table></td></tr></table></body></html>`;
 
   const text = [
@@ -66,16 +55,10 @@ ${rows.map(([k, v]) => `<tr><td style="${td}${muted}">${esc(k)}</td><td style="$
     `${tr(locale, 'track.tripRef', { ref: r.reference })} · ${meta}`,
     '',
     ...routeRows.map(([k, v]) => `${k}: ${v}`),
-    ...(r.driver ? [`${tr(locale, 'rides.receipt.driver')}: ${r.driver.name} (${r.driver.vehicle} · ${r.driver.plate})`] : []),
     '',
-    ...rows.map(([k, v]) => `${k}: ${v}`),
     `${totalLabel}: ${total}`,
-    note,
-    tr(locale, 'track.paymentLine', { method: pay }),
     '',
     `${tr(locale, 'rides.email.open')}: ${link}`,
-    '',
-    tr(locale, 'rides.email.footer'),
   ].join('\n');
   return { subject, html, text };
 }
