@@ -1,4 +1,5 @@
 import { meterWaitingCents } from '@/lib/tariff';
+import { isFixedPrice } from '@/lib/price-type';
 import { enqueueReceiptEmail } from '@/server/email/receipts';
 import { randomInt } from 'crypto';
 import { Prisma, Role } from '@prisma/client';
@@ -86,7 +87,7 @@ async function finalizeCompletion(
   const stopWait = await closeStopWaiting(tx, b.id, new Date());
   const waitingCents = (w?.accruedCents ?? 0) + stopWait;
   const priceType = b.priceType ?? 'REGULATED_METER_ESTIMATE';
-  const isUpfront = priceType === 'UPFRONT_DYNAMIC';
+  const isUpfront = isFixedPrice(priceType);
   // Upfront = the accepted committed price is the final amount. Regulated estimate =
   // no fabricated meter total; the driver settles the metered fare (finalCents stays null).
   const finalCents = isUpfront ? b.fareCents ?? null : null;
@@ -94,7 +95,7 @@ async function finalizeCompletion(
     priceType,
     estimateCents: b.fareCents ?? null,
     waitingCents,
-    note: isUpfront ? 'Accepted upfront price (final).' : 'Estimate; final regulated meter amount is settled with the driver.',
+    note: priceType === 'REGULATED_FIXED' ? 'Fixed airport fare (final).' : isUpfront ? 'Accepted upfront price (final).' : 'Estimate; final regulated meter amount is settled with the driver.',
     breakdown: b.fareBreakdown ? safeParse(b.fareBreakdown) : null,
   };
   const existing = await tx.fare.findUnique({ where: { bookingId: b.id } }); // immutable: write once

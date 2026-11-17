@@ -62,6 +62,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
                 { href: '/admin/passengers', label: t('staff.nav.passengers') },
                 { href: '/admin/drivers', label: t('staff.nav.drivers') },
                 { href: '/admin/vehicles', label: t('staff.nav.vehicles') },
+                { href: '/admin/fixed-prices', label: t('staff.nav.fixedPrices') },
                 { href: '/admin/settings', label: t('staff.nav.settings') },
               ]
             : []),

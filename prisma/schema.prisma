@@ -574,6 +574,24 @@ model Fare {
   createdAt        DateTime @default(now())
 }
 
+// Fixed airport fares (2026-11-17): the operator draws a zone on the map in admin and sets the
+// price; a trip between that airport and a point inside the zone (either direction, no stop)
+// is priced REGULATED_FIXED at exactly this amount instead of the meter estimate.
+model FixedFareZone {
+  id           String   @id @default(uuid())
+  airport      String   // AIRPORTS code: PFO | LCA
+  name         String
+  // [[lat, lng], …] closed implicitly; ≥ 3 points.
+  polygon      Json
+  comfortCents Int
+  xlCents      Int
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  @@index([airport, active])
+}
+
 // E-mailed trip receipt (2026-11-17). One row per completed booking, written in the completion
 // transaction (outbox); the worker sends it through the e-mail provider. A passenger "send again"
 // request puts the same row back to PENDING (resendCount is capped).

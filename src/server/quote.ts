@@ -3,6 +3,7 @@ import { config } from '@/lib/config';
 import { sha256 } from '@/lib/crypto';
 import { haversineMeters } from '@/lib/geo';
 import { isAirportPoint } from '@/lib/airports';
+import { findFixedFare } from '@/server/fixed-fares';
 import { computeMeterEstimate } from '@/lib/tariff';
 import { computeDynamicMultiplier, dynamicSurchargeCents } from '@/lib/pricing-dynamic';
 import { marketSnapshot } from '@/server/dispatch/market';
@@ -159,6 +160,18 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
     dynamic = { multiplier: dyn.multiplier, applied: dyn.applied, demandSupplyRatio: dyn.demandSupplyRatio, reasons: dyn.reasons, version: dyn.version };
      
     console.log(`[pricing] dynamic quote ×${dyn.multiplier} demand=${snap.activeRequests} supply=${snap.availableDrivers} weather=${weather?.severity ?? 0} reasons=${dyn.reasons.join('|')}`);
+  }
+
+  // Fixed airport fare (2026-11-17): airport ↔ an operator-drawn zone, no stop → exactly the zone
+  // price, final, no ±band. Takes precedence over the meter estimate and any dynamic multiplier.
+  const fixed = await findFixedFare(input.pickup, input.dropoff, input.vClass, input.stop ?? null).catch(() => null);
+  if (fixed) {
+    priceType = 'REGULATED_FIXED';
+    lines = [{ code: 'fixed', label: `Fixed airport fare (${fixed.airport} ↔ ${fixed.zoneName})`, cents: fixed.cents }];
+    totalCents = fixed.cents;
+    rangeLowCents = fixed.cents;
+    rangeHighCents = fixed.cents;
+    dynamic = undefined;
   }
 
   const row = await prisma.quote.create({

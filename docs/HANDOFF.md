@@ -1,5 +1,22 @@
 # Session handoff
 
+## 2026-11-17 — Fixed airport fares: admin map editor (deployed, no zones yet)
+
+- New table `FixedFareZone` (migration 20261117030000_fixed_fare_zone): airport (PFO|LCA), name, polygon [[lat,lng]…],
+  comfortCents, xlCents, active.
+- Admin «Фикс. цены» (`/admin/fixed-prices`, ADMIN only): pick airport, «+ Новая зона», tap the map to add corners, drag corners
+  (Google: editable polygon with mid-point handles; MapLibre: draggable corner markers), undo/clear, name, Comfort/XL price,
+  active toggle; list with edit / deactivate / delete. API `/api/v1/admin/fixed-zones` (GET/POST) and `/[id]` (PUT/DELETE).
+- Pricing (`src/server/fixed-fares.ts`, used in `createQuote`): pickup within 2.5 km of an airport and drop-off inside one of its
+  active zones, or the reverse, no stop → `REGULATED_FIXED`, total = low = high = zone price (cheapest if zones overlap),
+  same day/night, overrides meter/dynamic. 30 s in-memory cache, invalidated on admin changes.
+- `src/lib/price-type.ts` `isFixedPrice()` (REGULATED_FIXED | UPFRONT_DYNAMIC) now drives: Fare.finalCents at completion,
+  trip-close `upfront`, receipt total/labels, settlement lock, driver offer label «по фиксированной цене».
+- Client shows a single price automatically (range low == high). Zones are empty on prod → nothing changes until the owner draws one.
+- Tests: tests/fixed-fares.db.test.ts (4). Full vitest 256 passed / 1 skipped. Admin flow checked locally (MapLibre), quote API
+  returned REGULATED_FIXED 3500 for PFO → zone and meter outside. Google editor not checked locally (no key).
+- Local note: the local test DB lost its migration history; use `npx prisma db push` there (never on prod).
+
 ## 2026-11-17 — Google review prompt (deployed)
 
 - Admin Settings → «Отзыв в Google»: Place ID (ChIJ…) or https link → `settings.googleReviewUrl`; public config exposes

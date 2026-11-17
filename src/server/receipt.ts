@@ -1,3 +1,4 @@
+import { isFixedPrice } from '@/lib/price-type';
 import { prisma } from '@/lib/db';
 
 // Passenger-facing ride receipt (Task 020 follow-on). Built from the IMMUTABLE Fare written once
@@ -125,7 +126,7 @@ export async function buildReceipt(bookingId: string, passengerId?: string): Pro
     prisma.receiptEmail.findUnique({ where: { bookingId }, select: { status: true, toEmail: true, sentAt: true, resendCount: true } }),
   ]);
 
-  const isUpfront = b.fare.priceType === 'UPFRONT_DYNAMIC';
+  const isUpfront = isFixedPrice(b.fare.priceType);
   const note = isUpfront
     ? 'Accepted upfront price — this is the final amount.'
     : 'Estimated fare. The final regulated-meter amount is shown in the vehicle and paid to the driver.';
@@ -154,7 +155,7 @@ export async function buildReceipt(bookingId: string, passengerId?: string): Pro
         estimateCents: b.fare.estimateCents,
         waitingCents: b.fare.waitingCents,
         finalCents: b.fare.finalCents,
-        totalCents: isUpfront ? b.fare.finalCents : b.fare.estimateCents != null ? b.fare.estimateCents + b.fare.waitingCents : null,
+        totalCents: isUpfront ? (b.fare.finalCents != null ? b.fare.finalCents + b.fare.waitingCents : null) : b.fare.estimateCents != null ? b.fare.estimateCents + b.fare.waitingCents : null,
         lines: parseLines(b.fareBreakdown),
         note,
         paymentMethod: b.fare.paymentMethod,

@@ -57,3 +57,4 @@ export const DEMO_CYPRUS_POLYGON: LatLng[] = [
   { lat: 34.55, lng: 34.65 },
   { lat: 34.55, lng: 32.25 },
 ];
+

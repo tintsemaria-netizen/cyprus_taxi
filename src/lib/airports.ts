@@ -13,3 +13,8 @@ export const AIRPORT_RADIUS_M = 2500;
 export function isAirportPoint(lat: number, lng: number): boolean {
   return AIRPORTS.some((a) => haversineMeters({ lat, lng }, a) <= AIRPORT_RADIUS_M);
 }
+
+/** The airport a point belongs to (within AIRPORT_RADIUS_M), or null. */
+export function airportAt(lat: number, lng: number): (typeof AIRPORTS)[number]['code'] | null {
+  return AIRPORTS.find((a) => haversineMeters({ lat, lng }, a) <= AIRPORT_RADIUS_M)?.code ?? null;
+}

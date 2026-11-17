@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { meterWaitingCents } from '@/lib/tariff';
+import { isFixedPrice } from '@/lib/price-type';
 
 // Trip close-out for the driver (2026-11-15):
 //  1. fare preview before the final «Завершить» — what the completion will record, so the driver
@@ -15,7 +16,7 @@ export async function farePreview(bookingId: string, driverId: string, now = new
   const pickupWaitCents = w?.accruedCents ?? 0;
   const stopWaitCents = b.stopWaitCents ?? (b.stopWaitStartedAt ? meterWaitingCents(b.stopWaitStartedAt, b.stopDepartedAt ?? now) : 0);
   const estimateCents = b.fareCents ?? null;
-  const upfront = (b.priceType ?? 'REGULATED_METER_ESTIMATE') === 'UPFRONT_DYNAMIC';
+  const upfront = isFixedPrice(b.priceType);
   return {
     status: b.status,
     currency: 'EUR',
