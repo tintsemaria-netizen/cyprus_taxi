@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-17 — Searching screen: no folded panel
+
+- TrackApp: while SEARCHING the info panel is always open (`panelOpen = sheetOpen || searching`; handle hidden, swipe/tap ignored);
+  the folded «searching-compact» block (route + cancel) is removed. Other statuses fold as before.
+
 ## 2026-11-17 — Fixed airport fares: admin map editor (deployed, no zones yet)
 
 - New table `FixedFareZone` (migration 20261117030000_fixed_fare_zone): airport (PFO|LCA), name, polygon [[lat,lng]…],

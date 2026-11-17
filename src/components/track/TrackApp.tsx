@@ -227,7 +227,11 @@ export default function TrackApp() {
   const sheetSwipeY = useRef<number | null>(null);
   const sheetSwiped = useRef(false);
   const sheetBodyRef = useRef<HTMLDivElement | null>(null);
-  const sheetDrag = useSheetDrag({ open: sheetOpen, setOpen: setSheetOpen, scrollRef: sheetBodyRef });
+  // While searching the panel stays open — no folded variant (2026-11-17).
+  const searchingNow = view?.status === 'SEARCHING';
+  const panelOpen = sheetOpen || searchingNow;
+  const setPanelOpen = useCallback((v: boolean | ((o: boolean) => boolean)) => { if (!searchingNow) setSheetOpen(v); }, [searchingNow]);
+  const sheetDrag = useSheetDrag({ open: panelOpen, setOpen: setPanelOpen, scrollRef: sheetBodyRef });
   // The map runs under the sheet: frame points in the part ABOVE it (2026-11-16), so the pulsing
   // pickup pin sits in the middle of what the passenger actually sees while we search.
   const [sheetEl, setSheetEl] = useState<HTMLDivElement | null>(null);
@@ -380,28 +384,16 @@ export default function TrackApp() {
                 <a href="/" aria-label={t('track.closeToStart')} title={t('track.closeToStart')}
                   className="absolute end-1.5 top-1.5 z-20 flex h-12 w-12 items-center justify-center rounded-full text-[36px] leading-none text-muted hover:bg-page/60 hover:text-ink">×</a>
               )}
-              <button type="button" aria-expanded={sheetOpen} aria-label={sheetOpen ? t('booking.sheet.collapse') : t('booking.sheet.expand')}
-                onClick={() => { if (!sheetSwiped.current) setSheetOpen((o) => !o); sheetSwiped.current = false; }}
+              <button type="button" aria-expanded={panelOpen} aria-label={panelOpen ? t('booking.sheet.collapse') : t('booking.sheet.expand')}
+                onClick={() => { if (!sheetSwiped.current) setPanelOpen((o) => !o); sheetSwiped.current = false; }}
                 onPointerDown={(e) => { sheetSwipeY.current = e.clientY; }}
-                onPointerUp={(e) => { if (sheetSwipeY.current == null) return; const dy = e.clientY - sheetSwipeY.current; sheetSwipeY.current = null; if (Math.abs(dy) > 25) { sheetSwiped.current = true; setSheetOpen(dy < 0); } }}
-                className="flex w-full shrink-0 touch-none justify-center pb-0.5 pt-2"><span className="h-1.5 w-12 rounded-full bg-edge-strong" /></button>
+                onPointerUp={(e) => { if (sheetSwipeY.current == null) return; const dy = e.clientY - sheetSwipeY.current; sheetSwipeY.current = null; if (Math.abs(dy) > 25) { sheetSwiped.current = true; setPanelOpen(dy < 0); } }}
+                className={`flex w-full shrink-0 touch-none justify-center pb-0.5 pt-2 ${searchingNow ? 'pointer-events-none invisible' : ''}`}><span className="h-1.5 w-12 rounded-full bg-edge-strong" /></button>
               {/* Pinned: what the passenger needs at pickup (status, driver/plate, start code). */}
-              <div className={`shrink-0 p-4 pb-3 pt-1 sm:p-5 sm:pb-3 sm:pt-1 ${sheetOpen ? 'border-b border-edge' : ''}`}>
+              <div className={`shrink-0 p-4 pb-3 pt-1 sm:p-5 sm:pb-3 sm:pt-1 ${panelOpen ? 'border-b border-edge' : ''}`}>
                 {view.status === 'SEARCHING'
                   ? <>
                       <h1 className="text-lg font-medium leading-snug text-ink" role="status" aria-live="polite">{t('track.searchingNote')}</h1>
-                      {/* Folded searching panel: a compact route and the cancel link stay reachable. */}
-                      {!sheetOpen && (
-                        <div className="mt-2 space-y-1 text-sm" data-testid="searching-compact">
-                          <div className="flex items-center gap-2 truncate"><span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full border-2 border-accent" /><span className="truncate">{view.pickup.label}</span></div>
-                          <div className="flex items-center gap-2 truncate"><span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent" /><span className="truncate">{view.dropoff.label}</span></div>
-                          {view.canCancel && (
-                            <button type="button" className="pt-1 text-sm text-danger" onClick={() => setConfirmCancel(true)} disabled={cancelling}>
-                              {cancelling ? t('track.cancelling') : t('track.cancelBooking')}
-                            </button>
-                          )}
-                        </div>
-                      )}
                     </>
                   : <h1 className="text-xl font-bold" role="status" aria-live="polite">{headline}</h1>}
                 {view.status === 'REQUESTED' && !view.confirmedDriver && (
@@ -445,7 +437,7 @@ export default function TrackApp() {
                 ) : null /* searching: the pulsing pin on the map says it — no «Закрепляем…» box (2026-11-15) */}
 
               </div>
-              <div ref={sheetBodyRef} className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pt-3 sm:p-5 sm:pt-3 ${sheetOpen ? '' : 'hidden'}`}>
+              <div ref={sheetBodyRef} className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pt-3 sm:p-5 sm:pt-3 ${panelOpen ? '' : 'hidden'}`}>
                 {actionError && <p role="alert" className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{actionError}</p>}
 
                 {/* pickup waiting timer (after arrival) */}
