@@ -1,0 +1,56 @@
+import type { Catalog } from '../../types';
+import type en from '../en/common';
+
+const common: Catalog<typeof en> = {
+  brandTagline: 'احجز رحلتك في جميع أنحاء قبرص',
+  book: 'احجز',
+  cancel: 'إلغاء',
+  close: 'إغلاق',
+  back: 'رجوع',
+  retry: 'حاول مرة أخرى',
+  loading: 'جارٍ التحميل…',
+  pleaseWait: 'يرجى الانتظار…',
+  signOut: 'تسجيل الخروج',
+  myTrip: 'رحلتي',
+  language: 'اللغة',
+  networkError: 'مشكلة في الشبكة — تحقق من اتصالك وحاول مرة أخرى.',
+  somethingWrong: 'حدث خطأ ما. يرجى المحاولة مرة أخرى.',
+  emergency112: 'في حالات الطوارئ اتصل بالرقم 112.',
+  passengers: { zero: '{count} راكب', one: '{count} راكب', two: '{count} راكبان', few: '{count} ركاب', many: '{count} راكبًا', other: '{count} راكب' },
+  minutes: { zero: '{count} دقيقة', one: '{count} دقيقة', two: '{count} دقيقتان', few: '{count} دقائق', many: '{count} دقيقة', other: '{count} دقيقة' },
+  status: {
+    REQUESTED: 'رحلة مجدولة',
+    SEARCHING: 'نبحث لك عن سائق',
+    NO_DRIVER: 'لا يوجد سائقون متاحون',
+    ASSIGNED: 'تم تعيين سائق',
+    EN_ROUTE: 'السائق في الطريق',
+    ARRIVED: 'وصل السائق',
+    IN_PROGRESS: 'أثناء الرحلة',
+    COMPLETED: 'انتهت الرحلة',
+    CANCELED: 'تم إلغاء الحجز',
+  },
+  vClass: { COMFORT: 'Comfort', XL: 'XL' },
+  payment: { CASH_TO_DRIVER: 'نقدًا للسائق' },
+  notifyPrompt: {
+    title: 'تفعيل الإشعارات',
+    body: 'سنخبرك عندما نجد سائقًا، وعندما يكون في الطريق، وعندما ينتظرك — حتى عندما يكون التطبيق مغلقًا.',
+    allow: 'السماح',
+    later: 'ليس الآن',
+  },
+  install: {
+    title: 'ثبّت IL-Y على هاتفك',
+    titleDriver: 'ثبّت IL-Y Driver على هاتفك',
+    androidBody: 'يفتح بملء الشاشة مثل التطبيق ويمكنه عرض إشعارات الرحلات.',
+    iosSteps: 'اضغط على «مشاركة» (المربع مع السهم) في Safari، ثم «إضافة إلى الشاشة الرئيسية».',
+    install: 'تثبيت',
+    notNow: 'ليس الآن',
+    iosNotify: 'لتلقي الإشعارات على iPhone، أضف IL-Y إلى الشاشة الرئيسية (مشاركة ← إضافة إلى الشاشة الرئيسية) وافتحه من هناك.',
+  },
+  rotate: {
+    title: 'أمسك هاتفك بشكل عمودي',
+    body: 'يعمل IL-Y في الوضع العمودي. أمسك هاتفك عموديًا للمتابعة.',
+  },
+  showPassword: 'إظهار كلمة المرور',
+  hidePassword: 'إخفاء كلمة المرور',
+};
+export default common;

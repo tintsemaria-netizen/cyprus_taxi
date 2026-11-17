@@ -29,6 +29,46 @@ import ruDriver from './ru/driver';
 import ruDriverReg from './ru/driverReg';
 import ruRides from './ru/rides';
 import ruStaff from './ru/staff';
+import heCommon from './he/common';
+import heErrors from './he/errors';
+import heBooking from './he/booking';
+import heTrack from './he/track';
+import heAuth from './he/auth';
+import heDriver from './he/driver';
+import heDriverReg from './he/driverReg';
+import heRides from './he/rides';
+import arCommon from './ar/common';
+import arErrors from './ar/errors';
+import arBooking from './ar/booking';
+import arTrack from './ar/track';
+import arAuth from './ar/auth';
+import arDriver from './ar/driver';
+import arDriverReg from './ar/driverReg';
+import arRides from './ar/rides';
+import plCommon from './pl/common';
+import plErrors from './pl/errors';
+import plBooking from './pl/booking';
+import plTrack from './pl/track';
+import plAuth from './pl/auth';
+import plDriver from './pl/driver';
+import plDriverReg from './pl/driverReg';
+import plRides from './pl/rides';
+import deCommon from './de/common';
+import deErrors from './de/errors';
+import deBooking from './de/booking';
+import deTrack from './de/track';
+import deAuth from './de/auth';
+import deDriver from './de/driver';
+import deDriverReg from './de/driverReg';
+import deRides from './de/rides';
+import frCommon from './fr/common';
+import frErrors from './fr/errors';
+import frBooking from './fr/booking';
+import frTrack from './fr/track';
+import frAuth from './fr/auth';
+import frDriver from './fr/driver';
+import frDriverReg from './fr/driverReg';
+import frRides from './fr/rides';
 
 const en = {
   common: enCommon,
@@ -66,4 +106,65 @@ const ru: Catalog<Messages> = {
   staff: ruStaff,
 };
 
-export const MESSAGES: Record<Locale, Catalog<Messages>> = { en, el, ru };
+// Staff/admin panel stays English for he (internal tool).
+const he: Catalog<Messages> = {
+  common: heCommon,
+  errors: heErrors,
+  booking: heBooking,
+  track: heTrack,
+  auth: heAuth,
+  driver: heDriver,
+  driverReg: heDriverReg,
+  rides: heRides,
+  staff: enStaff,
+};
+// Staff/admin panel stays English for ar (internal tool).
+const ar: Catalog<Messages> = {
+  common: arCommon,
+  errors: arErrors,
+  booking: arBooking,
+  track: arTrack,
+  auth: arAuth,
+  driver: arDriver,
+  driverReg: arDriverReg,
+  rides: arRides,
+  staff: enStaff,
+};
+// Staff/admin panel stays English for pl (internal tool).
+const pl: Catalog<Messages> = {
+  common: plCommon,
+  errors: plErrors,
+  booking: plBooking,
+  track: plTrack,
+  auth: plAuth,
+  driver: plDriver,
+  driverReg: plDriverReg,
+  rides: plRides,
+  staff: enStaff,
+};
+// Staff/admin panel stays English for de (internal tool).
+const de: Catalog<Messages> = {
+  common: deCommon,
+  errors: deErrors,
+  booking: deBooking,
+  track: deTrack,
+  auth: deAuth,
+  driver: deDriver,
+  driverReg: deDriverReg,
+  rides: deRides,
+  staff: enStaff,
+};
+// Staff/admin panel stays English for fr (internal tool).
+const fr: Catalog<Messages> = {
+  common: frCommon,
+  errors: frErrors,
+  booking: frBooking,
+  track: frTrack,
+  auth: frAuth,
+  driver: frDriver,
+  driverReg: frDriverReg,
+  rides: frRides,
+  staff: enStaff,
+};
+
+export const MESSAGES: Record<Locale, Catalog<Messages>> = { en, el, ru, he, ar, pl, de, fr };

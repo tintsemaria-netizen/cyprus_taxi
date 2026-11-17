@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { I18nProvider } from '@/i18n/I18nProvider';
 import { getRequestLocale } from '@/i18n/server';
+import { RTL_LOCALES } from '@/i18n/config';
 import { PortraitLock } from '@/components/PortraitLock';
 import { ErrorFocus } from '@/components/ErrorFocus';
 
@@ -38,7 +39,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getRequestLocale();
   return (
-    <html lang={locale}>
+    <html lang={locale} data-rtl={RTL_LOCALES.includes(locale) ? '' : undefined}>
       <body className="min-h-full bg-page text-ink antialiased">
         <I18nProvider locale={locale}>{children}<PortraitLock />
         <ErrorFocus /></I18nProvider>

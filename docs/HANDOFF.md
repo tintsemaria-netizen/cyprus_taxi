@@ -1,5 +1,21 @@
 # Session handoff
 
+## 2026-11-17 — Five more UI languages: Hebrew, Arabic, Polish, German, French
+
+- `src/i18n/config.ts`: LOCALES = en, el, ru, he, ar, pl, de, fr; names, short codes, Intl tags; `RTL_LOCALES = he, ar`.
+- New catalogs `src/i18n/messages/{he,ar,pl,de,fr}/` for common, errors, auth, booking, track, rides, driver, driverReg
+  (full key parity with English, plural forms per CLDR: fr one/many/other, pl one/few/many/other, he one/two/many/other,
+  ar zero/one/two/few/many/other). Staff/admin panel reuses the English catalog for these five (internal tool).
+- Language still follows the device/browser (Accept-Language), so a German phone now gets German instead of English;
+  unknown languages fall back to English; the driver profile «Язык» switch lists all eight.
+- RTL: layout stays left-to-right (maps/sheets positioned for it); `<html data-rtl>` + globals.css `unicode-bidi: plaintext`
+  makes Hebrew/Arabic text blocks read and align right-to-left. Full mirrored RTL layout NOT done.
+- `public/sw.js`: driver offer push texts in the five new languages.
+- Chat auto-translation (previous entry) already uses the reader's locale, so it covers the new languages too.
+- Tests: tests/i18n.test.ts checks key parity and placeholders for every locale, new Accept-Language cases, pl/de plurals.
+  Full vitest: 248 passed, 1 skipped. Build ok. Local screenshots of he/ar/de start screen checked.
+- Translations are machine-quality by Claude, not reviewed by native speakers.
+
 ## 2026-11-17 — Driver↔passenger chat auto-translation
 **Migration** `20261117010000_chat_translation`: ChatMessage.lang (the sender's UI locale) and ChatMessage.translations (JSONB cache `{lang: text}`; '' means no translation needed).
 

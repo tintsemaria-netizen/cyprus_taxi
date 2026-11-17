@@ -1,0 +1,56 @@
+import type { Catalog } from '../../types';
+import type en from '../en/common';
+
+const common: Catalog<typeof en> = {
+  brandTagline: 'הזמנת נסיעה בכל רחבי קפריסין',
+  book: 'הזמנה',
+  cancel: 'ביטול',
+  close: 'סגירה',
+  back: 'חזרה',
+  retry: 'נסו שוב',
+  loading: 'טוען…',
+  pleaseWait: 'רגע אחד…',
+  signOut: 'התנתקות',
+  myTrip: 'הנסיעה שלי',
+  language: 'שפה',
+  networkError: 'בעיית רשת — בדקו את החיבור ונסו שוב.',
+  somethingWrong: 'משהו השתבש. נסו שוב.',
+  emergency112: 'במקרה חירום התקשרו ל-112.',
+  passengers: { one: '{count} נוסע', two: '{count} נוסעים', many: '{count} נוסעים', other: '{count} נוסעים' },
+  minutes: { one: '{count} דק׳', two: '{count} דק׳', many: '{count} דק׳', other: '{count} דק׳' },
+  status: {
+    REQUESTED: 'נסיעה מתוכננת',
+    SEARCHING: 'מחפשים לכם נהג',
+    NO_DRIVER: 'אין נהגים זמינים',
+    ASSIGNED: 'נהג שובץ',
+    EN_ROUTE: 'הנהג בדרך',
+    ARRIVED: 'הנהג הגיע',
+    IN_PROGRESS: 'בנסיעה',
+    COMPLETED: 'הנסיעה הסתיימה',
+    CANCELED: 'ההזמנה בוטלה',
+  },
+  vClass: { COMFORT: 'Comfort', XL: 'XL' },
+  payment: { CASH_TO_DRIVER: 'מזומן לנהג' },
+  notifyPrompt: {
+    title: 'הפעלת התראות',
+    body: 'נודיע לכם כשנמצא נהג, כשהוא בדרך וכשהוא מחכה לכם — גם כשהאפליקציה סגורה.',
+    allow: 'אישור',
+    later: 'לא עכשיו',
+  },
+  install: {
+    title: 'התקינו את IL-Y בטלפון',
+    titleDriver: 'התקינו את IL-Y Driver בטלפון',
+    androidBody: 'נפתחת במסך מלא כמו אפליקציה ויכולה להציג התראות על נסיעות.',
+    iosSteps: 'הקישו על שיתוף (הריבוע עם החץ) ב-Safari ואז על „הוסף למסך הבית”.',
+    install: 'התקנה',
+    notNow: 'לא עכשיו',
+    iosNotify: 'כדי לקבל התראות באייפון, הוסיפו את IL-Y למסך הבית (שיתוף ← הוסף למסך הבית) ופתחו משם.',
+  },
+  rotate: {
+    title: 'החזיקו את הטלפון לאורך',
+    body: 'IL-Y עובדת במצב לאורך. החזיקו את הטלפון אנכית כדי להמשיך.',
+  },
+  showPassword: 'הצגת סיסמה',
+  hidePassword: 'הסתרת סיסמה',
+};
+export default common;

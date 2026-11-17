@@ -1,0 +1,56 @@
+import type { Catalog } from '../../types';
+import type en from '../en/common';
+
+const common: Catalog<typeof en> = {
+  brandTagline: 'Fahrten in ganz Zypern buchen',
+  book: 'Buchen',
+  cancel: 'Abbrechen',
+  close: 'Schließen',
+  back: 'Zurück',
+  retry: 'Erneut versuchen',
+  loading: 'Wird geladen…',
+  pleaseWait: 'Bitte warten…',
+  signOut: 'Abmelden',
+  myTrip: 'Meine Fahrt',
+  language: 'Sprache',
+  networkError: 'Netzwerkproblem — prüfen Sie Ihre Verbindung und versuchen Sie es erneut.',
+  somethingWrong: 'Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.',
+  emergency112: 'Im Notfall 112 anrufen.',
+  passengers: { one: '{count} Fahrgast', other: '{count} Fahrgäste' },
+  minutes: { one: '{count} Min.', other: '{count} Min.' },
+  status: {
+    REQUESTED: 'Geplante Fahrt',
+    SEARCHING: 'Wir suchen einen Fahrer',
+    NO_DRIVER: 'Keine Fahrer verfügbar',
+    ASSIGNED: 'Fahrer zugewiesen',
+    EN_ROUTE: 'Fahrer ist unterwegs',
+    ARRIVED: 'Fahrer ist da',
+    IN_PROGRESS: 'Unterwegs',
+    COMPLETED: 'Fahrt beendet',
+    CANCELED: 'Buchung storniert',
+  },
+  vClass: { COMFORT: 'Comfort', XL: 'XL' },
+  payment: { CASH_TO_DRIVER: 'Bar an den Fahrer' },
+  notifyPrompt: {
+    title: 'Benachrichtigungen aktivieren',
+    body: 'Wir sagen Ihnen Bescheid, wenn ein Fahrer gefunden ist, unterwegs ist und auf Sie wartet — auch wenn die App geschlossen ist.',
+    allow: 'Erlauben',
+    later: 'Nicht jetzt',
+  },
+  install: {
+    title: 'IL-Y auf dem Handy installieren',
+    titleDriver: 'IL-Y Driver auf dem Handy installieren',
+    androidBody: 'Öffnet sich im Vollbild wie eine App und kann Fahrtbenachrichtigungen anzeigen.',
+    iosSteps: 'Tippen Sie in Safari auf „Teilen“ (Quadrat mit Pfeil) und dann auf „Zum Home-Bildschirm“.',
+    install: 'Installieren',
+    notNow: 'Nicht jetzt',
+    iosNotify: 'Für Benachrichtigungen auf dem iPhone fügen Sie IL-Y zum Home-Bildschirm hinzu (Teilen → Zum Home-Bildschirm) und öffnen es von dort.',
+  },
+  rotate: {
+    title: 'Halten Sie das Handy hochkant',
+    body: 'IL-Y funktioniert im Hochformat. Halten Sie Ihr Handy senkrecht, um fortzufahren.',
+  },
+  showPassword: 'Passwort anzeigen',
+  hidePassword: 'Passwort verbergen',
+};
+export default common;

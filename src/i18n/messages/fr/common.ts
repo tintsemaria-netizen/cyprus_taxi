@@ -1,0 +1,56 @@
+import type { Catalog } from '../../types';
+import type en from '../en/common';
+
+const common: Catalog<typeof en> = {
+  brandTagline: 'Réservez une course partout à Chypre',
+  book: 'Réserver',
+  cancel: 'Annuler',
+  close: 'Fermer',
+  back: 'Retour',
+  retry: 'Réessayer',
+  loading: 'Chargement…',
+  pleaseWait: 'Veuillez patienter…',
+  signOut: 'Se déconnecter',
+  myTrip: 'Ma course',
+  language: 'Langue',
+  networkError: 'Problème de réseau — vérifiez votre connexion et réessayez.',
+  somethingWrong: 'Une erreur s’est produite. Veuillez réessayer.',
+  emergency112: 'En cas d’urgence, appelez le 112.',
+  passengers: { one: '{count} passager', many: '{count} passagers', other: '{count} passagers' },
+  minutes: { one: '{count} min', many: '{count} min', other: '{count} min' },
+  status: {
+    REQUESTED: 'Course programmée',
+    SEARCHING: 'Recherche d’un chauffeur',
+    NO_DRIVER: 'Aucun chauffeur disponible',
+    ASSIGNED: 'Chauffeur attribué',
+    EN_ROUTE: 'Le chauffeur arrive',
+    ARRIVED: 'Le chauffeur est arrivé',
+    IN_PROGRESS: 'Course en cours',
+    COMPLETED: 'Course terminée',
+    CANCELED: 'Réservation annulée',
+  },
+  vClass: { COMFORT: 'Comfort', XL: 'XL' },
+  payment: { CASH_TO_DRIVER: 'Espèces au chauffeur' },
+  notifyPrompt: {
+    title: 'Activer les notifications',
+    body: 'Nous vous prévenons quand un chauffeur est trouvé, en route et vous attend — même application fermée.',
+    allow: 'Autoriser',
+    later: 'Pas maintenant',
+  },
+  install: {
+    title: 'Installer IL-Y sur votre téléphone',
+    titleDriver: 'Installer IL-Y Driver sur votre téléphone',
+    androidBody: 'S’ouvre en plein écran comme une application et peut afficher les notifications de course.',
+    iosSteps: 'Touchez Partager (le carré avec une flèche) dans Safari, puis « Sur l’écran d’accueil ».',
+    install: 'Installer',
+    notNow: 'Pas maintenant',
+    iosNotify: 'Pour recevoir les notifications sur iPhone, ajoutez IL-Y à l’écran d’accueil (Partager → Sur l’écran d’accueil) et ouvrez-le depuis là.',
+  },
+  rotate: {
+    title: 'Tenez votre téléphone à la verticale',
+    body: 'IL-Y fonctionne en mode portrait. Tenez votre téléphone verticalement pour continuer.',
+  },
+  showPassword: 'Afficher le mot de passe',
+  hidePassword: 'Masquer le mot de passe',
+};
+export default common;

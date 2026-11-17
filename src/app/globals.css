@@ -73,3 +73,10 @@ body {
 /* Driver offer card (2026-11-15): slides up over everything when a new order arrives. */
 @keyframes ily-offer-in { from { transform: translateY(110%); opacity: .4 } to { transform: translateY(0); opacity: 1 } }
 .ily-offer-in { animation: ily-offer-in .35s cubic-bezier(.2,.9,.3,1.15); }
+
+/* Hebrew / Arabic (2026-11-17): the screen layout stays left-to-right (maps, sheets and buttons are
+   positioned for it), but every text block takes its direction from its own content, so RTL
+   sentences read and align right-to-left and mixed numbers/addresses keep their order. */
+[data-rtl] :where(p, h1, h2, h3, h4, div, span, label, button, li, a, dt, dd, td, th, input, textarea) {
+  unicode-bidi: plaintext;
+}

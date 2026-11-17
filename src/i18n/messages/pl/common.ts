@@ -1,0 +1,56 @@
+import type { Catalog } from '../../types';
+import type en from '../en/common';
+
+const common: Catalog<typeof en> = {
+  brandTagline: 'Zamów przejazd w całym Cyprze',
+  book: 'Zamów',
+  cancel: 'Anuluj',
+  close: 'Zamknij',
+  back: 'Wstecz',
+  retry: 'Spróbuj ponownie',
+  loading: 'Ładowanie…',
+  pleaseWait: 'Proszę czekać…',
+  signOut: 'Wyloguj się',
+  myTrip: 'Mój przejazd',
+  language: 'Język',
+  networkError: 'Problem z siecią — sprawdź połączenie i spróbuj ponownie.',
+  somethingWrong: 'Coś poszło nie tak. Spróbuj ponownie.',
+  emergency112: 'W nagłym wypadku dzwoń pod 112.',
+  passengers: { one: '{count} pasażer', few: '{count} pasażerów', many: '{count} pasażerów', other: '{count} pasażera' },
+  minutes: { one: '{count} min', few: '{count} min', many: '{count} min', other: '{count} min' },
+  status: {
+    REQUESTED: 'Zaplanowany przejazd',
+    SEARCHING: 'Szukamy kierowcy',
+    NO_DRIVER: 'Brak dostępnych kierowców',
+    ASSIGNED: 'Kierowca przydzielony',
+    EN_ROUTE: 'Kierowca jest w drodze',
+    ARRIVED: 'Kierowca na miejscu',
+    IN_PROGRESS: 'W trakcie przejazdu',
+    COMPLETED: 'Przejazd zakończony',
+    CANCELED: 'Zamówienie anulowane',
+  },
+  vClass: { COMFORT: 'Comfort', XL: 'XL' },
+  payment: { CASH_TO_DRIVER: 'Gotówką u kierowcy' },
+  notifyPrompt: {
+    title: 'Włącz powiadomienia',
+    body: 'Powiadomimy Cię, gdy znajdziemy kierowcę, gdy będzie w drodze i gdy na Ciebie czeka — nawet przy zamkniętej aplikacji.',
+    allow: 'Zezwól',
+    later: 'Nie teraz',
+  },
+  install: {
+    title: 'Zainstaluj IL-Y na telefonie',
+    titleDriver: 'Zainstaluj IL-Y Driver na telefonie',
+    androidBody: 'Otwiera się na pełnym ekranie jak aplikacja i może pokazywać powiadomienia o przejazdach.',
+    iosSteps: 'W Safari stuknij „Udostępnij” (kwadrat ze strzałką), a potem „Do ekranu początkowego”.',
+    install: 'Zainstaluj',
+    notNow: 'Nie teraz',
+    iosNotify: 'Aby otrzymywać powiadomienia na iPhonie, dodaj IL-Y do ekranu początkowego (Udostępnij → Do ekranu początkowego) i otwieraj stamtąd.',
+  },
+  rotate: {
+    title: 'Obróć telefon pionowo',
+    body: 'IL-Y działa w trybie pionowym. Trzymaj telefon pionowo, aby kontynuować.',
+  },
+  showPassword: 'Pokaż hasło',
+  hidePassword: 'Ukryj hasło',
+};
+export default common;

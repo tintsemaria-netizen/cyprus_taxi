@@ -1,12 +1,15 @@
-// Supported UI languages (2026-10-01 audit, Stage 1.18). Cyprus: Greek, English, Russian.
-export const LOCALES = ['en', 'el', 'ru'] as const;
+// Supported UI languages (2026-10-01 audit, Stage 1.18). Cyprus: Greek, English, Russian;
+// plus Hebrew, Arabic, Polish, German and French (2026-11-17).
+export const LOCALES = ['en', 'el', 'ru', 'he', 'ar', 'pl', 'de', 'fr'] as const;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = 'en';
 export const LOCALE_COOKIE = 'lang';
-export const LOCALE_NAMES: Record<Locale, string> = { en: 'English', el: 'Ελληνικά', ru: 'Русский' };
-export const LOCALE_SHORT: Record<Locale, string> = { en: 'EN', el: 'ΕΛ', ru: 'РУ' };
+export const LOCALE_NAMES: Record<Locale, string> = { en: 'English', el: 'Ελληνικά', ru: 'Русский', he: 'עברית', ar: 'العربية', pl: 'Polski', de: 'Deutsch', fr: 'Français' };
+export const LOCALE_SHORT: Record<Locale, string> = { en: 'EN', el: 'ΕΛ', ru: 'РУ', he: 'HE', ar: 'AR', pl: 'PL', de: 'DE', fr: 'FR' };
 // BCP-47 tags for Intl date/number formatting.
-export const INTL_TAG: Record<Locale, string> = { en: 'en-GB', el: 'el-GR', ru: 'ru-RU' };
+export const INTL_TAG: Record<Locale, string> = { en: 'en-GB', el: 'el-GR', ru: 'ru-RU', he: 'he-IL', ar: 'ar', pl: 'pl-PL', de: 'de-DE', fr: 'fr-FR' };
+// Right-to-left scripts.
+export const RTL_LOCALES: readonly Locale[] = ['he', 'ar'];
 
 export function isLocale(v: unknown): v is Locale {
   return typeof v === 'string' && (LOCALES as readonly string[]).includes(v);
