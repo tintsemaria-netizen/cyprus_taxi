@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-17 — Language choice: RU / EL / EN + the phone's own language (passenger and driver)
+
+- LanguageSwitcher `only=[ru, el, en]` now also lists the current language and the device/browser language (navigator.languages,
+  first supported one). Used in the passenger account menu (new) and the driver profile. The automatic language (Accept-Language)
+  is unchanged: a German phone opens in German and shows «DE · Deutsch» next to RU/EL/EN; an Italian phone (unsupported) gets
+  English and only RU/EL/EN. Checked locally with Playwright for de-DE, de-DE+cookie ru, ru-RU, it-IT.
+
 ## 2026-11-17 — Two fingers: zoom and rotate at the same time (Google maps)
 
 - New `src/components/useTwoFingerCamera.ts`: while two touch pointers are down inside the map, their pointer/touch events are

@@ -1,15 +1,24 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LOCALES, LOCALE_NAMES, LOCALE_SHORT, Locale } from './config';
+import { LOCALES, LOCALE_NAMES, LOCALE_SHORT, Locale, isLocale } from './config';
 import { setLocaleCookie, useLocale, useT } from './I18nProvider';
 
 // compact: options show only the short code (EN / ΕΛ / РУ) — for tight mobile headers.
-// only: limit the manual choice (driver profile: RU / EL / EN). The current language stays listed
-// even when it is not in the list, so the selector never shows a wrong value.
+// only: limit the manual choice to a few languages (RU / EL / EN, 2026-11-17). Also listed: the current
+// language (so the selector never shows a wrong value) and the phone's/browser's own language when
+// we support it (e.g. a German phone also gets «DE · Deutsch»).
 export function LanguageSwitcher({ className = '', compact = false, only }: { className?: string; compact?: boolean; only?: readonly Locale[] }) {
   const locale = useLocale();
-  const list = only ? LOCALES.filter((l) => only.includes(l) || l === locale) : LOCALES;
+  const [device, setDevice] = useState<Locale | null>(null);
+  useEffect(() => {
+    const langs = typeof navigator !== 'undefined' ? (navigator.languages?.length ? navigator.languages : [navigator.language]) : [];
+    const hit = langs.map((l) => (l || '').toLowerCase().split('-')[0]).find((l) => isLocale(l));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (hit && isLocale(hit)) setDevice(hit);
+  }, []);
+  const list = only ? LOCALES.filter((l) => only.includes(l) || l === locale || l === device) : LOCALES;
   const { t } = useT();
   const router = useRouter();
   return (

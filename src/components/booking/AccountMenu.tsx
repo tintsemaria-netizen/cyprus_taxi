@@ -104,7 +104,7 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
             <MenuLink href="/privacy" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.help')}</MenuLink>
             <div className="flex items-center justify-between gap-3 px-3 py-2">
               <span className="text-sm text-muted">{t('common.language')}</span>
-              <LanguageSwitcher />
+              <LanguageSwitcher only={['ru', 'el', 'en']} />
             </div>
             <div className="my-1 border-t border-edge" />
             <button role="menuitem" onClick={logout} disabled={busy} className="w-full rounded-[10px] px-3 py-3 text-start text-sm text-danger hover:bg-page disabled:opacity-60">
