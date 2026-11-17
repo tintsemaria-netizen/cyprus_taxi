@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-18 — Driver GPS auto-start quiet on refusal (deployed)
+- User (Samsung S26 Ultra, installed driver app) saw the big «location blocked» text after opening the app.
+- The automatic GPS start (reopen, 2026-11-17) now runs only when the page is visible and shows no alarm if the phone refuses; the instructions appear only after the driver taps «Включить GPS» (`autoStartRef`).
+- Denied text (ru/en) rewritten for the installed app: long-press icon → App info → Permissions/Site settings → Location.
+- Checked locally (Playwright, location blocked): auto-start → no warning; tap → warning.
+- Open question to user: does tapping «Включить GPS» work on that phone? If still denied → the site/app permission really is blocked on the phone.
+
 ## 2026-11-18 — Lower passenger start sheet (deployed)
 - Start screen (collapsed, no address open): eyebrow «Довезём куда нужно» hidden, title text-lg, recent rows h-9, quick picks mt-1.5, peek margin 8 px, min peek 110 px. Measured locally 420×912: 233 → 195 px.
 

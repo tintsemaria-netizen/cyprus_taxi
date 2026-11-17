@@ -161,7 +161,9 @@ function Driver() {
         lastPos.current = p; const c = { lat: p.coords.latitude, lng: p.coords.longitude }; posRef.current = c; setPos(c);
       },
       (err) => {
-        if (err.code === err.PERMISSION_DENIED) { setGps((g) => ({ ...g, active: false, error: 'denied' })); stopGps(); return; }
+        // A silent automatic start (app reopened) that the phone refuses shows no alarm: the driver
+        // just sees «Включить GPS»; the how-to-allow text comes only after the driver taps it (2026-11-18).
+        if (err.code === err.PERMISSION_DENIED) { const quiet = autoStartRef.current; setGps((g) => ({ ...g, active: false, error: quiet ? null : 'denied' })); stopGps(); return; }
         if (highAccuracy) { highModeRef.current = false; beginWatch(false); return; }
         // POSITION_UNAVAILABLE even in coarse mode = the phone's own Location switch is off (common on
         // Android/Samsung): say so instead of an endless «Поиск GPS…» (2026-11-16).
@@ -171,13 +173,16 @@ function Driver() {
       highAccuracy ? { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 } : { enableHighAccuracy: false, maximumAge: 60000, timeout: 30000 },
     );
   }
-  function startGps() {
+  const autoStartRef = useRef(false);
+  function startGpsAuto() { autoStartRef.current = true; startGps(true); }
+  function startGps(auto?: unknown) {
+    if (auto !== true) autoStartRef.current = false; // the driver tapped «Включить GPS»
     if (!('geolocation' in navigator)) { setGps({ active: false, error: 'unsupported', last: null }); return; }
     // Chrome/Samsung Internet never prompt again once the site is blocked (incl. the automatic block
     // after the prompt was dismissed a few times) — show the fix-it steps right away (2026-11-16).
     try {
       void navigator.permissions?.query({ name: 'geolocation' as PermissionName }).then((st) => {
-        if (st.state === 'denied') setGps((g) => ({ ...g, error: 'denied' }));
+        if (st.state === 'denied' && !autoStartRef.current) setGps((g) => ({ ...g, error: 'denied' }));
       }).catch(() => { /* not supported: the watch error tells us */ });
     } catch { /* ignore */ }
     session.current = uuid(); seq.current = 0; setGps({ active: true, error: null, last: null, accuracyM: null });
@@ -243,10 +248,10 @@ function Driver() {
   // the car without the driver having to press «Включить GPS» again. Once per app launch.
   const gpsAutoTried = useRef(false);
   useEffect(() => {
-    if (gpsAutoTried.current || !data || gps.active) return;
+    if (gpsAutoTried.current || !data || gps.active || document.visibilityState !== 'visible') return;
     if (!data.trip && !data.onDuty) return;
     gpsAutoTried.current = true;
-    startGps();
+    startGpsAuto();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, gps.active]);
 
