@@ -2,6 +2,12 @@ import type { Catalog } from '../../types';
 import type en from '../en/common';
 
 const common: Catalog<typeof en> = {
+  review: {
+    title: "Bewerten Sie IL-Y bei Google",
+    body: "Ihre Bewertung hilft anderen Fahrgästen, uns zu finden. Es dauert eine Minute.",
+    cta: "Google-Bewertung schreiben",
+    later: "Nicht jetzt",
+  },
   mapNorth: 'Karte nach Norden drehen',
   brandTagline: 'Fahrten in ganz Zypern buchen',
   book: 'Buchen',

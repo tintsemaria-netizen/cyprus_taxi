@@ -124,6 +124,8 @@ const staff = {
     supportPhone: 'Support phone',
     supportEmail: 'Support email',
     hiddenPh: 'Hidden if empty',
+    googleReview: 'Google review (Place ID or link)',
+    googleReviewPh: 'ChIJ… — hidden if empty',
     schedMin: 'Schedule min (min)',
     schedMax: 'Schedule max (days)',
     minStop: 'Min stop dist (m)',

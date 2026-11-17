@@ -4,6 +4,7 @@ import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { use, useEffect, useState } from 'react';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import { GoogleReviewCard } from '@/components/GoogleReviewCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -156,6 +157,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
           )}
         </div>
       )}
+      {receipt && <div className="mt-4"><GoogleReviewCard compact /></div>}
     </div>
     </div>
   );

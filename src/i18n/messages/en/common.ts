@@ -1,4 +1,10 @@
 const common = {
+  review: {
+    title: "Rate IL-Y on Google",
+    body: "Your review helps other passengers find us. It takes a minute.",
+    cta: "Leave a Google review",
+    later: "Not now",
+  },
   mapNorth: 'Turn the map north',
   brandTagline: 'Book a ride across Cyprus',
   book: 'Book',

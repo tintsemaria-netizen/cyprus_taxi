@@ -1,0 +1,41 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { api } from '@/lib/api-client';
+import { useT } from '@/i18n/I18nProvider';
+
+// «Leave us a review on Google» (2026-11-17). Shown to EVERY passenger after a completed ride —
+// whatever stars they gave: Google's rules forbid asking only happy customers (no review gating).
+// The link comes from admin settings (Place ID → Google's write-review page); without it nothing shows.
+let cached: Promise<string | null> | null = null;
+function reviewUrl(): Promise<string | null> {
+  if (!cached) cached = api<{ googleReviewUrl?: string | null }>('/public/config', { timeoutMs: 8000 }).then((c) => c.googleReviewUrl ?? null).catch(() => { cached = null; return null; });
+  return cached;
+}
+
+export function GoogleReviewCard({ compact = false }: { compact?: boolean }) {
+  const { t } = useT();
+  const [url, setUrl] = useState<string | null>(null);
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    try { if (localStorage.getItem('il-y-review-done') === '1') { setHidden(true); return; } } catch { /* storage off */ }
+    let alive = true;
+    void reviewUrl().then((u) => { if (alive) setUrl(u); });
+    return () => { alive = false; };
+  }, []);
+  if (!url || hidden) return null;
+  const done = () => { try { localStorage.setItem('il-y-review-done', '1'); } catch { /* ignore */ } };
+  return (
+    <div className={`rounded-[14px] border border-edge bg-elevated ${compact ? 'p-3' : 'p-4'}`} data-testid="google-review">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/15 text-lg text-accent" aria-hidden>★</span>
+        <div className="min-w-0">
+          <div className="font-semibold">{t('common.review.title')}</div>
+          <p className="mt-0.5 text-sm text-muted">{t('common.review.body')}</p>
+        </div>
+      </div>
+      <a href={url} target="_blank" rel="noopener noreferrer" onClick={done} className="btn-primary mt-3 w-full" data-testid="google-review-link">{t('common.review.cta')}</a>
+      <button type="button" onClick={() => setHidden(true)} className="mt-1 block w-full py-1.5 text-center text-xs text-muted hover:text-ink">{t('common.review.later')}</button>
+    </div>
+  );
+}

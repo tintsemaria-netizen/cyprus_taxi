@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
+import { getSettings, reviewLink } from '@/lib/settings';
 import { asLocale } from '@/i18n/translate';
 import { buildReceipt, RECEIPT_RESEND_MAX } from '@/server/receipt';
 import { emailConfigured, sendEmail } from './provider';
@@ -75,6 +76,7 @@ export async function drainReceiptEmails(now: Date = new Date(), batch = 20): Pr
     )
     RETURNING r.id, r."bookingId", r."toEmail", r.locale, r.attempts, r."resendCount", r."nextAttemptAt"`;
 
+  const reviewUrl = reviewLink((await getSettings()).googleReviewUrl);
   const done = (id: string, data: Prisma.ReceiptEmailUpdateManyMutationInput) =>
     prisma.receiptEmail.updateMany({ where: { id, leaseToken: token }, data: { ...data, leaseToken: null, leaseUntil: null } });
 
@@ -82,7 +84,7 @@ export async function drainReceiptEmails(now: Date = new Date(), batch = 20): Pr
     const built = await buildReceipt(r.bookingId);
     if (!built.ok) { await done(r.id, { status: 'SKIPPED', lastError: built.code }); continue; }
     const locale = asLocale(r.locale);
-    const mail = receiptEmail(built.receipt, locale, `${config.appBaseUrl}/rides/${r.bookingId}`);
+    const mail = receiptEmail(built.receipt, locale, `${config.appBaseUrl}/rides/${r.bookingId}`, reviewUrl);
     const res = await sendEmail({ to: r.toEmail, ...mail, idempotencyKey: `receipt-${r.bookingId}-${r.resendCount}` });
     if (res.ok) { await done(r.id, { status: 'SENT', sentAt: now, providerMessageId: res.id, lastError: null }); continue; }
     const attempts = r.attempts + 1;

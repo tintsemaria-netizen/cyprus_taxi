@@ -16,6 +16,7 @@ const patchSchema = z.object({
   operatorName: z.string().max(120).nullable().optional(),
   supportPhone: z.string().max(30).nullable().optional(),
   supportEmail: z.string().email().max(120).nullable().optional(),
+  googleReviewUrl: z.string().max(400).refine((v) => /^https:\/\//i.test(v) || /^[A-Za-z0-9_-]{10,}$/.test(v.trim()), 'Use a Google Place ID or an https link').nullable().optional(),
   scheduleMinMinutes: z.number().int().min(0).max(1440).optional(),
   scheduleMaxDays: z.number().int().min(1).max(365).optional(),
   minStopDistanceMeters: z.number().int().min(0).max(100000).optional(),

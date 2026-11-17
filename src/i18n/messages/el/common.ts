@@ -2,6 +2,12 @@ import type { Catalog } from '../../types';
 import type en from '../en/common';
 
 const common: Catalog<typeof en> = {
+  review: {
+    title: "Αξιολογήστε την IL-Y στο Google",
+    body: "Η κριτική σας βοηθά άλλους επιβάτες να μας βρουν. Παίρνει ένα λεπτό.",
+    cta: "Γράψτε κριτική στο Google",
+    later: "Όχι τώρα",
+  },
   mapNorth: 'Στροφή χάρτη προς βορρά',
   brandTagline: 'Κλείστε διαδρομή σε όλη την Κύπρο',
   book: 'Κράτηση',

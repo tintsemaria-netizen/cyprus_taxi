@@ -7,7 +7,7 @@ import type { Receipt } from '@/server/receipt';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-export function receiptEmail(r: Receipt, locale: Locale, link: string): { subject: string; html: string; text: string } {
+export function receiptEmail(r: Receipt, locale: Locale, link: string, reviewUrl: string | null = null): { subject: string; html: string; text: string } {
   const money = (c: number) => new Intl.NumberFormat(INTL_TAG[locale], { style: 'currency', currency: r.fare.currency }).format(c / 100);
   const when = r.completedAt
     ? new Intl.DateTimeFormat(INTL_TAG[locale], { timeZone: 'Europe/Nicosia', dateStyle: 'long', timeStyle: 'short' }).format(new Date(r.completedAt))
@@ -44,6 +44,7 @@ ${routeRows.map(([k, v]) => `<tr><td style="${td}${muted}width:34%;vertical-alig
 <tr><td style="${td}font-weight:700;font-size:16px;border-top:1px solid #e3e7e8;padding-top:10px;">${esc(totalLabel)}</td><td style="${tdEnd}font-weight:800;font-size:20px;border-top:1px solid #e3e7e8;padding-top:10px;">${esc(total)}</td></tr>
 </table>
 <div style="margin-top:22px;text-align:center;"><a href="${esc(link)}" style="display:inline-block;background:#C8FF46;color:#10191C;font-weight:700;font-size:15px;text-decoration:none;padding:12px 22px;border-radius:12px;">${esc(tr(locale, 'rides.email.open'))}</a></div>
+${reviewUrl ? `<div style="margin-top:18px;padding:14px;border:1px solid #e3e7e8;border-radius:12px;text-align:center;"><div style="font-size:15px;font-weight:700;color:#10191C;">★ ${esc(tr(locale, 'common.review.title'))}</div><div style="margin-top:4px;font-size:13px;${muted}">${esc(tr(locale, 'common.review.body'))}</div><a href="${esc(reviewUrl)}" style="display:inline-block;margin-top:10px;color:#10191C;font-weight:700;font-size:14px;text-decoration:underline;">${esc(tr(locale, 'common.review.cta'))}</a></div>` : ''}
 </td></tr>
 </table></td></tr></table></body></html>`;
 
@@ -56,6 +57,7 @@ ${routeRows.map(([k, v]) => `<tr><td style="${td}${muted}width:34%;vertical-alig
     `${totalLabel}: ${total}`,
     '',
     `${tr(locale, 'rides.email.open')}: ${link}`,
+    ...(reviewUrl ? ['', `${tr(locale, 'common.review.cta')}: ${reviewUrl}`] : []),
   ].join('\n');
   return { subject, html, text };
 }

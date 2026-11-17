@@ -2,6 +2,12 @@ import type { Catalog } from '../../types';
 import type en from '../en/common';
 
 const common: Catalog<typeof en> = {
+  review: {
+    title: "Notez IL-Y sur Google",
+    body: "Votre avis aide d’autres passagers à nous trouver. Cela prend une minute.",
+    cta: "Laisser un avis Google",
+    later: "Pas maintenant",
+  },
   mapNorth: 'Orienter la carte au nord',
   brandTagline: 'Réservez une course partout à Chypre',
   book: 'Réserver',

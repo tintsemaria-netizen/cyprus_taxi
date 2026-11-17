@@ -8,6 +8,7 @@ import { Logo } from '@/components/Brand';
 import { ChatPanel } from '@/components/ChatPanel';
 import { useSilentPush } from '@/components/NotifyPrompt';
 import { RateTripModal } from '@/components/booking/RateTripModal';
+import { GoogleReviewCard } from '@/components/GoogleReviewCard';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { formatFlight } from '@/lib/flight';
@@ -533,6 +534,8 @@ export default function TrackApp() {
                         <div className="mb-3"><RateTripModal inline postUrl="/tracking/rating" onDone={(s) => setRatedNow(s)} /></div>
                       )
                     )}
+                    {/* Google review prompt after rating — for every rating, never only for 5★ (Google rules). */}
+                    {view.status === 'COMPLETED' && (ratedNow ?? view.myRating) ? <div className="mb-3"><GoogleReviewCard /></div> : null}
                     {view.status === 'COMPLETED' && view.receipt ? (
                       <div className="rounded-[12px] border border-edge bg-elevated p-3 text-sm">
                         <div className="mb-2 font-semibold">{t('track.receiptTitle')}</div>

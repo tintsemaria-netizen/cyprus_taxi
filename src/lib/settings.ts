@@ -13,6 +13,8 @@ export interface OperationalSettings {
   gpsStaleSeconds: number;
   supportPhone: string | null;
   supportEmail: string | null;
+  /** Google review link (2026-11-17): a Place ID (ChIJ…) or a full https link. null = no review prompt. */
+  googleReviewUrl: string | null;
   operatorName: string | null;
   classes: { key: 'COMFORT' | 'XL'; label: string; maxPassengers: number }[];
 }
@@ -26,6 +28,7 @@ const DEFAULTS: OperationalSettings = {
   gpsStaleSeconds: config.gps.staleSeconds,
   supportPhone: null,
   supportEmail: null,
+  googleReviewUrl: null,
   operatorName: null,
   classes: [
     { key: 'COMFORT', label: 'Comfort', maxPassengers: 4 },
@@ -56,6 +59,15 @@ export async function saveSettings(patch: Partial<OperationalSettings>): Promise
   return next;
 }
 
+/** A Place ID becomes Google's «write a review» link; a full https link is used as given. */
+export function reviewLink(v: string | null | undefined): string | null {
+  const s = (v || '').trim();
+  if (!s) return null;
+  if (/^https:\/\//i.test(s)) return s;
+  if (/^[A-Za-z0-9_-]{10,}$/.test(s)) return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(s)}`;
+  return null;
+}
+
 // Safe public subset for GET /public/config.
 export async function getPublicConfig() {
   const s = await getSettings();
@@ -66,6 +78,7 @@ export async function getPublicConfig() {
     operatorName: s.operatorName,
     supportPhone: s.supportPhone,
     supportEmail: s.supportEmail,
+    googleReviewUrl: reviewLink(s.googleReviewUrl),
     classes: s.classes,
     schedule: { minMinutes: s.scheduleMinMinutes, maxDays: s.scheduleMaxDays },
     serviceAreaPolygon: s.serviceAreaPolygon,

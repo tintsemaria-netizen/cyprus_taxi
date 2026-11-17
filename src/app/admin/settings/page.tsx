@@ -11,6 +11,7 @@ interface Settings {
   operatorName: string | null;
   supportPhone: string | null;
   supportEmail: string | null;
+  googleReviewUrl: string | null;
   scheduleMinMinutes: number;
   scheduleMaxDays: number;
   minStopDistanceMeters: number;
@@ -41,6 +42,7 @@ function SettingsForm() {
           operatorName: s.operatorName || null,
           supportPhone: s.supportPhone || null,
           supportEmail: s.supportEmail || null,
+          googleReviewUrl: s.googleReviewUrl?.trim() || null,
           scheduleMinMinutes: Number(s.scheduleMinMinutes),
           scheduleMaxDays: Number(s.scheduleMaxDays),
           minStopDistanceMeters: Number(s.minStopDistanceMeters),
@@ -65,6 +67,7 @@ function SettingsForm() {
         <Row label={t('staff.settings.operator')}><input className="field" value={s.operatorName ?? ''} onChange={(e) => setS({ ...s, operatorName: e.target.value })} placeholder={t('staff.settings.operatorPh')} /></Row>
         <Row label={t('staff.settings.supportPhone')}><input className="field" value={s.supportPhone ?? ''} onChange={(e) => setS({ ...s, supportPhone: e.target.value })} placeholder={t('staff.settings.hiddenPh')} /></Row>
         <Row label={t('staff.settings.supportEmail')}><input className="field" value={s.supportEmail ?? ''} onChange={(e) => setS({ ...s, supportEmail: e.target.value })} placeholder={t('staff.settings.hiddenPh')} /></Row>
+        <Row label={t('staff.settings.googleReview')}><input className="field" value={s.googleReviewUrl ?? ''} onChange={(e) => setS({ ...s, googleReviewUrl: e.target.value })} placeholder={t('staff.settings.googleReviewPh')} /></Row>
         <div className="grid grid-cols-3 gap-3">
           <Row label={t('staff.settings.schedMin')}><input type="number" className="field" value={s.scheduleMinMinutes} onChange={(e) => setS({ ...s, scheduleMinMinutes: Number(e.target.value) })} /></Row>
           <Row label={t('staff.settings.schedMax')}><input type="number" className="field" value={s.scheduleMaxDays} onChange={(e) => setS({ ...s, scheduleMaxDays: Number(e.target.value) })} /></Row>

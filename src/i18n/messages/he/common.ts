@@ -2,6 +2,12 @@ import type { Catalog } from '../../types';
 import type en from '../en/common';
 
 const common: Catalog<typeof en> = {
+  review: {
+    title: "דרגו את IL-Y בגוגל",
+    body: "הביקורת שלכם עוזרת לנוסעים אחרים למצוא אותנו. זה לוקח דקה.",
+    cta: "כתיבת ביקורת בגוגל",
+    later: "לא עכשיו",
+  },
   mapNorth: 'סיבוב המפה לצפון',
   brandTagline: 'הזמנת נסיעה בכל רחבי קפריסין',
   book: 'הזמנה',

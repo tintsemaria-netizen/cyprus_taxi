@@ -126,6 +126,8 @@ const staff: Catalog<typeof en> = {
     supportPhone: 'Телефон поддержки',
     supportEmail: 'Email поддержки',
     hiddenPh: 'Скрыт, если пусто',
+    googleReview: 'Отзыв в Google (Place ID или ссылка)',
+    googleReviewPh: 'ChIJ… — не показывается, если пусто',
     schedMin: 'Предзаказ мин. (мин)',
     schedMax: 'Предзаказ макс. (дней)',
     minStop: 'Мин. расстояние (м)',
