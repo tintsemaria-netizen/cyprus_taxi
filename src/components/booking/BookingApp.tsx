@@ -167,6 +167,9 @@ export default function BookingApp() {
   }
   // Passenger's detected location (for centring the map + defaulting the pickup).
   const [myLoc, setMyLoc] = useState<{ lat: number; lng: number } | null>(null);
+  // «My location» button (2026-11-17): appears once the passenger drags the map away.
+  const [mapMoved, setMapMoved] = useState(false);
+  const [recenterTick, setRecenterTick] = useState(0);
   const [autoPickup, setAutoPickup] = useState(false); // pickup was auto-set from geolocation
   // The auto-detected pickup, kept so the × reset can restore it (2026-11-15).
   const autoPickupSaved = useRef<{ sel: Selected; text: string } | null>(null);
@@ -832,12 +835,28 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-[#0e1518]" />
           ) : (
-            <AutoMapView markers={markers} route={route?.line} fitRoute fleet={fleet} focus={pickup && dropoff ? null : myLoc} focusZoom={pickup && dropoff ? undefined : 15.49 /* 2026-11-17: 30 % further out than 16 (16 + log2 0.7) */} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} className="h-full w-full" />
+            <AutoMapView markers={markers} route={route?.line} fitRoute fleet={fleet} focus={pickup && dropoff ? null : myLoc} focusZoom={pickup && dropoff ? undefined : 15.49 /* 2026-11-17: 30 % further out than 16 (16 + log2 0.7) */} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} onUserMove={() => setMapMoved(true)} className="h-full w-full" />
           )}
         </div>
 
+        {mapMoved && myLoc && !picker && (
+          <button type="button" aria-label={t('booking.picker.myLocation')} title={t('booking.picker.myLocation')}
+            onClick={() => { setMapMoved(false); setRecenterTick((n) => n + 1); }}
+            className="absolute bottom-6 end-6 z-20 hidden h-12 w-12 items-center justify-center rounded-full border border-edge-strong bg-page/95 text-accent shadow-lg sm:flex">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="6.5" /><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" /></svg>
+          </button>
+        )}
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end sm:block">
           <div ref={sheetBoxRef} className="flex h-full w-full flex-col justify-end sm:absolute sm:start-4 sm:top-4 sm:block sm:h-[calc(100%-2rem)] sm:w-[380px]">
+            {mapMoved && myLoc && !picker && (
+              <div className="flex shrink-0 justify-end px-3 pb-3 sm:hidden">
+                <button type="button" data-testid="map-my-location" aria-label={t('booking.picker.myLocation')} title={t('booking.picker.myLocation')}
+                  onClick={() => { setMapMoved(false); setRecenterTick((n) => n + 1); }}
+                  className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border border-edge-strong bg-page/95 text-accent shadow-lg">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="6.5" /><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" /></svg>
+                </button>
+              </div>
+            )}
             <div
               ref={sheetRef}
               className={`card pointer-events-auto relative flex flex-col overflow-hidden sm:max-h-full ${isMobile ? 'rounded-b-none' : ''} ${isMobile && dragH == null ? 'transition-[height] duration-300 ease-out' : ''}`}

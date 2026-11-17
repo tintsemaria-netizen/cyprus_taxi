@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-17 — «My location» button on the passenger start screen
+
+- Map views get `recenterTick` (bump → re-run focus/fit, i.e. back to the automatic view) and `onUserMove` (fires on dragstart).
+- BookingApp: after the passenger drags the map, a round location button (`data-testid=map-my-location`) appears just above the
+  sheet (mobile) / bottom-end corner (desktop); tap → back to own location (or the whole route when one is set), button hides.
+- Checked locally (MapLibre): hidden at start, appears after drag, recentres and hides on tap.
+
 ## 2026-11-17 — Passenger start screen 30 % further out
 
 - BookingApp start-screen `focusZoom` 16 → 15.49 (map scale × 0.7 = 16 + log2 0.7). Only the client start screen.

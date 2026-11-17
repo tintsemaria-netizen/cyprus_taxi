@@ -38,6 +38,10 @@ interface Props {
   /** Called when the map returns to its automatic view after idleReturnMs (e.g. resume follow). */
   onIdleReturn?: () => void;
   onFollowBreak?: () => void;
+  /** Bump to bring the camera back to its automatic view (focus point / route) — «my location» button. */
+  recenterTick?: number;
+  /** The user dragged the map by hand. */
+  onUserMove?: () => void;
 }
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
@@ -96,7 +100,7 @@ function markerEl(mk: MapMarker): HTMLElement {
   return centerOnPoint(el);
 }
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], focus, focusZoom, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], focus, focusZoom, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   // Reconcile markers by id (no recreation flicker) and remember each one's logical
@@ -115,6 +119,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   followRef.current = follow;
   const breakRef = useRef(onFollowBreak);
   breakRef.current = onFollowBreak;
+  const userMoveRef = useRef(onUserMove);
+  userMoveRef.current = onUserMove;
   const camAnim = useRef<number | null>(null);
   const homeRef = useRef<{ lat: number; lng: number }>(center ?? CYPRUS_CENTER);
   // Any touch/pinch/scroll stops the navigation follow-camera at once (not only a drag) and,
@@ -167,7 +173,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
           map.addListener('click', (e: any) => clickRef.current?.({ lat: e.latLng.lat(), lng: e.latLng.lng() }));
         }
         mapRef.current = map;
-        map.addListener('dragstart', () => { if (followRef.current) breakRef.current?.(); });
+        map.addListener('dragstart', () => { userMoveRef.current?.(); if (followRef.current) breakRef.current?.(); });
         // Keep cars pointing along their travel direction while the map rotates (heading-up nav).
         // Compass (north button) only on maps without an automatic return — those go back to north by themselves.
         const compass = interactive && !idleReturnMs && g.ControlPosition
@@ -307,7 +313,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       map.fitBounds(b, pad);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fitKey, ready, idle.returnTick, padKey, routeKey]);
+  }, [fitKey, ready, idle.returnTick, padKey, recenterTick, routeKey]);
 
   // Zoom to a focus point (the passenger's detected location) once it resolves, unless a
   // full 2-stop route is already framed.
@@ -319,7 +325,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     if (focusZoom != null) centerPointAt(map, focus.lat, focus.lng, fpad, focusZoom);
     else framePoint(map, g, focus.lat, focus.lng, fpad);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusKey, ready, idle.returnTick, padKey]);
+  }, [focusKey, ready, idle.returnTick, padKey, recenterTick]);
 
   // Navigation camera: ease centre + heading toward the latest fix (shortest way round).
   const followKey = follow ? `${follow.lat.toFixed(6)},${follow.lng.toFixed(6)},${Math.round(follow.heading)},${follow.zoom ?? 17},${follow.tilt ?? 45}` : '';

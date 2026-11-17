@@ -56,6 +56,10 @@ interface Props {
   /** Called when the map returns to its automatic view after idleReturnMs (e.g. resume follow). */
   onIdleReturn?: () => void;
   onFollowBreak?: () => void;
+  /** Bump to bring the camera back to its automatic view (focus point / route) — «my location» button. */
+  recenterTick?: number;
+  /** The user dragged the map by hand. */
+  onUserMove?: () => void;
 }
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
@@ -80,7 +84,7 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], focus, focusZoom: focusZoomProp, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], focus, focusZoom: focusZoomProp, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
   const focusZoom = focusZoomProp ?? 15;
   // Re-frame / re-centre when the visible area changes (e.g. the sheet under the map grew or shrank).
   const padKey = fitPadding ? `${fitPadding.top},${fitPadding.right},${fitPadding.bottom},${fitPadding.left}` : '';
@@ -109,6 +113,8 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
   followRef.current = follow;
   const breakRef = useRef(onFollowBreak);
   breakRef.current = onFollowBreak;
+  const userMoveRef = useRef(onUserMove);
+  userMoveRef.current = onUserMove;
 
   useEffect(() => {
     let cancelled = false;
@@ -137,7 +143,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         const compass = interactive && !idleReturnMs ? compassEl(compassLabel.current, () => map!.resetNorth({ duration: 400 })) : null;
         if (compass) { const box = document.createElement('div'); box.className = 'maplibregl-ctrl'; box.appendChild(compass.el); map.addControl({ onAdd: () => box, onRemove: () => box.remove() }, 'top-right'); }
         map.on('rotate', () => { const b = map!.getBearing(); compass?.update(b); document.querySelectorAll<HTMLElement>('.ily-vehicle').forEach((el) => orientVehicle(el, b)); });
-        map.on('dragstart', () => { if (followRef.current) breakRef.current?.(); });
+        map.on('dragstart', () => { userMoveRef.current?.(); if (followRef.current) breakRef.current?.(); });
         if (interactive) {
           // Zoom buttons only with a mouse; on touch screens pinch-zoom is used and bottom sheets
           // would cover the buttons anyway (2026-11-15 multi-device audit). (Google: right-centre.)
@@ -200,7 +206,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       // markers (cars, the live person) do not re-fit — only a change of the fixed points does.
       if (followRef.current || idle.active.current) return;
       // The visible area (padding) is part of the key: a sheet that changes height re-frames (2026-11-16).
-      const key = `${fitKeyOf(markers)}#${idle.returnTick}#${fitPadding ? `${fitPadding.top},${fitPadding.bottom}` : ''}#${fitRoute && route ? route.length : ''}`;
+      const key = `${fitKeyOf(markers)}#${idle.returnTick}.${recenterTick}#${fitPadding ? `${fitPadding.top},${fitPadding.bottom}` : ''}#${fitRoute && route ? route.length : ''}`;
       if (key === lastFit.current) return;
       lastFit.current = key;
       if (focus && focusZoomProp != null) return; // a focus point with its own zoom owns the camera (2026-11-17)
@@ -219,7 +225,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     })();
     // Only a change in the padding VALUES re-fits (padKey), not a new object identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [markers, ready, idle.returnTick, padKey, fitRoute ? route : null]);
+  }, [markers, ready, idle.returnTick, padKey, recenterTick, fitRoute ? route : null]);
 
   // Live on-duty cars overlay (does not affect the fit) — same as GoogleMapView.
   useEffect(() => {
@@ -247,7 +253,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     // Centre in the visible area (between overlays / above a sheet) — fitPadding, 2026-11-16.
     map.easeTo({ center: [focus.lng, focus.lat], zoom: focusZoom, duration: 500, ...(fitPadding ? { padding: fitPadding } : {}) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusKey, ready, idle.returnTick, padKey]);
+  }, [focusKey, ready, idle.returnTick, padKey, recenterTick]);
 
   const followKey = follow ? `${follow.lat.toFixed(6)},${follow.lng.toFixed(6)},${Math.round(follow.heading)},${follow.zoom ?? 17},${follow.tilt ?? 45}` : '';
   useEffect(() => {
