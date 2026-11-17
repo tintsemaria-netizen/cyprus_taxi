@@ -1,5 +1,14 @@
 # Session handoff
 
+## 2026-11-17 — Short receipt e-mail; sign-in button on the receipt page
+
+- Receipt e-mail now shows only: thanks + date/time, pickup → destination, «Итого», «Открыть в IL-Y» button
+  (driver, tariff lines, waiting, meter note, payment line, footer, trip number, class and passenger count removed).
+  Subject still «Чек IL-Y · поездка #REF» (user not yet answered whether to drop the number there).
+- `/rides/[id]` logged out: «Войти» button → `/login?next=/rides/<id>`; login returns there after sign-in.
+  `next` accepts only same-site paths (`//evil.com` → `/`). Checked locally with Playwright.
+- Google review prompt still on local branch `google-review` (f1e1632), NOT deployed; its template change will need a merge.
+
 ## 2026-11-17 — Start-screen «Моё местоположение»: right side, smaller
 
 - Pill moved to the right above the sheet; height 40 px, 14 px text, smaller icon. Still appears only after the map is dragged.

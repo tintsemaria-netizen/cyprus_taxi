@@ -34,6 +34,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const eur = (cents: number, ccy: string) => fmt.money(cents, ccy);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needLogin, setNeedLogin] = useState(false);
   const [mailBusy, setMailBusy] = useState(false);
   const [mailNote, setMailNote] = useState<string | null>(null);
 
@@ -52,7 +53,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     (async () => {
       try { setReceipt(await api<Receipt>(`/passenger/rides/${id}/receipt`)); }
       catch (e) {
-        if (e instanceof ApiRequestError) setError(e.status === 401 ? t('rides.receipt.signInToView') : e.body.message);
+        if (e instanceof ApiRequestError) { setError(e.status === 401 ? t('rides.receipt.signInToView') : e.body.message); setNeedLogin(e.status === 401); }
         else setError(t('rides.receipt.loadFailed'));
       }
     })();
@@ -66,7 +67,10 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     <div className="mx-auto max-w-lg p-4 sm:p-6">
 
       {error ? (
-        <div className="card p-6 text-center text-sm text-muted">{error}</div>
+        <div className="card p-6 text-center text-sm text-muted">
+          {error}
+          {needLogin && <a href={`/login?next=${encodeURIComponent(`/rides/${id}`)}`} className="btn-primary mt-4 w-full" data-testid="receipt-login">{t('auth.signIn')}</a>}
+        </div>
       ) : !receipt ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : (

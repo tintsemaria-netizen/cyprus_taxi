@@ -24,7 +24,10 @@ export default function Login() {
     setBusy(true); setError(null);
     try {
       await api('/passenger/login', { method: 'POST', body: { email, password } });
-      router.push('/');
+      // ?next=/rides/<id> (e.g. «Open in IL-Y» from the receipt e-mail): back there after sign-in.
+      // Only same-site paths — never an absolute or protocol-relative URL (no open redirect).
+      const next = new URLSearchParams(window.location.search).get('next');
+      router.push(next && /^\/(?!\/)[\w\-/?=&.%]*$/.test(next) ? next : '/');
     } catch (err) {
       if (err instanceof ApiRequestError && err.status === 401) setError(t('errors.BAD_CREDENTIALS'));
       else if (err instanceof ApiRequestError && err.status === 429) setError(t('auth.tooManyAttempts'));
