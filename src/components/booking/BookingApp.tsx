@@ -816,7 +816,7 @@ export default function BookingApp() {
       <input ref={proxyRef} aria-hidden tabIndex={-1} readOnly={false} className="pointer-events-none fixed start-0 top-0 h-px w-px opacity-0" style={{ fontSize: 16 }} />
       {savedSheet && (
         <SavedPlacesSheet mode={savedSheet} places={places} onSaved={reloadPlaces} onClose={() => setSavedSheet(null)}
-          onGo={(pl) => { setSavedSheet(null); pickQuick(pl); }} onOther={() => { setSavedSheet(null); openEditor('d'); }} />
+          onGo={(pl) => { setSavedSheet(null); pickQuick(pl); }} />
       )}
       {editor && (
         <RouteEditor

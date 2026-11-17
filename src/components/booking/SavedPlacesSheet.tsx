@@ -18,7 +18,6 @@ export default function SavedPlacesSheet(p: {
   places: SavedPlaces;
   onSaved: () => void; // reload the places
   onGo: (pl: Selected) => void;
-  onOther: () => void;
   onClose: () => void;
 }) {
   const { t } = useT();
@@ -79,11 +78,6 @@ export default function SavedPlacesSheet(p: {
 
       {!edit ? (
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
-          <button type="button" data-testid="saved-other" onClick={p.onOther}
-            className="mb-3 flex h-12 w-full items-center gap-3 rounded-[14px] border border-edge-strong bg-elevated px-3 text-start text-[15px] text-muted">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
-            {t('booking.form.otherAddress')}
-          </button>
           <ul>
             {row('home', '🏠', t('booking.form.home'), p.places.home, 'HOME')}
             {row('work', '💼', t('booking.form.work'), p.places.work, 'WORK')}

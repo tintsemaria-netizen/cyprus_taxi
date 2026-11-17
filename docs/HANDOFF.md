@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-18 — Saved places polish + map/clear buttons in every address search (branch `saved-places-2`, NOT merged)
+- «Мои адреса»: no «Другой адрес» row; name placeholder «Название вашего адреса» (8 languages).
+- PlacesInput (`mapPick`, default on unless read-only/trailing): × clear + «На карте» target button that opens AutoMapPicker in a portal → used in «Мои адреса», account saved places, tracking destination change.
+- Waiting for «заливай».
+
 ## 2026-11-18 — Saved places from the start screen (deployed)
 - `SavedPlace.name` + migration 20261118010000_saved_place_name; kind `C_<uuid>` = passenger's own named places (max 20).
 - `/api/v1/passenger/places`: GET adds `custom`; PUT kind CUSTOM creates, C_<id> changes / removes (null). Tests: tests/saved-places.db.test.ts.

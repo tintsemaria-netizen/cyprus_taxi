@@ -36,7 +36,7 @@ const booking: Catalog<typeof en> = {
     workTitle: "عنوان العمل",
     addOwnPlace: "إضافة عنوان",
     placeName: "الاسم",
-    placeNamePh: "مثال: أمي",
+    placeNamePh: "اسم عنوانك",
     placeAddress: "العنوان",
     savePlace: "حفظ",
     removePlace: "حذف",

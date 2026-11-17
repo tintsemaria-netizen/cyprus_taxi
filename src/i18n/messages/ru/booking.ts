@@ -32,7 +32,7 @@ const booking: Catalog<typeof en> = {
     workTitle: "Адрес работы",
     addOwnPlace: "Добавить адрес",
     placeName: "Название",
-    placeNamePh: "Например: Мама",
+    placeNamePh: "Название вашего адреса",
     placeAddress: "Адрес",
     savePlace: "Сохранить",
     removePlace: "Удалить",

@@ -36,7 +36,7 @@ const booking: Catalog<typeof en> = {
     workTitle: "כתובת העבודה",
     addOwnPlace: "הוספת כתובת",
     placeName: "שם",
-    placeNamePh: "לדוגמה: אמא",
+    placeNamePh: "שם הכתובת שלכם",
     placeAddress: "כתובת",
     savePlace: "שמירה",
     removePlace: "מחיקה",

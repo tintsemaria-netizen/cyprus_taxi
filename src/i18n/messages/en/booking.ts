@@ -29,7 +29,7 @@ const booking = {
     workTitle: "Work address",
     addOwnPlace: "Add a place",
     placeName: "Name",
-    placeNamePh: "For example: Mum",
+    placeNamePh: "Your address name",
     placeAddress: "Address",
     savePlace: "Save",
     removePlace: "Delete",

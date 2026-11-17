@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api, uuid } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import AutoMapPicker from './AutoMapPicker';
 
 export interface Selected {
   lat: number;
@@ -25,6 +27,8 @@ interface Props {
   error?: string;
   /** Own label text instead of «Откуда/Куда» (saved places, 2026-11-18). */
   labelText?: string;
+  /** «На карте» target button + × clear, like the route editor (default on; off for read-only fields). */
+  mapPick?: boolean;
 }
 
 // A result may carry coordinates directly (geocoding / demo) or only a placeId
@@ -38,7 +42,12 @@ interface Result {
   kind?: string;
 }
 
-export function PlacesInput({ kind, value, text, onText, onSelect, error, trailing, onFocusInput, autoFocus, onActivate, labelText }: Props) {
+export function PlacesInput({ kind, value, text, onText, onSelect, error, trailing, onFocusInput, autoFocus, onActivate, labelText, mapPick = true }: Props) {
+  const [picking, setPicking] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Same tools as the route editor everywhere an address is typed (2026-11-18): × wipes the field,
+  // the target opens the map to set the point by hand.
+  const tools = !onActivate && !trailing;
   const { t } = useT();
   const [results, setResults] = useState<Result[]>([]);
   const [open, setOpen] = useState(false);
@@ -159,7 +168,8 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
       <input
         id={inputId}
         aria-label={kind === 'From' ? t('booking.places.pickupAria') : kind === 'Stop' ? t('booking.places.stopAria') : t('booking.places.destinationAria')}
-        className={`field mt-1 ${trailing ? 'pe-28' : ''} ${error ? 'border-danger' : value ? 'border-accent/60' : ''}`}
+        ref={inputRef}
+        className={`field mt-1 ${trailing ? 'pe-28' : tools ? (mapPick ? 'pe-[84px]' : 'pe-11') : ''} ${error ? 'border-danger' : value ? 'border-accent/60' : ''}`}
         placeholder={kind === 'From' ? t('booking.places.pickupPlaceholder') : kind === 'Stop' ? t('booking.places.stopPlaceholder') : t('booking.places.destinationPlaceholder')}
         autoFocus={autoFocus}
         value={text}
@@ -178,7 +188,24 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
         aria-autocomplete="list"
         aria-invalid={!!error}
       />
-      {trailing ? (
+      {tools && (text !== '' || mapPick) ? (
+        <div className="absolute end-1.5 top-[30px] flex items-center gap-1">
+          {text !== '' && (
+            <button type="button" aria-label={t('booking.route.clear')} title={t('booking.route.clear')} data-testid="places-clear"
+              onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { handleText(''); onSelect(null); inputRef.current?.focus({ preventScroll: true }); }}
+              className="flex h-9 w-8 shrink-0 items-center justify-center text-muted hover:text-ink">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden><circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.35" /><path d="M8.5 8.5l7 7M15.5 8.5l-7 7" stroke="#0E1513" strokeWidth="2.2" strokeLinecap="round" /></svg>
+            </button>
+          )}
+          {mapPick && (
+            <button type="button" onClick={() => { setOpen(false); setPicking(true); }} aria-label={t('booking.form.onMap')} title={t('booking.form.onMap')} data-testid="places-on-map"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-page text-accent">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="6.5" /><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4" /><circle cx="12" cy="12" r="1.6" fill="currentColor" /></svg>
+            </button>
+          )}
+        </div>
+      ) : trailing ? (
         <div className="absolute end-1.5 top-[30px] flex items-center">{trailing}</div>
       ) : value && (
         <span className="absolute end-3 top-9 text-accent text-sm" aria-hidden>
@@ -186,6 +213,11 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
         </span>
       )}
       {error && <p className="mt-1 text-xs text-danger">{error}</p>}
+      {picking && createPortal(
+        <AutoMapPicker kind={kind === 'From' ? 'pickup' : kind === 'Stop' ? 'stop' : 'dropoff'} initial={value} fallback={null}
+          onConfirm={(s) => { setPicking(false); onSelect(s); onText(s.label); setOpen(false); }} onCancel={() => setPicking(false)} />,
+        document.body,
+      )}
       {open && (results.length > 0 || loading || status !== 'idle') && (
         <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-[12px] border border-edge bg-elevated shadow-card" role="listbox" id={`${inputId}-list`}>
           {loading && <div className="px-4 py-3 text-sm text-muted">{t('booking.places.searching')}</div>}

@@ -32,7 +32,7 @@ const booking: Catalog<typeof en> = {
     workTitle: "Διεύθυνση εργασίας",
     addOwnPlace: "Προσθήκη διεύθυνσης",
     placeName: "Όνομα",
-    placeNamePh: "Για παράδειγμα: Μαμά",
+    placeNamePh: "Όνομα της διεύθυνσής σας",
     placeAddress: "Διεύθυνση",
     savePlace: "Αποθήκευση",
     removePlace: "Διαγραφή",
