@@ -98,9 +98,14 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
           const s = await googleSnapToStreet(pts[k].lat, pts[k].lng).catch(() => null);
           if (s && (Math.abs(s.lat - pts[k].lat) > 1e-5 || Math.abs(s.lng - pts[k].lng) > 1e-5)) snapped[k] = s;
         }));
-        if (Object.keys(snapped).length) {
-          const r2 = await googleRoute(snapped.pickup ?? input.pickup, snapped.dropoff ?? input.dropoff, departureTime, { via: input.stop ? (snapped.stop ?? input.stop) : null }).catch(() => null);
-          if (r2) return { ok: false, status: 422, code: 'NO_ROUTE', message: 'No drivable route to that exact point; the nearest street works.', snapped };
+        // Move as few points as possible: one end alone first (the passenger's reachable pickup
+        // shouldn't shift by a few metres just because the destination is in the sea), then all.
+        const keys = Object.keys(snapped) as ('pickup' | 'dropoff' | 'stop')[];
+        const tries: ('pickup' | 'dropoff' | 'stop')[][] = [...(['dropoff', 'pickup', 'stop'] as const).filter((k) => keys.includes(k)).map((k) => [k]), ...(keys.length > 1 ? [keys] : [])];
+        for (const set of tries) {
+          const use = (k: 'pickup' | 'dropoff' | 'stop') => (set.includes(k) ? snapped[k]! : (pts[k] ?? null));
+          const r2 = await googleRoute(use('pickup')!, use('dropoff')!, departureTime, { via: input.stop ? use('stop') : null }).catch(() => null);
+          if (r2) return { ok: false, status: 422, code: 'NO_ROUTE', message: 'No drivable route to that exact point; the nearest street works.', snapped: Object.fromEntries(set.map((k) => [k, snapped[k]!])) };
         }
         return { ok: false, status: 422, code: 'NO_ROUTE', message: 'No drivable route between those points.' };
       }

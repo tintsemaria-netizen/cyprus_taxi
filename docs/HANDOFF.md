@@ -13,7 +13,7 @@
 
 **Tests:** `tests/quote-snap.db.test.ts` (2, Google mocked): a sea destination gives NO_ROUTE plus the snapped street; quoting from the snapped point succeeds with a price.
 
-**Not checked:** a live Google run (no key locally).
+**Prod probe:** a point about 1 km offshore returned `snapped.dropoff` (a street near the marina); points nearer the coast route directly. Follow-up: only the failing end is moved (single ends tried first, then all), and the snap radius is 5 km.
 
 ## 2026-11-17 — Booking: reset × also on the folded route sheet; MapView fit fix
 **Reset ×:** the route-reset × (top-right) now also shows on the collapsed sheet that shows the route and «Заказать поездку». Before, it disappeared when the sheet folded.

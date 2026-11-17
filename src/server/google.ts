@@ -38,8 +38,8 @@ export async function googleReverse(lat: number, lng: number): Promise<{ label: 
 
 // Nearest drivable spot for a point a car cannot reach (2026-11-17): a place whose map point lies
 // in the sea, a park or a pedestrian area. Reverse-geocodes to the nearest street address / road
-// and returns that location if it is within `maxM` metres.
-export async function googleSnapToStreet(lat: number, lng: number, maxM = 3000): Promise<{ lat: number; lng: number } | null> {
+// and returns that location if it is within `maxM` metres (5 km covers a pin well off the coast).
+export async function googleSnapToStreet(lat: number, lng: number, maxM = 5000): Promise<{ lat: number; lng: number } | null> {
   const key = config.googleServerKey();
   const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&result_type=street_address|route|premise&key=${key}`;
   const d = (await fetchJson(url)) as { status?: string; results?: { geometry?: { location?: { lat: number; lng: number } } }[] };
