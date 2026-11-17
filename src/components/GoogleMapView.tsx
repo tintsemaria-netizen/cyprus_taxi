@@ -9,6 +9,7 @@ import { fitKeyOf } from './mapFit';
 import { vehicleMarkerEl, orientVehicle, bearing, personMarkerEl, pickupPinEl, navArrowEl } from './carMarker';
 import { distanceM } from '@/lib/gpsFilter';
 import { useIdleReturn } from './useIdleReturn';
+import { useTwoFingerCamera } from './useTwoFingerCamera';
 import { compassEl, easeHeadingToNorth } from './mapCompass';
 import { useT } from '@/i18n/I18nProvider';
 
@@ -132,6 +133,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     // Back to the automatic view also turns a hand-rotated map back to north (follow sets its own heading).
     onReturn: () => { if (!followRef.current && mapRef.current) { const m = mapRef.current; easeHeadingToNorth(() => m.getHeading?.() ?? 0, (h) => m.setHeading?.(h)); } idleReturnRef.current?.(); },
   });
+  // Two fingers zoom and rotate at once (2026-11-17).
+  useTwoFingerCamera(containerRef, mapRef, interactive, { onGesture: () => { if (followRef.current) breakRef.current?.(); } });
   const { t } = useT();
   const compassLabel = useRef('');
   compassLabel.current = t('common.mapNorth');

@@ -3,6 +3,7 @@
 
 import { BRAND_PIN_SVG } from '@/components/carMarker';
 import { useEffect, useRef, useState } from 'react';
+import { useTwoFingerCamera } from '@/components/useTwoFingerCamera';
 import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { api } from '@/lib/api-client';
 import type { Selected } from './PlacesInput';
@@ -52,6 +53,8 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
   const [accuracyM, setAccuracyM] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
+  // Two fingers zoom and rotate at once (2026-11-17).
+  useTwoFingerCamera(containerRef, mapRef, mapLoaded);
   const [retryKey, setRetryKey] = useState(0);
   const { t } = useT();
   const coordLabel = (lat: number, lng: number) => t('booking.picker.pin', { coords: `${lat.toFixed(5)}, ${lng.toFixed(5)}` });

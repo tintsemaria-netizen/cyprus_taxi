@@ -1,5 +1,16 @@
 # Session handoff
 
+## 2026-11-17 — Two fingers: zoom and rotate at the same time (Google maps)
+
+- New `src/components/useTwoFingerCamera.ts`: while two touch pointers are down inside the map, their pointer/touch events are
+  stopped at window capture (Google never sees them; a synthetic pointercancel ends Google's one-finger pan cleanly) and the
+  camera is driven directly: zoom = z0 + log2(spread ratio), heading = h0 − finger rotation, around the map centre.
+  One finger stays Google's pan. Used in GoogleMapView (all interactive maps: booking, tracking, driver home/navigation) and
+  GoogleMapPicker. MapLibre fallback already zooms+rotates together natively.
+- useIdleReturn ignores untrusted (synthetic) pointer events; the gesture breaks follow mode like any touch.
+- Checked with a temporary harness page and CDP multi-touch in Chromium: spread ×2 + 90° turn → zoom +1 and heading −90 in one
+  gesture, no events reached the map underneath; one-finger pan still passed through. Not checked on a real phone / Google map.
+
 ## 2026-11-17 — Quick picks under «Пункт назначения» (deployed)
 
 - Start screen (signed in, no destination yet): pills 🏠 Дом, 💼 Работа (saved → one tap sets the destination and goes to the

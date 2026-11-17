@@ -31,8 +31,9 @@ export function useIdleReturn(
       }, ms);
     };
     const start = () => { if (!active.current) cbRef.current.onStart?.(); active.current = true; };
-    const onDown = (e: PointerEvent) => { pointers.add(e.pointerId); start(); clearTimeout(timer); };
-    const onUp = (e: PointerEvent) => { if (!pointers.delete(e.pointerId)) return; if (!pointers.size) arm(); };
+    // Synthetic events (the two-finger camera's pointercancel to the map) are not the user's fingers.
+    const onDown = (e: PointerEvent) => { if (!e.isTrusted) return; pointers.add(e.pointerId); start(); clearTimeout(timer); };
+    const onUp = (e: PointerEvent) => { if (!e.isTrusted) return; if (!pointers.delete(e.pointerId)) return; if (!pointers.size) arm(); };
     const onWheel = () => { start(); arm(); };
     el.addEventListener('pointerdown', onDown, true);
     window.addEventListener('pointerup', onUp, true);
