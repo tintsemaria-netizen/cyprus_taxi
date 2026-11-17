@@ -7,8 +7,6 @@ import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
 import { ChatPanel } from '@/components/ChatPanel';
 import { useSilentPush } from '@/components/NotifyPrompt';
-import { useLiveLocation } from '@/components/useLiveLocation';
-import { ShareLocationToggle } from './ShareLocationToggle';
 import { RateTripModal } from '@/components/booking/RateTripModal';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
@@ -217,10 +215,9 @@ export default function TrackApp() {
     }
   }
 
-  // Passenger's own live position (person marker) and opt-in sharing with the driver before
-  // pickup (2026-11-15). Asking the browser only happens once sharing is switched on.
+  // «Показать водителю, где я» and the passenger's own person marker are off for now (2026-11-17):
+  // the question moves to the full sign-up later (ShareLocationToggle / server code kept).
   const prePickup = view?.status === 'ASSIGNED' || view?.status === 'EN_ROUTE' || view?.status === 'ARRIVED';
-  const [wantLoc, setWantLoc] = useState(false);
   const [ratedNow, setRatedNow] = useState<number | null>(null); // 5-star rating left on this screen
   // Info sheet open/collapsed (2026-11-15): handle tap or swipe. Collapses by itself when the trip
   // starts so the passenger sees the car driving the route up close.
@@ -256,7 +253,6 @@ export default function TrackApp() {
   }, [view?.status]);
   // During the trip the map follows the car closely (north-up); a gesture frees it for 4 s.
   const [followCar, setFollowCar] = useState(true);
-  const myLive = useLiveLocation(view?.status !== 'IN_PROGRESS', wantLoc);
 
   // Tick the pickup-waiting timer once per second while the driver is waiting.
   const arrived = view?.status === 'ARRIVED';
@@ -325,7 +321,6 @@ export default function TrackApp() {
   const onTrip = view.status === 'IN_PROGRESS' || view.status === 'COMPLETED';
   if (onTrip || view.status === 'SEARCHING') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
   if (!onTrip) markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label, pulse: view.status === 'SEARCHING' });
-  if (myLive && view.status !== 'IN_PROGRESS') markers.push({ id: 'me', lat: myLive.lat, lng: myLive.lng, kind: 'person', label: t('booking.youAreHere') });
   if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: t('track.yourDriver'), stale: liveLocation.freshness === 'stale' });
 
   const etaMinText = view.pickupEtaMin != null ? tp('common.minutes', view.pickupEtaMin) : null;
@@ -487,11 +482,10 @@ export default function TrackApp() {
                 {/* actions */}
                 {!terminal && (
                   <div className="mt-4 space-y-2">
-                    {/* Side by side, no frames (2026-11-16): «show the driver where I am» and the optional
-                        confirmation code — each a label, a switch under it, and (code) the digits under that. */}
+                    {/* Optional confirmation code, no frame: label, the switch under it, the digits under that.
+                        («Показать водителю, где я» removed for now, 2026-11-17.) */}
                     {prePickup && (
-                      <div className="grid grid-cols-2 items-start gap-3 py-1">
-                        <ShareLocationToggle active={prePickup} loc={myLive} onWantLocation={setWantLoc} />
+                      <div className="py-1">
                         <div>
                           <label className="flex cursor-pointer flex-col items-start gap-2">
                             <span className="text-sm font-semibold">{t('track.startCodeToggle')}</span>

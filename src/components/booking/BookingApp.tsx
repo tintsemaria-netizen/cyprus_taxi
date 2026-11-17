@@ -14,7 +14,6 @@ import { PassengerLoginModal } from './PassengerLoginModal';
 import { AccountMenu } from './AccountMenu';
 import { recordVisit } from '@/lib/navTrail';
 import { BackArrow } from '@/components/BackArrow';
-import { useLiveLocation } from '@/components/useLiveLocation';
 import { nicosiaInputValue } from '@/lib/timezone';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
@@ -433,18 +432,14 @@ export default function BookingApp() {
   // Phones open with the sheet collapsed so the map is visible; tablets/desktop keep the panel open.
   useEffect(() => { if (window.innerWidth < 640) setCollapsed(true); }, []);
 
-  // Live "you are here" person marker (2026-11-15). Starts once the browser has location
-  // permission (the first-load detection above asks for it).
-  const live = useLiveLocation(true, false);
-  const meNow = live ?? myLoc;
+  // No «you are here» person on the passenger's maps (2026-11-17): only the IL-Y pickup logo.
   const markers = useMemo<MapMarker[]>(() => {
     const m: MapMarker[] = [];
     if (pickup) m.push({ id: 'p', lat: pickup.lat, lng: pickup.lng, kind: 'pickup', label: pickup.label });
     if (stop && hasStop) m.push({ id: 's', lat: stop.lat, lng: stop.lng, kind: 'stop', label: stop.label });
     if (dropoff) m.push({ id: 'd', lat: dropoff.lat, lng: dropoff.lng, kind: 'dropoff', label: dropoff.label });
-    if (meNow) m.push({ id: 'me', lat: meNow.lat, lng: meNow.lng, kind: 'person', label: t('booking.youAreHere') });
     return m;
-  }, [pickup, dropoff, stop, hasStop, meNow, t]);
+  }, [pickup, dropoff, stop, hasStop]);
 
   // The stop counts only once it has been chosen (an empty stop row is ignored).
   const viaStop = hasStop && stop ? stop : null;

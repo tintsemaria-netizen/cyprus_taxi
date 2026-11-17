@@ -1,5 +1,17 @@
 # Session handoff
 
+## 2026-11-17 — Passenger: no person marker, no «Показать водителю, где я» (for now)
+**Change:** the passenger's maps show only the IL-Y pickup logo; there is no «you are here» person on booking or tracking. The «Показать водителю, где я» switch is removed from tracking, so the confirmation-code switch stands alone (no frame).
+- BookingApp and TrackApp no longer use `useLiveLocation` for this.
+- With no client sending, the driver never sees a passenger person marker.
+
+**Kept for later:**
+- `ShareLocationToggle.tsx`, the tracking location API, `passenger-location.ts` and the driver-side marker.
+
+**OPEN (owner, 2026-11-17):** when the full passenger registration is built, ask «Показывать водителю, где я при подаче?» there and bring the feature back from that answer.
+
+**Check:** Playwright (local): home has the logo pin and no person; tracking EN_ROUTE has no share switch, the code switch is present, and the markers are only pickup and car; no errors.
+
 ## 2026-11-17 — IL-Y logo as the pickup pin everywhere; passenger start map one zoom level out
 **Pin:** `pickupPinEl` draws the brand mark (inline copy of public/brand/mark.svg, exported as `BRAND_PIN_SVG`) at 32×40 px, in its own 500:620 proportions. The tip is on the point and the pulse rings stay.
 - The map pickers' centre pin uses the same mark, also 32×40.
