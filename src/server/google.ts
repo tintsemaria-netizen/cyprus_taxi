@@ -114,15 +114,21 @@ async function fetchJsonWithStatus(url: string, init: RequestInit): Promise<{ st
   }
 }
 
-export async function googleAutocomplete(input: string, sessionToken: string, limit = 6): Promise<PlacePrediction[]> {
+export async function googleAutocomplete(input: string, sessionToken: string, limit = 6, near?: { lat: number; lng: number } | null): Promise<PlacePrediction[]> {
   const key = config.googleServerKey();
   const b = CYPRUS_BOUNDS;
-  const body = {
+  // Near the passenger first (2026-11-18): with a known position the bias is a 25 km circle around
+  // it (and `origin` lets Google weigh distance), so «Agias» finds the street in your town after a
+  // few letters instead of one somewhere else on the island. Still Cyprus only.
+  const body: Record<string, unknown> = {
     input,
     sessionToken,
     includedRegionCodes: ['cy'],
-    locationBias: { rectangle: { low: { latitude: b.south, longitude: b.west }, high: { latitude: b.north, longitude: b.east } } },
+    locationBias: near
+      ? { circle: { center: { latitude: near.lat, longitude: near.lng }, radius: 25000 } }
+      : { rectangle: { low: { latitude: b.south, longitude: b.west }, high: { latitude: b.north, longitude: b.east } } },
   };
+  if (near) body.origin = { latitude: near.lat, longitude: near.lng };
   const { status, json } = await fetchJsonWithStatus('https://places.googleapis.com/v1/places:autocomplete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key },

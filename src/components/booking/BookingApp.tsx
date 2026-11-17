@@ -8,6 +8,7 @@ import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import type { Selected } from './PlacesInput';
+import { setNearHint } from '@/lib/nearHint';
 import SavedPlacesSheet, { type SavedMode, type SavedPlaces } from './SavedPlacesSheet';
 import { RouteEditor, type RouteSlot } from './RouteEditor';
 import AutoMapPicker from './AutoMapPicker';
@@ -168,6 +169,8 @@ export default function BookingApp() {
   }
   // Passenger's detected location (for centring the map + defaulting the pickup).
   const [myLoc, setMyLoc] = useState<{ lat: number; lng: number } | null>(null);
+  // Address search ranks places near the passenger first (2026-11-18).
+  useEffect(() => { setNearHint(myLoc ?? pickup); }, [myLoc, pickup]);
   // «My location» button (2026-11-17): appears once the passenger drags the map away.
   const [mapMoved, setMapMoved] = useState(false);
   const [recenterTick, setRecenterTick] = useState(0);
@@ -827,6 +830,7 @@ export default function BookingApp() {
           home={places.home}
           work={places.work}
           school={places.school ?? null}
+          custom={places.custom ?? []}
           canAddStop={!hasStop}
           onText={(s, x) => { slotGet(s).setText(x); if (s === 'p' && autoPickup) setAutoPickup(false); }}
           onSelect={(s, sel) => { slotGet(s).setSel(sel); if (s === 'p') setAutoPickup(false); }}

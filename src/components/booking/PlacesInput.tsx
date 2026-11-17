@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { api, uuid } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import AutoMapPicker from './AutoMapPicker';
+import { nearParam } from '@/lib/nearHint';
 
 export interface Selected {
   lat: number;
@@ -109,7 +110,7 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
       abortRef.current = controller;
       try {
         const res = await api<{ demo: boolean; provider?: string; results: Result[]; unavailable?: boolean }>(
-          `/places/search?q=${encodeURIComponent(t)}&session=${sessionToken()}`,
+          `/places/search?q=${encodeURIComponent(t)}&session=${sessionToken()}${nearParam()}`,
           { signal: controller.signal, timeoutMs: 6000 },
         );
         if (my !== reqSeq.current) return; // superseded

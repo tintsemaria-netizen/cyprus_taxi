@@ -14,6 +14,9 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const q = (url.searchParams.get('q') || '').slice(0, 120);
   const session = (url.searchParams.get('session') || '').slice(0, 64) || undefined;
+  // Passenger position for «near me first» ranking (optional, Cyprus only).
+  const nm = (url.searchParams.get('near') || '').match(/^(-?\d{1,2}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?)$/);
+  const near = nm && Number(nm[1]) > 34 && Number(nm[1]) < 36 && Number(nm[2]) > 32 && Number(nm[2]) < 35 ? { lat: Number(nm[1]), lng: Number(nm[2]) } : null;
   if (q.trim().length < 2) return apiOk({ demo: config.demoMode, results: [] });
 
   if (googleConfigured()) {
@@ -21,7 +24,7 @@ export async function GET(req: Request) {
     // Falls back to forward geocoding if Places is not enabled on the project.
     if (session) {
       try {
-        const preds = await googleAutocomplete(q, session);
+        const preds = await googleAutocomplete(q, session, 6, near);
         return apiOk({ provider: 'places', demo: false, results: preds.map((p) => ({ label: p.label, secondary: p.secondary, placeId: p.placeId })) });
       } catch (e) {
         if (!isPlacesDisabled(e)) {

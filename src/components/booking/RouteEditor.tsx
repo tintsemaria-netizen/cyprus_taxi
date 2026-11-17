@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, uuid } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { Selected } from './PlacesInput';
+import { localMatches, nearParam } from '@/lib/nearHint';
 
 // Full-screen route editor (2026-11-15). Opens when the passenger starts typing an address.
 // A clean full screen (app dark theme) so the addresses and suggestions are easy to read: the route box at the top
@@ -24,6 +25,8 @@ interface Props {
   home: Place | null;
   work: Place | null;
   school?: Place | null;
+  /** The passenger's own named places (2026-11-18). */
+  custom?: (Place & { name: string })[];
   canAddStop: boolean;
   onText: (slot: RouteSlot, text: string) => void;
   onSelect: (slot: RouteSlot, sel: Selected | null) => void;
@@ -90,12 +93,12 @@ export function RouteEditor(p: Props) {
     setStatus('loading');
     timer.current = setTimeout(async () => {
       try {
-        const r = await api<{ results: Result[]; unavailable?: boolean }>(`/places/search?q=${encodeURIComponent(text)}&session=${token()}`, { timeoutMs: 6000 });
+        const r = await api<{ results: Result[]; unavailable?: boolean }>(`/places/search?q=${encodeURIComponent(text)}&session=${token()}${nearParam(p.origin)}`, { timeoutMs: 6000 });
         if (my !== seq.current) return;
         setResults(r.results);
         setStatus(r.unavailable ? 'unavailable' : r.results.length ? 'idle' : 'none');
       } catch { if (my === seq.current) { setResults([]); setStatus('unavailable'); } }
-    }, 250);
+    }, 200);
   }
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
@@ -129,14 +132,19 @@ export function RouteEditor(p: Props) {
   }
 
   const showSaved = query.length < 2;
-  const saved: (Place & { icon: 'home' | 'work' | 'school' | 'recent'; name?: string })[] = showSaved
-    ? [
-        ...(p.home ? [{ ...p.home, icon: 'home' as const, name: t('booking.form.home') }] : []),
-        ...(p.work ? [{ ...p.work, icon: 'work' as const, name: t('booking.form.work') }] : []),
-        ...(p.school ? [{ ...p.school, icon: 'school' as const, name: t('booking.form.school') }] : []),
-        ...p.recent.map((r) => ({ ...r, icon: 'recent' as const })),
-      ]
-    : [];
+  const allSaved: (Place & { icon: 'home' | 'work' | 'school' | 'recent' | 'pin'; name?: string })[] = [
+    ...(p.home ? [{ ...p.home, icon: 'home' as const, name: t('booking.form.home') }] : []),
+    ...(p.work ? [{ ...p.work, icon: 'work' as const, name: t('booking.form.work') }] : []),
+    ...(p.school ? [{ ...p.school, icon: 'school' as const, name: t('booking.form.school') }] : []),
+    ...(p.custom ?? []).map((c) => ({ ...c, icon: 'pin' as const })),
+    ...p.recent.map((r) => ({ ...r, icon: 'recent' as const })),
+  ];
+  const saved = showSaved ? allSaved : [];
+  // While typing (2026-11-18): the passenger's own places and recent trips that match show at once,
+  // above Google's suggestions — no waiting for the network, no typing the whole address.
+  const quick = showSaved ? [] : localMatches(allSaved, query);
+  const quickLabels = new Set(quick.map((q) => q.label.toLowerCase()));
+  const listed = showSaved ? saved : [...quick, ...results.filter((r) => !quickLabels.has(r.label.toLowerCase()))];
 
   const dot = (slot: RouteSlot) => slot === 'p'
     ? <span className="block h-3.5 w-3.5 rounded-full border-[3px] bg-page" style={{ borderColor: LIME }} />
@@ -234,10 +242,10 @@ export function RouteEditor(p: Props) {
 
       {/* Suggestions */}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-6" role="listbox" aria-label={t('booking.route.suggestions')}>
-        {status === 'loading' && <p className="px-2 py-3 text-sm text-muted">{t('booking.places.searching')}</p>}
-        {status === 'none' && <p className="px-2 py-3 text-sm text-muted">{t('booking.places.none')}</p>}
+        {status === 'loading' && !quick.length && <p className="px-2 py-3 text-sm text-muted">{t('booking.places.searching')}</p>}
+        {status === 'none' && !quick.length && <p className="px-2 py-3 text-sm text-muted">{t('booking.places.none')}</p>}
         {status === 'unavailable' && <p className="px-2 py-3 text-sm text-warn">{t('booking.places.unavailable')}</p>}
-        {(showSaved ? saved : results).map((r, i) => {
+        {listed.map((r, i) => {
           const [main, sub] = 'name' in r && r.name ? [r.name, r.label] : twoLines(r.label);
           const second = 'secondary' in r && r.secondary ? r.secondary : sub;
           const dist = p.origin && typeof r.lat === 'number' && typeof r.lng === 'number' ? km(p.origin, { lat: r.lat, lng: r.lng }) : null;

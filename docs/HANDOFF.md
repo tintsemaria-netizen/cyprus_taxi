@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-18 — Faster address search (deployed)
+- `googleAutocomplete(..., near)`: with the passenger position → locationBias circle 25 km + `origin`; otherwise Cyprus rectangle. `/places/search?near=lat,lng` (Cyprus range only).
+- `src/lib/nearHint.ts`: position hint (BookingApp sets myLoc ?? pickup), `foldText` (Greek→Latin, accents, case), `localMatches`. Tests: tests/near-hint.test.ts.
+- RouteEditor: own places (custom too) and recent trips that match the typed words show instantly above Google results; debounce 250 → 200 ms. PlacesInput sends the hint too.
+- Prod search quality not verified by me (no key locally) — user to try.
+
 ## 2026-11-18 — Saved places polish + map/clear buttons in every address search (branch `saved-places-2`, NOT merged)
 - «Мои адреса»: no «Другой адрес» row; name placeholder «Название вашего адреса» (8 languages).
 - PlacesInput (`mapPick`, default on unless read-only/trailing): × clear + «На карте» target button that opens AutoMapPicker in a portal → used in «Мои адреса», account saved places, tracking destination change.
