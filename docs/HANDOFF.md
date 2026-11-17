@@ -1,5 +1,18 @@
 # Session handoff
 
+## 2026-11-17 — Google review prompt (deployed)
+
+- Admin Settings → «Отзыв в Google»: Place ID (ChIJ…) or https link → `settings.googleReviewUrl`; public config exposes
+  `googleReviewUrl` (Place ID → https://search.google.com/local/writereview?placeid=…). Empty → nothing is shown anywhere.
+- `src/components/GoogleReviewCard.tsx`: modal (portal to body, five decorative stars) right after the passenger rates a trip
+  on the finished tracking screen; compact card at the bottom of the receipt page; block in the receipt e-mail.
+- Shown for every rating (no review gating — Google policy). «Оставить отзыв» → never again on that browser
+  (localStorage `il-y-review-done`); «Не сейчас» / backdrop → quiet for the next 5 rated trips (`il-y-review-skip`).
+- Finished tracking screen no longer has the «Чек за поездку» box (receipt is in «My rides»).
+- No prefilled review text/stars: Google does not support it and its policy forbids it.
+- Full vitest 252 passed / 1 skipped; build ok; flow checked locally with Playwright.
+- **User action:** create/verify the Google Business Profile and paste its Place ID in admin settings.
+
 ## 2026-11-17 — Short receipt e-mail; sign-in button on the receipt page
 
 - Receipt e-mail now shows only: thanks + date/time, pickup → destination, «Итого», «Открыть в IL-Y» button
