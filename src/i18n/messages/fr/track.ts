@@ -32,7 +32,7 @@ const track: Catalog<typeof en> = {
   pillEnRoute: "CHAUFFEUR EN ROUTE",
   scheduledNote: "Demande programmée — nous enverrons un chauffeur peu avant l’heure de prise en charge.",
   searchingNote: "Recherche du chauffeur disponible le plus proche…",
-  noDriverNote: "Aucun chauffeur libre à proximité pour le moment. Vous pouvez relancer la recherche ou annuler.",
+  noDriverNote: "Aucun chauffeur libre à proximité pour le moment. Vous pouvez relancer la recherche.",
   reserving: "Réservation du chauffeur le plus proche…",
   ratingAria: { one: "Noté {avg} sur 5 sur {count} course", many: "Noté {avg} sur 5 sur {count} courses", other: "Noté {avg} sur 5 sur {count} courses" },
   plateAria: "Plaque d’immatriculation {plate}",

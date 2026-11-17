@@ -32,7 +32,7 @@ const track: Catalog<typeof en> = {
   pillEnRoute: "FAHRER UNTERWEGS",
   scheduledNote: "Geplante Bestellung — wir schicken einen Fahrer kurz vor Ihrer Abholzeit.",
   searchingNote: "Wir suchen den nächsten verfügbaren Fahrer…",
-  noDriverNote: "In der Nähe ist gerade kein Fahrer frei. Sie können erneut suchen oder stornieren.",
+  noDriverNote: "In der Nähe ist gerade kein Fahrer frei. Sie können erneut suchen.",
   reserving: "Der nächste Fahrer wird für Sie reserviert…",
   ratingAria: { one: "Bewertet mit {avg} von 5 aus {count} Fahrt", other: "Bewertet mit {avg} von 5 aus {count} Fahrten" },
   plateAria: "Kennzeichen {plate}",

@@ -32,7 +32,7 @@ const track: Catalog<typeof en> = {
   pillEnRoute: "הנהג בדרך",
   scheduledNote: "הזמנה מתוזמנת — נשלח נהג סמוך למועד האיסוף.",
   searchingNote: "מחפשים את הנהג הפנוי הקרוב ביותר…",
-  noDriverNote: "אין כרגע נהגים פנויים בסביבה. אפשר לחפש שוב או לבטל.",
+  noDriverNote: "אין כרגע נהגים פנויים בסביבה. אפשר לחפש שוב.",
   reserving: "שומרים עבורכם את הנהג הקרוב ביותר…",
   ratingAria: { one: "דירוג {avg} מתוך 5 על סמך {count} נסיעה", two: "דירוג {avg} מתוך 5 על סמך {count} נסיעות", many: "דירוג {avg} מתוך 5 על סמך {count} נסיעות", other: "דירוג {avg} מתוך 5 על סמך {count} נסיעות" },
   plateAria: "לוחית רישוי {plate}",

@@ -24,7 +24,7 @@ const track = {
   pillEnRoute: 'DRIVER ON THE WAY',
   scheduledNote: 'Scheduled request — we’ll dispatch a driver near your pickup time.',
   searchingNote: 'Matching you with the nearest available driver…',
-  noDriverNote: 'No drivers are free nearby right now. You can search again or cancel.',
+  noDriverNote: 'No drivers are free nearby right now. You can search again.',
   reserving: 'Reserving the nearest driver for you…',
   ratingAria: { one: 'Rated {avg} out of 5 from {count} trip', other: 'Rated {avg} out of 5 from {count} trips' },
   plateAria: 'Number plate {plate}',

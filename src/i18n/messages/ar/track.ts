@@ -32,7 +32,7 @@ const track: Catalog<typeof en> = {
   pillEnRoute: "السائق في الطريق",
   scheduledNote: "طلب مجدول — سنرسل سائقًا قرب موعد الانطلاق.",
   searchingNote: "نبحث عن أقرب سائق متاح…",
-  noDriverNote: "لا يوجد سائقون متاحون بالقرب الآن. يمكنك البحث مرة أخرى أو الإلغاء.",
+  noDriverNote: "لا يوجد سائقون متاحون بالقرب الآن. يمكنك البحث مرة أخرى.",
   reserving: "نحجز لك أقرب سائق…",
   ratingAria: { zero: "تقييم {avg} من 5 من {count} رحلة", one: "تقييم {avg} من 5 من {count} رحلة", two: "تقييم {avg} من 5 من {count} رحلة", few: "تقييم {avg} من 5 من {count} رحلات", many: "تقييم {avg} من 5 من {count} رحلة", other: "تقييم {avg} من 5 من {count} رحلة" },
   plateAria: "لوحة الأرقام {plate}",

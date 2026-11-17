@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-17 — No-driver state: no map pill, shorter note
+
+- TrackApp: no status pill on the map for NO_DRIVER (the sheet says it). `track.noDriverNote` without «…или отменить заказ»
+  in all 8 languages.
+
 ## 2026-11-17 — Searching screen: no folded panel
 
 - TrackApp: while SEARCHING the info panel is always open (`panelOpen = sheetOpen || searching`; handle hidden, swipe/tap ignored);

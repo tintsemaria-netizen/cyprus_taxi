@@ -32,7 +32,7 @@ const track: Catalog<typeof en> = {
   pillEnRoute: "KIEROWCA W DRODZE",
   scheduledNote: "Zamówienie zaplanowane — wyślemy kierowcę krótko przed godziną odbioru.",
   searchingNote: "Szukamy najbliższego wolnego kierowcy…",
-  noDriverNote: "W pobliżu nie ma teraz wolnych kierowców. Możesz szukać ponownie lub anulować.",
+  noDriverNote: "W pobliżu nie ma teraz wolnych kierowców. Możesz szukać ponownie.",
   reserving: "Rezerwujemy dla Ciebie najbliższego kierowcę…",
   ratingAria: { one: "Ocena {avg} na 5 z {count} przejazdu", few: "Ocena {avg} na 5 z {count} przejazdów", many: "Ocena {avg} na 5 z {count} przejazdów", other: "Ocena {avg} na 5 z {count} przejazdu" },
   plateAria: "Numer rejestracyjny {plate}",
