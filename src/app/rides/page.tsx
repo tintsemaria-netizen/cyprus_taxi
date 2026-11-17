@@ -67,7 +67,7 @@ export default function Page() {
           {rides.map((r) => (
             <div key={r.id} className="flex items-center justify-between gap-3 p-3">
               <div className="min-w-0">
-                <div className="truncate text-sm font-medium">{r.pickup} → {r.dropoff}</div>
+                <div className="truncate text-sm font-medium">→ {r.dropoff}</div>
                 <div className="text-xs text-muted">{fmt.dateTime(r.at)} · {r.fareCents != null ? `≈ ${fmt.money(r.fareCents)}` : '—'}</div>
               </div>
               <div className="shrink-0 text-end">

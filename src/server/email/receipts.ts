@@ -15,6 +15,11 @@ import { receiptEmail } from './receipt-template';
 type Db = Prisma.TransactionClient | typeof prisma;
 
 const MAX_ATTEMPTS = 6;
+
+/** Receipts go out in Russian or English only (owner, 2026-11-17): Russian for a Russian app, else English. */
+export function receiptLocale(v: unknown): 'ru' | 'en' {
+  return asLocale(v) === 'ru' ? 'ru' : 'en';
+}
 const BACKOFF_SEC = [30, 120, 600, 1800, 3600, 7200];
 const LEASE_MS = 60_000;
 /** A receipt that could not go out for this long (e.g. no provider yet) is dropped, not sent late. */
@@ -28,7 +33,7 @@ export async function enqueueReceiptEmail(db: Db, bookingId: string): Promise<vo
   if (!p?.email) return;
   const exists = await db.receiptEmail.findUnique({ where: { bookingId }, select: { id: true } });
   if (exists) return;
-  await db.receiptEmail.create({ data: { bookingId, passengerId: b.passengerId, toEmail: p.email, locale: asLocale(p.locale) } });
+  await db.receiptEmail.create({ data: { bookingId, passengerId: b.passengerId, toEmail: p.email, locale: receiptLocale(p.locale) } });
 }
 
 export type ResendResult = { ok: true; status: string } | { ok: false; status: number; code: string; message: string };
@@ -42,14 +47,14 @@ export async function requestReceiptEmail(bookingId: string, passengerId: string
   if (!p?.email) return { ok: false, status: 409, code: 'NO_EMAIL', message: 'There is no e-mail address on your account.' };
   const row = await prisma.receiptEmail.findUnique({ where: { bookingId } });
   if (!row) {
-    await prisma.receiptEmail.create({ data: { bookingId, passengerId, toEmail: p.email, locale: asLocale(p.locale) } });
+    await prisma.receiptEmail.create({ data: { bookingId, passengerId, toEmail: p.email, locale: receiptLocale(p.locale) } });
     return { ok: true, status: 'PENDING' };
   }
   if (row.status === 'PROCESSING' || row.status === 'PENDING' || row.status === 'RETRY') return { ok: true, status: row.status };
   if (row.resendCount >= RECEIPT_RESEND_MAX) return { ok: false, status: 429, code: 'RESEND_LIMIT', message: 'This receipt was already sent several times.' };
   await prisma.receiptEmail.update({
     where: { id: row.id },
-    data: { status: 'PENDING', attempts: 0, resendCount: { increment: 1 }, nextAttemptAt: new Date(), toEmail: p.email, locale: asLocale(p.locale), lastError: null },
+    data: { status: 'PENDING', attempts: 0, resendCount: { increment: 1 }, nextAttemptAt: new Date(), toEmail: p.email, locale: receiptLocale(p.locale), lastError: null },
   });
   return { ok: true, status: 'PENDING' };
 }
@@ -83,7 +88,7 @@ export async function drainReceiptEmails(now: Date = new Date(), batch = 20): Pr
   for (const r of rows) {
     const built = await buildReceipt(r.bookingId);
     if (!built.ok) { await done(r.id, { status: 'SKIPPED', lastError: built.code }); continue; }
-    const locale = asLocale(r.locale);
+    const locale = receiptLocale(r.locale);
     const mail = receiptEmail(built.receipt, locale, `${config.appBaseUrl}/rides/${r.bookingId}`, reviewUrl);
     const res = await sendEmail({ to: r.toEmail, ...mail, idempotencyKey: `receipt-${r.bookingId}-${r.resendCount}` });
     if (res.ok) { await done(r.id, { status: 'SENT', sentAt: now, providerMessageId: res.id, lastError: null }); continue; }

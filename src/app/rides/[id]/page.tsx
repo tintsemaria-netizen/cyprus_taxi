@@ -3,7 +3,8 @@
 import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { use, useEffect, useState } from 'react';
 import { api, ApiRequestError } from '@/lib/api-client';
-import { useT } from '@/i18n/I18nProvider';
+import { useT, useLocale, I18nProvider } from '@/i18n/I18nProvider';
+import { LOCALES, LOCALE_NAMES, LOCALE_SHORT, type Locale } from '@/i18n/config';
 import { GoogleReviewCard } from '@/components/GoogleReviewCard';
 
 export const dynamic = 'force-dynamic';
@@ -31,8 +32,12 @@ interface Receipt {
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { t, fmt } = useT();
-  const eur = (cents: number, ccy: string) => fmt.money(cents, ccy);
+  const { t } = useT();
+  const appLocale = useLocale();
+  // Receipt language: Russian for a Russian app, otherwise English; the passenger can pick another.
+  const [lang, setLangState] = useState<Locale>(appLocale === 'ru' ? 'ru' : 'en');
+  useEffect(() => { try { const v = localStorage.getItem('il-y-receipt-lang'); if (v && (LOCALES as readonly string[]).includes(v)) setLangState(v as Locale); } catch { /* storage off */ } }, []);
+  const setLang = (l: Locale) => { setLangState(l); try { localStorage.setItem('il-y-receipt-lang', l); } catch { /* ignore */ } };
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [needLogin, setNeedLogin] = useState(false);
@@ -60,8 +65,6 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     })();
   }, [id, t]);
 
-  const f = receipt?.fare;
-
   return (
     <div>
     <PassengerTopBar back={'/rides'} />
@@ -75,11 +78,33 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       ) : !receipt ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : (
+        <I18nProvider locale={lang}>
+          <ReceiptCard receipt={receipt} lang={lang} onLang={setLang} sendMail={sendMail} mailBusy={mailBusy} mailNote={mailNote} />
+        </I18nProvider>
+      )}
+      {receipt && <div className="mt-4"><GoogleReviewCard compact /></div>}
+    </div>
+    </div>
+  );
+}
+
+const RECEIPT_ORDER: Locale[] = ['en', 'ru', ...LOCALES.filter((l) => l !== 'en' && l !== 'ru')];
+
+function ReceiptCard({ receipt, lang, onLang, sendMail, mailBusy, mailNote }: { receipt: Receipt; lang: Locale; onLang: (l: Locale) => void; sendMail: () => void; mailBusy: boolean; mailNote: string | null }) {
+  const { t, fmt } = useT();
+  const eur = (cents: number, ccy: string) => fmt.money(cents, ccy);
+  const f = receipt.fare;
+  return (
         <div className="card p-5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <h1 className="text-lg font-bold">{t('rides.receipt.title')}</h1>
-            <span className="text-xs text-muted">#{receipt.reference}</span>
+            {/* Receipts are in English or Russian; any other language on request (2026-11-17). */}
+            <select value={lang} onChange={(e) => onLang(e.target.value as Locale)} aria-label={t('common.language')} data-testid="receipt-lang"
+              className="min-h-[30px] rounded-[8px] border border-edge bg-elevated px-1.5 text-xs text-ink">
+              {RECEIPT_ORDER.map((l) => <option key={l} value={l}>{LOCALE_SHORT[l]} · {LOCALE_NAMES[l]}</option>)}
+            </select>
           </div>
+          <p className="mt-0.5 text-xs text-muted">#{receipt.reference}</p>
           <p className="mt-0.5 text-xs text-muted">
             {receipt.completedAt ? fmt.dateTime(receipt.completedAt) : t('rides.receipt.completed')}
           </p>
@@ -93,7 +118,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
           {f && (
             <div className="mt-4 border-t border-edge pt-3">
-              {/* Receipt (2026-11-18): just the total — no class / passengers / driver / fare lines / meter note. */}
+              {/* Receipt (2026-11-18): just the total (waiting included) — no class / passengers / driver / fare lines / meter note. */}
               <div className="flex items-baseline justify-between">
                 <span className="font-semibold">{t('rides.receipt.total')}</span>
                 <span className="text-lg font-bold tabular-nums">
@@ -130,9 +155,5 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
             </div>
           )}
         </div>
-      )}
-      {receipt && <div className="mt-4"><GoogleReviewCard compact /></div>}
-    </div>
-    </div>
   );
 }
