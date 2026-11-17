@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-17 — Reopen the app during a ride → back on the ride (branch `resume-active`, NOT merged)
+- New `GET /api/v1/passenger/active`: the passenger's live ride (ASSIGNED/EN_ROUTE/ARRIVED/IN_PROGRESS, or REQUESTED/SEARCHING for an immediate order).
+- BookingApp: once per app launch (sessionStorage `il-y-resume-checked`, also set by TrackApp) a signed-in passenger with a live ride is taken straight to /track (loading cover meanwhile); going home on purpose afterwards still works.
+- Driver: the ride screen was already restored from the server; now GPS also switches back on by itself (once per launch) when on a ride or on duty.
+- Checked locally with Playwright (fresh browser context = app closed): passenger `/` → `/track`; driver `/driver` → navigation screen with GPS on. Waiting for «заливай».
+
 ## 2026-11-17 — Bold rounded route line + smooth car turning (branch `smooth-route`, NOT merged)
 - `src/components/routeSmooth.ts` rounds every route bend (quadratic curve, ≤25 m cut) for display; tests/route-smooth.test.ts.
 - Route line 7 px (was 4) in GoogleMapView and MapView; the car glides along the same rounded line.

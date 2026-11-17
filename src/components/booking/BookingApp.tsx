@@ -230,6 +230,24 @@ export default function BookingApp() {
   }, []);
   useEffect(() => { loadPassenger(); }, [loadPassenger]);
 
+  // Reopening the app during a ride goes straight back to that ride (2026-11-17). Once per app
+  // launch only (sessionStorage is cleared when the app is fully closed), so going to the home
+  // screen on purpose from the tracking screen still works.
+  const [resuming, setResuming] = useState(false);
+  useEffect(() => {
+    if (!passenger) return;
+    try { if (sessionStorage.getItem('il-y-resume-checked')) return; sessionStorage.setItem('il-y-resume-checked', '1'); } catch { return; }
+    api<{ ride: { id: string } | null }>('/passenger/active').then(async (r) => {
+      if (!r.ride) return;
+      setResuming(true);
+      try {
+        const g = await api<{ token: string }>(`/passenger/rides/${r.ride.id}/track`, { method: 'POST' });
+        await api('/tracking/exchange', { method: 'POST', body: { token: g.token } });
+        router.replace('/track');
+      } catch { setResuming(false); }
+    }).catch(() => { /* stay on the home screen */ });
+  }, [passenger, router]);
+
   // On first load, detect the passenger's position: centre the map on it and default the
   // pickup there (reverse-geocoded label). Never overwrite a pickup the passenger has
   // already started choosing — they can still change it via the map or the address box.
@@ -779,6 +797,7 @@ export default function BookingApp() {
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
+      {resuming && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-page text-muted" data-testid="resuming-ride">{t('common.loading')}</div>}
       <NotifyPrompt pushUrl="/passenger/push" active={!!passenger} />
       <input ref={proxyRef} aria-hidden tabIndex={-1} readOnly={false} className="pointer-events-none fixed start-0 top-0 h-px w-px opacity-0" style={{ fontSize: 16 }} />
       {editor && (

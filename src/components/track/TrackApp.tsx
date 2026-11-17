@@ -128,6 +128,7 @@ export default function TrackApp() {
 
   useEffect(() => {
     const m = window.location.hash.match(/token=([^&]+)/);
+    try { sessionStorage.setItem('il-y-resume-checked', '1'); } catch { /* ignore */ } // see BookingApp resume
     if (m) {
       tokenRef.current = decodeURIComponent(m[1]);
       history.replaceState(null, '', window.location.pathname); // strip token from the address bar

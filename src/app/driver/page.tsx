@@ -238,6 +238,18 @@ function Driver() {
     return () => { alive = false; clearInterval(iv); };
   }, []);
 
+  // Reopened app (2026-11-17): the current ride is back on screen from the server; switch the GPS
+  // back on by itself as well when the driver is on a ride or on duty, so the passenger keeps seeing
+  // the car without the driver having to press «Включить GPS» again. Once per app launch.
+  const gpsAutoTried = useRef(false);
+  useEffect(() => {
+    if (gpsAutoTried.current || !data || gps.active) return;
+    if (!data.trip && !data.onDuty) return;
+    gpsAutoTried.current = true;
+    startGps();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, gps.active]);
+
   // Keep the screen awake while on duty (a sleeping screen suspends polling + GPS).
   useEffect(() => {
     if (!data?.onDuty) return;
