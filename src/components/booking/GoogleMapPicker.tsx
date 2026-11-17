@@ -283,11 +283,11 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
             {addr ?? coordLabel(center.lat, center.lng)}
             {resolving && !addr && <span className="ms-2 text-xs text-muted">{t('booking.picker.resolving')}</span>}
           </div>
-          <div className="text-xs text-muted">{addr ? ' ' : t('booking.picker.noAddress')}</div>
+          <div className="truncate text-xs text-muted">{addr ? ' ' : t('booking.picker.noAddress')}</div>
         </div>
         <div className="flex gap-2">
-          <button className="btn-ghost flex-1" onClick={cancel}>{t('common.cancel')}</button>
-          <button className="btn-primary flex-1" onClick={confirm} disabled={failed || !mapLoaded}>
+          <button className="btn-ghost !min-h-[44px] shrink-0 !px-4 !py-2 text-sm" onClick={cancel}>{t('common.cancel')}</button>
+          <button className="btn-primary !min-h-[44px] min-w-0 flex-1 !px-3 !py-2 text-sm whitespace-nowrap" onClick={confirm} disabled={failed || !mapLoaded}>
             {kind === 'pickup' ? t('booking.picker.confirmPickup') : kind === 'stop' ? t('booking.picker.confirmStop') : t('booking.picker.confirmDestination')}
           </button>
         </div>

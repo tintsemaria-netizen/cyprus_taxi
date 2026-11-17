@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-17 — Map picker: no +/-, «My location» bottom-right, compact buttons
+
+- GoogleMapPicker `zoomControl: false`; MapPicker without NavigationControl (pinch/wheel zoom).
+- «Моё местоположение» pill (same style as the start screen) at bottom-right above the map attribution (`picker-my-location`).
+- Cancel / Confirm: 44 px high, Cancel compact, Confirm one line (text-sm, nowrap); the "no address" note truncates.
+- Google review prompt still on local branch `google-review` (f1e1632), NOT deployed.
+
 ## 2026-11-17 — «Моё местоположение» as a pill
 
 - The start-screen location button is now a dark pill with a thin crosshair + text (booking.picker.myLocation), centred above the
