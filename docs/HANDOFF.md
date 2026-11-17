@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-17 — Map closes in when approaching the pickup / drop-off (deployed)
+- `src/lib/nav-zoom.ts`: `navZoomForApproach` (last 600 m: 17 → 18.5, full from 80 m) + `navZoomTarget` = max(speed zoom, approach zoom); tests in tests/nav-zoom.test.ts.
+- DriverNavigation uses `navZoomTarget` with the remaining route metres (also when the car stops).
+- Passenger tracking IN_PROGRESS follow camera: 16 → 17.5 within 600 m of the drop-off.
+
 ## 2026-11-17 — PARKED: map labels (branch `map-labels`, pushed, not merged)
 - Contains: Google map language `en`, «street we are on» chip (driver navigation + passenger tracking), `GET /api/v1/places/street`.
 - Also pending on the owner side: Cloud Console map style keyzooms (local road labels, POI, transit off below z17).

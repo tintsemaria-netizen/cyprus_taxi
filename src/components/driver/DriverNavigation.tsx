@@ -1,6 +1,6 @@
 'use client';
 
-import { navZoomForSpeed, nextNavZoom, smoothSpeed, NAV_ZOOM_MAX } from '@/lib/nav-zoom';
+import { navZoomTarget, nextNavZoom, smoothSpeed, NAV_ZOOM_MAX } from '@/lib/nav-zoom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { ChatPanel } from '@/components/ChatPanel';
@@ -125,6 +125,7 @@ export function DriverNavigation(props: {
   // Speed-dependent zoom: out when accelerating, back in when slowing (more in on the motorway).
   const speedRef = useRef<number | null>(null);
   const [navZoom, setNavZoom] = useState(NAV_ZOOM_MAX);
+  const remainingRef = useRef<number | null>(null); // metres left to the point (set below each render)
   useEffect(() => {
     if (!pos) return;
     const now = Date.now();
@@ -135,13 +136,13 @@ export function DriverNavigation(props: {
     const dt = (now - first.t) / 1000;
     if (dt >= 2) {
       speedRef.current = smoothSpeed(speedRef.current, (distM(first.p, pos) / dt) * 3.6);
-      setNavZoom((z) => nextNavZoom(z, navZoomForSpeed(speedRef.current ?? 0)));
+      setNavZoom((z) => nextNavZoom(z, navZoomTarget(speedRef.current ?? 0, remainingRef.current)));
     }
   }, [pos]);
   useEffect(() => {
     // No new fixes for a while → the car is standing (GPS often stops reporting when still).
     if (!moving) return;
-    const id = setTimeout(() => { setMoving(false); speedRef.current = 0; setNavZoom(NAV_ZOOM_MAX); }, 10000);
+    const id = setTimeout(() => { setMoving(false); speedRef.current = 0; setNavZoom(navZoomTarget(0, remainingRef.current)); }, 10000);
     return () => clearTimeout(id);
   }, [moving, pos]);
   // Direction of travel from movement when off the route line (or no route yet).
@@ -162,6 +163,7 @@ export function DriverNavigation(props: {
   }, [progress, fetchRoute]);
 
   const remainingM = route && progress ? Math.max(0, route.distanceM - progress.alongM) : route?.distanceM ?? (pos ? distM(pos, target) : null);
+  remainingRef.current = remainingM;
   const remainingSec = route && remainingM != null && route.distanceM > 0 ? Math.round(route.durationSec * (remainingM / route.distanceM)) : null;
   const upcoming = route && progress ? nextStep(route.steps, cum, progress.alongM) : null;
   const atTarget = !waitingAtPickup && pos != null && distM(pos, target) < 50;

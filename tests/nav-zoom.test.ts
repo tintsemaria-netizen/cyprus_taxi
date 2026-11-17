@@ -29,3 +29,21 @@ describe('speed-dependent navigation zoom', () => {
     expect(smoothSpeed(40, NaN)).toBe(40);
   });
 });
+
+import { navZoomForApproach, navZoomTarget, NAV_ZOOM_ARRIVE } from '@/lib/nav-zoom';
+describe('approach zoom (closing in on the pickup / drop-off)', () => {
+  it('no effect far away, gradual inside 600 m, closest from 80 m', () => {
+    expect(navZoomForApproach(2000)).toBeNull();
+    expect(navZoomForApproach(null)).toBeNull();
+    expect(navZoomForApproach(600)).toBe(17);
+    const mid = navZoomForApproach(340)!;
+    expect(mid).toBeGreaterThan(17); expect(mid).toBeLessThan(NAV_ZOOM_ARRIVE);
+    expect(navZoomForApproach(80)).toBe(NAV_ZOOM_ARRIVE);
+    expect(navZoomForApproach(5)).toBe(NAV_ZOOM_ARRIVE);
+  });
+  it('never zooms out compared with the speed zoom; speed zoom far away', () => {
+    expect(navZoomTarget(110, 5000)).toBe(15);
+    expect(navZoomTarget(110, 50)).toBe(NAV_ZOOM_ARRIVE);
+    expect(navZoomTarget(0, 300)).toBeGreaterThan(17);
+  });
+});

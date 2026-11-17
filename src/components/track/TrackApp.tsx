@@ -10,6 +10,7 @@ import { useSilentPush } from '@/components/NotifyPrompt';
 import { RateTripModal } from '@/components/booking/RateTripModal';
 import { GoogleReviewCard } from '@/components/GoogleReviewCard';
 import { api, ApiRequestError } from '@/lib/api-client';
+import { haversineMeters } from '@/lib/geo';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { formatFlight } from '@/lib/flight';
 import { useT } from '@/i18n/I18nProvider';
@@ -331,7 +332,10 @@ export default function TrackApp() {
   // While disconnected we suppress the live vehicle position/ETA entirely — a stale
   // marker must never look current.
   const liveLocation = disconnected ? null : view.location;
-  const carFollow = view.status === 'IN_PROGRESS' && followCar && liveLocation ? { lat: liveLocation.lat, lng: liveLocation.lng, heading: 0, zoom: 16, tilt: 0 } : null;
+  // Closing in on the drop-off (2026-11-17): within ~600 m the map zooms in gradually (16 → 17.5).
+  const toDropM = liveLocation ? haversineMeters(liveLocation, view.dropoff) : null;
+  const followZoom = toDropM != null && toDropM < 600 ? Math.round((16 + 1.5 * Math.min(1, (600 - toDropM) / 520)) * 10) / 10 : 16;
+  const carFollow = view.status === 'IN_PROGRESS' && followCar && liveLocation ? { lat: liveLocation.lat, lng: liveLocation.lng, heading: 0, zoom: followZoom, tilt: 0 } : null;
   const markers: MapMarker[] = [];
   // Before pickup, anchor on the pickup; during the trip, anchor on the destination.
   if (view.stop && !view.stop.departedAt) markers.push({ id: 's', lat: view.stop.lat, lng: view.stop.lng, kind: 'stop', label: view.stop.label });

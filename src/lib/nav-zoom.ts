@@ -14,6 +14,28 @@ export function navZoomForSpeed(kmh: number): number {
   return Math.round((NAV_ZOOM_MAX - f * (NAV_ZOOM_MAX - NAV_ZOOM_MIN)) * 10) / 10;
 }
 
+/** Closest zoom, reached right at the pickup / drop-off / stop. */
+export const NAV_ZOOM_ARRIVE = 18.5;
+const APPROACH_START_M = 600; // the map starts closing in this far from the point
+const APPROACH_END_M = 80; // fully zoomed in from here on
+
+/**
+ * Approach zoom (2026-11-17): over the last ~600 m to the pickup / drop-off the map closes in
+ * gradually, street level → 1.5 levels closer, so the driver sees the exact spot and entrance.
+ * Never zooms out compared with the speed zoom.
+ */
+export function navZoomForApproach(remainingM: number | null | undefined): number | null {
+  if (remainingM == null || !Number.isFinite(remainingM) || remainingM > APPROACH_START_M) return null;
+  const f = Math.max(0, Math.min(1, (APPROACH_START_M - remainingM) / (APPROACH_START_M - APPROACH_END_M)));
+  return Math.round((NAV_ZOOM_MAX + f * (NAV_ZOOM_ARRIVE - NAV_ZOOM_MAX)) * 10) / 10;
+}
+
+/** Camera zoom target: the speed zoom, closed in further while approaching the point. */
+export function navZoomTarget(kmh: number, remainingM: number | null | undefined): number {
+  const s = navZoomForSpeed(kmh), a = navZoomForApproach(remainingM);
+  return a == null ? s : Math.max(s, a);
+}
+
 /**
  * Next camera zoom: moves toward the target but at most `maxStep` levels per GPS update, and
  * ignores changes under `dead` levels — so the map breathes smoothly instead of pumping at every
