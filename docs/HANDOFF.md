@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-18 — Saved places from the start screen (deployed)
+- `SavedPlace.name` + migration 20261118010000_saved_place_name; kind `C_<uuid>` = passenger's own named places (max 20).
+- `/api/v1/passenger/places`: GET adds `custom`; PUT kind CUSTOM creates, C_<id> changes / removes (null). Tests: tests/saved-places.db.test.ts.
+- `src/components/booking/SavedPlacesSheet.tsx`: «+ Дом/Работа» opens the address editor right on the start screen; set pill: tap = ride, hold 0.55 s = change/delete; «Ещё» = «Мои адреса» (search another address, Home, Work, own places with ✎, «Добавить адрес»). PlacesInput got `labelText`.
+- 13 new booking.form.* keys in 8 languages.
+- Full suite: preassign «offline driver at the cutoff» failed once in the full run, passed alone (local leftover state).
+
 ## 2026-11-18 — Driver GPS auto-start quiet on refusal (deployed)
 - User (Samsung S26 Ultra, installed driver app) saw the big «location blocked» text after opening the app.
 - The automatic GPS start (reopen, 2026-11-17) now runs only when the page is visible and shows no alarm if the phone refuses; the instructions appear only after the driver taps «Включить GPS» (`autoStartRef`).

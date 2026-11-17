@@ -23,6 +23,8 @@ interface Props {
   onText: (t: string) => void;
   onSelect: (s: Selected | null) => void;
   error?: string;
+  /** Own label text instead of «Откуда/Куда» (saved places, 2026-11-18). */
+  labelText?: string;
 }
 
 // A result may carry coordinates directly (geocoding / demo) or only a placeId
@@ -36,7 +38,7 @@ interface Result {
   kind?: string;
 }
 
-export function PlacesInput({ kind, value, text, onText, onSelect, error, trailing, onFocusInput, autoFocus, onActivate }: Props) {
+export function PlacesInput({ kind, value, text, onText, onSelect, error, trailing, onFocusInput, autoFocus, onActivate, labelText }: Props) {
   const { t } = useT();
   const [results, setResults] = useState<Result[]>([]);
   const [open, setOpen] = useState(false);
@@ -153,7 +155,7 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
   const inputId = useId();
   return (
     <div ref={boxRef} className="relative">
-      <label className="label" htmlFor={inputId}>{kind === 'From' ? t('booking.places.from') : kind === 'Stop' ? t('booking.places.stop') : t('booking.places.to')}</label>
+      <label className="label" htmlFor={inputId}>{labelText ?? (kind === 'From' ? t('booking.places.from') : kind === 'Stop' ? t('booking.places.stop') : t('booking.places.to'))}</label>
       <input
         id={inputId}
         aria-label={kind === 'From' ? t('booking.places.pickupAria') : kind === 'Stop' ? t('booking.places.stopAria') : t('booking.places.destinationAria')}

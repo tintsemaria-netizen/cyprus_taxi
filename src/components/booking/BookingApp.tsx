@@ -8,6 +8,7 @@ import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import type { Selected } from './PlacesInput';
+import SavedPlacesSheet, { type SavedMode, type SavedPlaces } from './SavedPlacesSheet';
 import { RouteEditor, type RouteSlot } from './RouteEditor';
 import AutoMapPicker from './AutoMapPicker';
 import { PassengerLoginModal } from './PassengerLoginModal';
@@ -177,7 +178,20 @@ export default function BookingApp() {
   const [passenger, setPassenger] = useState<{ phone: string | null; name?: string; email?: string | null } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [destinations, setDestinations] = useState<{ label: string; lat: number; lng: number }[]>([]);
-  const [places, setPlaces] = useState<{ home: Selected | null; work: Selected | null; school?: Selected | null }>({ home: null, work: null, school: null });
+  const [places, setPlaces] = useState<SavedPlaces>({ home: null, work: null, school: null, custom: [] });
+  // Saved places sheet (2026-11-18): set Home/Work from the start screen; «Ещё» = the passenger's own places.
+  const [savedSheet, setSavedSheet] = useState<SavedMode | null>(null);
+  const reloadPlaces = useCallback(() => { api<SavedPlaces>('/passenger/places').then(setPlaces).catch(() => {}); }, []);
+  // Hold a set Home/Work pill to change it (a tap rides there).
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const held = useRef(false);
+  const holdProps = (kind: 'HOME' | 'WORK') => ({
+    onPointerDown: () => { held.current = false; if (holdTimer.current) clearTimeout(holdTimer.current); holdTimer.current = setTimeout(() => { held.current = true; navigator.vibrate?.(15); setSavedSheet({ type: 'set', kind }); }, 550); },
+    onPointerUp: () => { if (holdTimer.current) clearTimeout(holdTimer.current); },
+    onPointerLeave: () => { if (holdTimer.current) clearTimeout(holdTimer.current); },
+    onPointerCancel: () => { if (holdTimer.current) clearTimeout(holdTimer.current); },
+    onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+  });
   const pendingSubmit = useRef<number | undefined>(undefined);
   const pendingSubmitActive = useRef(false);
   const pendingReview = useRef(false);
@@ -224,9 +238,9 @@ export default function BookingApp() {
         setPhone((cur) => cur || p.phone || '');
         if (p.name) setName((cur) => cur || p.name!);
         api<{ destinations: { label: string; lat: number; lng: number }[] }>('/passenger/destinations').then((d) => setDestinations(d.destinations)).catch(() => {});
-        api<{ home: Selected | null; work: Selected | null; school?: Selected | null }>('/passenger/places').then(setPlaces).catch(() => {});
+        api<SavedPlaces>('/passenger/places').then(setPlaces).catch(() => {});
       })
-      .catch(() => { setPassenger(null); setPlaces({ home: null, work: null }); });
+      .catch(() => { setPassenger(null); setPlaces({ home: null, work: null, custom: [] }); });
   }, []);
   useEffect(() => { loadPassenger(); }, [loadPassenger]);
 
@@ -800,6 +814,10 @@ export default function BookingApp() {
       {resuming && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-page text-muted" data-testid="resuming-ride">{t('common.loading')}</div>}
       <NotifyPrompt pushUrl="/passenger/push" active={!!passenger} />
       <input ref={proxyRef} aria-hidden tabIndex={-1} readOnly={false} className="pointer-events-none fixed start-0 top-0 h-px w-px opacity-0" style={{ fontSize: 16 }} />
+      {savedSheet && (
+        <SavedPlacesSheet mode={savedSheet} places={places} onSaved={reloadPlaces} onClose={() => setSavedSheet(null)}
+          onGo={(pl) => { setSavedSheet(null); pickQuick(pl); }} onOther={() => { setSavedSheet(null); openEditor('d'); }} />
+      )}
       {editor && (
         <RouteEditor
           rows={slots.map((s) => { const v = slotGet(s); return { slot: s, sel: v.sel, text: v.text }; })}
@@ -1045,19 +1063,20 @@ export default function BookingApp() {
                               <div className="flex gap-2">
                                 {([['home', '🏠', places.home], ['work', '💼', places.work]] as const).map(([k, ic, pl]) => (
                                   pl ? (
-                                    <button key={k} type="button" data-testid={`quick-${k}`} title={pl.label} onClick={() => pickQuick(pl)}
-                                      className="flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-full border border-edge-strong px-2 text-[13px] text-ink hover:border-accent/60">
+                                    <button key={k} type="button" data-testid={`quick-${k}`} title={`${pl.label} · ${t('booking.form.holdToEdit')}`} {...holdProps(k === 'home' ? 'HOME' : 'WORK')}
+                                      onClick={() => { if (held.current) { held.current = false; return; } pickQuick(pl); }}
+                                      className="flex h-8 min-w-0 flex-1 select-none items-center justify-center gap-1 rounded-full border border-edge-strong px-2 text-[13px] text-ink [-webkit-touch-callout:none] hover:border-accent/60">
                                       <span aria-hidden>{ic}</span><span className="truncate">{t(`booking.form.${k}`)}</span>
                                     </button>
                                   ) : (
-                                    <a key={k} href="/account#places" data-testid={`quick-${k}`}
+                                    <button key={k} type="button" data-testid={`quick-${k}`} onClick={() => setSavedSheet({ type: 'set', kind: k === 'home' ? 'HOME' : 'WORK' })}
                                       className="flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-full border border-dashed border-edge px-2 text-[13px] text-muted hover:border-accent/60">
                                       <span aria-hidden className="text-accent">＋</span><span className="truncate">{t(`booking.form.${k}`)}</span>
-                                    </a>
+                                    </button>
                                   )
                                 ))}
                                 {/* «Ещё» (2026-11-17): the full list — every saved place, recent trips and search. */}
-                                <button type="button" data-testid="quick-more" onClick={() => openEditor('d')}
+                                <button type="button" data-testid="quick-more" onClick={() => setSavedSheet({ type: 'list' })}
                                   className="flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-full border border-edge-strong px-2 text-[13px] text-ink hover:border-accent/60">
                                   <span aria-hidden className="text-muted">•••</span><span className="truncate">{t('booking.form.more')}</span>
                                 </button>
