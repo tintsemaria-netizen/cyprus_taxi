@@ -122,7 +122,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
           mapId: MAP_ID || undefined,
           colorScheme: (g.ColorScheme && g.ColorScheme.DARK) || 'DARK',
           disableDefaultUI: true,
-          zoomControl: true,
+          zoomControl: false, // pinch to zoom; no +/- (2026-11-17)
           gestureHandling: 'greedy',
           headingInteractionEnabled: true, // two-finger rotation (2026-11-17)
           tiltInteractionEnabled: false,
@@ -267,8 +267,8 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
             {!mapLoaded && (
               <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-muted"><span className="animate-pulse">{t('booking.picker.loadingMap')}</span></div>
             )}
-            <button className="absolute end-3 top-3 z-10 rounded-full border border-edge bg-page/90 px-3 py-2 text-sm text-ink hover:border-accent/50 disabled:opacity-50" onClick={() => requestLocation(true)} disabled={!mapLoaded}>
-              ⌖ {t('booking.picker.myLocation')}
+            <button className="absolute bottom-10 end-3 z-10 flex h-12 items-center gap-2.5 rounded-full border border-white/15 bg-[#10191C]/95 px-5 text-[17px] text-white shadow-lg disabled:opacity-50" data-testid="picker-my-location" onClick={() => requestLocation(true)} disabled={!mapLoaded}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden className="shrink-0"><circle cx="12" cy="12" r="6" /><path d="M12 3v5M12 16v5M3 12h5M16 12h5" /></svg><span>{t('booking.picker.myLocation')}</span>
             </button>
           </>
         )}

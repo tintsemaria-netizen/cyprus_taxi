@@ -172,7 +172,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
           attributionControl: { compact: true },
         });
         mapRef.current = map;
-        map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'bottom-right');
+        // No +/- buttons (2026-11-17): pinch / wheel to zoom.
         const userGesture = (e: { originalEvent?: unknown }) => { if (e.originalEvent) userMoveCount.current += 1; };
         map.on('dragstart', userGesture);
         map.on('zoomstart', userGesture);
@@ -342,11 +342,11 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
               </div>
             )}
             <button
-              className="absolute end-3 top-3 z-10 rounded-full border border-edge bg-page/90 px-3 py-2 text-sm text-ink hover:border-accent/50 disabled:opacity-50"
+              className="absolute bottom-10 end-3 z-10 flex h-12 items-center gap-2.5 rounded-full border border-white/15 bg-[#10191C]/95 px-5 text-[17px] text-white shadow-lg disabled:opacity-50" data-testid="picker-my-location"
               onClick={() => requestLocation(true)}
               disabled={!mapLoaded}
             >
-              ⌖ {t('booking.picker.myLocation')}
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden className="shrink-0"><circle cx="12" cy="12" r="6" /><path d="M12 3v5M12 16v5M3 12h5M16 12h5" /></svg><span>{t('booking.picker.myLocation')}</span>
             </button>
           </>
         )}
