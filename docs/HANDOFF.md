@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-17 — PARKED: receipts RU/EN (owner: «вернёмся к чекам, когда скажу»)
+
+- Ready, NOT deployed, on branch `receipt-ru-en` (pushed to origin, commit «receipts: Russian/English …»). When the owner says
+  «вернись к чекам», show the last preview (screenshots: rides list «→ destination» + same total; receipt in RU for a Russian app,
+  EN otherwise with a language picker EN/RU/others; one «Итого» incl. waiting, no tariff/waiting lines, no «Ожидает оплаты»;
+  e-mail only RU/EN) and ask whether tariff lines should come back (they don't add up to the total without the waiting line).
+- To deploy: `git checkout main && git merge receipt-ru-en`, run vitest + build, push.
+
 ## 2026-11-17 — «Запланировать»: the pill itself toggles
 
 - No separate track/knob: the clock pill is the switch — outline = off, lime-filled = on; tap again → «now».
