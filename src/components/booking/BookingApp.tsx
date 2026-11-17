@@ -398,9 +398,9 @@ export default function BookingApp() {
         // …plus the quick picks under it (saved places + last trips, 2026-11-17).
         const qp = box.querySelector('[data-testid="quick-picks"]') as HTMLElement | null;
         const bottom = Math.max(addr.getBoundingClientRect().bottom, qp ? qp.getBoundingClientRect().bottom : 0);
-        h = Math.round(bottom - sheet.getBoundingClientRect().top + 16);
+        h = Math.round(bottom - sheet.getBoundingClientRect().top + 8);
       }
-      const next = Math.max(150, Math.min(Math.round(window.innerHeight * 0.6), h));
+      const next = Math.max(110, Math.min(Math.round(window.innerHeight * 0.6), h));
       setPeekPx((p) => (Math.abs(p - next) > 2 ? next : p));
     };
     measure();
@@ -952,8 +952,9 @@ export default function BookingApp() {
                       </button>
                     )}
                     {/* Start screen kept as compact as possible (2026-11-17) so more of the map shows. */}
-                    {!peekRoute && <p className={`label ${!addrOpen ? '!text-[11px]' : ''}`}>{t('booking.form.eyebrow')}</p>}
-                    {!peekRoute && <h1 className={!addrOpen ? 'mb-2.5 mt-0.5 text-xl font-bold' : 'mb-4 mt-1 text-2xl font-bold'}>{t('booking.form.title')}</h1>}
+                    {/* Start screen (2026-11-18): no eyebrow line, smaller title — a lower sheet, more map. */}
+                    {!peekRoute && addrOpen && <p className="label">{t('booking.form.eyebrow')}</p>}
+                    {!peekRoute && <h1 className={!addrOpen ? 'mb-2 text-lg font-bold leading-6' : 'mb-4 mt-1 text-2xl font-bold'}>{t('booking.form.title')}</h1>}
 
                     {flash && <p role="status" className="mb-3 rounded-[12px] border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">{flash}</p>}
                     {banner && <p className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{banner}</p>}
@@ -1040,7 +1041,7 @@ export default function BookingApp() {
                           {/* Quick picks under «Пункт назначения» (2026-11-17): saved Home / Work / School and the
                               last three destinations — one tap sets the destination and goes on to the price. */}
                           {!addrOpen && passenger && !dropoff && (
-                            <div className="mt-2" data-testid="quick-picks">
+                            <div className="mt-1.5" data-testid="quick-picks">
                               <div className="flex gap-2">
                                 {([['home', '🏠', places.home], ['work', '💼', places.work]] as const).map(([k, ic, pl]) => (
                                   pl ? (
@@ -1066,8 +1067,8 @@ export default function BookingApp() {
                                   {destinations.slice(0, 3).map((d, i) => (
                                     <li key={`${d.label}-${i}`}>
                                       <button type="button" data-testid="quick-recent" onClick={() => pickQuick(d)}
-                                        className={`flex h-10 w-full items-center gap-2.5 text-start ${i ? 'border-t border-white/[0.06]' : ''}`}>
-                                        <span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-muted">
+                                        className={`flex h-9 w-full items-center gap-2.5 text-start ${i ? 'border-t border-white/[0.06]' : ''}`}>
+                                        <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-muted">
                                           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>
                                         </span>
                                         <span className="min-w-0 flex-1 truncate text-[14px] text-ink">{d.label}</span>

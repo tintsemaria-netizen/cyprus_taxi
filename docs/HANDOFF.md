@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-18 — Lower passenger start sheet (deployed)
+- Start screen (collapsed, no address open): eyebrow «Довезём куда нужно» hidden, title text-lg, recent rows h-9, quick picks mt-1.5, peek margin 8 px, min peek 110 px. Measured locally 420×912: 233 → 195 px.
+
 ## 2026-11-18 — iPhone home-screen app: empty band at the bottom (deployed, unverified on device)
 - User (iPhone Air, standalone app): dark empty band below the start sheet + extra space in it. Matches the known iOS standalone bug: after the keyboard opened once the viewport stays ~59 px shorter for the session.
 - `src/components/IosViewportFix.tsx` (in layout): iOS standalone only; on focusout / return to the app, if innerHeight is below the session peak and no field is focused, hide body for one synchronous reflow and restore it (+ inner scroll positions).
