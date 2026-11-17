@@ -989,11 +989,10 @@ export default function BookingApp() {
                                           if (when === 'SCHEDULE') { setWhen('NOW'); setScheduledAt(''); setScheduleOffsetMin(undefined); setAmbiguous(null); }
                                           else { setWhen('SCHEDULE'); setCollapsed(false); }
                                         }}
-                                        className={`flex h-8 shrink-0 items-center gap-1 rounded-full border ps-2 pe-1 text-[12px] font-medium ${when === 'SCHEDULE' ? 'border-accent/70 text-accent' : 'border-edge-strong text-ink hover:border-accent/60'}`}>
+                                        className={`flex h-8 shrink-0 items-center gap-1 rounded-full border px-2.5 text-[13px] font-medium transition-colors ${when === 'SCHEDULE' ? 'border-accent bg-accent text-[#0d1608]' : 'border-edge-strong text-ink hover:border-accent/60'}`}>
+                                        {/* The pill itself is the switch (2026-11-17): lime = on, outline = off. */}
+                                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
                                         {when === 'SCHEDULE' && scheduledAt ? scheduledAt.slice(11, 16) : t('booking.form.schedule')}
-                                        <span aria-hidden className={`relative ms-0.5 h-[18px] w-[30px] shrink-0 rounded-full transition-colors ${when === 'SCHEDULE' ? 'bg-accent' : 'bg-white/20'}`}>
-                                          <span className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow transition-all ${when === 'SCHEDULE' ? 'start-[14px] !bg-[#0d1608]' : 'start-[2px]'}`} />
-                                        </span>
                                       </button>
                                     </>
                                   )}

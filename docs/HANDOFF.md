@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-17 — «Запланировать»: the pill itself toggles
+
+- No separate track/knob: the clock pill is the switch — outline = off, lime-filled = on; tap again → «now».
+
 ## 2026-11-17 — «Запланировать» is a switch
 
 - Start-row schedule chip = role="switch" with a small track/knob: tap on → schedule panel; tap again → back to «now» (same reset
