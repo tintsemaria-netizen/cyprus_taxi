@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-17 — Start-screen «Моё местоположение»: right side, smaller
+
+- Pill moved to the right above the sheet; height 40 px, 14 px text, smaller icon. Still appears only after the map is dragged.
+
 ## 2026-11-17 — Map picker: no +/-, «My location» bottom-right, compact buttons
 
 - GoogleMapPicker `zoomControl: false`; MapPicker without NavigationControl (pinch/wheel zoom).
