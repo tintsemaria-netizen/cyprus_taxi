@@ -30,6 +30,13 @@ const rides: Catalog<typeof en> = {
     paid: "שולם",
     paymentPending: "התשלום ממתין",
     yourRating: "הדירוג שלכם:",
+    emailSentTo: "הקבלה נשלחה אל {email}",
+    emailQueued: "הקבלה תישלח אל {email}",
+    emailFailed: "לא ניתן לשלוח את הקבלה אל {email}",
+    emailSend: "שליחת הקבלה באימייל",
+    emailResend: "שליחה חוזרת",
+    emailRequested: "בוצע — הקבלה בדרך.",
+    emailLimit: "הקבלה הזו כבר נשלחה כמה פעמים.",
   },
   rate: {
     title: "דרגו את הנסיעה",
@@ -67,6 +74,13 @@ const rides: Catalog<typeof en> = {
     reminderTitle: "הנסיעה שהזמנתם מתקרבת",
     reminderBody: "איסוף ב-{time}",
     menu: "ההזמנות מראש שלי",
+  },
+  email: {
+    subject: "קבלה מ-IL-Y · נסיעה #{ref}",
+    heading: "תודה שנסעתם עם IL-Y",
+    intro: "הנה הקבלה על הנסיעה שלכם ב-{date}.",
+    open: "פתיחה ב-IL-Y",
+    footer: "קיבלתם את האימייל הזה כי הזמנתם נסיעה ב-IL-Y. התשלום מועבר ישירות לנהג; הקבלה מאשרת את הנסיעה ואינה חשבונית מס.",
   },
 };
 export default rides;

@@ -30,6 +30,13 @@ const rides: Catalog<typeof en> = {
     paid: "Bezahlt",
     paymentPending: "Zahlung ausstehend",
     yourRating: "Ihre Bewertung:",
+    emailSentTo: "Quittung an {email} gesendet",
+    emailQueued: "Die Quittung wird an {email} gesendet",
+    emailFailed: "Die Quittung konnte nicht an {email} gesendet werden",
+    emailSend: "Quittung per E-Mail senden",
+    emailResend: "Erneut senden",
+    emailRequested: "Erledigt — die Quittung ist unterwegs.",
+    emailLimit: "Diese Quittung wurde bereits mehrmals gesendet.",
   },
   rate: {
     title: "Fahrt bewerten",
@@ -67,6 +74,13 @@ const rides: Catalog<typeof en> = {
     reminderTitle: "Ihre vorbestellte Fahrt steht bald an",
     reminderBody: "Abholung um {time}",
     menu: "Meine Vorbestellungen",
+  },
+  email: {
+    subject: "IL-Y-Quittung · Fahrt #{ref}",
+    heading: "Danke, dass Sie mit IL-Y gefahren sind",
+    intro: "Hier ist die Quittung für Ihre Fahrt am {date}.",
+    open: "In IL-Y öffnen",
+    footer: "Sie erhalten diese E-Mail, weil Sie eine Fahrt bei IL-Y gebucht haben. Die Zahlung geht direkt an den Fahrer; diese Quittung bestätigt die Fahrt und ist keine Steuerrechnung.",
   },
 };
 export default rides;

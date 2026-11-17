@@ -358,6 +358,8 @@ model Passenger {
   // accounts have none). No KYC for passengers.
   email           String?   @unique
   passwordHash    String?
+  // Last UI language seen when booking (2026-11-17) — used for e-mailed receipts.
+  locale          String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -570,6 +572,32 @@ model Fare {
   paymentMethod    String   @default("CASH_TO_DRIVER")
   paymentStatus    String   @default("PENDING") // PENDING | COLLECTED (never auto-COLLECTED on COMPLETED)
   createdAt        DateTime @default(now())
+}
+
+// E-mailed trip receipt (2026-11-17). One row per completed booking, written in the completion
+// transaction (outbox); the worker sends it through the e-mail provider. A passenger "send again"
+// request puts the same row back to PENDING (resendCount is capped).
+model ReceiptEmail {
+  id                String    @id @default(uuid())
+  bookingId         String    @unique
+  passengerId       String
+  toEmail           String
+  locale            String    @default("en")
+  // PENDING | PROCESSING | RETRY | SENT | FAILED | SKIPPED
+  status            String    @default("PENDING")
+  attempts          Int       @default(0)
+  resendCount       Int       @default(0)
+  nextAttemptAt     DateTime  @default(now())
+  leaseToken        String?
+  leaseUntil        DateTime?
+  lastError         String?
+  providerMessageId String?
+  sentAt            DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @default(now()) @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([passengerId])
 }
 
 // Durable per-booking dispatch attempt (Task 012 §4). The background worker leases a

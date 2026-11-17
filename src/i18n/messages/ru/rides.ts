@@ -30,6 +30,13 @@ const rides: Catalog<typeof en> = {
     paid: 'Оплачено',
     paymentPending: 'Ожидает оплаты',
     yourRating: 'Ваша оценка:',
+    emailSentTo: "Чек отправлен на {email}",
+    emailQueued: "Чек будет отправлен на {email}",
+    emailFailed: "Не удалось отправить чек на {email}",
+    emailSend: "Отправить чек на почту",
+    emailResend: "Отправить ещё раз",
+    emailRequested: "Готово — чек отправляется.",
+    emailLimit: "Этот чек уже отправлялся несколько раз.",
   },
   rate: {
     title: 'Оцените поездку',
@@ -67,6 +74,13 @@ const rides: Catalog<typeof en> = {
     reminderTitle: 'Скоро ваш предзаказ',
     reminderBody: 'Подача в {time}',
     menu: 'Мои предзаказы',
+  },
+  email: {
+    subject: "Чек IL-Y · поездка #{ref}",
+    heading: "Спасибо, что ездите с IL-Y",
+    intro: "Чек за вашу поездку {date}.",
+    open: "Открыть в IL-Y",
+    footer: "Вы получили это письмо, потому что заказали поездку в IL-Y. Оплата идёт напрямую водителю; этот чек подтверждает поездку и не является налоговым счётом.",
   },
 };
 export default rides;

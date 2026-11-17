@@ -19,10 +19,12 @@ interface Receipt {
   driver: { name: string; vehicle: string; plate: string } | null;
   fare: {
     priceType: string; currency: string; isUpfront: boolean;
-    estimateCents: number | null; waitingCents: number; finalCents: number | null;
+    estimateCents: number | null; waitingCents: number; finalCents: number | null; totalCents: number | null;
     lines: Line[]; note: string; paymentMethod: string; paymentStatus: string;
   };
   rating: { stars: number } | null;
+  email: { status: string; to: string; sentAt: string | null; canResend: boolean } | null;
+  canEmail: boolean;
 }
 
 
@@ -32,6 +34,19 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const eur = (cents: number, ccy: string) => fmt.money(cents, ccy);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mailBusy, setMailBusy] = useState(false);
+  const [mailNote, setMailNote] = useState<string | null>(null);
+
+  async function sendMail() {
+    setMailBusy(true); setMailNote(null);
+    try {
+      await api(`/passenger/rides/${id}/receipt/email`, { method: 'POST' });
+      setMailNote(t('rides.receipt.emailRequested'));
+      setReceipt(await api<Receipt>(`/passenger/rides/${id}/receipt`));
+    } catch (e) {
+      setMailNote(e instanceof ApiRequestError && e.body.code === 'RESEND_LIMIT' ? t('rides.receipt.emailLimit') : e instanceof ApiRequestError ? e.body.message : t('rides.receipt.loadFailed'));
+    } finally { setMailBusy(false); }
+  }
 
   useEffect(() => {
     (async () => {
@@ -98,7 +113,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
               <div className="mt-2 flex items-baseline justify-between border-t border-edge pt-2">
                 <span className="font-semibold">{f.isUpfront ? t('rides.receipt.total') : t('rides.receipt.estimatedTotal')}</span>
                 <span className="text-lg font-bold tabular-nums">
-                  {f.isUpfront && f.finalCents != null ? eur(f.finalCents, f.currency) : f.estimateCents != null ? eur(f.estimateCents, f.currency) : '—'}
+                  {f.totalCents != null ? eur(f.totalCents, f.currency) : '—'}
                 </span>
               </div>
               <p className="mt-2 text-xs text-muted">{f.isUpfront ? t('rides.receipt.noteUpfront') : t('rides.receipt.noteMeter')}</p>
@@ -110,6 +125,24 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
               </div>
             </div>
           )}
+
+          {/* E-mailed copy (2026-11-17). */}
+          {receipt.email && (
+            <div className="mt-4 border-t border-edge pt-3 text-sm" data-testid="receipt-email">
+              <div className={receipt.email.status === 'FAILED' ? 'text-danger' : 'text-muted'}>
+                {receipt.email.status === 'SENT' ? `✉️ ${t('rides.receipt.emailSentTo', { email: receipt.email.to })}` : receipt.email.status === 'FAILED' || receipt.email.status === 'SKIPPED' ? t('rides.receipt.emailFailed', { email: receipt.email.to }) : `✉️ ${t('rides.receipt.emailQueued', { email: receipt.email.to })}`}
+              </div>
+              {['SENT', 'FAILED', 'SKIPPED'].includes(receipt.email.status) && receipt.email.canResend && (
+                <button type="button" onClick={sendMail} disabled={mailBusy} className="btn-ghost mt-2 w-full" data-testid="receipt-email-send">{mailBusy ? t('common.loading') : t('rides.receipt.emailResend')}</button>
+              )}
+            </div>
+          )}
+          {!receipt.email && receipt.canEmail && (
+            <div className="mt-4 border-t border-edge pt-3">
+              <button type="button" onClick={sendMail} disabled={mailBusy} className="btn-ghost w-full" data-testid="receipt-email-send">✉️ {mailBusy ? t('common.loading') : t('rides.receipt.emailSend')}</button>
+            </div>
+          )}
+          {mailNote && <p className="mt-2 text-xs text-muted">{mailNote}</p>}
 
           {receipt.rating && (
             <div className="mt-4 border-t border-edge pt-3 text-sm">

@@ -30,6 +30,13 @@ const rides: Catalog<typeof en> = {
     paid: "مدفوع",
     paymentPending: "الدفع معلّق",
     yourRating: "تقييمك:",
+    emailSentTo: "تم إرسال الإيصال إلى {email}",
+    emailQueued: "سيُرسل الإيصال إلى {email}",
+    emailFailed: "تعذّر إرسال الإيصال إلى {email}",
+    emailSend: "إرسال الإيصال بالبريد الإلكتروني",
+    emailResend: "إرسال مرة أخرى",
+    emailRequested: "تم — الإيصال في الطريق.",
+    emailLimit: "تم إرسال هذا الإيصال عدة مرات بالفعل.",
   },
   rate: {
     title: "قيّم رحلتك",
@@ -67,6 +74,13 @@ const rides: Catalog<typeof en> = {
     reminderTitle: "رحلتك المحجوزة مسبقًا قريبة",
     reminderBody: "الانطلاق في {time}",
     menu: "حجوزاتي المسبقة",
+  },
+  email: {
+    subject: "إيصال IL-Y · الرحلة #{ref}",
+    heading: "شكرًا لركوبك مع IL-Y",
+    intro: "إليك إيصال رحلتك بتاريخ {date}.",
+    open: "فتح في IL-Y",
+    footer: "تلقيت هذه الرسالة لأنك حجزت رحلة مع IL-Y. يُدفع المبلغ مباشرة للسائق؛ هذا الإيصال يؤكد الرحلة وليس فاتورة ضريبية.",
   },
 };
 export default rides;

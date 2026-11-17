@@ -1,4 +1,5 @@
 import { meterWaitingCents } from '@/lib/tariff';
+import { enqueueReceiptEmail } from '@/server/email/receipts';
 import { randomInt } from 'crypto';
 import { Prisma, Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
@@ -110,6 +111,8 @@ async function finalizeCompletion(
   await tx.driver.update({ where: { id: a.driverId }, data: { available: true } });
   const u = await tx.booking.update({ where: { id: b.id }, data: { status: 'COMPLETED', revision: { increment: 1 } } });
   await tx.bookingEvent.create({ data: { bookingId: b.id, type: 'COMPLETED', actorType: actor.type, actorId: actor.id, beforeStatus: 'IN_PROGRESS', afterStatus: 'COMPLETED' } });
+  // E-mailed receipt (2026-11-17): queued atomically with the completion; the worker sends it.
+  await enqueueReceiptEmail(tx, b.id);
   // Completed-booking projection + a separate fare fact (money is analyzed from the fare
   // event; finalCents may be null under regulated metering — never coerced to 0).
   await recordEvent(tx, {

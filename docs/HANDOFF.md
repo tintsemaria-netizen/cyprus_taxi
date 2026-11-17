@@ -1,5 +1,22 @@
 # Session handoff
 
+## 2026-11-17 — E-mailed trip receipts
+
+- New table `ReceiptEmail` (migration 20261117020000_receipt_email) + `Passenger.locale` (set from the request language on each booking).
+- Completion (`finalizeCompletion`) queues one receipt e-mail in the same transaction when the account has an e-mail.
+  Worker section 2b `drainReceiptEmails` claims rows (SKIP LOCKED + lease), builds the receipt from the immutable Fare
+  (`buildReceipt`), renders `src/server/email/receipt-template.ts` in the passenger's language (RTL for he/ar) and sends via
+  Resend HTTP API (`src/server/email/provider.ts`, Idempotency-Key `receipt-<bookingId>-<resendCount>`). 4xx → FAILED,
+  429/5xx/network → RETRY with backoff (6 attempts). Unsent after 7 days → SKIPPED.
+- **Not active on prod until** `RESEND_API_KEY` + `EMAIL_FROM` (optional `EMAIL_REPLY_TO`) are in `deploy/.env.production`
+  (wired in docker-compose) and the sending domain is verified in Resend. Until then rows wait as PENDING.
+- Receipt page (`/rides/[id]`): e-mail status line (masked address), «Отправить ещё раз» (max 3), «Отправить чек на почту» for
+  older rides. API `POST /api/v1/passenger/rides/[id]/receipt/email`.
+- Fix: receipt total = estimate + waiting (same as the driver's «Итого»), new `fare.totalCents`.
+- Pure server translator `src/i18n/translate.ts`; new keys rides.receipt.email* and rides.email.* in all 8 languages.
+- Tests: tests/receipt-email.db.test.ts (4). Full vitest 252 passed / 1 skipped. Fresh-DB `migrate deploy` + diff clean.
+- Local note: `prisma migrate diff --shadow-database-url $DATABASE_URL` wipes the test DB — reseed with `npm run seed`.
+
 ## 2026-11-17 — Full RTL mirroring for Hebrew/Arabic; driver language choice RU/EL/EN
 
 - `<html dir="rtl">` for he/ar (RTL_LOCALES); the old text-only `unicode-bidi` rule is replaced (kept only for inputs).

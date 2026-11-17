@@ -30,6 +30,13 @@ const rides: Catalog<typeof en> = {
     paid: "Zapłacono",
     paymentPending: "Płatność oczekuje",
     yourRating: "Twoja ocena:",
+    emailSentTo: "Paragon wysłano na {email}",
+    emailQueued: "Paragon zostanie wysłany na {email}",
+    emailFailed: "Nie udało się wysłać paragonu na {email}",
+    emailSend: "Wyślij paragon e-mailem",
+    emailResend: "Wyślij ponownie",
+    emailRequested: "Gotowe — paragon jest w drodze.",
+    emailLimit: "Ten paragon wysłano już kilka razy.",
   },
   rate: {
     title: "Oceń przejazd",
@@ -67,6 +74,13 @@ const rides: Catalog<typeof en> = {
     reminderTitle: "Twój zarezerwowany przejazd już wkrótce",
     reminderBody: "Odbiór o {time}",
     menu: "Moje rezerwacje",
+  },
+  email: {
+    subject: "Paragon IL-Y · przejazd #{ref}",
+    heading: "Dziękujemy za przejazd z IL-Y",
+    intro: "Oto paragon za przejazd z dnia {date}.",
+    open: "Otwórz w IL-Y",
+    footer: "Otrzymujesz tę wiadomość, bo zamówiłeś przejazd w IL-Y. Płatność trafia bezpośrednio do kierowcy; ten paragon potwierdza przejazd i nie jest fakturą VAT.",
   },
 };
 export default rides;

@@ -28,12 +28,18 @@ export interface Receipt {
     estimateCents: number | null;
     waitingCents: number;
     finalCents: number | null;
+    /** What the passenger pays: final (upfront) or estimate + waiting — the driver's «Итого». */
+    totalCents: number | null;
     lines: ReceiptLine[];
     note: string;
     paymentMethod: string;
     paymentStatus: string;
   };
   rating: { stars: number } | null;
+  /** E-mailed copy (2026-11-17). null = never queued (no e-mail on the account). */
+  email: { status: string; to: string; sentAt: string | null; canResend: boolean } | null;
+  /** The account has an e-mail address (so «send to e-mail» can be offered). */
+  canEmail: boolean;
 }
 
 function parseLines(s: string | null | undefined): ReceiptLine[] {
@@ -56,8 +62,22 @@ export type ReceiptResult =
   | { ok: false; status: number; code: string; message: string };
 
 export async function passengerReceipt(bookingId: string, passengerId: string): Promise<ReceiptResult> {
+  return buildReceipt(bookingId, passengerId);
+}
+
+/** Mask an e-mail for display: m•••@gmail.com */
+export function maskEmail(e: string): string {
+  const [u, d] = e.split('@');
+  if (!d) return e;
+  return `${u.slice(0, 1)}•••@${d}`;
+}
+
+export const RECEIPT_RESEND_MAX = 3;
+
+// Shared by the passenger API and the receipt e-mail. passengerId (when given) scopes the lookup.
+export async function buildReceipt(bookingId: string, passengerId?: string): Promise<ReceiptResult> {
   const b = await prisma.booking.findFirst({
-    where: { id: bookingId, passengerId },
+    where: passengerId ? { id: bookingId, passengerId } : { id: bookingId },
     select: {
       reference: true,
       status: true,
@@ -67,6 +87,7 @@ export async function passengerReceipt(bookingId: string, passengerId: string): 
       vClass: true,
       passengerCount: true,
       fareBreakdown: true,
+      passengerId: true,
       fare: {
         select: {
           priceType: true,
@@ -89,7 +110,7 @@ export async function passengerReceipt(bookingId: string, passengerId: string): 
 
   // Completion time = the COMPLETED booking event; and the driver/vehicle snapshot from the
   // assignment that actually completed the trip.
-  const [completedEvent, completing] = await Promise.all([
+  const [completedEvent, completing, pax, mail] = await Promise.all([
     prisma.bookingEvent.findFirst({
       where: { bookingId, type: 'COMPLETED' },
       orderBy: { createdAt: 'desc' },
@@ -100,6 +121,8 @@ export async function passengerReceipt(bookingId: string, passengerId: string): 
       orderBy: { endedAt: 'desc' },
       select: { driverPublicName: true, vehicleMake: true, vehicleModel: true, vehicleColor: true, vehiclePlate: true },
     }),
+    b.passengerId ? prisma.passenger.findUnique({ where: { id: b.passengerId }, select: { email: true } }) : Promise.resolve(null),
+    prisma.receiptEmail.findUnique({ where: { bookingId }, select: { status: true, toEmail: true, sentAt: true, resendCount: true } }),
   ]);
 
   const isUpfront = b.fare.priceType === 'UPFRONT_DYNAMIC';
@@ -131,12 +154,15 @@ export async function passengerReceipt(bookingId: string, passengerId: string): 
         estimateCents: b.fare.estimateCents,
         waitingCents: b.fare.waitingCents,
         finalCents: b.fare.finalCents,
+        totalCents: isUpfront ? b.fare.finalCents : b.fare.estimateCents != null ? b.fare.estimateCents + b.fare.waitingCents : null,
         lines: parseLines(b.fareBreakdown),
         note,
         paymentMethod: b.fare.paymentMethod,
         paymentStatus: b.fare.paymentStatus,
       },
       rating: b.rating ? { stars: b.rating.stars } : null,
+      canEmail: !!pax?.email,
+      email: mail ? { status: mail.status, to: maskEmail(mail.toEmail), sentAt: mail.sentAt?.toISOString() ?? null, canResend: mail.resendCount < RECEIPT_RESEND_MAX && mail.status !== 'PROCESSING' } : null,
     },
   };
 }

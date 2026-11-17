@@ -30,6 +30,13 @@ const rides: Catalog<typeof en> = {
     paid: "Payé",
     paymentPending: "Paiement en attente",
     yourRating: "Votre note :",
+    emailSentTo: "Reçu envoyé à {email}",
+    emailQueued: "Le reçu sera envoyé à {email}",
+    emailFailed: "Impossible d’envoyer le reçu à {email}",
+    emailSend: "Envoyer le reçu par e-mail",
+    emailResend: "Renvoyer",
+    emailRequested: "C’est fait — le reçu est en route.",
+    emailLimit: "Ce reçu a déjà été envoyé plusieurs fois.",
   },
   rate: {
     title: "Notez votre course",
@@ -67,6 +74,13 @@ const rides: Catalog<typeof en> = {
     reminderTitle: "Votre course réservée approche",
     reminderBody: "Prise en charge à {time}",
     menu: "Mes réservations",
+  },
+  email: {
+    subject: "Reçu IL-Y · course #{ref}",
+    heading: "Merci d’avoir voyagé avec IL-Y",
+    intro: "Voici le reçu de votre course du {date}.",
+    open: "Ouvrir dans IL-Y",
+    footer: "Vous recevez cet e-mail car vous avez réservé une course avec IL-Y. Le paiement va directement au chauffeur ; ce reçu confirme la course et n’est pas une facture fiscale.",
   },
 };
 export default rides;

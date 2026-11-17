@@ -30,6 +30,13 @@ const rides: Catalog<typeof en> = {
     paid: 'Πληρώθηκε',
     paymentPending: 'Εκκρεμεί πληρωμή',
     yourRating: 'Η αξιολόγησή σας:',
+    emailSentTo: "Η απόδειξη στάλθηκε στο {email}",
+    emailQueued: "Η απόδειξη θα σταλεί στο {email}",
+    emailFailed: "Δεν ήταν δυνατή η αποστολή της απόδειξης στο {email}",
+    emailSend: "Αποστολή απόδειξης με email",
+    emailResend: "Αποστολή ξανά",
+    emailRequested: "Έγινε — η απόδειξη στέλνεται.",
+    emailLimit: "Αυτή η απόδειξη έχει ήδη σταλεί αρκετές φορές.",
   },
   rate: {
     title: 'Αξιολογήστε τη διαδρομή',
@@ -67,6 +74,13 @@ const rides: Catalog<typeof en> = {
     reminderTitle: 'Η προκράτησή σας σύντομα',
     reminderBody: 'Παραλαβή στις {time}',
     menu: 'Οι προκρατήσεις μου',
+  },
+  email: {
+    subject: "Απόδειξη IL-Y · διαδρομή #{ref}",
+    heading: "Ευχαριστούμε που ταξιδέψατε με την IL-Y",
+    intro: "Η απόδειξη για τη διαδρομή σας στις {date}.",
+    open: "Άνοιγμα στην IL-Y",
+    footer: "Λαμβάνετε αυτό το email επειδή κλείσατε διαδρομή με την IL-Y. Η πληρωμή γίνεται απευθείας στον οδηγό· η απόδειξη επιβεβαιώνει τη διαδρομή και δεν αποτελεί φορολογικό παραστατικό.",
   },
 };
 export default rides;

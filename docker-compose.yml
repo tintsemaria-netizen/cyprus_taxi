@@ -19,6 +19,10 @@ x-app-env: &app-env
   APP_RELEASE: ${APP_RELEASE:-unknown}
   # Server-only Google key for Geocoding + Routes (never exposed to the browser).
   GOOGLE_MAPS_SERVER_API_KEY: ${GOOGLE_MAPS_SERVER_API_KEY:-}
+  # E-mailed trip receipts (Resend). Without the key receipts stay in the app only.
+  RESEND_API_KEY: ${RESEND_API_KEY:-}
+  EMAIL_FROM: ${EMAIL_FROM:-}
+  EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
   # Web Push (VAPID). Public key is safe for the browser; private key is server-only.
   VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
   VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}

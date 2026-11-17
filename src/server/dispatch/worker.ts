@@ -68,6 +68,12 @@ export async function runOnce(): Promise<void> {
       await heartbeat('notifications', state.workerId, { claimed: r.claimed });
     } catch (e) { console.error('[outbox] drain error', e); }
 
+    // --- Section 2b: RECEIPT E-MAILS (no-op until an e-mail provider is configured) ---
+    try {
+      const { drainReceiptEmails } = await import('@/server/email/receipts');
+      await drainReceiptEmails(now);
+    } catch (e) { console.error('[receipt-email] drain error', e); }
+
     // --- Section 3: ANALYTICS EXPORT (no-op unless ClickHouse configured; never blocks ops) ---
     try {
       const { drainAnalytics } = await import('@/server/analytics/exporter');

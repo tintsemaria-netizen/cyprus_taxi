@@ -27,6 +27,13 @@ const rides = {
     paid: 'Paid',
     paymentPending: 'Payment pending',
     yourRating: 'Your rating:',
+    emailSentTo: "Receipt sent to {email}",
+    emailQueued: "The receipt will be e-mailed to {email}",
+    emailFailed: "Could not e-mail the receipt to {email}",
+    emailSend: "Send receipt to e-mail",
+    emailResend: "Send again",
+    emailRequested: "Done — the receipt is on its way.",
+    emailLimit: "This receipt was already sent several times.",
   },
   rate: {
     title: 'Rate your trip',
@@ -64,6 +71,13 @@ const rides = {
     reminderTitle: 'Your pre-booked ride soon',
     reminderBody: 'Pickup at {time}',
     menu: 'My pre-bookings',
+  },
+  email: {
+    subject: "IL-Y receipt · trip #{ref}",
+    heading: "Thank you for riding with IL-Y",
+    intro: "Here is the receipt for your trip on {date}.",
+    open: "Open in IL-Y",
+    footer: "You get this e-mail because you booked a ride with IL-Y. Payment goes directly to the driver; this receipt confirms the trip and is not a tax invoice.",
   },
 };
 export default rides;

@@ -2,6 +2,8 @@ import { apiOk, apiError, Errors, clientIp, requestBaseUrl } from '@/lib/http';
 import { createBookingSchema, zodFieldErrors } from '@/lib/validation';
 import { createBooking } from '@/server/bookings';
 import { getPassenger } from '@/server/passenger';
+import { getRequestLocale } from '@/i18n/server';
+import { prisma } from '@/lib/db';
 import { rateLimit } from '@/lib/rate-limit';
 import { config } from '@/lib/config';
 
@@ -37,5 +39,10 @@ export async function POST(req: Request) {
   const phone = (passenger.phone ?? parsed.data.phone) as (typeof parsed.data)['phone'];
   const result = await createBooking({ ...parsed.data, phone }, idempotencyKey, requestBaseUrl(req), passenger.id);
   if (!result.ok) return apiError(result.status, result.code, result.message, result.fieldErrors, result.extra);
+  // Remember the passenger's UI language for the e-mailed receipt (best effort).
+  try {
+    const locale = await getRequestLocale();
+    if (passenger.locale !== locale) await prisma.passenger.update({ where: { id: passenger.id }, data: { locale } });
+  } catch { /* never fail a booking over this */ }
   return apiOk(result.body, 201);
 }
