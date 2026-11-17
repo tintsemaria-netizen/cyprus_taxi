@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-17 — «Запланировать» is a switch
+
+- Start-row schedule chip = role="switch" with a small track/knob: tap on → schedule panel; tap again → back to «now» (same reset
+  as «Ехать сейчас»). Clock icon dropped, 12 px text, start placeholder 15 px so «Пункт назначения» fits on 390 px.
+- datetime-local field: block/w-full/min-w-0/appearance-none (iOS Safari overflowed the panel on the owner's phone).
+
 ## 2026-11-17 — Compact start sheet (deployed)
 
 - Start screen (no address editor open): smaller eyebrow/title, «Пункт назначения» row 44 px, quick-pick pills 32 px / 13 px,

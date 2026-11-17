@@ -972,7 +972,7 @@ export default function BookingApp() {
                                     aria-invalid={!!rowErr(slot)}
                                     onFocus={() => openEditor(slot)}
                                     onClick={() => openEditor(slot)}
-                                    className="h-full min-w-0 flex-1 cursor-pointer truncate bg-transparent text-[16px] text-ink placeholder:text-muted"
+                                    className={`h-full min-w-0 flex-1 cursor-pointer truncate bg-transparent ${addrOpen ? 'text-[16px]' : 'text-[15px]'} text-ink placeholder:text-muted`}
                                     style={{ outline: 'none', boxShadow: 'none', border: 0 }}
                                   />
                                   {/* No «pick on the map» button here (2026-11-17): it lives in the route editor
@@ -982,12 +982,18 @@ export default function BookingApp() {
                                   {i === 0 && !addrOpen && (
                                     <>
                                       <span aria-hidden className="h-7 w-px shrink-0 bg-white/15" />
-                                      <button type="button" data-testid="schedule-chip"
-                                        aria-label={t('booking.form.schedule')} title={t('booking.form.schedule')} aria-pressed={when === 'SCHEDULE'}
-                                        onClick={() => { setWhen('SCHEDULE'); setCollapsed(false); }}
-                                        className={`flex h-8 shrink-0 items-center gap-1 rounded-full border px-2.5 text-[13px] font-medium ${when === 'SCHEDULE' ? 'border-accent bg-accent text-[#0d1608]' : 'border-edge-strong text-ink hover:border-accent/60'}`}>
-                                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                                      <button type="button" data-testid="schedule-chip" role="switch" aria-checked={when === 'SCHEDULE'}
+                                        aria-label={t('booking.form.schedule')} title={t('booking.form.schedule')}
+                                        onClick={() => {
+                                          // A switch (2026-11-17): tap again to go back to «now».
+                                          if (when === 'SCHEDULE') { setWhen('NOW'); setScheduledAt(''); setScheduleOffsetMin(undefined); setAmbiguous(null); }
+                                          else { setWhen('SCHEDULE'); setCollapsed(false); }
+                                        }}
+                                        className={`flex h-8 shrink-0 items-center gap-1 rounded-full border ps-2 pe-1 text-[12px] font-medium ${when === 'SCHEDULE' ? 'border-accent/70 text-accent' : 'border-edge-strong text-ink hover:border-accent/60'}`}>
                                         {when === 'SCHEDULE' && scheduledAt ? scheduledAt.slice(11, 16) : t('booking.form.schedule')}
+                                        <span aria-hidden className={`relative ms-0.5 h-[18px] w-[30px] shrink-0 rounded-full transition-colors ${when === 'SCHEDULE' ? 'bg-accent' : 'bg-white/20'}`}>
+                                          <span className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow transition-all ${when === 'SCHEDULE' ? 'start-[14px] !bg-[#0d1608]' : 'start-[2px]'}`} />
+                                        </span>
                                       </button>
                                     </>
                                   )}
@@ -1072,7 +1078,7 @@ export default function BookingApp() {
                             <button type="button" className="text-sm text-muted hover:text-ink" data-testid="schedule-cancel"
                               onClick={() => { setWhen('NOW'); setScheduledAt(''); setScheduleOffsetMin(undefined); setAmbiguous(null); }}>{t('booking.form.rideNow')}</button>
                           </div>
-                          <input type="datetime-local" className={`field ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
+                          <input type="datetime-local" className={`field block w-full min-w-0 max-w-full appearance-none ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
                           <p className="mt-1 text-xs text-muted">{withSlot(t('booking.form.timezoneNote'), 'tz', <strong>{cfg?.timezone ?? 'Europe/Nicosia'}</strong>)}</p>
                           {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
                           {/* Pre-booking note: flight number, meeting point and bags are written here for the driver. */}
