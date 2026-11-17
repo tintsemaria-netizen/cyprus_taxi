@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-17 — PARKED: map labels (branch `map-labels`, pushed, not merged)
+- Contains: Google map language `en`, «street we are on» chip (driver navigation + passenger tracking), `GET /api/v1/places/street`.
+- Also pending on the owner side: Cloud Console map style keyzooms (local road labels, POI, transit off below z17).
+- User said «отложи на потом». When they return to it: show the screenshots again (chip) and repeat the Console steps; merge only on «заливай».
+
 ## 2026-11-17 — Reopen the app during a ride → back on the ride (branch `resume-active`, NOT merged)
 - New `GET /api/v1/passenger/active`: the passenger's live ride (ASSIGNED/EN_ROUTE/ARRIVED/IN_PROGRESS, or REQUESTED/SEARCHING for an immediate order).
 - BookingApp: once per app launch (sessionStorage `il-y-resume-checked`, also set by TrackApp) a signed-in passenger with a live ride is taken straight to /track (loading cover meanwhile); going home on purpose afterwards still works.
