@@ -198,6 +198,9 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         const b = new maplibre.LngLatBounds();
         markers.forEach((m) => b.extend([m.lng, m.lat]));
         if (fitRoute && route) route.forEach((p) => b.extend(p as [number, number]));
+        // An earlier easeTo({padding}) leaves that padding on the map, and fitBounds adds its own on
+        // top — together they no longer fit and MapLibre silently skips the fit (2026-11-17).
+        map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
         map.fitBounds(b, { padding: fitPadding ?? 70, maxZoom: fitRoute ? 15 : 12, duration: 400 });
       } else if (markers.length === 1 && !focus) {
         // A focus point owns the camera when given (it runs first; this async fit must not undo it).

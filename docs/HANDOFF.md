@@ -1,5 +1,15 @@
 # Session handoff
 
+## 2026-11-17 — Booking: reset × also on the folded route sheet; MapView fit fix
+**Reset ×:** the route-reset × (top-right) now also shows on the collapsed sheet that shows the route and «Заказать поездку». Before, it disappeared when the sheet folded.
+
+**MapView fix (fallback map):** an earlier `easeTo({padding})` leaves padding on the map, and `fitBounds` adds its own on top. With both, the bounds no longer fit and MapLibre silently skipped the fit («Map cannot fit…»), so the destination stayed off-screen. The fix is `setPadding(0)` before `fitBounds`. Google is unaffected.
+
+**Check:** Playwright (local):
+- the folded sheet has × (48 px) above ⇅ with no overlap, and × clears the route;
+- both markers are in view after choosing a destination (they were off-screen before the fix);
+- no errors.
+
 ## 2026-11-17 — Passenger: no person marker, no «Показать водителю, где я» (for now)
 **Change:** the passenger's maps show only the IL-Y pickup logo; there is no «you are here» person on booking or tracking. The «Показать водителю, где я» switch is removed from tracking, so the confirmation-code switch stands alone (no frame).
 - BookingApp and TrackApp no longer use `useLiveLocation` for this.

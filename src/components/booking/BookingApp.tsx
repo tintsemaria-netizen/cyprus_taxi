@@ -832,8 +832,9 @@ export default function BookingApp() {
               // its focus after a tap re-expanded the sheet right after the tap collapsed it (2026-11-15).
               onFocusCapture={(e) => { if (isMobile && collapsed && (e.target as HTMLElement).matches('input:not([readonly]), textarea, select')) setCollapsed(false); }}
             >
-              {/* Reset the route (2026-11-15): in the sheet's top-right corner, twice the old size. */}
-              {step === 'form' && !collapsed && (addrOpen || dropoff || dropoffText) && (
+              {/* Reset the route (2026-11-15): top-right corner, twice the old size. Also on the folded sheet
+                  that shows the route (2026-11-17), so it never disappears while a route is set. */}
+              {step === 'form' && (!collapsed || peekRoute) && (addrOpen || dropoff || dropoffText) && (
                 <button type="button" aria-label={t('booking.form.resetRoute')} title={t('booking.form.resetRoute')} onClick={resetRoute}
                   className="absolute right-1.5 top-1.5 z-20 flex h-12 w-12 items-center justify-center rounded-full text-[36px] leading-none text-muted hover:bg-page/60 hover:text-ink">×</button>
               )}
