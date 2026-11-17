@@ -1,6 +1,7 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { BRAND_PIN_SVG } from '@/components/carMarker';
 import { useEffect, useRef, useState } from 'react';
 import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { api } from '@/lib/api-client';
@@ -257,10 +258,8 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
             <div ref={containerRef} className="absolute inset-0 h-full w-full" aria-label={t('booking.picker.mapAria')} role="application" />
             {mapLoaded && (
               <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full">
-                <svg width="34" height="46" viewBox="0 0 34 46" aria-hidden>
-                  <path d="M17 0C7.6 0 0 7.6 0 17c0 12 17 29 17 29s17-17 17-29C34 7.6 26.4 0 17 0z" fill="#C8FF46" stroke="#0d1608" strokeWidth="2" />
-                  <circle cx="17" cy="17" r="6" fill="#0d1608" />
-                </svg>
+                {/* IL-Y brand mark as the centre pin (2026-11-17). */}
+                <span className="block h-[40px] w-[32px] [filter:drop-shadow(0_2px_3px_rgba(0,0,0,0.55))]" dangerouslySetInnerHTML={{ __html: BRAND_PIN_SVG }} />
               </div>
             )}
             {!mapLoaded && (

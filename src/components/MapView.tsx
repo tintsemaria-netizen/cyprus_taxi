@@ -78,7 +78,8 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], focus, focusZoom = 15, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], focus, focusZoom: focusZoomProp, follow, onFollowBreak, idleReturnMs, onIdleReturn }: Props) {
+  const focusZoom = focusZoomProp ?? 15;
   // Re-frame / re-centre when the visible area changes (e.g. the sheet under the map grew or shrank).
   const padKey = fitPadding ? `${fitPadding.top},${fitPadding.right},${fitPadding.bottom},${fitPadding.left}` : '';
   const containerRef = useRef<HTMLDivElement>(null);
@@ -181,6 +182,8 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         }
         const marker = new maplibre.Marker({ element: el, anchor: mk.kind === 'pickup' ? 'bottom' : 'center' }).setLngLat([mk.lng, mk.lat]).addTo(map);
         if (mk.self) marker.getElement().style.zIndex = '1000';
+        else if (mk.kind === 'pickup') marker.getElement().style.zIndex = '950'; // brand pin over the person (2026-11-17)
+        else if (mk.kind === 'person') marker.getElement().style.zIndex = '900';
         markerObjs.current.push(marker);
       }
       // Fit to markers if more than one (not while the navigation camera is following). Moving
@@ -190,6 +193,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       const key = `${fitKeyOf(markers)}#${idle.returnTick}#${fitPadding ? `${fitPadding.top},${fitPadding.bottom}` : ''}#${fitRoute && route ? route.length : ''}`;
       if (key === lastFit.current) return;
       lastFit.current = key;
+      if (focus && focusZoomProp != null) return; // a focus point with its own zoom owns the camera (2026-11-17)
       if (markers.length >= 2) {
         const b = new maplibre.LngLatBounds();
         markers.forEach((m) => b.extend([m.lng, m.lat]));

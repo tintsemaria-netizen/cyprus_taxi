@@ -211,7 +211,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     for (const mk of markers) {
       let marker = markerMap.current.get(mk.id);
       if (!marker) {
-        marker = new g.marker.AdvancedMarkerElement({ map, position: { lat: mk.lat, lng: mk.lng }, content: markerEl(mk), title: mk.label, ...(mk.self ? { zIndex: 1000 } : mk.kind === 'person' ? { zIndex: 900 } : {}) });
+        marker = new g.marker.AdvancedMarkerElement({ map, position: { lat: mk.lat, lng: mk.lng }, content: markerEl(mk), title: mk.label, ...(mk.self ? { zIndex: 1000 } : mk.kind === 'pickup' ? { zIndex: 950 } : mk.kind === 'person' ? { zIndex: 900 } : {}) /* brand pin over the person (2026-11-17) */ });
         if (mk.kind === 'vehicle' && mk.heading != null && marker.content) orientVehicle(marker.content as HTMLElement, map.getHeading?.() ?? 0, mk.heading);
         markerMap.current.set(mk.id, marker);
         posMap.current.set(mk.id, { lat: mk.lat, lng: mk.lng });
@@ -271,6 +271,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
     if (!map || !g || !ready || followRef.current || idle.active.current) return;
+    // A focus point with its own zoom owns the camera (2026-11-17): don't fit the markers around it.
+    if (focus && focusZoom != null) return;
     const pad = fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 };
     if (markers.length >= 2) {
       const b = new g.LatLngBounds();

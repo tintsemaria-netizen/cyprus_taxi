@@ -220,18 +220,16 @@ export function personMarkerEl(opts: { title?: string; size?: number; stale?: bo
  */
 export function pickupPinEl(opts: { title?: string; stale?: boolean; pulse?: boolean } = {}): HTMLElement {
   ensureNavArrowCss();
+  // The IL-Y brand mark is the pickup pin everywhere (2026-11-17): a lime map pin with the
+  // charcoal Y-road, its tip on the point (anchor bottom). Inline copy of public/brand/mark.svg.
   const el = document.createElement('div');
-  el.style.cssText = `width:26px;height:44px;opacity:${opts.stale ? 0.55 : 1};filter:drop-shadow(0 2px 3px rgba(0,0,0,0.5));pointer-events:auto`;
-  el.innerHTML = `<svg viewBox="0 0 26 44" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <ellipse cx="13" cy="42.6" rx="3.4" ry="1.3" fill="rgba(0,0,0,0.35)"/>
-    <path d="M13 20v22.4" stroke="#E8ECEA" stroke-width="2.4" stroke-linecap="round"/>
-    <path d="M13 20v22.4" stroke="#8A9490" stroke-width="0.8" stroke-linecap="round" transform="translate(0.6 0)"/>
-    <circle cx="13" cy="12" r="10.5" fill="#C8FF46" stroke="#0d1608" stroke-width="1.6"/>
-    <circle cx="9.6" cy="8.6" r="3" fill="#ffffff" opacity="0.55"/>
-  </svg>`;
-  // While a driver is being searched (2026-11-15): lime rings pulse out from the needle tip.
+  el.style.cssText = `width:32px;height:40px;opacity:${opts.stale ? 0.55 : 1};filter:drop-shadow(0 2px 3px rgba(0,0,0,0.55));pointer-events:auto`;
+  el.innerHTML = BRAND_PIN_SVG;
+  // While a driver is being searched (2026-11-15): lime rings pulse out from the pin's tip.
   if (opts.pulse) { el.style.position = 'relative'; el.insertAdjacentHTML('afterbegin', '<div class="ily-pin-pulse"></div><div class="ily-pin-pulse d2"></div>'); }
   el.classList.add('ily-pickup-pin');
   if (opts.title) el.title = opts.title;
   return el;
 }
+
+export const BRAND_PIN_SVG = '<svg viewBox="0 0 500 620" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="#C8FF46" stroke="#0d1608" stroke-width="14" d="M250 16C120 16 16 118 16 246C16 310 43 360 86 414L245 600Q250 607 255 600L414 414C457 360 484 310 484 246C484 118 380 16 250 16Z"/><path fill="#10191C" d="M82 126Q78 123 74 130L48 187Q44 196 51 202L169 300Q193 321 193 355V498L246 556Q250 561 254 556L307 498V355Q307 321 331 300L449 202Q456 196 452 187L426 130Q422 123 418 126L280 238Q258 256 258 280V345H242V280Q242 256 220 238Z"/><path fill="#C8FF46" d="M87 176L117 199L123 222L88 198Z"/><path fill="#C8FF46" d="M150 225L182 251L183 276L150 250Z"/><path fill="#C8FF46" d="M413 176L383 199L377 222L412 198Z"/><path fill="#C8FF46" d="M350 225L318 251L317 276L350 250Z"/><path fill="#C8FF46" d="M242 380H258V426H242Z"/><path fill="#C8FF46" d="M242 459H258V504H242Z"/></svg>';

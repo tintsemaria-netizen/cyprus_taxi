@@ -1,5 +1,17 @@
 # Session handoff
 
+## 2026-11-17 — IL-Y logo as the pickup pin everywhere; passenger start map one zoom level out
+**Pin:** `pickupPinEl` draws the brand mark (inline copy of public/brand/mark.svg, exported as `BRAND_PIN_SVG`) at 32×40 px, in its own 500:620 proportions. The tip is on the point and the pulse rings stay.
+- The map pickers' centre pin uses the same mark, also 32×40.
+- The pickup pin now sits above the «you are here» person (z 950 over 900) on Google and MapView.
+
+**Zoom (passenger start screen only):** BookingApp passes `focusZoom={16}` for its own-location focus while no route is chosen. Before, Google fitted pickup + person (two points close together) and capped at 17, which was too close.
+- GoogleMapView and MapView now skip the marker fit when a focus point has its own zoom.
+- MapView's `focusZoom` default (15) is now applied inside the component.
+- Other screens are unchanged.
+
+**Check:** local Playwright: the pin renders on home and on searching (with pulse); no errors. Zoom levels ≥ 16 have no local tiles, so the zoom was not visually checked.
+
 ## 2026-11-17 — Back arrow: one step back, and where it was missing
 **New component:** `src/components/BackArrow.tsx`. It goes exactly one step back: `onBack` steps inside a screen; otherwise it goes one page back in the navTrail, or to the fallback when the page was opened directly. Pages using it record themselves in the trail.
 
