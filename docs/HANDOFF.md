@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-17 — Passenger start screen 30 % further out
+
+- BookingApp start-screen `focusZoom` 16 → 15.49 (map scale × 0.7 = 16 + log2 0.7). Only the client start screen.
+- Google review prompt is ready on local branch `google-review` (commit f1e1632, NOT pushed) — waiting for the user's go.
+
 ## 2026-11-17 — E-mailed trip receipts
 
 - New table `ReceiptEmail` (migration 20261117020000_receipt_email) + `Passenger.locale` (set from the request language on each booking).
