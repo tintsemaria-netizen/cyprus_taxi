@@ -1,5 +1,21 @@
 # Session handoff
 
+## 2026-11-17 — Language follows the device; switcher only in profiles; no driver top-bar sign-out
+**Language:** the locale was already resolved from the `lang` cookie, else the browser/device Accept-Language (never from the phone number).
+
+**Language switcher removed from:** PassengerTopBar, the booking header, the login/register pages (passenger and driver), the driver registration flow and /share.
+
+**Where the language can still be changed:**
+- Passenger: the AccountMenu «Язык» row (unchanged).
+- Driver: the Profile card, new «Язык» row (removed from the title line).
+
+**StaffShell:** hides the language switcher and «Выйти» for the DRIVER role; drivers have both in Profile. Staff/admin keep them.
+
+**Check:** Playwright (local):
+- driver with an el-GR device: Greek UI, no select or sign-out in the header, «Γλώσσα» in Profile;
+- passenger with a ru-RU device: Russian, no header select, language in the account menu;
+- no errors.
+
 ## 2026-11-17 — Booking form: «Запланировать» pill instead of the Now/Schedule switch; no on-map buttons; content-high sheet
 **Schedule (approved from screenshots):**
 - The «Сейчас / Запланировать» segmented switch is removed; a ride is «now» by default.

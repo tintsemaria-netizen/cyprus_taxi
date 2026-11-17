@@ -7,7 +7,6 @@ import { Logo } from '@/components/Brand';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { MsgKey } from '@/i18n/I18nProvider';
-import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,7 +80,6 @@ export default function SharePage() {
         <Logo />
         <div className="flex items-center gap-2">
           <span className="hidden text-xs text-muted min-[400px]:inline">{t('track.share.headerTag')}</span>
-          <LanguageSwitcher compact />
         </div>
       </header>
       <div className="relative flex-1">

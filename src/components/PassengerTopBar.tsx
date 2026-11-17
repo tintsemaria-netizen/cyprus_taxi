@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Logo } from '@/components/Brand';
-import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 import { useT } from '@/i18n/I18nProvider';
 import { api } from '@/lib/api-client';
 import { AccountMenu, type PassengerInfo } from '@/components/booking/AccountMenu';
@@ -44,7 +43,6 @@ export function PassengerTopBar({ back = '/', sticky = true }: { back?: string |
         <a href="/" aria-label="IL-Y" className="shrink-0"><Logo className="h-9" /></a>
       </div>
       <div className="flex items-center gap-2">
-        <LanguageSwitcher compact />
         {passenger ? (
           <AccountMenu passenger={passenger} onLoggedOut={() => { setPassenger(null); window.location.href = '/'; }} />
         ) : passenger === null ? (

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Brand';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
-import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,7 +37,7 @@ export default function DriverLogin() {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center px-4">
       <div className="card w-full max-w-sm p-6">
-        <div className="flex items-center justify-between gap-2"><a href="/" className="inline-block"><Logo /></a><LanguageSwitcher /></div>
+        <div className="flex items-center justify-between gap-2"><a href="/" className="inline-block"><Logo /></a></div>
         <h1 className="mt-6 text-xl font-bold">{t('driver.login.title')}</h1>
         <p className="mt-1 text-sm text-muted">{t('driver.login.subtitle')}</p>
         {err && <p className="mt-4 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}

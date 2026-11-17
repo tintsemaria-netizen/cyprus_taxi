@@ -5,7 +5,6 @@ import { Logo } from '@/components/Brand';
 import { compressImageForUpload, UPLOAD_TARGET_BYTES } from '@/lib/image-compress';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
-import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +41,7 @@ export default function Register() {
   // DRAFT or CHANGES_REQUESTED → wizard
   return (
     <div className="mx-auto max-w-lg p-4 sm:p-6">
-      <div className="mb-4 flex items-center justify-between"><Logo className="h-8" /><div className="flex items-center gap-2"><LanguageSwitcher /><LogoutBtn /></div></div>
+      <div className="mb-4 flex items-center justify-between"><Logo className="h-8" /><LogoutBtn /></div>
       {app.status === 'CHANGES_REQUESTED' && app.decisionReason && (
         <p className="mb-3 rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn">{t('driverReg.changesRequested', { reason: app.decisionReason })}</p>
       )}
@@ -81,7 +80,6 @@ function StatusCard({ app, title, body, cta }: { app: AppData; title: string; bo
   return (
     <div className="flex min-h-[100dvh] items-center justify-center px-4">
       <div className="card w-full max-w-sm p-6 text-center">
-        <div className="mb-4 flex justify-end"><LanguageSwitcher /></div>
         <Logo className="mb-4 h-8 justify-center" />
         <h1 className="text-lg font-bold">{title}</h1>
         <p className="mt-2 text-sm text-muted">{body}</p>
@@ -108,7 +106,7 @@ function PhoneGate({ onDone }: { onDone: () => void }) {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center px-4">
       <div className="card w-full max-w-sm p-6">
-        <div className="flex items-center justify-between gap-2"><a href="/" className="inline-block"><Logo /></a><LanguageSwitcher /></div>
+        <div className="flex items-center justify-between gap-2"><a href="/" className="inline-block"><Logo /></a></div>
         <h1 className="mt-6 text-xl font-bold">{t('driverReg.phone.title')}</h1>
         <p className="mt-1 text-sm text-muted">{t('driverReg.phone.intro')}</p>
         {err && <p className="mt-4 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}

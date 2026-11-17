@@ -827,7 +827,7 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2"><h1 className="text-xl font-semibold">{t('driver.profile.title')}</h1><LanguageSwitcher /></div>
+      <h1 className="text-xl font-semibold">{t('driver.profile.title')}</h1>
       <div className="card p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="font-semibold">{dash?.driver.name ?? t('driver.profile.driverFallback')}</div>
@@ -837,6 +837,11 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
         </div>
         <div className="text-xs text-muted">{t('driver.profile.eligibility', { value: dash?.driver.eligibility ? tOr(`driver.profile.eligibilityValue.${dash.driver.eligibility}`, dash.driver.eligibility) : '—' })}</div>
         <div className="mt-2"><NotifyToggle pushUrl="/driver/push" /></div>
+        {/* App language (2026-11-17): set by the phone's language; changed only here. */}
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-edge pt-3">
+          <span className="text-sm">{t('common.language')}</span>
+          <LanguageSwitcher />
+        </div>
       </div>
 
       <div className="card p-4">

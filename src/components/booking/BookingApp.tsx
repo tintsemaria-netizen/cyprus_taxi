@@ -17,7 +17,6 @@ import { BackArrow } from '@/components/BackArrow';
 import { nicosiaInputValue } from '@/lib/timezone';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
-import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 import { NotifyPrompt } from '@/components/NotifyPrompt';
 
 interface PublicConfig {
@@ -817,7 +816,6 @@ export default function BookingApp() {
               </a>
             ))}
           </nav>
-          <LanguageSwitcher compact />
           {passenger ? (
             <AccountMenu passenger={passenger} onLoggedOut={() => setPassenger(null)} />
           ) : (

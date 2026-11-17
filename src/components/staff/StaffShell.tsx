@@ -87,8 +87,9 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
         </div>
         <div className="flex items-center gap-3">
           <span className="hidden text-xs text-muted 2xl:inline">{me.displayName} · {t(`staff.role.${me.role}`)}</span>
-          <LanguageSwitcher compact />
-          <button onClick={logout} className="btn-ghost !min-h-0 !py-1.5 text-sm">{t('common.signOut')}</button>
+          {/* Drivers (2026-11-17): language and sign-out live in their Profile, not in this bar. */}
+          {me.role !== 'DRIVER' && <LanguageSwitcher compact />}
+          {me.role !== 'DRIVER' && <button onClick={logout} className="btn-ghost !min-h-0 !py-1.5 text-sm">{t('common.signOut')}</button>}
         </div>
       </header>
       {/* mobile nav */}
