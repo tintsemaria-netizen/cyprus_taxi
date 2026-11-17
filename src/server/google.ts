@@ -89,6 +89,19 @@ export async function googleSearch(q: string, limit = 6): Promise<{ label: strin
   return out;
 }
 
+// One named place (popular-places list, 2026-11-18): coordinates only when Google returns that very
+// place (an establishment / landmark, not a partial match or a town centre); otherwise null.
+export async function googleFindPoi(q: string): Promise<{ lat: number; lng: number } | null> {
+  const key = config.googleServerKey();
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&components=country:CY&region=cy&key=${key}`;
+  const d = (await fetchJson(url)) as { status?: string; results?: { partial_match?: boolean; types?: string[]; geometry?: { location?: { lat: number; lng: number } } }[] };
+  if (d.status && d.status !== 'OK' && d.status !== 'ZERO_RESULTS') throw new Error(`geocode:${d.status}`);
+  const r = d.results?.[0];
+  const ok = ['establishment', 'point_of_interest', 'airport', 'hospital', 'shopping_mall', 'natural_feature', 'tourist_attraction', 'park', 'premise'];
+  if (!r || r.partial_match || !(r.types ?? []).some((t) => ok.includes(t)) || !r.geometry?.location) return null;
+  return { lat: r.geometry.location.lat, lng: r.geometry.location.lng };
+}
+
 // ---- Places API (New): autocomplete predictions + selected-place details ----
 // A billing session ties N autocomplete calls + 1 details call together. On a not-enabled
 // / permission-denied response we throw 'places-disabled' so the caller falls back to

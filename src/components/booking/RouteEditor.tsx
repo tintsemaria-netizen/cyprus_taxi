@@ -15,7 +15,7 @@ import { localMatches, nearParam } from '@/lib/nearHint';
 export type RouteSlot = 'p' | 's' | 'd';
 interface Row { slot: RouteSlot; sel: Selected | null; text: string }
 interface Place { label: string; lat: number; lng: number }
-interface Result { label: string; secondary?: string; lat?: number; lng?: number; placeId?: string }
+interface Result { label: string; secondary?: string; lat?: number; lng?: number; placeId?: string; kind?: string }
 
 interface Props {
   rows: Row[]; // in route order: p, [s], d
@@ -152,12 +152,13 @@ export function RouteEditor(p: Props) {
       ? <span className="block h-3 w-3 rounded-[3px]" style={{ background: '#FFC83D' }} />
       : <span className="block h-3.5 w-3.5 rounded-full" style={{ background: LIME }} />;
 
-  const icon = (k: 'home' | 'work' | 'school' | 'recent' | 'pin') => (
+  const icon = (k: 'home' | 'work' | 'school' | 'recent' | 'pin' | 'star') => (
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" className="text-muted" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       {k === 'recent' && (<><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>)}
       {k === 'home' && (<path d="M4 11.5 12 5l8 6.5M6.5 10v8.5h11V10" />)}
       {k === 'work' && (<><rect x="4" y="8" width="16" height="11" rx="2" /><path d="M9 8V6.5A1.5 1.5 0 0 1 10.5 5h3A1.5 1.5 0 0 1 15 6.5V8" /></>)}
       {k === 'school' && (<><path d="M3 9.5 12 5l9 4.5-9 4.5z" /><path d="M7 11.5V16c1.5 1.3 3.2 2 5 2s3.5-.7 5-2v-4.5" /></>)}
+      {k === 'star' && (<path d="M12 4.5l2.3 4.7 5.2.8-3.8 3.6.9 5.1L12 16.3l-4.6 2.4.9-5.1-3.8-3.6 5.2-.8z" />)}
       {k === 'pin' && (<><path d="M12 20s6-5.4 6-10a6 6 0 0 0-12 0c0 4.6 6 10 6 10z" /><circle cx="12" cy="10" r="2.2" /></>)}
     </svg>
   );
@@ -252,7 +253,7 @@ export function RouteEditor(p: Props) {
           return (
             <button key={`${r.label}-${i}`} type="button" role="option" aria-selected={false} onClick={() => void pick(r)}
               className="flex w-full items-center gap-3 border-b border-edge px-2 py-3 text-start hover:bg-white/5 active:bg-white/5">
-              <span className="shrink-0">{icon('icon' in r ? r.icon : 'pin')}</span>
+              <span className="shrink-0">{icon('icon' in r ? r.icon : 'kind' in r && r.kind === 'popular' ? 'star' : 'pin')}</span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[16px] font-medium text-ink">{main}</span>
                 {second && <span className="block truncate text-[14px] text-muted">{second}</span>}
