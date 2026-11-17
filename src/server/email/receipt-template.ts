@@ -1,8 +1,8 @@
-// Receipt e-mail body (2026-11-17): short — the trip (date, class, route) and the total only, in the
+// Receipt e-mail body (2026-11-17): short — date, route and the total only, in the
 // passenger's language; the full receipt is one tap away in «My rides». Plain table layout with inline styles so it renders in mail clients.
 import type { Locale } from '@/i18n/config';
 import { INTL_TAG, RTL_LOCALES } from '@/i18n/config';
-import { tr, trPlural } from '@/i18n/translate';
+import { tr } from '@/i18n/translate';
 import type { Receipt } from '@/server/receipt';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -25,7 +25,6 @@ export function receiptEmail(r: Receipt, locale: Locale, link: string): { subjec
     ...(r.stop ? [[tr(locale, 'booking.places.stop'), r.stop] as [string, string]] : []),
     [tr(locale, 'track.destination'), r.dropoff],
   ];
-  const meta = `${r.vClass} · ${trPlural(locale, 'common.passengers', r.passengerCount)}`;
 
   const td = `padding:6px 0;font-size:14px;color:#1d2427;text-align:${align};`;
   const tdEnd = `padding:6px 0;font-size:14px;color:#1d2427;text-align:${alignEnd};white-space:nowrap;`;
@@ -38,7 +37,6 @@ export function receiptEmail(r: Receipt, locale: Locale, link: string): { subjec
 <tr><td style="padding:24px;text-align:${align};">
 <div style="font-size:20px;font-weight:700;color:#10191C;">${esc(tr(locale, 'rides.email.heading'))}</div>
 <div style="margin-top:6px;font-size:14px;${muted}">${esc(tr(locale, 'rides.email.intro', { date: when }))}</div>
-<div style="margin-top:4px;font-size:13px;${muted}">${esc(tr(locale, 'track.tripRef', { ref: r.reference }))} · ${esc(meta)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:18px;border-top:1px solid #e3e7e8;">
 ${routeRows.map(([k, v]) => `<tr><td style="${td}${muted}width:34%;vertical-align:top;">${esc(k)}</td><td style="${td}">${esc(v)}</td></tr>`).join('')}
 </table>
@@ -52,7 +50,6 @@ ${routeRows.map(([k, v]) => `<tr><td style="${td}${muted}width:34%;vertical-alig
   const text = [
     tr(locale, 'rides.email.heading'),
     tr(locale, 'rides.email.intro', { date: when }),
-    `${tr(locale, 'track.tripRef', { ref: r.reference })} · ${meta}`,
     '',
     ...routeRows.map(([k, v]) => `${k}: ${v}`),
     '',
