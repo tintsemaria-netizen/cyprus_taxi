@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-17 — Compact start sheet (deployed)
+
+- Start screen (no address editor open): smaller eyebrow/title, «Пункт назначения» row 44 px, quick-pick pills 32 px / 13 px,
+  recent rows 40 px, less top padding → sheet ~70 px lower, more map. Address editor unchanged.
+
 ## 2026-11-17 — Language choice: RU / EL / EN + the phone's own language (passenger and driver)
 
 - LanguageSwitcher `only=[ru, el, en]` now also lists the current language and the device/browser language (navigator.languages,
