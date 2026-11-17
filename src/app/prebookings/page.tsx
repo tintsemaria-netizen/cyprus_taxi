@@ -66,7 +66,7 @@ export default function Page() {
           ) : (
             <div className="space-y-2">
               {items.map((b) => (
-                <button key={b.id} onClick={() => open(b.id)} className={`card block w-full p-3 text-left ${b.soon ? 'border-2 border-accent' : ''}`}>
+                <button key={b.id} onClick={() => open(b.id)} className={`card block w-full p-3 text-start ${b.soon ? 'border-2 border-accent' : ''}`}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-semibold">{fmt.dateTime(b.at)}</span>
                     {b.soon ? <span className="chip !text-accent">⏰ {t('rides.prebookings.soon')}</span> : <span className="chip">{t(`common.status.${b.status}` as 'common.status.COMPLETED')}</span>}

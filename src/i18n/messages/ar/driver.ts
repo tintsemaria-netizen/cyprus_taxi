@@ -28,7 +28,7 @@ const driver: Catalog<typeof en> = {
     newOffer: "عرض رحلة جديد",
     offerCountdown: "⏳ {secs} ث · عرض",
     activeTrip: "رحلة نشطة · {reference}",
-    returnToTrip: "العودة →",
+    returnToTrip: "العودة ←",
   },
   gps: {
     denied: "الموقع محظور لموقع il-y.taxi. أندرويد: اضغط 🔒 يسار العنوان ← الأذونات ← الموقع ← السماح؛ وإن لم ينجح — إعدادات الهاتف ← التطبيقات ← Chrome (أو Samsung Internet) ← الأذونات ← الموقع ← السماح. آيفون: الإعدادات ← Safari ← الموقع ← السماح. ثم اضغط 📍 GPS مرة أخرى.",

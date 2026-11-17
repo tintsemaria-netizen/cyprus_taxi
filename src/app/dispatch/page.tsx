@@ -74,7 +74,7 @@ function Dispatch() {
   return (
     <div className="grid h-[calc(100dvh-49px-env(safe-area-inset-top))] grid-cols-1 lg:grid-cols-[minmax(380px,460px)_1fr]">
       {/* Queue column */}
-      <div className={`flex flex-col border-r border-edge ${tab === 'map' ? 'hidden lg:flex' : 'flex'}`}>
+      <div className={`flex flex-col border-e border-edge ${tab === 'map' ? 'hidden lg:flex' : 'flex'}`}>
         <div className="border-b border-edge p-3">
           <div className="flex items-center justify-between">
             <h1 className="font-semibold">{t('staff.dispatch.title')}</h1>
@@ -110,8 +110,8 @@ function Dispatch() {
       {/* Fleet map */}
       <div className={`relative ${tab === 'list' ? 'hidden lg:block' : 'block'}`}>
         <AutoMapView markers={markers} center={{ lat: 34.92, lng: 33.2 }} zoom={9} interactive className="h-full w-full" />
-        <button className="chip absolute left-3 top-3 z-10 lg:hidden" onClick={() => setTab('list')}>{t('staff.dispatch.list')}</button>
-        <div className="absolute right-3 top-3 z-10 chip !bg-page/90">{t('staff.dispatch.onDuty', { n: fleet.length })}</div>
+        <button className="chip absolute start-3 top-3 z-10 lg:hidden" onClick={() => setTab('list')}>{t('staff.dispatch.list')}</button>
+        <div className="absolute end-3 top-3 z-10 chip !bg-page/90">{t('staff.dispatch.onDuty', { n: fleet.length })}</div>
       </div>
     </div>
   );

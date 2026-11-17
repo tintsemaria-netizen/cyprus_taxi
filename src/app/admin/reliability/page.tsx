@@ -63,10 +63,10 @@ function Reliability() {
         <div className="space-y-2">
           {rows.map((r) => (
             <div key={r.driverId} className={`card p-4 ${r.flags.length ? 'border-warn/50' : ''}`}>
-              <button className="flex w-full flex-wrap items-center justify-between gap-2 text-left" onClick={() => openDriver(r.driverId)} aria-expanded={open === r.driverId}>
+              <button className="flex w-full flex-wrap items-center justify-between gap-2 text-start" onClick={() => openDriver(r.driverId)} aria-expanded={open === r.driverId}>
                 <span className="min-w-0">
                   <span className="font-semibold">{r.name}</span>
-                  <span className="ml-2 text-xs text-muted">{r.eligibility} · {r.state.onDuty ? t('staff.rel.onDutyNow') : t('staff.rel.offDuty')} · {r.state.vehicle ?? t('staff.rel.noVehicle')} · {age(t, r.state.gpsAgeSec)} · {t('staff.rel.hOnline', { n: r.onlineHours })}</span>
+                  <span className="ms-2 text-xs text-muted">{r.eligibility} · {r.state.onDuty ? t('staff.rel.onDutyNow') : t('staff.rel.offDuty')} · {r.state.vehicle ?? t('staff.rel.noVehicle')} · {age(t, r.state.gpsAgeSec)} · {t('staff.rel.hOnline', { n: r.onlineHours })}</span>
                 </span>
                 <span className="flex flex-wrap gap-1">
                   {r.flags.length === 0 ? <span className="chip !text-accent">{t('staff.rel.noFlags')}</span> : r.flags.map((f) => <span key={f} className="chip !border-warn/50 !text-warn">{lbl(t, `staff.rel.flag.${f}`, f)}</span>)}
@@ -100,7 +100,7 @@ function Reliability() {
       )}
       <section className="card p-4 text-xs text-muted">
         <h2 className="mb-2 text-sm font-semibold text-ink">{t('staff.rel.howTitle')}</h2>
-        <ul className="list-disc space-y-1 pl-4">
+        <ul className="list-disc space-y-1 ps-4">
           {(['how1', 'how2', 'how3', 'how4', 'how5', 'how6'] as const).map((k) => <li key={k}>{t(`staff.rel.${k}`)}</li>)}
         </ul>
       </section>

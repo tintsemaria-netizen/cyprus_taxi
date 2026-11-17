@@ -67,10 +67,10 @@ export function ShareLocationToggle({ active, loc, onWantLocation }: { active: b
     // Compact, frameless (2026-11-16): label, the switch under it, a short status line under that.
     // Sits in a two-column row next to the confirmation-code switch.
     <button type="button" role="switch" onClick={toggle} aria-checked={on} data-testid="share-loc-switch"
-      className="flex w-full flex-col items-start gap-2 text-left">
+      className="flex w-full flex-col items-start gap-2 text-start">
       <span className="text-sm font-semibold">{on ? t('track.shareLoc.on') : t('track.shareLoc.off')}</span>
       <span className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${on ? 'bg-[#4C9AFF]' : 'bg-edge'}`}>
-        <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? 'left-[22px]' : 'left-0.5'}`} />
+        <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? 'start-[22px]' : 'start-0.5'}`} />
       </span>
       {on && !loc && <span className="text-xs text-muted">{t('track.shareLoc.waiting')}</span>}
     </button>

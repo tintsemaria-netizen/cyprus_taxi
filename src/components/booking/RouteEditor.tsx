@@ -155,12 +155,12 @@ export function RouteEditor(p: Props) {
   const aria = (s: RouteSlot) => s === 'p' ? t('booking.places.pickupAria') : s === 's' ? t('booking.places.stopAria') : t('booking.places.destinationAria');
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-page text-ink sm:inset-auto sm:bottom-4 sm:left-4 sm:top-4 sm:w-[380px] sm:overflow-hidden sm:rounded-[18px] sm:border sm:border-edge sm:shadow-2xl" style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    <div className="absolute inset-0 z-50 flex flex-col bg-page text-ink sm:inset-auto sm:bottom-4 sm:start-4 sm:top-4 sm:w-[380px] sm:overflow-hidden sm:rounded-[18px] sm:border sm:border-edge sm:shadow-2xl" style={{ paddingTop: 'env(safe-area-inset-top)' }}
       role="dialog" aria-modal="true" aria-label={t('booking.route.title')} data-testid="route-editor">
       {/* Top bar */}
       <div className="relative flex h-14 shrink-0 items-center justify-center px-3">
         <button type="button" onClick={p.onClose} aria-label={t('booking.route.close')}
-          className="absolute left-2 flex h-11 w-11 items-center justify-center rounded-full text-[30px] leading-none text-ink hover:bg-white/5">×</button>
+          className="absolute start-2 flex h-11 w-11 items-center justify-center rounded-full text-[30px] leading-none text-ink hover:bg-white/5">×</button>
         <h2 className="text-lg font-bold">{t('booking.route.title')}</h2>
       </div>
 
@@ -168,7 +168,7 @@ export function RouteEditor(p: Props) {
       <div className="flex shrink-0 items-stretch gap-2 px-3 pb-2">
         <div className="relative min-w-0 flex-1 rounded-[16px] border border-edge-strong bg-elevated px-3">
           {/* connector line between the dots */}
-          <span aria-hidden className="absolute left-[19px] w-[2px]" style={{ top: 26, height: (p.rows.length - 1) * 53, background: 'rgba(200,255,70,0.45)' }} />
+          <span aria-hidden className="absolute start-[19px] w-[2px]" style={{ top: 26, height: (p.rows.length - 1) * 53, background: 'rgba(200,255,70,0.45)' }} />
           {p.rows.map((r, i) => (
             <div key={r.slot} className={`relative flex items-center gap-3 ${drag?.index === i ? 'z-20 rounded-[10px] bg-panel opacity-95' : ''}`}
               style={{ borderTop: i ? '1px solid rgba(255,255,255,0.08)' : undefined, transform: drag?.index === i ? `translateY(${drag.dy}px)` : undefined }}>
@@ -240,7 +240,7 @@ export function RouteEditor(p: Props) {
           const dist = p.origin && typeof r.lat === 'number' && typeof r.lng === 'number' ? km(p.origin, { lat: r.lat, lng: r.lng }) : null;
           return (
             <button key={`${r.label}-${i}`} type="button" role="option" aria-selected={false} onClick={() => void pick(r)}
-              className="flex w-full items-center gap-3 border-b border-edge px-2 py-3 text-left hover:bg-white/5 active:bg-white/5">
+              className="flex w-full items-center gap-3 border-b border-edge px-2 py-3 text-start hover:bg-white/5 active:bg-white/5">
               <span className="shrink-0">{icon('icon' in r ? r.icon : 'pin')}</span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[16px] font-medium text-ink">{main}</span>

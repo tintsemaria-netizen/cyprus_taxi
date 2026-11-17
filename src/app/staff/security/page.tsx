@@ -64,7 +64,7 @@ function Security() {
 
         {setup && (
           <div className="mt-4 space-y-3">
-            <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
+            <ol className="list-decimal space-y-1 ps-5 text-sm text-muted">
               <li>{t('staff.sec.step1')}</li>
               <li>{t('staff.sec.step2')}</li>
               <li>{t('staff.sec.step3')}</li>

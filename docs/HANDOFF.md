@@ -1,5 +1,18 @@
 # Session handoff
 
+## 2026-11-17 — Full RTL mirroring for Hebrew/Arabic; driver language choice RU/EL/EN
+
+- `<html dir="rtl">` for he/ar (RTL_LOCALES); the old text-only `unicode-bidi` rule is replaced (kept only for inputs).
+- Codemod across src/**/*.tsx: physical Tailwind classes → logical (left/right→start/end, ml/mr→ms/me, pl/pr→ps/pe,
+  text-left/right→text-start/end, border-l/r→border-s/e). Kept physical on purpose: `left-1/2` centring with translate,
+  AccountMenu `sm:right-[var(--menu-right)]` (computed from the physical button rect). LTR rendering unchanged.
+- Map containers (GoogleMapView, MapView, both pickers) are `dir="ltr"` — geography never mirrors; the turn-arrow icon too.
+- Back arrows (BackArrow, PassengerTopBar) and the account chevron flip with `rtl:-scale-x-100`; → in he/ar catalogs is ←.
+- `LanguageSwitcher only=…`: driver profile offers RU/EL/EN only (current language is still listed if it is another one,
+  e.g. a Hebrew phone shows HE as the current value). Passenger account menu still lists all eight.
+- Checked locally (screenshots he/ar vs ru): passenger home, route editor, tracking sheet, driver home, driver navigation,
+  driver profile — mirrored correctly. vitest 248 passed / 1 skipped; build ok.
+
 ## 2026-11-17 — Two-finger 360° map rotation (passenger + driver)
 
 - `GoogleMapView`, `GoogleMapPicker`: `headingInteractionEnabled` on interactive maps (vector Map ID), `tiltInteractionEnabled: false`,

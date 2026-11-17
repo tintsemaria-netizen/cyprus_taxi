@@ -28,10 +28,10 @@ const driver: Catalog<typeof en> = {
     newOffer: "הצעת נסיעה חדשה",
     offerCountdown: "⏳ {secs} שנ׳ · צפייה",
     activeTrip: "נסיעה פעילה · {reference}",
-    returnToTrip: "חזרה →",
+    returnToTrip: "חזרה ←",
   },
   gps: {
-    denied: "המיקום חסום עבור il-y.taxi. אנדרואיד: הקישו על 🔒 משמאל לכתובת → הרשאות → מיקום → אפשר; אם זה לא עוזר — הגדרות הטלפון → אפליקציות → Chrome (או Samsung Internet) → הרשאות → מיקום → אפשר. אייפון: הגדרות → Safari → מיקום → אפשר. לאחר מכן הקישו שוב על 📍 GPS.",
+    denied: "המיקום חסום עבור il-y.taxi. אנדרואיד: הקישו על 🔒 משמאל לכתובת ← הרשאות ← מיקום ← אפשר; אם זה לא עוזר — הגדרות הטלפון ← אפליקציות ← Chrome (או Samsung Internet) ← הרשאות ← מיקום ← אפשר. אייפון: הגדרות ← Safari ← מיקום ← אפשר. לאחר מכן הקישו שוב על 📍 GPS.",
     unavailable: "המיקום כבוי בטלפון. משכו את הלוח המהיר, הפעילו מיקום והקישו שוב על 📍 GPS.",
     acquiring: "מאתר GPS… השאירו את המיקום פועל; בחוץ ובתנועה הקליטה טובה יותר.",
     unsupported: "המכשיר/הדפדפן אינו תומך באיתור מיקום.",
@@ -247,7 +247,7 @@ const driver: Catalog<typeof en> = {
     verifying: "מאמת…",
     signIn: "כניסה",
     differentNumber: "מספר אחר",
-    register: "נהג חדש? הרשמה →",
+    register: "נהג חדש? הרשמה ←",
     staffLogin: "כניסת צוות / מנהל",
   },
   scheduled: {

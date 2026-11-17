@@ -60,7 +60,7 @@ function Passengers() {
         {data?.passengers.length === 0 && <p className="p-4 text-sm text-muted">{t('staff.pax.empty')}</p>}
         {data?.passengers.map((p) => (
           <div key={p.id}>
-            <button className="flex w-full flex-wrap items-center justify-between gap-2 p-3 text-left hover:bg-elevated" onClick={() => toggle(p.id)} aria-expanded={open === p.id}>
+            <button className="flex w-full flex-wrap items-center justify-between gap-2 p-3 text-start hover:bg-elevated" onClick={() => toggle(p.id)} aria-expanded={open === p.id}>
               <span className="min-w-0">
                 <span className="block font-medium">{p.name || t('staff.pax.noName')}</span>
                 <span className="block text-xs text-muted">{[p.phone, p.email].filter(Boolean).join(' · ') || '—'}</span>

@@ -7,7 +7,7 @@ const rides: Catalog<typeof en> = {
   signIn: "تسجيل الدخول",
   loadError: "تعذّر تحميل رحلاتك. تحقق من الاتصال.",
   empty: "لا توجد رحلات بعد.",
-  bookFirst: "احجز رحلتك الأولى →",
+  bookFirst: "احجز رحلتك الأولى ←",
   trackLive: "تتبع مباشر ›",
   rateTrip: "قيّم الرحلة ›",
   receiptLink: "الإيصال ›",

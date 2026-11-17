@@ -70,7 +70,7 @@ export default function Page() {
                 <div className="truncate text-sm font-medium">{r.pickup} → {r.dropoff}</div>
                 <div className="text-xs text-muted">{fmt.dateTime(r.at)} · {r.fareCents != null ? `≈ ${fmt.money(r.fareCents)}` : '—'}</div>
               </div>
-              <div className="shrink-0 text-right">
+              <div className="shrink-0 text-end">
                 <div className="chip">{t(`common.status.${r.status}` as 'common.status.COMPLETED')}</div>
                 {r.active && <button className="mt-1 block text-xs text-accent hover:underline" onClick={() => openTracking(r.id)}>{t('rides.trackLive')}</button>}
                 {!r.active && r.status === 'COMPLETED' && (

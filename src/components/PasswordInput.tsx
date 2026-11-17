@@ -13,13 +13,13 @@ export function PasswordInput({ className = '', ...props }: Omit<InputHTMLAttrib
   const input = cls.filter((c) => !/^m[tby]?-/.test(c)).join(' ');
   return (
     <div className={`relative ${wrap}`}>
-      <input {...props} type={show ? 'text' : 'password'} className={`${input} pr-12`} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+      <input {...props} type={show ? 'text' : 'password'} className={`${input} pe-12`} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
       <button
         type="button"
         onClick={() => setShow((s) => !s)}
         aria-label={show ? t('common.hidePassword') : t('common.showPassword')}
         aria-pressed={show}
-        className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-muted hover:text-ink"
+        className="absolute inset-y-0 end-0 flex w-12 items-center justify-center text-muted hover:text-ink"
       >
         {show ? (
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>

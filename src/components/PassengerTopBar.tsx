@@ -37,7 +37,7 @@ export function PassengerTopBar({ back = '/', sticky = true }: { back?: string |
             aria-label={t('common.back')}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-2xl text-ink hover:bg-elevated"
           >
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="rtl:-scale-x-100"><path d="M15 5l-7 7 7 7" /></svg>
           </a>
         )}
         <a href="/" aria-label="IL-Y" className="shrink-0"><Logo className="h-9" /></a>

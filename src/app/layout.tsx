@@ -39,7 +39,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getRequestLocale();
   return (
-    <html lang={locale} data-rtl={RTL_LOCALES.includes(locale) ? '' : undefined}>
+    <html lang={locale} dir={RTL_LOCALES.includes(locale) ? 'rtl' : 'ltr'}>
       <body className="min-h-full bg-page text-ink antialiased">
         <I18nProvider locale={locale}>{children}<PortraitLock />
         <ErrorFocus /></I18nProvider>

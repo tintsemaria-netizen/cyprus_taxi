@@ -254,13 +254,13 @@ function Category({ id, icon, title, sub, open, onToggle, children }: { id: stri
   const isOpen = open === id;
   return (
     <section id={id}>
-      <button type="button" onClick={() => onToggle(id)} aria-expanded={isOpen} className="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-elevated">
+      <button type="button" onClick={() => onToggle(id)} aria-expanded={isOpen} className="flex w-full items-center gap-3 px-4 py-3.5 text-start hover:bg-elevated">
         <span className="text-xl" aria-hidden="true">{icon}</span>
         <span className="min-w-0 flex-1">
           <span className="block font-medium">{title}</span>
           {sub && <span className="block truncate text-xs text-muted">{sub}</span>}
         </span>
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`shrink-0 text-muted transition-transform ${isOpen ? 'rotate-90' : ''}`}><path d="M9 5l7 7-7 7" /></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`shrink-0 text-muted transition-transform ${isOpen ? 'rotate-90' : 'rtl:-scale-x-100'}`}><path d="M9 5l7 7-7 7" /></svg>
       </button>
       {isOpen && <div className="px-4 pb-4 pt-1">{children}</div>}
     </section>

@@ -107,7 +107,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number) => void }) {
               return (
                 <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)} className={`relative flex-1 rounded-[9px] px-3 py-2 text-sm font-medium ${view === v ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>
                   {v === 'available' ? t('driver.scheduled.available') : t('driver.scheduled.mine')}
-                  {n > 0 && <span className={`ml-1.5 inline-block min-w-[18px] rounded-full px-1 text-center text-[10px] font-bold leading-[18px] ${v === 'available' ? 'bg-danger text-white' : 'bg-page text-ink'}`}>{n}</span>}
+                  {n > 0 && <span className={`ms-1.5 inline-block min-w-[18px] rounded-full px-1 text-center text-[10px] font-bold leading-[18px] ${v === 'available' ? 'bg-danger text-white' : 'bg-page text-ink'}`}>{n}</span>}
                 </button>
               );
             })}

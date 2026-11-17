@@ -118,7 +118,7 @@ export function ChatPanel({ listUrl, postUrl, me, pushUrl, expandedOverride, onU
   return (
     <div className="rounded-[12px] border border-edge bg-elevated">
       <div className="flex items-center">
-        <button type="button" className="flex min-w-0 flex-1 items-center justify-between px-3 py-2.5 text-left" onClick={() => (onClose ? onClose() : setExpanded((e) => !e))}>
+        <button type="button" className="flex min-w-0 flex-1 items-center justify-between px-3 py-2.5 text-start" onClick={() => (onClose ? onClose() : setExpanded((e) => !e))}>
           <span className="flex items-center gap-2 text-sm font-medium">
             {peerIsDriver ? t('track.chat.titleDriver') : t('track.chat.titlePassenger')}
             {unread > 0 && <span className="rounded-full bg-accent px-1.5 text-xs font-bold text-[#10191C]">{unread > 9 ? '9+' : unread}</span>}
@@ -126,9 +126,9 @@ export function ChatPanel({ listUrl, postUrl, me, pushUrl, expandedOverride, onU
           <span className="text-xs text-muted">{onClose ? '' : expanded ? t('track.chat.hide') : t('track.chat.open')}</span>
         </button>
         {callHref && (
-          <a href={callHref} className="mr-1 flex h-10 items-center gap-1.5 rounded-full bg-accent px-3 text-sm font-semibold text-[#10191C]" aria-label={t('driver.trip.call')}>{t('driver.trip.call').includes('📞') ? '' : '📞 '}{t('driver.trip.call')}</a>
+          <a href={callHref} className="me-1 flex h-10 items-center gap-1.5 rounded-full bg-accent px-3 text-sm font-semibold text-[#10191C]" aria-label={t('driver.trip.call')}>{t('driver.trip.call').includes('📞') ? '' : '📞 '}{t('driver.trip.call')}</a>
         )}
-        {onClose && <button type="button" onClick={onClose} aria-label={t('track.closeToStart')} className="mr-1 flex h-10 w-10 items-center justify-center rounded-full text-2xl text-muted hover:text-ink">×</button>}
+        {onClose && <button type="button" onClick={onClose} aria-label={t('track.closeToStart')} className="me-1 flex h-10 w-10 items-center justify-center rounded-full text-2xl text-muted hover:text-ink">×</button>}
       </div>
 
       {expanded && (
@@ -154,7 +154,7 @@ export function ChatPanel({ listUrl, postUrl, me, pushUrl, expandedOverride, onU
                       {showOrig[m.id] ? t('track.chat.showTranslation') : t('track.chat.translatedShowOriginal')}
                     </button>
                   )}
-                  <span className={`ml-2 align-bottom text-[11px] ${m.sender === me ? 'text-[#10191C]/60' : 'text-muted'}`}>{fmt.time(m.at)}</span>
+                  <span className={`ms-2 align-bottom text-[11px] ${m.sender === me ? 'text-[#10191C]/60' : 'text-muted'}`}>{fmt.time(m.at)}</span>
                 </div>
               </div>
             ))}

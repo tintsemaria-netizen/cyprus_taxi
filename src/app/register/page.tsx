@@ -59,7 +59,7 @@ export default function Register() {
       <div className="w-full max-w-sm">
         {step === 'form' ? (
           <form onSubmit={requestCode} className="card p-6">
-            <div className="flex items-center justify-between gap-2"><div className="-ml-2 flex items-center gap-1"><BackArrow /><a href="/" className="inline-block"><Logo /></a></div></div>
+            <div className="flex items-center justify-between gap-2"><div className="-ms-2 flex items-center gap-1"><BackArrow /><a href="/" className="inline-block"><Logo /></a></div></div>
             <h1 className="mt-6 text-xl font-bold">{t('auth.register.title')}</h1>
             <p className="mt-1 text-sm text-muted">{t('auth.register.subtitle')}</p>
             {error && <p className="mt-4 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
@@ -81,7 +81,7 @@ export default function Register() {
           </div>
         ) : (
           <form onSubmit={verify} className="card p-6">
-            <div className="flex items-center justify-between gap-2"><div className="-ml-2 flex items-center gap-1"><BackArrow onBack={() => { setStep('form'); setError(null); }} /><a href="/" className="inline-block"><Logo /></a></div></div>
+            <div className="flex items-center justify-between gap-2"><div className="-ms-2 flex items-center gap-1"><BackArrow onBack={() => { setStep('form'); setError(null); }} /><a href="/" className="inline-block"><Logo /></a></div></div>
             <h1 className="mt-6 text-xl font-bold">{t('auth.register.verifyTitle')}</h1>
             <p className="mt-1 text-sm text-muted">{t('auth.register.enterCode', { phone })}</p>
             {devCode && <p className="mt-3 rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn">{t('auth.testCodePrefix')} <b>{devCode}</b></p>}

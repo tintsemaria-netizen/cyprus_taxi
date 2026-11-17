@@ -743,13 +743,13 @@ export default function BookingApp() {
           return (
             <button key={c.key} type="button" role="radio" aria-checked={selected}
               onClick={() => { setVClass(c.key); if (pax > c.maxPassengers) setPax(c.maxPassengers); }}
-              className={`flex w-full items-center gap-3 rounded-[14px] border px-3 py-3 text-left transition ${selected ? 'border-accent bg-accent/10' : 'border-edge bg-elevated hover:border-accent/40'}`}>
+              className={`flex w-full items-center gap-3 rounded-[14px] border px-3 py-3 text-start transition ${selected ? 'border-accent bg-accent/10' : 'border-edge bg-elevated hover:border-accent/40'}`}>
               <CarClassIcon kind={c.key === 'XL' ? 'minibus' : 'sedan'} active={selected} />
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold">{t(`common.vClass.${c.key}`)}</span>
                 <span className="block text-xs text-muted">{t('booking.form.upToPeople', { n: c.maxPassengers })}</span>
               </span>
-              <span className="shrink-0 text-right">
+              <span className="shrink-0 text-end">
                 {q ? (
                   <>
                     <span className={`block font-semibold tabular-nums ${selected ? 'text-accent' : 'text-ink'}`}>{fmtRange(q)}</span>
@@ -767,7 +767,7 @@ export default function BookingApp() {
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
       <NotifyPrompt pushUrl="/passenger/push" active={!!passenger} />
-      <input ref={proxyRef} aria-hidden tabIndex={-1} readOnly={false} className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0" style={{ fontSize: 16 }} />
+      <input ref={proxyRef} aria-hidden tabIndex={-1} readOnly={false} className="pointer-events-none fixed start-0 top-0 h-px w-px opacity-0" style={{ fontSize: 16 }} />
       {editor && (
         <RouteEditor
           rows={slots.map((s) => { const v = slotGet(s); return { slot: s, sel: v.sel, text: v.text }; })}
@@ -798,7 +798,7 @@ export default function BookingApp() {
       <header className="z-20 flex items-center justify-between border-b border-edge bg-page/90 px-4 py-2 backdrop-blur sm:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
         {/* Back arrow only where there is a step behind (2026-11-17): class choice → the form. */}
         <div className="flex items-center gap-1">
-          {step === 'review' && <BackArrow className="-ml-2" onBack={() => setStep('form')} />}
+          {step === 'review' && <BackArrow className="-ms-2" onBack={() => setStep('form')} />}
           <Logo className="h-10" />
         </div>
         <div className="flex items-center gap-2">
@@ -837,7 +837,7 @@ export default function BookingApp() {
         </div>
 
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end sm:block">
-          <div ref={sheetBoxRef} className="flex h-full w-full flex-col justify-end sm:absolute sm:left-4 sm:top-4 sm:block sm:h-[calc(100%-2rem)] sm:w-[380px]">
+          <div ref={sheetBoxRef} className="flex h-full w-full flex-col justify-end sm:absolute sm:start-4 sm:top-4 sm:block sm:h-[calc(100%-2rem)] sm:w-[380px]">
             <div
               ref={sheetRef}
               className={`card pointer-events-auto relative flex flex-col overflow-hidden sm:max-h-full ${isMobile ? 'rounded-b-none' : ''} ${isMobile && dragH == null ? 'transition-[height] duration-300 ease-out' : ''}`}
@@ -850,7 +850,7 @@ export default function BookingApp() {
                   that shows the route (2026-11-17), so it never disappears while a route is set. */}
               {step === 'form' && (!collapsed || peekRoute) && (addrOpen || dropoff || dropoffText) && (
                 <button type="button" aria-label={t('booking.form.resetRoute')} title={t('booking.form.resetRoute')} onClick={resetRoute}
-                  className="absolute right-1.5 top-1.5 z-20 flex h-12 w-12 items-center justify-center rounded-full text-[36px] leading-none text-muted hover:bg-page/60 hover:text-ink">×</button>
+                  className="absolute end-1.5 top-1.5 z-20 flex h-12 w-12 items-center justify-center rounded-full text-[36px] leading-none text-muted hover:bg-page/60 hover:text-ink">×</button>
               )}
               {isMobile ? (
                 // Mobile bottom sheet: drag the handle up (full screen) or down (a strip stays visible).
@@ -878,7 +878,7 @@ export default function BookingApp() {
               >
                 <span className="h-1 w-10 rounded-full bg-edge-strong" />
                 {collapsed ? (
-                  <span className="flex w-full items-center justify-between gap-3 py-1.5 text-left">
+                  <span className="flex w-full items-center justify-between gap-3 py-1.5 text-start">
                     <span className="min-w-0">
                       <span className="block text-base font-bold text-ink">{t('booking.form.title')}</span>
                       {pickup && dropoff && <span className="block truncate text-xs">{pickup.label} → {viaStop ? `${viaStop.label} → ` : ''}{dropoff.label}</span>}
@@ -896,7 +896,7 @@ export default function BookingApp() {
                   /* ---- FORM (inlined so inputs keep focus across renders) ---- */
                   <div>
                     {soonRide && (
-                      <button type="button" onClick={() => openRide(soonRide.id)} className="mb-3 block w-full rounded-[12px] border-2 border-accent bg-accent/10 px-3 py-2.5 text-left">
+                      <button type="button" onClick={() => openRide(soonRide.id)} className="mb-3 block w-full rounded-[12px] border-2 border-accent bg-accent/10 px-3 py-2.5 text-start">
                         <div className="flex items-center justify-between gap-2 text-sm font-semibold text-accent"><span>⏰ {t('rides.prebookings.reminderTitle')}</span><span>{t('rides.prebookings.open')} ›</span></div>
                         <div className="mt-0.5 text-sm text-ink">{t('rides.prebookings.reminderBody', { time: fmt.time(soonRide.at) })}</div>
                         <div className="truncate text-xs text-muted">{soonRide.pickup} → {soonRide.dropoff}</div>
@@ -919,7 +919,7 @@ export default function BookingApp() {
                         <div>
                           <div className="flex items-center gap-1.5">
                           <div data-route-box className={`relative min-w-0 flex-1 rounded-[14px] border bg-elevated px-3 ${anyErr.length ? 'border-danger' : 'border-edge-strong'}`}>
-                            {shown.length > 1 && <span aria-hidden className="absolute left-[19px] w-[2px]" style={{ top: 26, height: (shown.length - 1) * 53, background: 'rgba(200,255,70,0.45)' }} />}
+                            {shown.length > 1 && <span aria-hidden className="absolute start-[19px] w-[2px]" style={{ top: 26, height: (shown.length - 1) * 53, background: 'rgba(200,255,70,0.45)' }} />}
                             {shown.map((slot, i) => {
                               const v = slotGet(slot);
                               const dragging = rowDrag?.index === i;
@@ -1146,7 +1146,7 @@ function Row({ label, value, dot }: { label: string; value: string; dot?: 'accen
         {dot && <span className={`inline-block h-2 w-2 rounded-full ${dot === 'accent' ? 'bg-accent' : 'bg-ink'}`} />}
         {label}
       </span>
-      <span className="text-right font-medium">{value}</span>
+      <span className="text-end font-medium">{value}</span>
     </div>
   );
 }

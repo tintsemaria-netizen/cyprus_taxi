@@ -345,25 +345,25 @@ export default function TrackApp() {
         </div>
 
         {/* status pill */}
-        <div className="absolute left-4 top-4 z-10 max-w-[70%]">
+        <div className="absolute start-4 top-4 z-10 max-w-[70%]">
           {/* No pill while searching (2026-11-15): the sheet already says it, bigger. */}
           {/* No pill while searching or after a cancellation (2026-11-16): the sheet says it. */}
           {view.status !== 'SEARCHING' && view.status !== 'CANCELED' && <span className="chip !bg-page/90 !text-accent">
             {view.status === 'EN_ROUTE' ? `● ${t('track.pillEnRoute')}` : `● ${statusLabel.toUpperCase()}`}
           </span>}
-          {reconnecting && <span className="chip ml-2 !bg-page/90 !text-warn">{t('track.reconnecting')}</span>}
+          {reconnecting && <span className="chip ms-2 !bg-page/90 !text-warn">{t('track.reconnecting')}</span>}
         </div>
 
         {/* bottom sheet */}
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end sm:block">
-          <div className="pointer-events-auto relative w-full sm:absolute sm:bottom-4 sm:left-4 sm:w-[400px]">
+          <div className="pointer-events-auto relative w-full sm:absolute sm:bottom-4 sm:start-4 sm:w-[400px]">
             {/* ☰ above the sheet (2026-11-15): «Поделиться» and «Безопасность» live in this menu. */}
             {!terminal && (
-              <div className="absolute bottom-full right-3 z-20 mb-2">
+              <div className="absolute bottom-full end-3 z-20 mb-2">
                 {menuOpen && (
-                  <div className="absolute bottom-full right-0 mb-2 w-56 overflow-hidden rounded-[14px] border border-edge bg-page shadow-2xl" role="menu">
-                    <button type="button" role="menuitem" className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] hover:bg-white/5" onClick={() => { setMenuOpen(false); share(); }}>{t('track.shareTrip')}</button>
-                    <button type="button" role="menuitem" className="flex w-full items-center gap-3 border-t border-edge px-4 py-3.5 text-left text-[15px] hover:bg-white/5" onClick={() => { setMenuOpen(false); setSafety(true); }}>{t('track.safety')}</button>
+                  <div className="absolute bottom-full end-0 mb-2 w-56 overflow-hidden rounded-[14px] border border-edge bg-page shadow-2xl" role="menu">
+                    <button type="button" role="menuitem" className="flex w-full items-center gap-3 px-4 py-3.5 text-start text-[15px] hover:bg-white/5" onClick={() => { setMenuOpen(false); share(); }}>{t('track.shareTrip')}</button>
+                    <button type="button" role="menuitem" className="flex w-full items-center gap-3 border-t border-edge px-4 py-3.5 text-start text-[15px] hover:bg-white/5" onClick={() => { setMenuOpen(false); setSafety(true); }}>{t('track.safety')}</button>
                   </div>
                 )}
                 <button type="button" aria-label={t('track.menu')} aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)}
@@ -372,12 +372,12 @@ export default function TrackApp() {
                 </button>
               </div>
             )}
-            {shareMsg && <p role="status" className="absolute bottom-full left-3 mb-3 rounded-full bg-page/95 px-3 py-1.5 text-xs text-muted shadow">{shareMsg}</p>}
+            {shareMsg && <p role="status" className="absolute bottom-full start-3 mb-3 rounded-full bg-page/95 px-3 py-1.5 text-xs text-muted shadow">{shareMsg}</p>}
             <div ref={sheetRef} data-testid="track-sheet" className="card relative flex max-h-[78dvh] flex-col overflow-hidden sm:max-h-[calc(100dvh-7rem)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }}>
               {/* Finished ride (2026-11-15): × in the top-right corner returns to the start (new booking). */}
               {(view.status === 'COMPLETED' || view.status === 'CANCELED') && (
                 <a href="/" aria-label={t('track.closeToStart')} title={t('track.closeToStart')}
-                  className="absolute right-1.5 top-1.5 z-20 flex h-12 w-12 items-center justify-center rounded-full text-[36px] leading-none text-muted hover:bg-page/60 hover:text-ink">×</a>
+                  className="absolute end-1.5 top-1.5 z-20 flex h-12 w-12 items-center justify-center rounded-full text-[36px] leading-none text-muted hover:bg-page/60 hover:text-ink">×</a>
               )}
               <button type="button" aria-expanded={sheetOpen} aria-label={sheetOpen ? t('booking.sheet.collapse') : t('booking.sheet.expand')}
                 onClick={() => { if (!sheetSwiped.current) setSheetOpen((o) => !o); sheetSwiped.current = false; }}
@@ -492,7 +492,7 @@ export default function TrackApp() {
                             <input type="checkbox" role="switch" className="peer sr-only" checked={!!view.startCode} disabled={codeBusy}
                               onChange={(e) => toggleStartCode(e.target.checked)} data-testid="start-code-switch" />
                             <span aria-hidden className={`relative h-7 w-12 shrink-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent ${view.startCode ? 'bg-accent' : 'bg-edge'} ${codeBusy ? 'opacity-60' : ''}`}>
-                              <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${view.startCode ? 'left-[22px]' : 'left-0.5'}`} />
+                              <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${view.startCode ? 'start-[22px]' : 'start-0.5'}`} />
                             </span>
                           </label>
                           {view.startCode && (
@@ -647,7 +647,7 @@ function TrackRoute({ view, editable, onChanged }: { view: { pickup: RoutePoint;
   return (
     <div className="mt-4">
       <div className="relative rounded-[14px] border border-edge-strong bg-elevated px-3">
-        <span aria-hidden className="absolute left-[19px] w-[2px]" style={{ top: ROW / 2, height: (rows.length - 1) * (ROW + 1), background: 'rgba(200,255,70,0.45)' }} />
+        <span aria-hidden className="absolute start-[19px] w-[2px]" style={{ top: ROW / 2, height: (rows.length - 1) * (ROW + 1), background: 'rgba(200,255,70,0.45)' }} />
         {rows.map((r, i) => (
           <div key={r.key} className={`relative flex items-center gap-3 ${i ? 'border-t border-white/[0.08]' : ''}`} style={{ minHeight: ROW }}>
             <span className="relative z-10 flex w-4 shrink-0 justify-center" aria-hidden>
@@ -657,7 +657,7 @@ function TrackRoute({ view, editable, onChanged }: { view: { pickup: RoutePoint;
                 : <span className="block h-3.5 w-3.5 rounded-full bg-accent" />}
             </span>
             {r.dot === 'add' ? (
-              <button type="button" onClick={() => { setPicking(true); setErr(null); }} className="flex-1 py-2 text-left text-[15px] font-medium text-accent">＋ {r.label}</button>
+              <button type="button" onClick={() => { setPicking(true); setErr(null); }} className="flex-1 py-2 text-start text-[15px] font-medium text-accent">＋ {r.label}</button>
             ) : (
               <span className="min-w-0 flex-1 py-2 text-[15px] font-medium leading-snug text-ink">{r.label}</span>
             )}

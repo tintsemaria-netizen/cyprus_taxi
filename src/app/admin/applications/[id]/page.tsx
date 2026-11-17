@@ -55,7 +55,7 @@ function Detail() {
   }
 
   if (!d) return <div className="p-8 text-muted">{t('staff.loading')}</div>;
-  const kv = (o: Record<string, string>) => Object.entries(o).map(([k, v]) => <div key={k} className="flex justify-between gap-4 text-sm"><span className="text-muted">{k}</span><span className="text-right">{v || '—'}</span></div>);
+  const kv = (o: Record<string, string>) => Object.entries(o).map(([k, v]) => <div key={k} className="flex justify-between gap-4 text-sm"><span className="text-muted">{k}</span><span className="text-end">{v || '—'}</span></div>);
 
   return (
     <div className="mx-auto max-w-4xl p-4 sm:p-6">

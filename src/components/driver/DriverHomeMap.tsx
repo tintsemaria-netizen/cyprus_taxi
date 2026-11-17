@@ -63,8 +63,8 @@ export function DriverHomeMap({ pos, fullscreen = false, onCounts, pickup = null
         )}
       </div>
       <div className="flex items-center justify-between gap-2 px-4 py-2 text-xs text-muted">
-        <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-accent align-middle" />{t('driver.map.free', { n: free })}</span>
-        <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-muted align-middle" />{t('driver.map.busy', { n: busy })}</span>
+        <span><span className="me-1 inline-block h-2 w-2 rounded-full bg-accent align-middle" />{t('driver.map.free', { n: free })}</span>
+        <span><span className="me-1 inline-block h-2 w-2 rounded-full bg-muted align-middle" />{t('driver.map.busy', { n: busy })}</span>
       </div>
     </div>
   );

@@ -157,7 +157,7 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
       <input
         id={inputId}
         aria-label={kind === 'From' ? t('booking.places.pickupAria') : kind === 'Stop' ? t('booking.places.stopAria') : t('booking.places.destinationAria')}
-        className={`field mt-1 ${trailing ? 'pr-28' : ''} ${error ? 'border-danger' : value ? 'border-accent/60' : ''}`}
+        className={`field mt-1 ${trailing ? 'pe-28' : ''} ${error ? 'border-danger' : value ? 'border-accent/60' : ''}`}
         placeholder={kind === 'From' ? t('booking.places.pickupPlaceholder') : kind === 'Stop' ? t('booking.places.stopPlaceholder') : t('booking.places.destinationPlaceholder')}
         autoFocus={autoFocus}
         value={text}
@@ -177,9 +177,9 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
         aria-invalid={!!error}
       />
       {trailing ? (
-        <div className="absolute right-1.5 top-[30px] flex items-center">{trailing}</div>
+        <div className="absolute end-1.5 top-[30px] flex items-center">{trailing}</div>
       ) : value && (
-        <span className="absolute right-3 top-9 text-accent text-sm" aria-hidden>
+        <span className="absolute end-3 top-9 text-accent text-sm" aria-hidden>
           ✓
         </span>
       )}
@@ -196,7 +196,7 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
                 type="button"
                 role="option"
                 aria-selected={i === active}
-                className={`flex w-full items-start gap-2 px-4 py-2.5 text-left ${i === active ? 'bg-panel' : 'hover:bg-panel'}`}
+                className={`flex w-full items-start gap-2 px-4 py-2.5 text-start ${i === active ? 'bg-panel' : 'hover:bg-panel'}`}
                 onMouseEnter={() => setActive(i)}
                 onClick={() => void choose(r)}
               >

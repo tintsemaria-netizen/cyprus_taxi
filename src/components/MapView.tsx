@@ -295,5 +295,5 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
   }
 
   // isolation: marker z-indexes (own car 1000, person 900) stay inside the map, never above panels.
-  return <div ref={containerRef} className={className} style={{ isolation: 'isolate' }} aria-label="Map" role="application" />;
+  return <div ref={containerRef} dir="ltr" className={className} style={{ isolation: 'isolate' }} aria-label="Map" role="application" />;
 }

@@ -107,7 +107,7 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
               <LanguageSwitcher />
             </div>
             <div className="my-1 border-t border-edge" />
-            <button role="menuitem" onClick={logout} disabled={busy} className="w-full rounded-[10px] px-3 py-3 text-left text-sm text-danger hover:bg-page disabled:opacity-60">
+            <button role="menuitem" onClick={logout} disabled={busy} className="w-full rounded-[10px] px-3 py-3 text-start text-sm text-danger hover:bg-page disabled:opacity-60">
               {busy ? t('auth.signingOut') : t('auth.logOut')}
             </button>
           </div>

@@ -272,7 +272,7 @@ function AssignDialog({ bookingId, revision, isReassign, onClose, onDone }: { bo
               key={dr.driverId}
               disabled={!dr.vehicle}
               onClick={() => setSel(dr)}
-              className={`flex w-full items-center justify-between rounded-[12px] border px-3 py-2.5 text-left disabled:opacity-40 ${sel?.driverId === dr.driverId ? 'border-accent bg-accent/10' : 'border-edge bg-elevated'}`}
+              className={`flex w-full items-center justify-between rounded-[12px] border px-3 py-2.5 text-start disabled:opacity-40 ${sel?.driverId === dr.driverId ? 'border-accent bg-accent/10' : 'border-edge bg-elevated'}`}
             >
               <span>
                 <span className="block text-sm font-medium">{dr.name}</span>

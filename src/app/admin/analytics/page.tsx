@@ -180,7 +180,7 @@ function DailyChart({ data }: { data: DailyPoint[] }) {
               </div>
             ))}
           </div>
-          <div className="mt-2 flex gap-4 text-xs text-muted"><span><span className="mr-1 inline-block h-2 w-2 rounded-sm bg-accent/40" />{t('staff.an.lReq')}</span><span><span className="mr-1 inline-block h-2 w-2 rounded-sm bg-accent" />{t('staff.an.lDone')}</span></div>
+          <div className="mt-2 flex gap-4 text-xs text-muted"><span><span className="me-1 inline-block h-2 w-2 rounded-sm bg-accent/40" />{t('staff.an.lReq')}</span><span><span className="me-1 inline-block h-2 w-2 rounded-sm bg-accent" />{t('staff.an.lDone')}</span></div>
           {/* Accessible list fallback */}
           <details className="mt-2 text-xs text-muted"><summary className="cursor-pointer">{t('staff.an.asList')}</summary>
             <ul className="mt-1 space-y-0.5">{data.map((d) => <li key={d.day}>{t('staff.an.dayTip', { day: d.day, r: d.requested, c: d.completed })}</li>)}</ul>

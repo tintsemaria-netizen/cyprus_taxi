@@ -285,19 +285,19 @@ export function DriverNavigation(props: {
           <div className="text-lg font-bold">{t('driver.navigation.continueTo', { place: target.label })}</div>
         )}
       </div>
-      {props.banner && <button onClick={props.onDismissBanner} className="relative z-10 border-b border-warn/40 bg-warn/15 px-4 py-2 text-left text-sm text-warn">{props.banner}</button>}
+      {props.banner && <button onClick={props.onDismissBanner} className="relative z-10 border-b border-warn/40 bg-warn/15 px-4 py-2 text-start text-sm text-warn">{props.banner}</button>}
 
       {/* Map */}
       <div className="relative min-h-0 flex-1" data-nav-zoom={navZoom}>
         <AutoMapView markers={markers} route={routeLine} center={pos ?? target} zoom={15} interactive className="h-full w-full"
           follow={follow} onFollowBreak={() => setFollowing(false)} idleReturnMs={4000} onIdleReturn={() => setFollowing(true)} fitPadding={wide ? { top: 60, right: 50, bottom: 60, left: 470 } : { top: 60, right: 50, bottom: panelOpen ? 520 : 330, left: 50 }} />
-        <div className="absolute right-3 top-3 flex flex-col gap-2">
+        <div className="absolute end-3 top-3 flex flex-col gap-2">
           <button onClick={toggleMute} className="flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-lg" aria-label={muted ? t('driver.navigation.unmute') : t('driver.navigation.mute')} aria-pressed={muted}>{muted ? '🔇' : '🔊'}</button>
         </div>
       </div>
 
       {/* Overlay over the map: recenter, then the stage action (its own floating bar), then the info sheet. */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col sm:bottom-4 sm:left-4 sm:right-auto sm:w-[420px]" data-testid="nav-overlay">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col sm:bottom-4 sm:start-4 sm:end-auto sm:w-[420px]" data-testid="nav-overlay">
         {!following && !waitingAtPickup && pos && (
           <button onClick={() => setFollowing(true)} className="pointer-events-auto mx-auto mb-2 rounded-full border border-accent bg-page/95 px-4 py-2 text-sm font-semibold text-accent">{t('driver.navigation.recenter')}</button>
         )}
@@ -306,7 +306,7 @@ export function DriverNavigation(props: {
           <button type="button" onClick={() => setChatOpen(true)} aria-label={t('driver.navigation.chat')} title={t('driver.navigation.chat')}
             className="pointer-events-auto relative flex h-[58px] w-[58px] items-center justify-center text-[40px] [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.55))]">
             💬
-            {chatUnread > 0 && <span className="absolute -right-1 -top-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-bold text-[#10191C]">{chatUnread > 9 ? '9+' : chatUnread}</span>}
+            {chatUnread > 0 && <span className="absolute -end-1 -top-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-bold text-[#10191C]">{chatUnread > 9 ? '9+' : chatUnread}</span>}
           </button>
           <div className="h-[58px]" aria-hidden />
           <a href={externalHref} target="_blank" rel="noreferrer" aria-label={t('driver.navigation.googleMaps')} title={t('driver.navigation.googleMaps')}
@@ -351,7 +351,7 @@ export function DriverNavigation(props: {
         <div ref={panelBodyRef} className={`${panelOpen ? 'max-h-[45vh] overflow-y-auto overscroll-contain' : (gps.active ? 'max-h-[150px]' : 'max-h-[176px]') + ' overflow-hidden'} px-4 pb-2 transition-[max-height] duration-300`}>
         {/* Collapsed: a one-line GPS warning instead of the full box (no half-cut box in the peek). */}
         {!gps.active && !panelOpen && (
-          <button type="button" onClick={props.onStartGps} className="mb-1 block text-left text-sm font-semibold text-warn">{t('driver.navigation.gpsOffShort')}</button>
+          <button type="button" onClick={props.onStartGps} className="mb-1 block text-start text-sm font-semibold text-warn">{t('driver.navigation.gpsOffShort')}</button>
         )}
         {!gps.active && panelOpen && (
           <div className="mb-3 rounded-[12px] border border-warn/40 bg-warn/10 p-3 text-sm">
@@ -366,7 +366,7 @@ export function DriverNavigation(props: {
             {/* Twice the old size (2026-11-15) — readable at a glance from the phone holder. */}
             <span className="text-[44px] font-bold leading-none text-accent">{remainingSec != null ? t('driver.navigation.min', { n: Math.max(1, Math.round(remainingSec / 60)) }) : '—'}</span>
             <span className="text-[28px] font-semibold leading-none text-ink">{remainingM != null ? distLabel(remainingM) : ''}</span>
-            {remainingSec != null && clock > 0 && <span className="ml-auto text-2xl font-semibold leading-none text-muted">{t('driver.navigation.arriveAt', { time: fmt.time(new Date(clock + remainingSec * 1000)) })}</span>}
+            {remainingSec != null && clock > 0 && <span className="ms-auto text-2xl font-semibold leading-none text-muted">{t('driver.navigation.arriveAt', { time: fmt.time(new Date(clock + remainingSec * 1000)) })}</span>}
           </div>
         )}
         {/* Address only — no «К подаче:» label (2026-11-15); the map shows which point it is. */}
@@ -381,7 +381,7 @@ export function DriverNavigation(props: {
           <span className="font-medium">{trip.passengerName}</span>
           {trip.passengerRating && trip.passengerRating.count > 0 && <span className="text-accent">★ {trip.passengerRating.average.toFixed(1)}</span>}
           {/* Payment left of the class (2026-11-15): cash green, card red. */}
-          <span className={`ml-auto rounded-md border px-2 py-0.5 text-sm font-bold ${trip.payment === 'CARD' ? 'border-danger/60 text-danger' : 'border-[#34C759]/60 text-[#34C759]'}`}>{trip.payment === 'CARD' ? 'card' : 'cash'}</span>
+          <span className={`ms-auto rounded-md border px-2 py-0.5 text-sm font-bold ${trip.payment === 'CARD' ? 'border-danger/60 text-danger' : 'border-[#34C759]/60 text-[#34C759]'}`}>{trip.payment === 'CARD' ? 'card' : 'cash'}</span>
           <span className="text-muted">{t(`common.vClass.${trip.vClass}` as MsgKey)}</span>
         </div>
         {waitingNode && <div className="mt-2 rounded-[12px] border border-edge bg-page p-3 text-sm">{waitingNode}</div>}
@@ -394,8 +394,8 @@ export function DriverNavigation(props: {
 
         {details && (
           <div className="mt-3 space-y-2 rounded-[12px] border border-edge bg-page p-3 text-sm" data-testid="nav-details">
-            <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="text-muted">{t('driver.trip.pickup')}</span><span className="ml-auto text-right font-medium">{trip.pickup.label}</span></div>
-            <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-ink" /><span className="text-muted">{t('driver.trip.destination')}</span><span className="ml-auto text-right font-medium">{trip.dropoff.label}</span></div>
+            <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="text-muted">{t('driver.trip.pickup')}</span><span className="ms-auto text-end font-medium">{trip.pickup.label}</span></div>
+            <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-ink" /><span className="text-muted">{t('driver.trip.destination')}</span><span className="ms-auto text-end font-medium">{trip.dropoff.label}</span></div>
             <div>{t('driver.offer.passengerLine', { name: trip.passengerName, passengers: tp('common.passengers', trip.passengerCount), vClass: trip.vClass })}</div>
             {trip.note && <div className="text-xs text-warn">{t('driver.trip.note', { note: trip.note })}</div>}
             {trip.flightNumber && <div className="font-mono text-xs">✈ {t('driver.scheduled.flight', { flight: formatFlight(trip.flightNumber) })}</div>}

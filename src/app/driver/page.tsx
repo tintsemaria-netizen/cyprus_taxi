@@ -15,6 +15,9 @@ import { formatFlight } from '@/lib/flight';
 import { useT, useLocale, MsgKey } from '@/i18n/I18nProvider';
 import { rememberPushLocale } from '@/lib/push-client';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
+
+// Manual language choice for drivers (2026-11-17): Russian, Greek, English.
+const DRIVER_LOCALES = ['ru', 'el', 'en'] as const;
 import { StaffPasswordForm } from '@/components/StaffPasswordForm';
 import { RatePassengerSheet } from '@/components/driver/RatePassengerSheet';
 
@@ -371,20 +374,20 @@ function HomeSection(props: {
         <div className="flex w-full items-start justify-end gap-2">
         {/* Today's recorded earnings as a figure over the map; tap → Profile › Earnings. */}
         {dash && (
-          <button className={`${pill} shrink-0 px-3 py-1.5 text-right`} onClick={props.goEarnings} aria-label={t('driver.home.earnedToday')}>
+          <button className={`${pill} shrink-0 px-3 py-1.5 text-end`} onClick={props.goEarnings} aria-label={t('driver.home.earnedToday')}>
             <span className="block text-base font-bold leading-tight text-accent">{dash.today.recordedEarnings.length ? dash.today.recordedEarnings.map((e) => money(e.cents, e.currency)).join(' + ') : money(0, 'EUR')}</span>
             <span className="block text-[10px] leading-tight text-muted">{t('driver.home.earnedToday')}</span>
           </button>
         )}
         </div>
-        {props.banner && <button className="pointer-events-auto rounded-[12px] border border-warn/40 bg-page/95 px-3 py-2 text-left text-sm text-warn" onClick={props.onDismissBanner}>{props.banner}</button>}
+        {props.banner && <button className="pointer-events-auto rounded-[12px] border border-warn/40 bg-page/95 px-3 py-2 text-start text-sm text-warn" onClick={props.onDismissBanner}>{props.banner}</button>}
         {blocker && (
           <div className="pointer-events-auto rounded-[12px] border border-danger/40 bg-page/95 px-3 py-2 text-sm">
             <p className="font-medium text-danger">{blocker.code === 'NO_VEHICLE' ? t('driver.alerts.noVehicle') : blocker.message}</p>
             {blocker.action && <a href={blocker.action.href} className="mt-1 inline-block text-xs underline">{blocker.action.label}</a>}
           </div>
         )}
-        {!offer && warning && <div className="pointer-events-auto rounded-[12px] border border-warn/40 bg-page/95 px-3 py-2 text-sm text-warn">{warning.message}{warning.action && <a href={warning.action.href} className="ml-2 underline">{warning.action.label}</a>}</div>}
+        {!offer && warning && <div className="pointer-events-auto rounded-[12px] border border-warn/40 bg-page/95 px-3 py-2 text-sm text-warn">{warning.message}{warning.action && <a href={warning.action.href} className="ms-2 underline">{warning.action.label}</a>}</div>}
         {data.onDuty && gps.error && <div className={`pointer-events-auto rounded-[12px] border bg-page/95 px-3 py-2 text-xs ${gps.error === 'acquiring' ? 'border-warn/40 text-warn' : 'border-danger/40 text-danger'}`}>{t(`driver.gps.${gps.error as 'denied' | 'acquiring' | 'unsupported' | 'unavailable'}`)}</div>}
         {data.onDuty && !gps.active && !gps.error && <div className="pointer-events-auto rounded-[12px] border border-edge bg-page/95 px-3 py-2 text-xs text-muted">{t('driver.map.noGps')}</div>}
         <InstallPrompt app="driver" className="pointer-events-auto w-full bg-page/95" />
@@ -396,7 +399,7 @@ function HomeSection(props: {
                 onClick={gps.active ? props.onStopGps : props.onStartGps} aria-pressed={gps.active}>
                 📍 {gps.active ? t('driver.home.gpsOn') : t('driver.home.gpsOff')}
                 {gps.active && gps.accuracyM != null && (
-                  <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-semibold ${accuracyLevel(gps.accuracyM) === 'good' ? 'bg-accent/20 text-accent' : accuracyLevel(gps.accuracyM) === 'fair' ? 'bg-warn/20 text-warn' : 'bg-danger/20 text-danger'}`}>
+                  <span className={`ms-1 rounded-full px-2 py-0.5 text-xs font-semibold ${accuracyLevel(gps.accuracyM) === 'good' ? 'bg-accent/20 text-accent' : accuracyLevel(gps.accuracyM) === 'fair' ? 'bg-warn/20 text-warn' : 'bg-danger/20 text-danger'}`}>
                     ±{gps.accuracyM > 999 ? '999+' : gps.accuracyM} {t('driver.home.gpsM')}{accuracyLevel(gps.accuracyM) === 'poor' ? ` · ${t('driver.home.gpsWeak')}` : ''}
                   </span>
                 )}
@@ -412,8 +415,8 @@ function HomeSection(props: {
         {!offer && (
           <div className="flex flex-col items-center gap-2">
             <div className={`${pill} px-3 py-1 text-xs text-muted`}>
-              <span className="mr-1 inline-block h-2 w-2 rounded-full bg-accent align-middle" />{t('driver.map.free', { n: counts.free })}
-              <span className="ml-3 mr-1 inline-block h-2 w-2 rounded-full bg-muted align-middle" />{t('driver.map.busy', { n: counts.busy })}
+              <span className="me-1 inline-block h-2 w-2 rounded-full bg-accent align-middle" />{t('driver.map.free', { n: counts.free })}
+              <span className="ms-3 me-1 inline-block h-2 w-2 rounded-full bg-muted align-middle" />{t('driver.map.busy', { n: counts.busy })}
             </div>
             {blocker && !data.onDuty ? (
               <span className="pointer-events-auto rounded-full bg-danger/90 px-5 py-3 text-sm font-semibold text-white">{t('driver.duty.cantGoOnline')}</span>
@@ -440,7 +443,7 @@ function HomeSection(props: {
           <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
             {offer.stop && <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.stop.via')}</span><span className="font-medium">{offer.stop.label}</span></div>}
             <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{offer.dropoff.label}</span></div>
-            <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span><span className="ml-auto text-xs text-muted">{t('driver.units.paxShort', { count: offer.passengerCount })}{offer.luggageCount ? ` · 🧳 ${offer.luggageCount}` : ''} · {offer.vClass}</span></div>
+            <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span><span className="ms-auto text-xs text-muted">{t('driver.units.paxShort', { count: offer.passengerCount })}{offer.luggageCount ? ` · 🧳 ${offer.luggageCount}` : ''} · {offer.vClass}</span></div>
             <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{offer.fareCents != null ? money(offer.fareCents, offer.currency) : '—'}</span><span className="text-xs text-muted">{offer.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.upfront') : t('driver.offer.meterEstimate')}</span></div>
             {offer.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(offer.scheduledAt)}</div>}
             {offer.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: offer.note })}</div>}
@@ -478,12 +481,12 @@ function TripRow({ t, onClick }: { t: TripCard; onClick?: () => void }) {
   const { money, statusLabel, fareLabel, paymentLabel } = useDriverFmt();
   const badge = t.driverStatus === 'COMPLETED' ? 'text-accent' : t.driverStatus === 'RELEASED' ? 'text-muted' : 'text-warn';
   return (
-    <button onClick={onClick} className="flex w-full items-center justify-between gap-2 rounded-[10px] border border-edge p-2 text-left text-sm">
+    <button onClick={onClick} className="flex w-full items-center justify-between gap-2 rounded-[10px] border border-edge p-2 text-start text-sm">
       <div className="min-w-0">
         <div className="truncate">{t.pickupLabel} → {t.dropoffLabel}</div>
         <div className="text-xs text-muted">{fmt.dateTime(t.at)} · <span className={badge}>{statusLabel(t.driverStatus)}</span></div>
       </div>
-      <div className="shrink-0 text-right"><div className="font-medium">{t.fare.cents != null ? money(t.fare.cents, t.fare.currency) : (t.fare.label === 'Pending' ? fareLabel('Pending') : '—')}</div><div className="text-xs text-muted">{fareLabel(t.fare.label)}{t.payment ? ` · ${paymentLabel(t.payment)}` : ''}</div></div>
+      <div className="shrink-0 text-end"><div className="font-medium">{t.fare.cents != null ? money(t.fare.cents, t.fare.currency) : (t.fare.label === 'Pending' ? fareLabel('Pending') : '—')}</div><div className="text-xs text-muted">{fareLabel(t.fare.label)}{t.payment ? ` · ${paymentLabel(t.payment)}` : ''}</div></div>
     </button>
   );
 }
@@ -564,9 +567,9 @@ function FreeOrdersSection({ pos, onDuty, onTaken }: { pos: { lat: number; lng: 
               className="card cursor-pointer p-4 transition hover:border-accent/50 active:scale-[0.99]">
               {o.distanceM != null && <p className="mb-2 text-lg font-bold text-ink">{t('driver.offer.away', { dist: km(o.distanceM) })}</p>}
               <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="text-muted">{t('driver.offer.pickup')}</span><span className="ml-auto text-right font-medium">{o.pickup.label}</span></div>
-                {o.stop && <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-[#FFC83D]" /><span className="text-muted">{t('driver.map.stop')}</span><span className="ml-auto text-right font-medium">{o.stop.label}</span></div>}
-                <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-ink" /><span className="text-muted">{t('driver.offer.destination')}</span><span className="ml-auto text-right font-medium">{o.dropoff.label}</span></div>
+                <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="text-muted">{t('driver.offer.pickup')}</span><span className="ms-auto text-end font-medium">{o.pickup.label}</span></div>
+                {o.stop && <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-[#FFC83D]" /><span className="text-muted">{t('driver.map.stop')}</span><span className="ms-auto text-end font-medium">{o.stop.label}</span></div>}
+                <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-ink" /><span className="text-muted">{t('driver.offer.destination')}</span><span className="ms-auto text-end font-medium">{o.dropoff.label}</span></div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
                 <span className="rounded-full bg-elevated px-2 py-1">{o.vClass}{o.luggageCount ? ` · 🧳 ${o.luggageCount}` : ''}</span>
@@ -576,7 +579,7 @@ function FreeOrdersSection({ pos, onDuty, onTaken }: { pos: { lat: number; lng: 
               <p className="mt-2 text-sm font-medium">{o.passengerName}</p>
               {o.note && <p className="mt-1 text-xs text-muted">{t('driver.offer.note', { note: o.note })}</p>}
               <div className="mt-3 flex items-center justify-between gap-3">
-                <div className="text-sm"><span className="font-semibold">{money(o.fareCents, o.currency)}</span>{o.priceType && <span className="ml-1 text-xs text-muted">{o.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.upfront') : o.priceType === 'REGULATED_METER_ESTIMATE' ? t('driver.offer.meterEstimate') : ''}</span>}</div>
+                <div className="text-sm"><span className="font-semibold">{money(o.fareCents, o.currency)}</span>{o.priceType && <span className="ms-1 text-xs text-muted">{o.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.upfront') : o.priceType === 'REGULATED_METER_ESTIMATE' ? t('driver.offer.meterEstimate') : ''}</span>}</div>
                 <button className="btn-primary min-h-[44px]" onClick={() => setViewId(o.bookingId)}>{t('driver.free.view')}</button>
               </div>
             </div>
@@ -632,7 +635,7 @@ function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
               <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
                 {o.stop && <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.stop.via')}</span><span className="font-medium">{o.stop.label}</span></div>}
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{o.dropoff.label}</span></div>
-                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{o.passengerName}</span><span className="ml-auto text-xs text-muted">{t('driver.units.paxShort', { count: o.passengerCount })}{o.luggageCount ? ` · 🧳 ${o.luggageCount}` : ''} · {o.vClass}</span></div>
+                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{o.passengerName}</span><span className="ms-auto text-xs text-muted">{t('driver.units.paxShort', { count: o.passengerCount })}{o.luggageCount ? ` · 🧳 ${o.luggageCount}` : ''} · {o.vClass}</span></div>
                 <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{o.fareCents != null ? money(o.fareCents, o.currency) : '—'}</span><span className="text-xs text-muted">{o.priceType === 'UPFRONT_DYNAMIC' ? t('driver.offer.upfront') : t('driver.offer.meterEstimate')}</span></div>
                 {o.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(o.scheduledAt)}</div>}
                 {o.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: o.note })}</div>}
@@ -840,7 +843,7 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
         {/* App language (2026-11-17): set by the phone's language; changed only here. */}
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-edge pt-3">
           <span className="text-sm">{t('common.language')}</span>
-          <LanguageSwitcher />
+          <LanguageSwitcher only={DRIVER_LOCALES} />
         </div>
       </div>
 
@@ -890,10 +893,10 @@ function BottomNav({ tab, setTab, hasOffer, freeCount, prebookCount }: { tab: Ta
           <button key={it.id} onClick={() => setTab(it.id)} className={`relative flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 py-1 text-xs ${tab === it.id ? 'text-accent' : 'text-muted'}`}>
             <span className="text-base leading-none" aria-hidden>{it.icon}</span>
             <span>{it.label}</span>
-            {it.id === 'home' && hasOffer && tab !== 'home' && <span className="absolute right-[28%] top-1.5 h-2 w-2 rounded-full bg-accent" />}
+            {it.id === 'home' && hasOffer && tab !== 'home' && <span className="absolute end-[28%] top-1.5 h-2 w-2 rounded-full bg-accent" />}
             {/* Small red count: new free orders / open pre-bookings. */}
-            {it.id === 'free' && freeCount > 0 && <span className="absolute right-[20%] top-1 min-w-[18px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[18px] text-white">{freeCount}</span>}
-            {it.id === 'prebook' && prebookCount > 0 && <span className="absolute right-[20%] top-1 min-w-[18px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[18px] text-white">{prebookCount}</span>}
+            {it.id === 'free' && freeCount > 0 && <span className="absolute end-[20%] top-1 min-w-[18px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[18px] text-white">{freeCount}</span>}
+            {it.id === 'prebook' && prebookCount > 0 && <span className="absolute end-[20%] top-1 min-w-[18px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[18px] text-white">{prebookCount}</span>}
           </button>
         ))}
       </div>

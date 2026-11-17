@@ -177,7 +177,7 @@ function Upload({ slot, app, reload, label }: { slot: string; app: AppData; relo
         <span className="btn-ghost !min-h-0 inline-block cursor-pointer !py-1.5 text-xs">{busy ? t('driverReg.upload.uploading') : has ? t('driverReg.upload.replace') : t('driverReg.upload.uploadOrPhoto')}</span>
         <input type="file" accept="image/*,application/pdf" capture="environment" className="hidden" onChange={(ev) => ev.target.files?.[0] && onFile(ev.target.files[0])} />
       </label>
-      {has && <a href={`/api/v1/applicant/documents/${has.id}`} target="_blank" rel="noreferrer" className="ml-2 text-xs text-accent hover:underline">{t('driverReg.upload.view')}</a>}
+      {has && <a href={`/api/v1/applicant/documents/${has.id}`} target="_blank" rel="noreferrer" className="ms-2 text-xs text-accent hover:underline">{t('driverReg.upload.view')}</a>}
       {e && <p className="mt-1 text-xs text-danger">{e}</p>}
     </div>
   );

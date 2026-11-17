@@ -7,7 +7,7 @@ const rides: Catalog<typeof en> = {
   signIn: "התחברות",
   loadError: "לא הצלחנו לטעון את הנסיעות. בדקו את החיבור.",
   empty: "אין עדיין נסיעות.",
-  bookFirst: "הזמינו את הנסיעה הראשונה →",
+  bookFirst: "הזמינו את הנסיעה הראשונה ←",
   trackLive: "מעקב חי ›",
   rateTrip: "דירוג הנסיעה ›",
   receiptLink: "קבלה ›",

@@ -87,7 +87,7 @@ export default function SharePage() {
           <AutoMapView markers={markers} center={view.location ?? view.pickup} zoom={13} interactive className="h-full w-full" />
         </div>
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end sm:block">
-          <div className="pointer-events-auto w-full sm:absolute sm:bottom-4 sm:left-4 sm:w-[400px]">
+          <div className="pointer-events-auto w-full sm:absolute sm:bottom-4 sm:start-4 sm:w-[400px]">
             <div className="card max-h-[60dvh] overflow-y-auto p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
               <h1 className="text-xl font-bold" role="status" aria-live="polite">
                 {etaText && view.status !== 'IN_PROGRESS' ? t('track.share.headlineEta', { status: statusLabel, eta: etaText }) : statusLabel}

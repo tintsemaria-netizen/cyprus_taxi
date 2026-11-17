@@ -329,7 +329,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
           </div>
         ) : (
           <>
-            <div ref={containerRef} className="absolute inset-0 h-full w-full" aria-label={t('booking.picker.mapAria')} role="application" />
+            <div ref={containerRef} dir="ltr" className="absolute inset-0 h-full w-full" aria-label={t('booking.picker.mapAria')} role="application" />
             {mapLoaded && (
               <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full">
                 {/* IL-Y brand mark as the centre pin (2026-11-17). */}
@@ -342,7 +342,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
               </div>
             )}
             <button
-              className="absolute right-3 top-3 z-10 rounded-full border border-edge bg-page/90 px-3 py-2 text-sm text-ink hover:border-accent/50 disabled:opacity-50"
+              className="absolute end-3 top-3 z-10 rounded-full border border-edge bg-page/90 px-3 py-2 text-sm text-ink hover:border-accent/50 disabled:opacity-50"
               onClick={() => requestLocation(true)}
               disabled={!mapLoaded}
             >
@@ -360,7 +360,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
           <div className="label">{kind === 'pickup' ? t('booking.picker.selectedPickup') : kind === 'stop' ? t('booking.picker.selectedStop') : t('booking.picker.selectedDestination')}</div>
           <div className="mt-0.5 truncate text-sm font-medium">
             {addr ?? coordLabel(center.lat, center.lng)}
-            {resolving && !addr && <span className="ml-2 text-xs text-muted">{t('booking.picker.resolving')}</span>}
+            {resolving && !addr && <span className="ms-2 text-xs text-muted">{t('booking.picker.resolving')}</span>}
           </div>
           <div className="text-xs text-muted">{addr ? ' ' : t('booking.picker.noAddress')}</div>
         </div>
