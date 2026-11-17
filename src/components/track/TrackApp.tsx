@@ -534,30 +534,10 @@ export default function TrackApp() {
                         <div className="mb-3"><RateTripModal inline postUrl="/tracking/rating" onDone={(s) => setRatedNow(s)} /></div>
                       )
                     )}
-                    {/* Google review prompt after rating — for every rating, never only for 5★ (Google rules). */}
-                    {view.status === 'COMPLETED' && (ratedNow ?? view.myRating) ? <div className="mb-3"><GoogleReviewCard /></div> : null}
-                    {view.status === 'COMPLETED' && view.receipt ? (
-                      <div className="rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-                        <div className="mb-2 font-semibold">{t('track.receiptTitle')}</div>
-                        {view.receipt.estimateCents != null && (
-                          <div className="flex justify-between"><span className="text-muted">{t('track.fareEstimate')}</span><span>{fmt.money(view.receipt.estimateCents, view.receipt.currency)}</span></div>
-                        )}
-                        {view.receipt.waitingCents > 0 && (
-                          <div className="flex justify-between"><span className="text-muted">{t('track.waiting')}</span><span>{fmt.money(view.receipt.waitingCents, view.receipt.currency)}</span></div>
-                        )}
-                        <div className="mt-2 border-t border-edge pt-2 text-xs text-muted">
-                          {view.receipt.priceType === 'REGULATED_METER_ESTIMATE'
-                            ? t('track.receiptMeterNote')
-                            : t('track.receiptQuoted')}
-                        </div>
-                        <div className="mt-1 flex justify-between text-xs text-muted">
-                          <span>{t('track.paymentLine', { method: view.receipt.paymentMethod === 'CASH_TO_DRIVER' ? t('track.paymentCash') : view.receipt.paymentMethod })}</span>
-                          <span>{view.receipt.paymentStatus === 'PENDING' ? t('track.toBeCollected') : t('track.collected')}</span>
-                        </div>
-                      </div>
-                    ) : view.status === 'COMPLETED' ? (
-                      <div className="rounded-[12px] border border-edge bg-elevated p-3 text-sm">{t('track.thanks')}</div>
-                    ) : null /* canceled: no «Этот заказ отменён» box (2026-11-16) — the title says it */}
+                    {/* Google review prompt: its own window over everything, right after rating — for every rating,
+                        never only for 5★ (Google rules). */}
+                    {view.status === 'COMPLETED' && ratedNow ? <GoogleReviewCard modal /> : null}
+                    {/* No «Чек за поездку» box on the finished screen (2026-11-17): the receipt lives in «My rides». */}
                     {view.status === 'CANCELED' ? (
                       // Re-order the very same ride (route + stop + class); × above starts a fresh booking.
                       <button type="button" className="btn-primary mt-3 w-full" data-testid="repeat-ride" onClick={() => {
