@@ -842,18 +842,18 @@ export default function BookingApp() {
         {mapMoved && myLoc && !picker && (
           <button type="button" aria-label={t('booking.picker.myLocation')} title={t('booking.picker.myLocation')}
             onClick={() => { setMapMoved(false); setRecenterTick((n) => n + 1); }}
-            className="absolute bottom-6 end-6 z-20 hidden h-12 w-12 items-center justify-center rounded-full border border-edge-strong bg-page/95 text-accent shadow-lg sm:flex">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="6.5" /><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" /></svg>
+            className="absolute bottom-6 end-6 z-20 hidden h-12 items-center gap-2.5 rounded-full border border-white/15 bg-[#10191C]/95 px-5 text-[17px] text-white shadow-lg sm:flex">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden className="shrink-0"><circle cx="12" cy="12" r="6" /><path d="M12 3v5M12 16v5M3 12h5M16 12h5" /></svg><span>{t('booking.picker.myLocation')}</span>
           </button>
         )}
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end sm:block">
           <div ref={sheetBoxRef} className="flex h-full w-full flex-col justify-end sm:absolute sm:start-4 sm:top-4 sm:block sm:h-[calc(100%-2rem)] sm:w-[380px]">
             {mapMoved && myLoc && !picker && (
-              <div className="flex shrink-0 justify-end px-3 pb-3 sm:hidden">
+              <div className="flex shrink-0 justify-center px-3 pb-3 sm:hidden">
                 <button type="button" data-testid="map-my-location" aria-label={t('booking.picker.myLocation')} title={t('booking.picker.myLocation')}
                   onClick={() => { setMapMoved(false); setRecenterTick((n) => n + 1); }}
-                  className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border border-edge-strong bg-page/95 text-accent shadow-lg">
-                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="6.5" /><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" /></svg>
+                  className="pointer-events-auto flex h-12 items-center gap-2.5 rounded-full border border-white/15 bg-[#10191C]/95 px-5 text-[17px] text-white shadow-lg">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden className="shrink-0"><circle cx="12" cy="12" r="6" /><path d="M12 3v5M12 16v5M3 12h5M16 12h5" /></svg><span>{t('booking.picker.myLocation')}</span>
                 </button>
               </div>
             )}

@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-17 — «Моё местоположение» as a pill
+
+- The start-screen location button is now a dark pill with a thin crosshair + text (booking.picker.myLocation), centred above the
+  sheet on mobile, bottom-end on desktop (user's reference screenshot). Behaviour unchanged.
+
 ## 2026-11-17 — «My location» button on the passenger start screen
 
 - Map views get `recenterTick` (bump → re-run focus/fit, i.e. back to the automatic view) and `onUserMove` (fires on dragstart).
