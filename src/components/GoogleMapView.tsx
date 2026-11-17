@@ -9,6 +9,8 @@ import { fitKeyOf } from './mapFit';
 import { vehicleMarkerEl, orientVehicle, bearing, personMarkerEl, pickupPinEl, navArrowEl } from './carMarker';
 import { distanceM } from '@/lib/gpsFilter';
 import { useIdleReturn } from './useIdleReturn';
+import { compassEl, easeHeadingToNorth } from './mapCompass';
+import { useT } from '@/i18n/I18nProvider';
 
 interface Props {
   markers?: MapMarker[];
@@ -121,8 +123,12 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   idleReturnRef.current = onIdleReturn;
   const idle = useIdleReturn(containerRef, idleReturnMs, {
     onStart: () => { if (followRef.current) breakRef.current?.(); },
-    onReturn: () => idleReturnRef.current?.(),
+    // Back to the automatic view also turns a hand-rotated map back to north (follow sets its own heading).
+    onReturn: () => { if (!followRef.current && mapRef.current) { const m = mapRef.current; easeHeadingToNorth(() => m.getHeading?.() ?? 0, (h) => m.setHeading?.(h)); } idleReturnRef.current?.(); },
   });
+  const { t } = useT();
+  const compassLabel = useRef('');
+  compassLabel.current = t('common.mapNorth');
 
   useEffect(() => {
     let cancelled = false;
@@ -144,6 +150,10 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
           disableDefaultUI: !interactive,
           clickableIcons: false,
           gestureHandling: interactive ? 'greedy' : 'none',
+          // Two-finger rotation, 360° (2026-11-17). Works on vector maps (our Map ID); tilt stays ours.
+          headingInteractionEnabled: interactive,
+          tiltInteractionEnabled: false,
+          rotateControl: false,
           keyboardShortcuts: interactive,
           fullscreenControl: false,
           // Zoom/camera buttons only with a mouse (touch → pinch); kept clear of the bottom sheets.
@@ -159,7 +169,12 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
         mapRef.current = map;
         map.addListener('dragstart', () => { if (followRef.current) breakRef.current?.(); });
         // Keep cars pointing along their travel direction while the map rotates (heading-up nav).
-        map.addListener('heading_changed', () => { const h = map.getHeading?.() ?? 0; containerRef.current?.querySelectorAll<HTMLElement>('.ily-vehicle').forEach((el) => orientVehicle(el, h)); });
+        // Compass (north button) only on maps without an automatic return — those go back to north by themselves.
+        const compass = interactive && !idleReturnMs && g.ControlPosition
+          ? compassEl(compassLabel.current, () => easeHeadingToNorth(() => map.getHeading?.() ?? 0, (h) => map.setHeading?.(h)))
+          : null;
+        if (compass) map.controls[g.ControlPosition.RIGHT_TOP].push(compass.el);
+        map.addListener('heading_changed', () => { const h = map.getHeading?.() ?? 0; compass?.update(h); containerRef.current?.querySelectorAll<HTMLElement>('.ily-vehicle').forEach((el) => orientVehicle(el, h)); });
         // The map may be created before its (mobile/flex) container has its final size,
         // which leaves it painting only the background. Nudge a resize + recentre when
         // the container settles and on any later size change.

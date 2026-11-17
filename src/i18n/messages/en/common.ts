@@ -1,4 +1,5 @@
 const common = {
+  mapNorth: 'Turn the map north',
   brandTagline: 'Book a ride across Cyprus',
   book: 'Book',
   cancel: 'Cancel',

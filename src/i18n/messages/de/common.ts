@@ -2,6 +2,7 @@ import type { Catalog } from '../../types';
 import type en from '../en/common';
 
 const common: Catalog<typeof en> = {
+  mapNorth: 'Karte nach Norden drehen',
   brandTagline: 'Fahrten in ganz Zypern buchen',
   book: 'Buchen',
   cancel: 'Abbrechen',

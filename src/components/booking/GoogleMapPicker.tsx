@@ -124,6 +124,8 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
           disableDefaultUI: true,
           zoomControl: true,
           gestureHandling: 'greedy',
+          headingInteractionEnabled: true, // two-finger rotation (2026-11-17)
+          tiltInteractionEnabled: false,
           clickableIcons: false,
         });
         mapRef.current = map;

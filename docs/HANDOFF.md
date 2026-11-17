@@ -1,5 +1,18 @@
 # Session handoff
 
+## 2026-11-17 — Two-finger 360° map rotation (passenger + driver)
+
+- `GoogleMapView`, `GoogleMapPicker`: `headingInteractionEnabled` on interactive maps (vector Map ID), `tiltInteractionEnabled: false`,
+  `rotateControl: false`. `MapView` (MapLibre fallback): touch rotate already on; touch pitch disabled.
+- New `src/components/mapCompass.ts`: round compass button (lime = north) shown only while the map is turned; tap eases back to north.
+  Added at top-right on maps without automatic return (booking start screen, driver home map).
+- Maps with automatic return (driver navigation, passenger tracking, idleReturnMs=4000): any touch (incl. rotate) pauses the
+  follow camera; after 4 s the map returns to the car and, if not in follow mode, turns back to north. Navigation returns heading-up.
+- i18n key `common.mapNorth` in all 8 languages.
+- Checked locally on MapLibre (mouse right-drag rotate → compass appears → tap → north, compass hidden). Google rotation not
+  testable locally (no key); depends on the production Map ID being a vector map (heading-up navigation already works there).
+- vitest 248 passed / 1 skipped; build ok.
+
 ## 2026-11-17 — Five more UI languages: Hebrew, Arabic, Polish, German, French
 
 - `src/i18n/config.ts`: LOCALES = en, el, ru, he, ar, pl, de, fr; names, short codes, Intl tags; `RTL_LOCALES = he, ar`.

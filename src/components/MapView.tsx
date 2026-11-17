@@ -7,6 +7,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { publicMapConfig } from '@/lib/config';
 import { vehicleMarkerEl, personMarkerEl, orientVehicle, pickupPinEl, navArrowEl } from './carMarker';
 import { useIdleReturn } from './useIdleReturn';
+import { compassEl } from './mapCompass';
+import { useT } from '@/i18n/I18nProvider';
 import { fitKeyOf } from './mapFit';
 
 export interface MapMarker {
@@ -88,9 +90,13 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
   const idleReturnRef = useRef(onIdleReturn);
   idleReturnRef.current = onIdleReturn;
   const lastFit = useRef('');
+  const { t } = useT();
+  const compassLabel = useRef('');
+  compassLabel.current = t('common.mapNorth');
   const idle = useIdleReturn(containerRef, idleReturnMs, {
     onStart: () => { if (followRef.current) breakRef.current?.(); },
-    onReturn: () => idleReturnRef.current?.(),
+    // Back to the automatic view also turns a hand-rotated map back to north (follow sets its own bearing).
+    onReturn: () => { if (!followRef.current) mapRef.current?.resetNorth({ duration: 400 }); idleReturnRef.current?.(); },
   });
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerObjs = useRef<maplibregl.Marker[]>([]);
@@ -126,7 +132,11 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         });
         map.on('load', () => { if (!cancelled) setReady(true); });
         // Keep cars pointing along their travel direction while the map rotates (heading-up nav).
-        map.on('rotate', () => { const b = map!.getBearing(); document.querySelectorAll<HTMLElement>('.ily-vehicle').forEach((el) => orientVehicle(el, b)); });
+        // Two-finger rotation, 360° (2026-11-17): MapLibre's touch rotate is on; pitch stays ours.
+        if (interactive) map.touchPitch.disable();
+        const compass = interactive && !idleReturnMs ? compassEl(compassLabel.current, () => map!.resetNorth({ duration: 400 })) : null;
+        if (compass) { const box = document.createElement('div'); box.className = 'maplibregl-ctrl'; box.appendChild(compass.el); map.addControl({ onAdd: () => box, onRemove: () => box.remove() }, 'top-right'); }
+        map.on('rotate', () => { const b = map!.getBearing(); compass?.update(b); document.querySelectorAll<HTMLElement>('.ily-vehicle').forEach((el) => orientVehicle(el, b)); });
         map.on('dragstart', () => { if (followRef.current) breakRef.current?.(); });
         if (interactive) {
           // Zoom buttons only with a mouse; on touch screens pinch-zoom is used and bottom sheets
