@@ -843,7 +843,7 @@ export default function BookingApp() {
             <div
               ref={sheetRef}
               className={`card pointer-events-auto relative flex flex-col overflow-hidden sm:max-h-full ${isMobile ? 'rounded-b-none' : ''} ${isMobile && dragH == null ? 'transition-[height] duration-300 ease-out' : ''}`}
-              style={isMobile ? (step === 'review' && !collapsed && dragH == null ? { height: 'auto', maxHeight: '100%' } : { height: dragH != null ? `${dragH}px` : collapsed ? `calc(${peekPx}px + env(safe-area-inset-bottom))` : '100%' }) : undefined}
+              style={isMobile ? (!collapsed && dragH == null ? { height: 'auto', maxHeight: '100%' } /* only as tall as its content (2026-11-17) */ : { height: dragH != null ? `${dragH}px` : collapsed ? `calc(${peekPx}px + env(safe-area-inset-bottom))` : '100%' }) : undefined}
               // Only a focused FORM FIELD expands a collapsed sheet. The handle itself is focusable, and
               // its focus after a tap re-expanded the sheet right after the tap collapsed it (2026-11-15).
               onFocusCapture={(e) => { if (isMobile && collapsed && (e.target as HTMLElement).matches('input:not([readonly]), textarea, select')) setCollapsed(false); }}
@@ -946,11 +946,22 @@ export default function BookingApp() {
                                     className="h-full min-w-0 flex-1 cursor-pointer truncate bg-transparent text-[16px] text-ink placeholder:text-muted"
                                     style={{ outline: 'none', boxShadow: 'none', border: 0 }}
                                   />
-                                  <button type="button" aria-label={t('booking.form.onMap')} title={t('booking.form.onMap')}
-                                    onClick={() => { setAddrOpen(true); setPicker(slot === 'p' ? 'pickup' : slot === 's' ? 'stop' : 'dropoff'); }}
-                                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-accent hover:bg-accent/10">
-                                    <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="6.5" /><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4" /><circle cx="12" cy="12" r="1.6" fill="currentColor" /></svg>
-                                  </button>
+                                  {/* No «pick on the map» button here (2026-11-17): it lives in the route editor
+                                      that opens when you tap a field. */}
+                                  {/* Schedule = a separate function (2026-11-17): a clock pill only on the start
+                                      screen's single «Пункт назначения» row, parted by a divider; shows the time once set. */}
+                                  {i === 0 && !addrOpen && (
+                                    <>
+                                      <span aria-hidden className="h-7 w-px shrink-0 bg-white/15" />
+                                      <button type="button" data-testid="schedule-chip"
+                                        aria-label={t('booking.form.schedule')} title={t('booking.form.schedule')} aria-pressed={when === 'SCHEDULE'}
+                                        onClick={() => { setWhen('SCHEDULE'); setCollapsed(false); }}
+                                        className={`flex h-8 shrink-0 items-center gap-1 rounded-full border px-2.5 text-[13px] font-medium ${when === 'SCHEDULE' ? 'border-accent bg-accent text-[#0d1608]' : 'border-edge-strong text-ink hover:border-accent/60'}`}>
+                                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                                        {when === 'SCHEDULE' && scheduledAt ? scheduledAt.slice(11, 16) : t('booking.form.schedule')}
+                                      </button>
+                                    </>
+                                  )}
                                   {slot === 's' && (
                                     <button type="button" aria-label={t('booking.form.removeStop')} onClick={() => { setHasStop(false); setStop(null); setStopText(''); }}
                                       className="flex h-9 w-7 shrink-0 items-center justify-center rounded-[8px] text-lg text-muted hover:text-danger">×</button>
@@ -981,16 +992,16 @@ export default function BookingApp() {
                     })()}
 
 
-                    <div className="mt-4">
-                      <div className="flex gap-2 rounded-[12px] border border-edge bg-elevated p-1">
-                        {(['NOW', 'SCHEDULE'] as const).map((w) => (
-                          <button key={w} type="button" aria-pressed={when === w} onClick={() => setWhen(w)} className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium transition ${when === w ? 'bg-accent text-[#0d1608]' : 'text-muted hover:text-ink'}`}>
-                            {w === 'NOW' ? t('booking.form.now') : t('booking.form.schedule')}
-                          </button>
-                        ))}
-                      </div>
+                    {/* No «Сейчас / Запланировать» switch (2026-11-17): a ride is «now» unless the clock pill
+                        in the address box is used; its panel has a way back to «now». */}
+                    <div className="mt-3">
                       {when === 'SCHEDULE' && (
-                        <div className="mt-2">
+                        <div className="rounded-[12px] border border-accent/40 bg-accent/5 p-3">
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <span className="text-sm font-semibold text-accent">🕒 {t('booking.form.schedule')}</span>
+                            <button type="button" className="text-sm text-muted hover:text-ink" data-testid="schedule-cancel"
+                              onClick={() => { setWhen('NOW'); setScheduledAt(''); setScheduleOffsetMin(undefined); setAmbiguous(null); }}>{t('booking.form.rideNow')}</button>
+                          </div>
                           <input type="datetime-local" className={`field ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
                           <p className="mt-1 text-xs text-muted">{withSlot(t('booking.form.timezoneNote'), 'tz', <strong>{cfg?.timezone ?? 'Europe/Nicosia'}</strong>)}</p>
                           {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}

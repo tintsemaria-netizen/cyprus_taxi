@@ -27,6 +27,8 @@ const booking = {
     pricing: 'Pricing…',
     now: 'Now',
     schedule: 'Schedule',
+    later: 'Later',
+    rideNow: 'Ride now',
     timezoneNote: 'Time is {tz} (Cyprus) regardless of your device. We start matching a nearby driver automatically shortly before your pickup time.',
   },
   classes: {

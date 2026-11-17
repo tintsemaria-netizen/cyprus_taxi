@@ -1,5 +1,26 @@
 # Session handoff
 
+## 2026-11-17 — Booking form: «Запланировать» pill instead of the Now/Schedule switch; no on-map buttons; content-high sheet
+**Schedule (approved from screenshots):**
+- The «Сейчас / Запланировать» segmented switch is removed; a ride is «now» by default.
+- On the start screen's single «Пункт назначения» row there is a «🕒 Запланировать» pill on the right, after a divider (`data-testid=schedule-chip`). Tapping it opens the schedule panel (date and time, Cyprus time note, driver comment) and expands the sheet.
+- The panel has «Ехать сейчас» (`schedule-cancel`) to go back to now.
+- Once a time is set the pill turns lime and shows HH:MM.
+- The pill is not shown in the two-row state or in the route editor; the schedule stays set and its panel remains visible.
+
+**Other changes:**
+- No «На карте» (⊕) buttons in the main sheet's address box. The pick-on-map button lives in the route editor.
+- The expanded mobile sheet is content-high in every step (`height: auto`, max 100 %), so the map shows above it.
+
+**i18n:** booking.form.later (unused now) and booking.form.rideNow, in ru, en and el.
+
+**Check:** Playwright (local):
+- start shows the pill and no ⊕;
+- the editor has no pill and has ⊕;
+- with a route set there is no pill and no ⊕;
+- scheduling shows the time on the pill, and «Ехать сейчас» resets it;
+- no errors.
+
 ## 2026-11-17 — Unreachable points (e.g. a place pinned in the sea): snap to the nearest street
 **Report:** «Molos, Limasol 3036» put the destination in the sea, so there was no route, no price, and the order button was still shown.
 
