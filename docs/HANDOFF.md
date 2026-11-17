@@ -1,5 +1,20 @@
 # Session handoff
 
+## 2026-11-17 — Driver↔passenger chat auto-translation
+**Migration** `20261117010000_chat_translation`: ChatMessage.lang (the sender's UI locale) and ChatMessage.translations (JSONB cache `{lang: text}`; '' means no translation needed).
+
+**Server:**
+- `postMessage` stores the sender's request locale.
+- `listMessages({reader, readerLang})` translates the OTHER side's messages into the reader's request locale with `googleTranslate` (Cloud Translation v2, same server key), caches per target language and returns `translated`.
+- Any API error leaves the original and pauses translation calls for 5 min (logged `[chat] translation unavailable`).
+- The passenger (tracking) and driver message routes pass their role and `getRequestLocale()`.
+
+**UI (ChatPanel):** shows `translated` with a small «Переведено · показать оригинал» / «Показать перевод» toggle.
+
+**Tests:** `tests/chat-translate.db.test.ts` (3, Google mocked): Greek driver sees Russian passenger in Greek, own messages untouched, same-language skipped, cache prevents repeat calls.
+
+**OPEN:** the Cloud Translation API must be enabled for the server key's Google Cloud project; until then chat shows originals.
+
 ## 2026-11-17 — Language follows the device; switcher only in profiles; no driver top-bar sign-out
 **Language:** the locale was already resolved from the `lang` cookie, else the browser/device Accept-Language (never from the phone number).
 

@@ -113,6 +113,8 @@ const track = {
   },
   timelineEntry: '· {event} — {time}',
   chat: {
+    translatedShowOriginal: 'Translated · show original',
+    showTranslation: 'Show translation',
     titleDriver: '💬 Chat with driver',
     titlePassenger: '💬 Chat with passenger',
     open: 'Open',

@@ -4,6 +4,7 @@ import { listMessages, postMessage, driverOwnsBooking } from '@/server/chat';
 import { notifyNewMessage } from '@/server/push';
 import { rateLimit } from '@/lib/rate-limit';
 import { config } from '@/lib/config';
+import { getRequestLocale } from '@/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
   if (!(await driverOwnsBooking(ctx.driver.id, id))) return Errors.forbidden();
   const sp = new URL(req.url).searchParams;
-  return apiOk(await listMessages(id, { after: sp.get('after') || undefined, before: sp.get('before') || undefined, limit: sp.get('limit') ? Number(sp.get('limit')) : undefined }));
+  return apiOk(await listMessages(id, { after: sp.get('after') || undefined, before: sp.get('before') || undefined, limit: sp.get('limit') ? Number(sp.get('limit')) : undefined, reader: 'DRIVER', readerLang: await getRequestLocale() }));
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -27,7 +28,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!rl.ok) return Errors.throttled(rl.retryAfter);
   let body: { body?: string };
   try { body = await req.json(); } catch { return Errors.validation({ _: 'Invalid JSON body.' }); }
-  const r = await postMessage(id, 'DRIVER', body.body ?? '', { requireDriverId: ctx.driver.id });
+  const r = await postMessage(id, 'DRIVER', body.body ?? '', { requireDriverId: ctx.driver.id, lang: await getRequestLocale() });
   if (!r.ok) return apiError(r.status, r.code, r.message);
   void notifyNewMessage(id, 'DRIVER', r.message.body).catch(() => {}); // best-effort
   return apiOk({ ok: true, message: r.message }, 201);

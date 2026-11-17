@@ -116,6 +116,8 @@ const track: Catalog<typeof en> = {
   },
   timelineEntry: '· {event} — {time}',
   chat: {
+    translatedShowOriginal: 'Μετάφραση · εμφάνιση πρωτοτύπου',
+    showTranslation: 'Εμφάνιση μετάφρασης',
     titleDriver: '💬 Συνομιλία με τον οδηγό',
     titlePassenger: '💬 Συνομιλία με τον επιβάτη',
     open: 'Άνοιγμα',

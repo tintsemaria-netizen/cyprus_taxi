@@ -5,7 +5,7 @@ import { api, ApiRequestError } from '@/lib/api-client';
 import { enablePush, pushPermission, pushSupported } from '@/lib/push-client';
 import { useT } from '@/i18n/I18nProvider';
 
-interface Msg { id: string; sender: 'PASSENGER' | 'DRIVER'; body: string; at: string }
+interface Msg { id: string; sender: 'PASSENGER' | 'DRIVER'; body: string; at: string; translated?: string }
 
 // Collapsible passenger↔driver chat. Polls the given list endpoint and posts to the
 // given endpoint; `me` decides bubble alignment. Works for both roles. When `pushUrl`
@@ -18,6 +18,7 @@ export function ChatPanel({ listUrl, postUrl, me, pushUrl, expandedOverride, onU
   const { t, fmt, tError } = useT();
   const peerIsDriver = me === 'PASSENGER';
   const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [showOrig, setShowOrig] = useState<Record<string, boolean>>({});
   const [open, setOpen] = useState(true); // chat available (driver assigned, pre-terminal)
   const [hasOlder, setHasOlder] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -145,7 +146,14 @@ export function ChatPanel({ listUrl, postUrl, me, pushUrl, expandedOverride, onU
             {msgs.map((m) => (
               <div key={m.id} className={`flex ${m.sender === me ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] rounded-[12px] px-3 py-1.5 ${large ? 'text-base' : 'text-sm'} ${m.sender === me ? 'bg-accent text-[#10191C]' : 'bg-panel text-ink'}`}>
-                  {m.body}
+                  {/* Auto-translated into my language (2026-11-17); tap «Оригинал» to see what was written. */}
+                  {m.translated && !showOrig[m.id] ? m.translated : m.body}
+                  {m.translated && (
+                    <button type="button" onClick={() => setShowOrig((s) => ({ ...s, [m.id]: !s[m.id] }))}
+                      className="mt-0.5 block text-[11px] text-muted underline-offset-2 hover:underline">
+                      {showOrig[m.id] ? t('track.chat.showTranslation') : t('track.chat.translatedShowOriginal')}
+                    </button>
+                  )}
                   <span className={`ml-2 align-bottom text-[11px] ${m.sender === me ? 'text-[#10191C]/60' : 'text-muted'}`}>{fmt.time(m.at)}</span>
                 </div>
               </div>

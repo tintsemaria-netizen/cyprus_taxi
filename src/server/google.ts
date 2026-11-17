@@ -50,6 +50,23 @@ export async function googleSnapToStreet(lat: number, lng: number, maxM = 5000):
   return 2 * 6371000 * Math.asin(Math.sqrt(h)) <= maxM ? { lat: loc.lat, lng: loc.lng } : null;
 }
 
+// Google Cloud Translation (v2, same server key; the API must be enabled for the key's project).
+// Returns the translated text, or null when the text is already in `target` or the call fails —
+// chat then simply shows the original (2026-11-17).
+export async function googleTranslate(text: string, target: string, source?: string | null): Promise<string | null> {
+  const key = config.googleServerKey();
+  if (!key) return null;
+  const d = (await fetchJson(`https://translation.googleapis.com/language/translate/v2?key=${key}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ q: text, target, format: 'text', ...(source ? { source } : {}) }),
+  }, 6000)) as { data?: { translations?: { translatedText?: string; detectedSourceLanguage?: string }[] }; error?: { message?: string } };
+  if (d.error) throw new Error(`translate:${d.error.message ?? 'error'}`);
+  const tr = d.data?.translations?.[0];
+  if (!tr?.translatedText) return null;
+  if ((tr.detectedSourceLanguage ?? source ?? '').split('-')[0] === target) return null;
+  return tr.translatedText;
+}
+
 // Forward geocode / address search, restricted to Cyprus. Returns resolved places
 // with real coordinates (not predictions). Deduplicated, bounded count.
 export async function googleSearch(q: string, limit = 6): Promise<{ label: string; lat: number; lng: number }[]> {

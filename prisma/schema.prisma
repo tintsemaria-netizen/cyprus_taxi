@@ -532,6 +532,9 @@ model ChatMessage {
   createdAt         DateTime  @default(now())
   readByPassengerAt DateTime?
   readByDriverAt    DateTime?
+  // Auto-translation (2026-11-17): sender's UI language and cached translations { "<lang>": text }.
+  lang              String?
+  translations      Json?
 
   @@index([bookingId, createdAt])
 }

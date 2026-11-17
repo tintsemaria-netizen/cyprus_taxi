@@ -121,6 +121,8 @@ const track: Catalog<typeof en> = {
   },
   timelineEntry: '· {event} — {time}',
   chat: {
+    translatedShowOriginal: 'Переведено · показать оригинал',
+    showTranslation: 'Показать перевод',
     titleDriver: '💬 Чат с водителем',
     titlePassenger: '💬 Чат с пассажиром',
     open: 'Открыть',
