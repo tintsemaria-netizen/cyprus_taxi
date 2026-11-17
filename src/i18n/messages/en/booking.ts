@@ -21,6 +21,8 @@ const booking = {
     swapAria: 'Swap pickup and destination',
     home: 'Home',
     work: 'Work',
+    school: "School",
+    addPlace: "Add",
     recent: 'Recent:',
     upToPeople: 'up to {n} people',
     chooseRide: 'Choose your ride',

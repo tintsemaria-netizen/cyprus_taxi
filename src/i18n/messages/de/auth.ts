@@ -68,7 +68,7 @@ const auth: Catalog<typeof en> = {
   cat: {
     personal: "Persönliche Angaben",
     security: "Passwort & Anmeldung",
-    placesSub: "Zuhause und Arbeit für Buchung mit einem Tipp",
+    placesSub: "Zuhause, Arbeit und Schule für Buchung mit einem Tipp",
     notifications: "Benachrichtigungen",
   },
   pw: {
@@ -93,7 +93,7 @@ const auth: Catalog<typeof en> = {
   },
   places: {
     title: "Gespeicherte Orte",
-    subtitle: "Zuhause und Arbeit erscheinen beim Buchen als schnelle Ziele.",
+    subtitle: "Zuhause, Arbeit und Schule erscheinen beim Buchen als schnelle Ziele.",
     home: "Zuhause",
     work: "Arbeit",
     change: "Ändern",
@@ -101,6 +101,8 @@ const auth: Catalog<typeof en> = {
     remove: "Entfernen",
     saveHome: "Zuhause speichern",
     saveWork: "Arbeit speichern",
+    school: "Schule",
+    saveSchool: "Schule speichern",
   },
   staff: {
     title: "Anmeldung",

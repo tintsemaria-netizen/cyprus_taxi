@@ -68,7 +68,7 @@ const auth: Catalog<typeof en> = {
   cat: {
     personal: "Dane osobowe",
     security: "Hasło i logowanie",
-    placesSub: "Dom i praca do zamawiania jednym dotknięciem",
+    placesSub: "Dom, praca i szkoła do zamawiania jednym dotknięciem",
     notifications: "Powiadomienia",
   },
   pw: {
@@ -93,7 +93,7 @@ const auth: Catalog<typeof en> = {
   },
   places: {
     title: "Zapisane miejsca",
-    subtitle: "Dom i Praca pojawiają się jako szybkie cele przy zamawianiu.",
+    subtitle: "Dom, Praca i Szkoła pojawiają się jako szybkie cele przy zamawianiu.",
     home: "Dom",
     work: "Praca",
     change: "Zmień",
@@ -101,6 +101,8 @@ const auth: Catalog<typeof en> = {
     remove: "Usuń",
     saveHome: "Zapisz Dom",
     saveWork: "Zapisz Pracę",
+    school: "Szkoła",
+    saveSchool: "Zapisz Szkołę",
   },
   staff: {
     title: "Logowanie",

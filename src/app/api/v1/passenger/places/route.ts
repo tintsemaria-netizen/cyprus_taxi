@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-const KINDS = ['HOME', 'WORK'];
+const KINDS = ['HOME', 'WORK', 'SCHOOL']; // SCHOOL added 2026-11-17
 
 // Passenger saved places (Task 019). GET returns Home/Work; PUT upserts one kind (place:null removes).
 export async function GET() {
@@ -12,7 +12,7 @@ export async function GET() {
   if (!p) return Errors.unauthorized();
   const rows = await prisma.savedPlace.findMany({ where: { passengerId: p.id } });
   const pick = (k: string) => { const r = rows.find((x) => x.kind === k); return r ? { label: r.label, lat: r.lat, lng: r.lng } : null; };
-  return apiOk({ home: pick('HOME'), work: pick('WORK') });
+  return apiOk({ home: pick('HOME'), work: pick('WORK'), school: pick('SCHOOL') });
 }
 
 export async function PUT(req: Request) {
@@ -21,7 +21,7 @@ export async function PUT(req: Request) {
   let body: { kind?: string; place?: { label?: string; lat?: number; lng?: number } | null };
   try { body = await req.json(); } catch { return Errors.validation({ _: 'Invalid JSON body.' }); }
   const kind = String(body.kind || '').toUpperCase();
-  if (!KINDS.includes(kind)) return Errors.validation({ kind: 'HOME or WORK.' });
+  if (!KINDS.includes(kind)) return Errors.validation({ kind: 'HOME, WORK or SCHOOL.' });
 
   if (body.place === null) {
     await prisma.savedPlace.deleteMany({ where: { passengerId: p.id, kind } });

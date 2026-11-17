@@ -23,6 +23,7 @@ interface Props {
   recent: Place[];
   home: Place | null;
   work: Place | null;
+  school?: Place | null;
   canAddStop: boolean;
   onText: (slot: RouteSlot, text: string) => void;
   onSelect: (slot: RouteSlot, sel: Selected | null) => void;
@@ -128,10 +129,11 @@ export function RouteEditor(p: Props) {
   }
 
   const showSaved = query.length < 2;
-  const saved: (Place & { icon: 'home' | 'work' | 'recent'; name?: string })[] = showSaved
+  const saved: (Place & { icon: 'home' | 'work' | 'school' | 'recent'; name?: string })[] = showSaved
     ? [
         ...(p.home ? [{ ...p.home, icon: 'home' as const, name: t('booking.form.home') }] : []),
         ...(p.work ? [{ ...p.work, icon: 'work' as const, name: t('booking.form.work') }] : []),
+        ...(p.school ? [{ ...p.school, icon: 'school' as const, name: t('booking.form.school') }] : []),
         ...p.recent.map((r) => ({ ...r, icon: 'recent' as const })),
       ]
     : [];
@@ -142,11 +144,12 @@ export function RouteEditor(p: Props) {
       ? <span className="block h-3 w-3 rounded-[3px]" style={{ background: '#FFC83D' }} />
       : <span className="block h-3.5 w-3.5 rounded-full" style={{ background: LIME }} />;
 
-  const icon = (k: 'home' | 'work' | 'recent' | 'pin') => (
+  const icon = (k: 'home' | 'work' | 'school' | 'recent' | 'pin') => (
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" className="text-muted" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       {k === 'recent' && (<><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>)}
       {k === 'home' && (<path d="M4 11.5 12 5l8 6.5M6.5 10v8.5h11V10" />)}
       {k === 'work' && (<><rect x="4" y="8" width="16" height="11" rx="2" /><path d="M9 8V6.5A1.5 1.5 0 0 1 10.5 5h3A1.5 1.5 0 0 1 15 6.5V8" /></>)}
+      {k === 'school' && (<><path d="M3 9.5 12 5l9 4.5-9 4.5z" /><path d="M7 11.5V16c1.5 1.3 3.2 2 5 2s3.5-.7 5-2v-4.5" /></>)}
       {k === 'pin' && (<><path d="M12 20s6-5.4 6-10a6 6 0 0 0-12 0c0 4.6 6 10 6 10z" /><circle cx="12" cy="10" r="2.2" /></>)}
     </svg>
   );

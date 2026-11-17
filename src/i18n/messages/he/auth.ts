@@ -68,7 +68,7 @@ const auth: Catalog<typeof en> = {
   cat: {
     personal: "פרטים אישיים",
     security: "סיסמה והתחברות",
-    placesSub: "בית ועבודה להזמנה בנגיעה אחת",
+    placesSub: "בית, עבודה ובית ספר להזמנה בנגיעה אחת",
     notifications: "התראות",
   },
   pw: {
@@ -93,7 +93,7 @@ const auth: Catalog<typeof en> = {
   },
   places: {
     title: "מקומות שמורים",
-    subtitle: "בית ועבודה מופיעים כיעדים מהירים בעת ההזמנה.",
+    subtitle: "בית, עבודה ובית ספר מופיעים כיעדים מהירים בעת ההזמנה.",
     home: "בית",
     work: "עבודה",
     change: "שינוי",
@@ -101,6 +101,8 @@ const auth: Catalog<typeof en> = {
     remove: "הסרה",
     saveHome: "שמירת בית",
     saveWork: "שמירת עבודה",
+    school: "בית ספר",
+    saveSchool: "שמירת בית הספר",
   },
   staff: {
     title: "כניסה",

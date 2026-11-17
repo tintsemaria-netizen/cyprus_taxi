@@ -24,6 +24,8 @@ const booking: Catalog<typeof en> = {
     swapAria: 'Поменять местами подачу и пункт назначения',
     home: 'Дом',
     work: 'Работа',
+    school: "Школа",
+    addPlace: "Добавить",
     recent: 'Недавние:',
     upToPeople: 'до {n} человек',
     chooseRide: 'Выберите класс',

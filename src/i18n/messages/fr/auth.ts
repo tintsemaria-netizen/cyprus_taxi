@@ -68,7 +68,7 @@ const auth: Catalog<typeof en> = {
   cat: {
     personal: "Informations personnelles",
     security: "Mot de passe et connexion",
-    placesSub: "Domicile et travail pour réserver en un geste",
+    placesSub: "Domicile, travail et école pour réserver en un geste",
     notifications: "Notifications",
   },
   pw: {
@@ -93,7 +93,7 @@ const auth: Catalog<typeof en> = {
   },
   places: {
     title: "Lieux enregistrés",
-    subtitle: "Domicile et Travail apparaissent comme destinations rapides lors de la réservation.",
+    subtitle: "Domicile, Travail et École apparaissent comme destinations rapides lors de la réservation.",
     home: "Domicile",
     work: "Travail",
     change: "Modifier",
@@ -101,6 +101,8 @@ const auth: Catalog<typeof en> = {
     remove: "Supprimer",
     saveHome: "Enregistrer Domicile",
     saveWork: "Enregistrer Travail",
+    school: "École",
+    saveSchool: "Enregistrer École",
   },
   staff: {
     title: "Connexion",

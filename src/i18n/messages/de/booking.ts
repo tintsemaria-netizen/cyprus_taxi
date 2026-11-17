@@ -28,6 +28,8 @@ const booking: Catalog<typeof en> = {
     swapAria: "Abholort und Ziel tauschen",
     home: "Zuhause",
     work: "Arbeit",
+    school: "Schule",
+    addPlace: "Hinzufügen",
     recent: "Zuletzt:",
     upToPeople: "bis zu {n} Personen",
     chooseRide: "Wählen Sie Ihre Fahrt",

@@ -117,12 +117,13 @@ interface Place { label: string; lat: number; lng: number }
 function SavedPlaces() {
   const [home, setHome] = useState<Place | null>(null);
   const [work, setWork] = useState<Place | null>(null);
+  const [school, setSchool] = useState<Place | null>(null);
   const [loaded, setLoaded] = useState(false);
   const { t } = useT();
 
   useEffect(() => {
-    api<{ home: Place | null; work: Place | null }>('/passenger/places')
-      .then((r) => { setHome(r.home); setWork(r.work); })
+    api<{ home: Place | null; work: Place | null; school?: Place | null }>('/passenger/places')
+      .then((r) => { setHome(r.home); setWork(r.work); setSchool(r.school ?? null); })
       .catch(() => {})
       .finally(() => setLoaded(true));
   }, []);
@@ -134,13 +135,14 @@ function SavedPlaces() {
         <>
           <PlaceEditor kind="HOME" icon="🏠" title={t('auth.places.home')} current={home} onChange={setHome} />
           <PlaceEditor kind="WORK" icon="💼" title={t('auth.places.work')} current={work} onChange={setWork} />
+          <PlaceEditor kind="SCHOOL" icon="🎓" title={t('auth.places.school')} current={school} onChange={setSchool} />
         </>
       )}
     </section>
   );
 }
 
-function PlaceEditor({ kind, icon, title, current, onChange }: { kind: 'HOME' | 'WORK'; icon: string; title: string; current: Place | null; onChange: (p: Place | null) => void }) {
+function PlaceEditor({ kind, icon, title, current, onChange }: { kind: 'HOME' | 'WORK' | 'SCHOOL'; icon: string; title: string; current: Place | null; onChange: (p: Place | null) => void }) {
   const [editing, setEditing] = useState(false);
   const [sel, setSel] = useState<Selected | null>(null);
   const [text, setText] = useState('');
@@ -176,7 +178,7 @@ function PlaceEditor({ kind, icon, title, current, onChange }: { kind: 'HOME' | 
       {editing && (
         <div className="mt-2 space-y-2">
           <PlacesInput kind="To" value={sel} text={text} onText={setText} onSelect={setSel} />
-          <button onClick={save} disabled={busy || !sel} className="btn-primary min-h-[44px] w-full">{busy ? t('auth.saving') : t(kind === 'HOME' ? 'auth.places.saveHome' : 'auth.places.saveWork')}</button>
+          <button onClick={save} disabled={busy || !sel} className="btn-primary min-h-[44px] w-full">{busy ? t('auth.saving') : t(kind === 'HOME' ? 'auth.places.saveHome' : kind === 'WORK' ? 'auth.places.saveWork' : 'auth.places.saveSchool')}</button>
         </div>
       )}
     </div>

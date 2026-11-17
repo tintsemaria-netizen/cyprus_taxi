@@ -24,6 +24,8 @@ const booking: Catalog<typeof en> = {
     swapAria: 'Αντιστροφή παραλαβής και προορισμού',
     home: 'Σπίτι',
     work: 'Εργασία',
+    school: "Σχολείο",
+    addPlace: "Προσθήκη",
     recent: 'Πρόσφατα:',
     upToPeople: 'έως {n} άτομα',
     chooseRide: 'Επιλέξτε όχημα',

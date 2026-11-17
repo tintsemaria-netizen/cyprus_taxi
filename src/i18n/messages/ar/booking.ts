@@ -28,6 +28,8 @@ const booking: Catalog<typeof en> = {
     swapAria: "تبديل نقطة الانطلاق والوجهة",
     home: "المنزل",
     work: "العمل",
+    school: "المدرسة",
+    addPlace: "إضافة",
     recent: "الأخيرة:",
     upToPeople: "حتى {n} أشخاص",
     chooseRide: "اختر رحلتك",

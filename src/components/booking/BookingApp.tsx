@@ -177,7 +177,7 @@ export default function BookingApp() {
   const [passenger, setPassenger] = useState<{ phone: string | null; name?: string; email?: string | null } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [destinations, setDestinations] = useState<{ label: string; lat: number; lng: number }[]>([]);
-  const [places, setPlaces] = useState<{ home: { label: string; lat: number; lng: number } | null; work: { label: string; lat: number; lng: number } | null }>({ home: null, work: null });
+  const [places, setPlaces] = useState<{ home: Selected | null; work: Selected | null; school?: Selected | null }>({ home: null, work: null, school: null });
   const pendingSubmit = useRef<number | undefined>(undefined);
   const pendingSubmitActive = useRef(false);
   const pendingReview = useRef(false);
@@ -224,7 +224,7 @@ export default function BookingApp() {
         setPhone((cur) => cur || p.phone || '');
         if (p.name) setName((cur) => cur || p.name!);
         api<{ destinations: { label: string; lat: number; lng: number }[] }>('/passenger/destinations').then((d) => setDestinations(d.destinations)).catch(() => {});
-        api<{ home: { label: string; lat: number; lng: number } | null; work: { label: string; lat: number; lng: number } | null }>('/passenger/places').then(setPlaces).catch(() => {});
+        api<{ home: Selected | null; work: Selected | null; school?: Selected | null }>('/passenger/places').then(setPlaces).catch(() => {});
       })
       .catch(() => { setPassenger(null); setPlaces({ home: null, work: null }); });
   }, []);
@@ -377,7 +377,10 @@ export default function BookingApp() {
         // start, both rows once an address is being entered (was: only the first input → rows cut).
         const addr = (box.querySelector('[data-route-box]') ?? box.querySelector('input[readonly][aria-label]')) as HTMLElement | null;
         if (!addr) return;
-        h = Math.round(addr.getBoundingClientRect().bottom - sheet.getBoundingClientRect().top + 16);
+        // …plus the quick picks under it (saved places + last trips, 2026-11-17).
+        const qp = box.querySelector('[data-testid="quick-picks"]') as HTMLElement | null;
+        const bottom = Math.max(addr.getBoundingClientRect().bottom, qp ? qp.getBoundingClientRect().bottom : 0);
+        h = Math.round(bottom - sheet.getBoundingClientRect().top + 16);
       }
       const next = Math.max(150, Math.min(Math.round(window.innerHeight * 0.6), h));
       setPeekPx((p) => (Math.abs(p - next) > 2 ? next : p));
@@ -388,7 +391,7 @@ export default function BookingApp() {
     if (first) ro.observe(first);
     window.addEventListener('resize', measure);
     return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
-  }, [isMobile, step, routeReady, addrOpen, hasStop]);
+  }, [isMobile, step, routeReady, addrOpen, hasStop, destinations.length, places, passenger]);
   useHideClipped(contentRef, isMobile && (collapsed || dragH != null));
   useEffect(() => {
     const el = contentRef.current;
@@ -608,6 +611,13 @@ export default function BookingApp() {
     toReview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quotes, passenger, step, vClass]);
+  // Quick pick (saved place / recent destination): set the destination, then go to the price step
+  // as soon as it is priced (same path as «Заказать ещё раз»).
+  function pickQuick(pl: Selected) {
+    setDropoff({ label: pl.label, lat: pl.lat, lng: pl.lng });
+    setDropoffText(pl.label);
+    repeatPending.current = true;
+  }
   function toReview() {
     if (!validate()) return;
     // Contact details come from the signed-in account, so sign in before the review step.
@@ -779,6 +789,7 @@ export default function BookingApp() {
           recent={destinations}
           home={places.home}
           work={places.work}
+          school={places.school ?? null}
           canAddStop={!hasStop}
           onText={(s, x) => { slotGet(s).setText(x); if (s === 'p' && autoPickup) setAutoPickup(false); }}
           onSelect={(s, sel) => { slotGet(s).setSel(sel); if (s === 'p') setAutoPickup(false); }}
@@ -1001,6 +1012,42 @@ export default function BookingApp() {
                           )}
                           </div>
                           {anyErr.map((e) => <p key={e} className="mt-1 text-xs text-danger">{e}</p>)}
+                          {/* Quick picks under «Пункт назначения» (2026-11-17): saved Home / Work / School and the
+                              last three destinations — one tap sets the destination and goes on to the price. */}
+                          {!addrOpen && passenger && !dropoff && (
+                            <div className="mt-3" data-testid="quick-picks">
+                              <div className="flex gap-2">
+                                {([['home', '🏠', places.home], ['work', '💼', places.work], ['school', '🎓', places.school ?? null]] as const).map(([k, ic, pl]) => (
+                                  pl ? (
+                                    <button key={k} type="button" data-testid={`quick-${k}`} title={pl.label} onClick={() => pickQuick(pl)}
+                                      className="flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-edge-strong px-2 text-[14px] text-ink hover:border-accent/60">
+                                      <span aria-hidden>{ic}</span><span className="truncate">{t(`booking.form.${k}`)}</span>
+                                    </button>
+                                  ) : (
+                                    <a key={k} href="/account#places" data-testid={`quick-${k}`}
+                                      className="flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-dashed border-edge px-2 text-[14px] text-muted hover:border-accent/60">
+                                      <span aria-hidden className="text-accent">＋</span><span className="truncate">{t(`booking.form.${k}`)}</span>
+                                    </a>
+                                  )
+                                ))}
+                              </div>
+                              {destinations.length > 0 && (
+                                <ul className="mt-2">
+                                  {destinations.slice(0, 3).map((d, i) => (
+                                    <li key={`${d.label}-${i}`}>
+                                      <button type="button" data-testid="quick-recent" onClick={() => pickQuick(d)}
+                                        className={`flex h-12 w-full items-center gap-3 text-start ${i ? 'border-t border-white/[0.06]' : ''}`}>
+                                        <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-muted">
+                                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>
+                                        </span>
+                                        <span className="min-w-0 flex-1 truncate text-[15px] text-ink">{d.label}</span>
+                                      </button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          )}
                           {addrOpen && !hasStop && (
                             <button type="button" className="chip mt-2 hover:border-accent/50" onClick={() => { setHasStop(true); openEditor('s'); }}>＋ {t('booking.form.addStop')}</button>
                           )}

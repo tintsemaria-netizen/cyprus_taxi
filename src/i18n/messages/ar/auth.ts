@@ -68,7 +68,7 @@ const auth: Catalog<typeof en> = {
   cat: {
     personal: "البيانات الشخصية",
     security: "كلمة المرور وتسجيل الدخول",
-    placesSub: "المنزل والعمل للحجز بلمسة واحدة",
+    placesSub: "المنزل والعمل والمدرسة للحجز بلمسة واحدة",
     notifications: "الإشعارات",
   },
   pw: {
@@ -93,7 +93,7 @@ const auth: Catalog<typeof en> = {
   },
   places: {
     title: "الأماكن المحفوظة",
-    subtitle: "يظهر المنزل والعمل كوجهات سريعة عند الحجز.",
+    subtitle: "يظهر المنزل والعمل والمدرسة كوجهات سريعة عند الحجز.",
     home: "المنزل",
     work: "العمل",
     change: "تغيير",
@@ -101,6 +101,8 @@ const auth: Catalog<typeof en> = {
     remove: "إزالة",
     saveHome: "حفظ المنزل",
     saveWork: "حفظ العمل",
+    school: "المدرسة",
+    saveSchool: "حفظ المدرسة",
   },
   staff: {
     title: "تسجيل الدخول",
