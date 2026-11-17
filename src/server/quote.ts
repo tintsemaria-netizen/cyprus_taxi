@@ -7,7 +7,7 @@ import { computeMeterEstimate } from '@/lib/tariff';
 import { computeDynamicMultiplier, dynamicSurchargeCents } from '@/lib/pricing-dynamic';
 import { marketSnapshot } from '@/server/dispatch/market';
 import { getWeather } from '@/server/weather';
-import { googleConfigured, googleRoute } from '@/server/google';
+import { googleConfigured, googleRoute, googleSnapToStreet } from '@/server/google';
 
 const QUOTE_TTL_MS = 120_000; // 2 minutes (Task 012 §6.3)
 
@@ -40,7 +40,7 @@ export function quoteRequestHash(i: QuoteInput): string {
 
 export type QuoteResult =
   | { ok: true; quote: QuoteBody }
-  | { ok: false; status: number; code: string; message: string };
+  | { ok: false; status: number; code: string; message: string; snapped?: Partial<Record<'pickup' | 'dropoff' | 'stop', { lat: number; lng: number }>> };
 
 export interface QuoteBody {
   quoteId: string;
@@ -89,6 +89,19 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
         distanceMeters = Math.round(r.distanceKm * 1000);
         durationSeconds = r.etaMinutes * 60;
       } else {
+        // A point a car cannot reach (e.g. a place pinned in the sea): find the nearest street for
+        // each end; if the route works from there, hand those points back so the passenger's app
+        // moves them and asks again — a car can get there and the price shows (2026-11-17).
+        const snapped: Partial<Record<'pickup' | 'dropoff' | 'stop', { lat: number; lng: number }>> = {};
+        const pts = { pickup: input.pickup, dropoff: input.dropoff, ...(input.stop ? { stop: input.stop } : {}) } as Record<'pickup' | 'dropoff' | 'stop', { lat: number; lng: number }>;
+        await Promise.all((Object.keys(pts) as ('pickup' | 'dropoff' | 'stop')[]).map(async (k) => {
+          const s = await googleSnapToStreet(pts[k].lat, pts[k].lng).catch(() => null);
+          if (s && (Math.abs(s.lat - pts[k].lat) > 1e-5 || Math.abs(s.lng - pts[k].lng) > 1e-5)) snapped[k] = s;
+        }));
+        if (Object.keys(snapped).length) {
+          const r2 = await googleRoute(snapped.pickup ?? input.pickup, snapped.dropoff ?? input.dropoff, departureTime, { via: input.stop ? (snapped.stop ?? input.stop) : null }).catch(() => null);
+          if (r2) return { ok: false, status: 422, code: 'NO_ROUTE', message: 'No drivable route to that exact point; the nearest street works.', snapped };
+        }
         return { ok: false, status: 422, code: 'NO_ROUTE', message: 'No drivable route between those points.' };
       }
     } catch {

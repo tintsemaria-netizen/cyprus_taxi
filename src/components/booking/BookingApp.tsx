@@ -477,6 +477,7 @@ export default function BookingApp() {
   // (2026-10-01 audit). `quote` is the selected class's quote (used for booking + review).
   const [quotes, setQuotes] = useState<Partial<Record<'COMFORT' | 'XL', QuoteBody>>>({});
   const [quoteErr, setQuoteErr] = useState<string | null>(null);
+  const [noRoute, setNoRoute] = useState(false); // no car can reach a point → no ordering (2026-11-17)
   const [quoting, setQuoting] = useState(false);
   // Quotes live 2 minutes on the server (Task 012 §6.3). Keep them fresh while the passenger
   // looks at the form (2026-11-15: «Оценка стоимости устарела» after a pause), and re-quote +
@@ -499,10 +500,10 @@ export default function BookingApp() {
   });
   const classKeys = (cfg?.classes ?? [{ key: 'COMFORT' as const, maxPassengers: 4 }, { key: 'XL' as const, maxPassengers: 6 }]).map((c) => `${c.key}:${c.maxPassengers}`).join(',');
   useEffect(() => {
-    if (!pickup || !dropoff) { setQuotes({}); setQuoteErr(null); return; }
+    if (!pickup || !dropoff) { setQuotes({}); setQuoteErr(null); setNoRoute(false); return; }
     const controller = new AbortController();
     const t = setTimeout(async () => {
-      setQuoteErr(null); setQuoting(true);
+      setQuoteErr(null); setNoRoute(false); setQuoting(true);
       const list = classKeys.split(',').map((k) => { const [key, max] = k.split(':'); return { key: key as 'COMFORT' | 'XL', max: Number(max) }; });
       const results = await Promise.all(list.map(async (c) => {
         try {
@@ -513,13 +514,27 @@ export default function BookingApp() {
           });
           return [c.key, q] as const;
         } catch (e) {
-          if (e instanceof ApiRequestError) setQuoteErr(tError(e));
+          if (e instanceof ApiRequestError) {
+            // A point a car can't reach (2026-11-17): the server found the nearest street → move the
+            // point there (label kept) and the quote runs again from it. Otherwise: block ordering.
+            const snapped = (e.body as { snapped?: Partial<Record<'pickup' | 'dropoff' | 'stop', { lat: number; lng: number }>> }).snapped;
+            if (e.body.code === 'NO_ROUTE' && snapped) return [c.key, { snapped }] as const;
+            setQuoteErr(tError(e)); if (e.body.code === 'NO_ROUTE') setNoRoute(true);
+          }
           return [c.key, null] as const;
         }
       }));
       if (controller.signal.aborted) return;
+      const snap = results.map(([, q]) => (q && 'snapped' in q ? q.snapped : null)).find(Boolean);
+      if (snap) {
+        if (snap.pickup && pickup) setPickup({ ...pickup, lat: snap.pickup.lat, lng: snap.pickup.lng });
+        if (snap.dropoff && dropoff) setDropoff({ ...dropoff, lat: snap.dropoff.lat, lng: snap.dropoff.lng });
+        if (snap.stop && stop) setStop({ ...stop, lat: snap.stop.lat, lng: snap.stop.lng });
+        setQuoting(false);
+        return; // the changed points start a new quote
+      }
       const next: Partial<Record<'COMFORT' | 'XL', QuoteBody>> = {};
-      for (const [k, q] of results) if (q) next[k] = q;
+      for (const [k, q] of results) if (q && !('snapped' in q)) next[k] = q as QuoteBody;
       setQuotes(next); setQuoting(false); quotesAt.current = Date.now();
     }, 500);
     return () => { clearTimeout(t); controller.abort(); };
@@ -567,6 +582,7 @@ export default function BookingApp() {
     const e: Record<string, string> = {};
     if (!pickup) e.pickup = t('booking.validation.pickup');
     if (!dropoff) e.dropoff = t('booking.validation.dropoff');
+    else if (noRoute) e.dropoff = t('errors.NO_ROUTE' as MsgKey);
     if (passenger && !name.trim()) e.name = t('booking.validation.name');
     // Email-only accounts have no verified phone: the contact number is entered per booking.
     if (passenger && !passenger.phone && !/^\+?[\d\s()-]{7,20}$/.test(phone.trim())) e.phone = t('booking.validation.phone');

@@ -1,5 +1,20 @@
 # Session handoff
 
+## 2026-11-17 — Unreachable points (e.g. a place pinned in the sea): snap to the nearest street
+**Report:** «Molos, Limasol 3036» put the destination in the sea, so there was no route, no price, and the order button was still shown.
+
+**Server:**
+- When Google Routes returns no route, `createQuote` snaps each end with `googleSnapToStreet`: a reverse geocode with result_type street_address|route|premise, within 3 km.
+- If the route works from the snapped points, it answers NO_ROUTE plus `snapped:{pickup?,dropoff?,stop?}`. The quote route passes `snapped` in the error body.
+
+**Client (BookingApp):**
+- On NO_ROUTE with `snapped`, it moves those points (label kept) and the quote runs again, so the price shows and the map shows the street point.
+- On NO_ROUTE without `snapped`, ordering is blocked: validate() flags the address with «Машина не может доехать до этой точки. Выберите адрес у дороги.» (new NO_ROUTE text in ru, en and el).
+
+**Tests:** `tests/quote-snap.db.test.ts` (2, Google mocked): a sea destination gives NO_ROUTE plus the snapped street; quoting from the snapped point succeeds with a price.
+
+**Not checked:** a live Google run (no key locally).
+
 ## 2026-11-17 — Booking: reset × also on the folded route sheet; MapView fit fix
 **Reset ×:** the route-reset × (top-right) now also shows on the collapsed sheet that shows the route and «Заказать поездку». Before, it disappeared when the sheet folded.
 

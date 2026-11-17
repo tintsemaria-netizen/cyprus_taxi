@@ -36,6 +36,20 @@ export async function googleReverse(lat: number, lng: number): Promise<{ label: 
   return null;
 }
 
+// Nearest drivable spot for a point a car cannot reach (2026-11-17): a place whose map point lies
+// in the sea, a park or a pedestrian area. Reverse-geocodes to the nearest street address / road
+// and returns that location if it is within `maxM` metres.
+export async function googleSnapToStreet(lat: number, lng: number, maxM = 3000): Promise<{ lat: number; lng: number } | null> {
+  const key = config.googleServerKey();
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&result_type=street_address|route|premise&key=${key}`;
+  const d = (await fetchJson(url)) as { status?: string; results?: { geometry?: { location?: { lat: number; lng: number } } }[] };
+  const loc = d.status === 'OK' ? d.results?.[0]?.geometry?.location : undefined;
+  if (!loc) return null;
+  const r = Math.PI / 180, dLat = (loc.lat - lat) * r, dLng = (loc.lng - lng) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat * r) * Math.cos(loc.lat * r) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(h)) <= maxM ? { lat: loc.lat, lng: loc.lng } : null;
+}
+
 // Forward geocode / address search, restricted to Cyprus. Returns resolved places
 // with real coordinates (not predictions). Deduplicated, bounded count.
 export async function googleSearch(q: string, limit = 6): Promise<{ label: string; lat: number; lng: number }[]> {

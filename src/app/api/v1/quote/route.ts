@@ -40,6 +40,6 @@ export async function POST(req: Request) {
   }
 
   const r = await createQuote({ ...parsed.data, scheduledAtUtc });
-  if (!r.ok) return apiError(r.status, r.code, r.message);
+  if (!r.ok) return apiError(r.status, r.code, r.message, {}, r.snapped ? { snapped: r.snapped } : undefined);
   return apiOk(r.quote);
 }
