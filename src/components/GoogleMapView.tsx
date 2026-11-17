@@ -10,6 +10,7 @@ import { vehicleMarkerEl, orientVehicle, bearing, personMarkerEl, pickupPinEl, n
 import { distanceM } from '@/lib/gpsFilter';
 import { useIdleReturn } from './useIdleReturn';
 import { useTwoFingerCamera } from './useTwoFingerCamera';
+import { glidePath } from './routeGlide';
 import { compassEl, easeHeadingToNorth } from './mapCompass';
 import { useT } from '@/i18n/I18nProvider';
 
@@ -104,6 +105,9 @@ function markerEl(mk: MapMarker): HTMLElement {
 export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], focus, focusZoom, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
+  const lastUpd = useRef(new Map<string, number>());
+  const routeRef = useRef(route ?? null);
+  routeRef.current = route ?? null;
   // Reconcile markers by id (no recreation flicker) and remember each one's logical
   // position so a vehicle marker can be tweened between GPS samples.
   const markerMap = useRef<Map<string, any>>(new Map());
@@ -252,7 +256,11 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       // Arrow: pulse only while standing still (toggle in place — no re-create, no animation restart).
       if (mk.nav && marker.content) (marker.content as HTMLElement).classList.toggle('ily-moving', !!mk.moving);
       if (marker.content) (marker.content as HTMLElement).style.opacity = mk.stale ? '0.5' : '1';
-      const from = posMap.current.get(mk.id) ?? { lat: mk.lat, lng: mk.lng };
+      // Start from where the car is drawn right now (an unfinished glide must not jump).
+      const drawn = marker.position as { lat: number | (() => number); lng: number | (() => number) } | null;
+      const dLat = drawn ? (typeof drawn.lat === 'function' ? drawn.lat() : drawn.lat) : null;
+      const dLng = drawn ? (typeof drawn.lng === 'function' ? drawn.lng() : drawn.lng) : null;
+      const from = dLat != null && dLng != null ? { lat: dLat, lng: dLng } : (posMap.current.get(mk.id) ?? { lat: mk.lat, lng: mk.lng });
       const moved = Math.abs(from.lat - mk.lat) > 1e-7 || Math.abs(from.lng - mk.lng) > 1e-7;
       const prev = animMap.current.get(mk.id);
       if (prev) { cancelAnimationFrame(prev); animMap.current.delete(mk.id); }
@@ -265,13 +273,18 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
           if (mk.heading != null) orientVehicle(marker.content as HTMLElement, mapHeading, mk.heading);
           else if (distanceM(from, to) >= 4) orientVehicle(marker.content as HTMLElement, mapHeading, bearing(from, to));
         }
+        // Economical GPS (~5 s) but smooth movement (2026-11-17): the glide lasts about as long as the
+        // gap between updates, so the car keeps rolling instead of jump-and-stop, and follows the drawn
+        // route line around corners.
         const start = performance.now();
-        const dur = 900; // slightly under the ~5s sample cadence
+        const last = lastUpd.current.get(mk.id);
+        lastUpd.current.set(mk.id, start);
+        const dur = last ? Math.max(900, Math.min(6000, (start - last) * 0.95)) : 900;
+        const path = glidePath(from, to, routeRef.current);
         const m = marker;
         const step = (now: number) => {
           const t = Math.min(1, (now - start) / dur);
-          const e = t * (2 - t); // easeOutQuad
-          m.position = { lat: from.lat + (to.lat - from.lat) * e, lng: from.lng + (to.lng - from.lng) * e };
+          m.position = path(t); // linear in time = steady speed
           if (t < 1) animMap.current.set(mk.id, requestAnimationFrame(step));
           else animMap.current.delete(mk.id);
         };

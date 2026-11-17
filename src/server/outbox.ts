@@ -26,6 +26,19 @@ export interface EnqueueInput {
   dedupeKey?: string | null;
 }
 
+// Faster pushes (2026-11-17): «the car is on its way / has arrived» should not wait for the
+// worker's next 2 s tick. Shortly after an enqueue (by then the caller's transaction has normally
+// committed) drain once more in this process; the claim is SKIP LOCKED, so racing the worker is
+// safe, and a row not yet committed is simply picked up by the next tick.
+let kickTimer: ReturnType<typeof setTimeout> | null = null;
+function kickDrain(): void {
+  if (process.env.VITEST || process.env.NODE_ENV === 'test' || kickTimer) return;
+  kickTimer = setTimeout(() => {
+    kickTimer = null;
+    drainOutbox(new Date()).catch(() => { /* the worker retries */ });
+  }, 300);
+}
+
 // Enqueue in the caller's transaction. A duplicate dedupeKey is skipped WITHOUT poisoning the
 // transaction: we probe first, and treat a P2002 as a no-op only as a last-resort race guard.
 export async function enqueue(db: Db, n: EnqueueInput): Promise<void> {
@@ -37,6 +50,7 @@ export async function enqueue(db: Db, n: EnqueueInput): Promise<void> {
     await db.notificationOutbox.create({
       data: { audience: n.audience, title: n.title, body: n.body, url: n.url, tag: n.tag ?? null, offerId: n.offerId ?? null, dedupeKey: n.dedupeKey ?? null, status: 'PENDING' },
     });
+    kickDrain();
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return; // duplicate dedupeKey
     throw e;

@@ -1,5 +1,19 @@
 # Session handoff
 
+## 2026-11-17 — Driver ↔ passenger delay: instant status, smooth car, economical GPS kept
+
+- Owner: keep GPS/battery as is (driver sends every 5 s, passenger polls every 5 s), make the car smooth and status fast.
+- `GET /api/v1/tracking/stream` (SSE, tracking cookie): checks booking status/revision/updatedAt + latest chat id every 1 s,
+  sends `data:` on change, ping every ~15 s, closes after 55 s or at COMPLETED/CANCELED (EventSource reconnects).
+  Headers: no-cache, X-Accel-Buffering: no, Content-Encoding: none. TrackApp opens it while the ride is active and reloads the view
+  on each event (+ one retry 0.7 s later). Measured locally: status change visible on the passenger page in 0.2–1.1 s (was 0–5 s).
+- Background pushes («driver assigned», «driver has arrived»…): `enqueue()` now kicks an in-process `drainOutbox` 300 ms later
+  (skipped under vitest/test) instead of waiting for the 2 s worker tick; SKIP LOCKED keeps it safe.
+- Car on the passenger map (GoogleMapView): glide starts from the drawn position, lasts ≈ the gap between updates (0.9–6 s, linear)
+  so the car keeps rolling, and follows the drawn route line around corners (`src/components/routeGlide.ts`, tests/route-glide.test.ts).
+- NOT verified on prod: SSE through nginx (`X-Accel-Buffering: no` should disable buffering; the 5 s poll remains the fallback).
+- Note: passenger push texts are English only (server-side), separate improvement.
+
 ## 2026-11-17 — Schedule panel without «Ехать сейчас»
 
 - The «Ехать сейчас» link in the schedule panel is gone; the «Запланировать» pill toggles schedule off.

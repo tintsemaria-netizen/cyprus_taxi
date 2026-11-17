@@ -135,6 +135,19 @@ export default function TrackApp() {
     bootstrap();
   }, [bootstrap]);
 
+  // Instant status (2026-11-17): a light server stream says «something changed» (driver on the way,
+  // arrived, started, chat…) within ~1 s, and the view reloads at once. The 5 s poll below stays for
+  // the car position (economical) and as a fallback when the stream is unavailable.
+  const streamStatus = view?.status;
+  const streamOpen = phase === 'ready' && !!streamStatus && streamStatus !== 'COMPLETED' && streamStatus !== 'CANCELED';
+  useEffect(() => {
+    if (!streamOpen || typeof EventSource === 'undefined') return;
+    const es = new EventSource('/api/v1/tracking/stream');
+    // A poll may be in flight at that moment (load() skips overlaps) → try again shortly after.
+    es.onmessage = () => { void load(); setTimeout(() => { void load(); }, 700); };
+    return () => es.close();
+  }, [streamOpen, load]);
+
   useEffect(() => {
     function tick() {
       if (ready.current && document.visibilityState === 'visible') load();
