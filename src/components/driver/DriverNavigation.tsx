@@ -19,7 +19,7 @@ import EdgeShine from '@/components/EdgeShine';
 // One size for every driver action button (2026-11-18): like «Выйти на линию» — 65 % wide, 53 px,
 // round, bold, glint on the rim.
 const STAGE_BTN = 'relative mx-auto block h-[53px] w-[65%] rounded-full bg-accent text-[16px] font-bold text-[#0d1608] shadow-lg active:scale-[0.99]';
-import { bearingDeg, cumulative, distM, locate, maneuverIcon, nextStep, offsetPoint, promptBand, roundNavDistance, type LatLng, type NavStep } from '@/lib/nav';
+import { bearingDeg, cumulative, distM, locate, nextStep, offsetPoint, promptBand, roundNavDistance, type LatLng, type NavStep } from '@/lib/nav';
 
 // Full-screen navigation for an accepted ride (replaces the tabbed driver UI while a trip is
 // active): heading-up map following the car, turn-by-turn banner with optional voice, rerouting,
@@ -266,35 +266,9 @@ export function DriverNavigation(props: {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-page" data-testid="driver-nav">
-      {/* Manoeuvre banner */}
-      <div className="relative z-10 bg-accent px-4 pb-3 text-[#10191C]" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }} aria-live="polite">
-        {atStop && stop ? (
-          <div><div className="text-lg font-bold">{t('driver.stop.atStop')}</div><div className="text-sm">{stop.label}</div></div>
-        ) : waitingAtPickup ? (
-          <div><div className="text-lg font-bold">{t('driver.navigation.waitingFor', { name: trip.passengerName })}</div><div className="text-sm">{trip.pickup.label}</div></div>
-        ) : atTarget ? (
-          <div><div className="text-lg font-bold">{leg === 'pickup' ? t('driver.navigation.arrivedPickup') : leg === 'stop' ? t('driver.navigation.arrivedStop') : t('driver.navigation.arrivedDestination')}</div><div className="text-sm">{target.label}</div></div>
-        ) : !pos ? (
-          <div className="text-base font-semibold">{t('driver.navigation.needGps')}</div>
-        ) : routeState === 'unavailable' ? (
-          <div className="flex items-center justify-between gap-3"><span className="text-sm font-semibold">{t('driver.navigation.unavailable')}</span><a href={externalHref} target="_blank" rel="noreferrer" className="shrink-0 rounded-[10px] bg-[#10191C] px-3 py-2 text-sm font-semibold text-accent">{t('driver.navigation.openExternal')}</a></div>
-        ) : rerouting ? (
-          <div className="text-lg font-bold">{t('driver.navigation.rerouting')}</div>
-        ) : upcoming ? (
-          <div className="flex items-center gap-3">
-            <span className="text-4xl leading-none" aria-hidden>{maneuverIcon(upcoming.step.maneuver)}</span>
-            <div className="min-w-0">
-              <div className="text-2xl font-bold leading-tight">{distLabel(upcoming.inM)}</div>
-              <div className="truncate text-sm font-medium" data-testid="nav-instruction">{upcoming.step.text}</div>
-            </div>
-          </div>
-        ) : routeState === 'loading' ? (
-          <div className="text-base font-semibold">{t('driver.navigation.loading')}</div>
-        ) : (
-          <div className="text-lg font-bold">{t('driver.navigation.continueTo', { place: target.label })}</div>
-        )}
-      </div>
-      {props.banner && <button onClick={props.onDismissBanner} className="relative z-10 border-b border-warn/40 bg-warn/15 px-4 py-2 text-start text-sm text-warn">{props.banner}</button>}
+      {/* No manoeuvre banner and no notice strip on top (2026-11-19): the map uses the whole screen;
+          turn-by-turn stays in the voice prompts. Only the status-bar safe area is kept. */}
+      <div className="shrink-0 bg-page" style={{ height: 'env(safe-area-inset-top)' }} />
 
       {/* Map */}
       <div className="relative min-h-0 flex-1" data-nav-zoom={navZoom}>

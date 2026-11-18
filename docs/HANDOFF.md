@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-19 — Navigation: no top banner, bigger orange arrow in a ring (deployed)
+- DriverNavigation: manoeuvre banner and the notice strip («Срок предложения истёк» etc.) removed; only the safe-area spacer; voice prompts unchanged.
+- navArrowEl: 120 px box, orange #FF9F1C arrow with white outline inside a white ring (orange tint), orange pulse when standing.
+
 ## 2026-11-19 — Driver sees the price as a range (deployed)
 - `fareRangeText` (src/lib/price-type.ts): taximeter estimate → ±15 % (same as passenger quote), fixed fare → one amount. Used on offer sheet, free orders (list + detail), pre-bookings (list + detail). «По таксометру — оценка» / «Фиксированная» labels removed.
 
