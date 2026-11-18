@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-18 — Passenger tracking: nose forward, whole route in view, economical (deployed)
+- carMarker `steerVehicle`: per-frame nose along the glide path tangent (look-ahead 8 %), eased; GoogleMapView vehicle glide uses it when a route is drawn (no sideways from off-road GPS fixes).
+- GoogleMapView `keepInView` + `cameraFor` (Web-Mercator fit): moves the camera only when a point leaves the padded view or the remaining route allows ≥0.6 zoom closer; ≤1 move / 3 s; 1 s ease. Old fit no longer re-fits on every route change in this mode. Polyline updated with setPath.
+- TrackApp: no car-follow camera; ASSIGNED/EN_ROUTE/IN_PROGRESS → keepInView + route trimmed behind the car (`trimRoute`, keeps 40 m). Route fetched once per leg, again only if the car is > 50 m off it or after 2 min (min 15 s) — was every ~10 m of movement (many Routes API calls).
+- Verified locally only on the MapLibre fallback (no crash, 1 route fetch / 12 s); Google-map behaviour needs a real ride.
+
 ## 2026-11-18 — PARKED until the app launch: Google Places API (New)
 - Decision (user): before launching in the app stores, enable **Places API (New)** in Google Cloud for the server key (APIs & Services → Library → Enable; Credentials → server key → API restrictions → add it). Then verify `/api/v1/places/search` returns `provider: "places"`.
 - Until then address search uses Photon (public OSM demo service, no guarantee; fine for a few hundred orders/day).

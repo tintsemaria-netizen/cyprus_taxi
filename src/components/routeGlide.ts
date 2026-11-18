@@ -66,3 +66,37 @@ export function glidePath(from: LL, to: LL, route?: [number, number][] | null): 
     return { lat: p.lat + da.lat * (1 - t) + db.lat * t, lng: p.lng + da.lng * (1 - t) + db.lng * t };
   };
 }
+
+/**
+ * The part of the route still ahead of the car (2026-11-18): from ~`keepBehindM` before the car's
+ * nearest point on the line to the end, so the drawn line shrinks as the car drives.
+ * Returns the route unchanged when the car is off it (> 60 m).
+ */
+export function trimRoute(route: [number, number][], car: LL | null | undefined, keepBehindM = 40): [number, number][] {
+  if (!car || route.length < 2) return route;
+  const line = route.map(([lng, lat]) => ({ lat, lng }));
+  const lat0 = line[0].lat;
+  const cum = [0];
+  for (let i = 1; i < line.length; i++) {
+    const [ax, ay] = toXY(line[i - 1], lat0), [bx, by] = toXY(line[i], lat0);
+    cum.push(cum[i - 1] + Math.hypot(bx - ax, by - ay));
+  }
+  const pr = project(line, cum, car, lat0);
+  if (pr.off > 60) return route;
+  const s0 = Math.max(0, pr.s - keepBehindM);
+  let i = 1;
+  while (i < cum.length - 1 && cum[i] < s0) i++;
+  const seg = cum[i] - cum[i - 1] || 1, k = Math.max(0, Math.min(1, (s0 - cum[i - 1]) / seg));
+  const start: [number, number] = [route[i - 1][0] + (route[i][0] - route[i - 1][0]) * k, route[i - 1][1] + (route[i][1] - route[i - 1][1]) * k];
+  return [start, ...route.slice(i)];
+}
+
+/** Metres from a point to the route line (Infinity without a route). */
+export function offRouteM(route: [number, number][] | null | undefined, p: LL): number {
+  if (!route || route.length < 2) return Infinity;
+  const line = route.map(([lng, lat]) => ({ lat, lng }));
+  const lat0 = line[0].lat;
+  const cum = [0];
+  for (let i = 1; i < line.length; i++) { const [ax, ay] = toXY(line[i - 1], lat0), [bx, by] = toXY(line[i], lat0); cum.push(cum[i - 1] + Math.hypot(bx - ax, by - ay)); }
+  return project(line, cum, p, lat0).off;
+}

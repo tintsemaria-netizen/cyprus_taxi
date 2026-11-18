@@ -42,6 +42,8 @@ interface Props {
   zoom?: number;
   /** Frame the whole route line too (booking preview). */
   fitRoute?: boolean;
+  /** Google map only (smooth keep-in-view camera); the fallback map frames as before. */
+  keepInView?: boolean;
   /** Zoom for a single point / the focus point (default 15; 13 ≈ half a city). */
   focusZoom?: number;
   interactive?: boolean;

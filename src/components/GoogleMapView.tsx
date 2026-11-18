@@ -6,7 +6,7 @@ import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { CYPRUS_BOUNDS } from '@/lib/config';
 import type { MapMarker } from './MapView';
 import { fitKeyOf } from './mapFit';
-import { vehicleMarkerEl, orientVehicle, bearing, personMarkerEl, pickupPinEl, navArrowEl } from './carMarker';
+import { vehicleMarkerEl, orientVehicle, steerVehicle, bearing, personMarkerEl, pickupPinEl, navArrowEl } from './carMarker';
 import { distanceM } from '@/lib/gpsFilter';
 import { useIdleReturn } from './useIdleReturn';
 import { useTwoFingerCamera } from './useTwoFingerCamera';
@@ -20,6 +20,9 @@ interface Props {
   route?: [number, number][]; // [lng, lat]
   /** Frame the whole route line too, and re-frame when it changes (booking preview). */
   fitRoute?: boolean;
+  /** Live trip (2026-11-18): keep the car, the stops and the route ahead in view, re-framing smoothly
+   *  only when something leaves the view or the route got much shorter (no jumps on every GPS fix). */
+  keepInView?: boolean;
   center?: { lat: number; lng: number };
   zoom?: number;
   /** Zoom for a single point / the focus point (default 16 = street level; 13 ≈ half a city). */
@@ -103,7 +106,7 @@ function markerEl(mk: MapMarker): HTMLElement {
   return centerOnPoint(el);
 }
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], focus, focusZoom, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], focus, focusZoom, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const lastUpd = useRef(new Map<string, number>());
@@ -275,7 +278,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
         const mapHeading = mapRef.current?.getHeading?.() ?? 0;
         if (marker.content) {
           if (mk.heading != null) orientVehicle(marker.content as HTMLElement, mapHeading, mk.heading);
-          else if (distanceM(from, to) >= 4) orientVehicle(marker.content as HTMLElement, mapHeading, bearing(from, to));
+          // No route heading: the nose is steered along the glide below (road direction).
+          else if (!routeRef.current && distanceM(from, to) >= 4) orientVehicle(marker.content as HTMLElement, mapHeading, bearing(from, to));
         }
         // Economical GPS (~5 s) but smooth movement (2026-11-17): the glide lasts about as long as the
         // gap between updates, so the car keeps rolling instead of jump-and-stop, and follows the drawn
@@ -286,9 +290,16 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
         const dur = last ? Math.max(900, Math.min(6000, (start - last) * 0.95)) : 900;
         const path = glidePath(from, to, routeRef.current);
         const m = marker;
+        const steer = mk.heading == null && !!routeRef.current && marker.content ? (marker.content as HTMLElement) : null;
         const step = (now: number) => {
           const t = Math.min(1, (now - start) / dur);
-          m.position = path(t); // linear in time = steady speed
+          const here = path(t);
+          m.position = here; // linear in time = steady speed
+          // Nose forward (2026-11-18): look a little ahead along the glide; ignore sub-metre wiggles.
+          if (steer && t < 1) {
+            const ahead = path(Math.min(1, t + 0.08));
+            if (distanceM(here, ahead) > 0.8) steerVehicle(steer, mapRef.current?.getHeading?.() ?? 0, bearing(here, ahead));
+          }
           if (t < 1) animMap.current.set(mk.id, requestAnimationFrame(step));
           else animMap.current.delete(mk.id);
         };
@@ -333,7 +344,41 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       map.fitBounds(b, pad);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fitKey, ready, idle.returnTick, padKey, recenterTick, routeKey]);
+  }, [fitKey, ready, idle.returnTick, padKey, recenterTick, keepInView ? (routeKey ? 'route' : '') : routeKey]);
+
+  // Keep-in-view camera (2026-11-18). Economical: one check per GPS update, a camera move only when a
+  // point left the view (or the remaining route got much smaller), at most every 3 s, eased over 1 s.
+  const keepAnim = useRef(0);
+  const lastCam = useRef(0);
+  useEffect(() => {
+    const map = mapRef.current, el = containerRef.current;
+    if (!keepInView || !map || !el || !ready || followRef.current || idle.active.current) return;
+    const pts: { lat: number; lng: number }[] = markers.map((m) => ({ lat: m.lat, lng: m.lng }));
+    if (route) route.forEach(([lng, lat]) => pts.push({ lat, lng }));
+    if (pts.length < 2) return;
+    const pad = fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 };
+    const W = el.clientWidth, H = el.clientHeight;
+    const target = cameraFor(pts, W, H, pad);
+    if (!target) return;
+    const c = map.getCenter?.(); const z = map.getZoom?.();
+    if (!c || z == null) return;
+    const cur = { lat: c.lat(), lng: c.lng() };
+    const inView = pts.every((p) => { const s = toScreen(p, cur, z, W, H); return s.x >= pad.left * 0.6 && s.x <= W - pad.right * 0.6 && s.y >= pad.top * 0.6 && s.y <= H - pad.bottom * 0.6; });
+    const now = performance.now();
+    if (inView && target.zoom - z < 0.6) return;
+    if (inView && now - lastCam.current < 3000) return;
+    lastCam.current = now;
+    cancelAnimationFrame(keepAnim.current);
+    const start = now, from = { ...cur, zoom: z };
+    const step = (tNow: number) => {
+      const k = Math.min(1, (tNow - start) / 1000), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      map.moveCamera({ center: { lat: from.lat + (target.center.lat - from.lat) * e, lng: from.lng + (target.center.lng - from.lng) * e }, zoom: from.zoom + (target.zoom - from.zoom) * e });
+      if (k < 1) keepAnim.current = requestAnimationFrame(step);
+    };
+    keepAnim.current = requestAnimationFrame(step);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [markers, route, keepInView, ready, padKey]);
+  useEffect(() => () => cancelAnimationFrame(keepAnim.current), []);
 
   // Zoom to a focus point (the passenger's detected location) once it resolves, unless a
   // full 2-stop route is already framed.
@@ -397,6 +442,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
     if (!map || !g || !ready) return;
+    // Update the existing line in place (no flicker while it shrinks behind the car, 2026-11-18).
+    if (polyRef.current && shownRoute && shownRoute.length) { polyRef.current.setPath(shownRoute.map(([lng, lat]) => ({ lat, lng }))); return; }
     if (polyRef.current) { polyRef.current.setMap(null); polyRef.current = null; }
     if (shownRoute && shownRoute.length) {
       polyRef.current = new g.Polyline({
@@ -421,4 +468,31 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   }
   // isolation: marker z-indexes (own car 1000, person 900) stay inside the map, never above panels.
   return <div ref={containerRef} dir="ltr" className={className} style={{ isolation: 'isolate' }} aria-label="Map" role="application" />;
+}
+
+// Web-Mercator helpers for the keep-in-view camera (map not rotated, no tilt).
+function worldXY(p: { lat: number; lng: number }): { x: number; y: number } {
+  const s = Math.sin((Math.max(-85, Math.min(85, p.lat)) * Math.PI) / 180);
+  return { x: (p.lng + 180) / 360, y: 0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI) };
+}
+function fromWorld(x: number, y: number): { lat: number; lng: number } {
+  return { lng: x * 360 - 180, lat: (Math.atan(Math.sinh(Math.PI * (1 - 2 * y))) * 180) / Math.PI };
+}
+function toScreen(p: { lat: number; lng: number }, center: { lat: number; lng: number }, zoom: number, W: number, H: number) {
+  const a = worldXY(p), c = worldXY(center), scale = 256 * 2 ** zoom;
+  return { x: W / 2 + (a.x - c.x) * scale, y: H / 2 + (a.y - c.y) * scale };
+}
+export function cameraFor(pts: { lat: number; lng: number }[], W: number, H: number, pad: { top: number; right: number; bottom: number; left: number }, maxZoom = 17) {
+  const ws = pts.map(worldXY);
+  const minX = Math.min(...ws.map((w) => w.x)), maxX = Math.max(...ws.map((w) => w.x));
+  const minY = Math.min(...ws.map((w) => w.y)), maxY = Math.max(...ws.map((w) => w.y));
+  const aw = Math.max(40, W - pad.left - pad.right), ah = Math.max(40, H - pad.top - pad.bottom);
+  const zx = maxX > minX ? Math.log2(aw / ((maxX - minX) * 256)) : maxZoom;
+  const zy = maxY > minY ? Math.log2(ah / ((maxY - minY) * 256)) : maxZoom;
+  const zoom = Math.max(3, Math.min(maxZoom, zx, zy));
+  const scale = 256 * 2 ** zoom;
+  // Shift the centre so the content sits in the padded (visible) area.
+  const cx = (minX + maxX) / 2 + (pad.right - pad.left) / 2 / scale;
+  const cy = (minY + maxY) / 2 + (pad.bottom - pad.top) / 2 / scale;
+  return { center: fromWorld(cx, cy), zoom };
 }

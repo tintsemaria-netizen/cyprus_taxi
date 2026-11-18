@@ -10,7 +10,7 @@ import { useSilentPush } from '@/components/NotifyPrompt';
 import { RateTripModal } from '@/components/booking/RateTripModal';
 import { GoogleReviewCard } from '@/components/GoogleReviewCard';
 import { api, ApiRequestError } from '@/lib/api-client';
-import { haversineMeters } from '@/lib/geo';
+import { offRouteM, trimRoute } from '@/components/routeGlide';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { formatFlight } from '@/lib/flight';
 import { useT } from '@/i18n/I18nProvider';
@@ -68,7 +68,9 @@ export default function TrackApp() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(0);
-  const [routeLine, setRouteLine] = useState<[number, number][]>([]); // [lng,lat] driver→pickup / →destination
+  const [routeLine, setRouteLine] = useState<[number, number][]>([]);
+  const routeLineRef = useRef<[number, number][]>([]);
+  routeLineRef.current = routeLine; // [lng,lat] driver→pickup / →destination
   const [disconnected, setDisconnected] = useState(false); // hide stale live data
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inFlight = useRef(false);
@@ -170,14 +172,20 @@ export default function TrackApp() {
   const drvLoc = disconnected ? null : view?.location ?? null;
   const rleg = view?.status === 'IN_PROGRESS' ? 'dropoff' : view?.status === 'EN_ROUTE' || view?.status === 'ASSIGNED' ? 'pickup' : null;
   const planned = !!view && ['REQUESTED', 'SEARCHING', 'NO_DRIVER', 'ARRIVED', 'ASSIGNED', 'EN_ROUTE', 'IN_PROGRESS'].includes(view.status);
-  const routeKey = drvLoc && rleg
-    ? `${rleg}:${drvLoc.lat.toFixed(4)},${drvLoc.lng.toFixed(4)}`
-    : planned ? `plan:${view!.pickup.lat},${view!.pickup.lng}>${view!.dropoff.lat},${view!.dropoff.lng}` : '';
+  // Economical (2026-11-18): the driver's route is fetched once per leg and again only when the car
+  // left it (> 50 m) or after 2 min — not every ~10 m as before. The passed part is cut off locally.
+  const routeFetch = useRef<{ leg: string; at: number; n: number }>({ leg: '', at: 0, n: 0 });
+  const legKey = drvLoc && rleg ? rleg : planned ? `plan:${view!.pickup.lat},${view!.pickup.lng}>${view!.dropoff.lat},${view!.dropoff.lng}` : '';
+  if (legKey !== routeFetch.current.leg) routeFetch.current = { leg: legKey, at: 0, n: routeFetch.current.n + 1 };
+  else if (drvLoc && rleg && routeFetch.current.at && Date.now() - routeFetch.current.at > 15_000
+    && (Date.now() - routeFetch.current.at > 120_000 || (routeLineRef.current.length > 1 && offRouteM(routeLineRef.current, drvLoc) > 50))) routeFetch.current = { leg: legKey, at: 0, n: routeFetch.current.n + 1 };
+  const routeKey = legKey ? `${legKey}#${routeFetch.current.n}` : '';
   useEffect(() => {
     if (!view || !routeKey) { setRouteLine([]); return; }
     const from = drvLoc && rleg ? drvLoc : view.pickup;
     const to = drvLoc && rleg ? (rleg === 'dropoff' ? view.dropoff : view.pickup) : view.dropoff;
     let alive = true;
+    routeFetch.current.at = Date.now(); // also after a failed fetch: retry in 15 s+, not never / in a loop
     (async () => {
       try {
         const r = await api<{ available?: boolean; path?: [number, number][] }>('/routes/estimate', {
@@ -272,7 +280,6 @@ export default function TrackApp() {
     }
   }, [view?.status]);
   // During the trip the map follows the car closely (north-up); a gesture frees it for 4 s.
-  const [followCar, setFollowCar] = useState(true);
 
   // Tick the pickup-waiting timer once per second while the driver is waiting.
   const arrived = view?.status === 'ARRIVED';
@@ -333,9 +340,10 @@ export default function TrackApp() {
   // marker must never look current.
   const liveLocation = disconnected ? null : view.location;
   // Closing in on the drop-off (2026-11-17): within ~600 m the map zooms in gradually (16 → 17.5).
-  const toDropM = liveLocation ? haversineMeters(liveLocation, view.dropoff) : null;
-  const followZoom = toDropM != null && toDropM < 600 ? Math.round((16 + 1.5 * Math.min(1, (600 - toDropM) / 520)) * 10) / 10 : 16;
-  const carFollow = view.status === 'IN_PROGRESS' && followCar && liveLocation ? { lat: liveLocation.lat, lng: liveLocation.lng, heading: 0, zoom: followZoom, tilt: 0 } : null;
+  // The whole route ahead stays in view (2026-11-18), on the way to the pickup and during the trip:
+  // the line shrinks behind the car and the camera re-frames smoothly as it gets shorter.
+  const liveTrip = !!liveLocation && (view.status === 'ASSIGNED' || view.status === 'EN_ROUTE' || view.status === 'IN_PROGRESS');
+  const shownRoute = liveTrip && routeLine.length ? trimRoute(routeLine, liveLocation) : routeLine;
   const markers: MapMarker[] = [];
   // Before pickup, anchor on the pickup; during the trip, anchor on the destination.
   if (view.stop && !view.stop.departedAt) markers.push({ id: 's', lat: view.stop.lat, lng: view.stop.lng, kind: 'stop', label: view.stop.label });
@@ -362,9 +370,9 @@ export default function TrackApp() {
 
       <div className="relative flex-1">
         <div className="absolute inset-0">
-          <AutoMapView markers={markers} route={routeLine.length ? routeLine : undefined} center={view.pickup} zoom={12} interactive className="h-full w-full"
-            fitPadding={mapPad} fitRoute={view.status === 'SEARCHING' || view.status === 'ASSIGNED' || view.status === 'EN_ROUTE'}
-            follow={carFollow} onFollowBreak={() => setFollowCar(false)} idleReturnMs={4000} onIdleReturn={() => setFollowCar(true)} />
+          <AutoMapView markers={markers} route={shownRoute.length ? shownRoute : undefined} center={view.pickup} zoom={12} interactive className="h-full w-full"
+            fitPadding={mapPad} fitRoute={view.status === 'SEARCHING' || liveTrip || view.status === 'ASSIGNED' || view.status === 'EN_ROUTE'} keepInView={liveTrip}
+            idleReturnMs={4000} />
         </div>
 
         {/* status pill */}
