@@ -11,17 +11,18 @@ import { useEffect } from 'react';
 
 let users = 0;
 let raf = 0;
-let target = 50, shown = 50;
+// A metal-rim glint (2026-11-18, v2): a sharp white spark plus a softer one opposite it, travelling
+// round the rim as the phone tilts (gamma −35°…35° → −80°…80°), instead of a band sweeping across.
+let target = 0, shown = 0;
 function onTilt(e: DeviceOrientationEvent) {
   if (e.gamma == null) return;
-  // gamma −30°…30° → glint position 5 %…95 % along the edge.
-  target = Math.max(5, Math.min(95, 50 + (e.gamma / 30) * 45));
+  target = Math.max(-80, Math.min(80, (e.gamma / 35) * 80));
   if (!raf) raf = requestAnimationFrame(paint);
 }
 function paint() {
   raf = 0;
-  shown += (target - shown) * 0.25;
-  document.documentElement.style.setProperty('--shine', `${shown.toFixed(1)}%`);
+  shown += (target - shown) * 0.22;
+  document.documentElement.style.setProperty('--shine-a', `${shown.toFixed(1)}deg`);
   if (Math.abs(target - shown) > 0.3) raf = requestAnimationFrame(paint);
 }
 
@@ -38,7 +39,7 @@ function askOnFirstTap() {
   window.addEventListener('click', ask, true);
 }
 
-export default function EdgeShine({ strength = 0.85 }: { strength?: number }) {
+export default function EdgeShine({ strength = 0.95 }: { strength?: number }) {
   useEffect(() => {
     if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return;
     if (users++ === 0) { window.addEventListener('deviceorientation', onTilt); askOnFirstTap(); }
@@ -47,11 +48,16 @@ export default function EdgeShine({ strength = 0.85 }: { strength?: number }) {
   return (
     <span aria-hidden className="pointer-events-none absolute inset-0 rounded-[inherit]"
       style={{
-        padding: 1.5,
-        background: `linear-gradient(100deg, transparent calc(var(--shine, 50%) - 18%), rgba(255,255,255,${strength}) var(--shine, 50%), transparent calc(var(--shine, 50%) + 18%))`,
+        padding: 2,
+        // Spark at the top of the rim (from −20° = just left of 12 o'clock), turning with the tilt.
+        background: `conic-gradient(from calc(var(--shine-a, 0deg) - 28deg),
+          transparent 0deg, rgba(255,255,255,${(strength * 0.35).toFixed(2)}) 14deg, rgba(255,255,255,${strength}) 26deg, #fff 28deg,
+          rgba(255,255,255,${strength}) 30deg, rgba(255,255,255,${(strength * 0.35).toFixed(2)}) 42deg, transparent 58deg,
+          transparent 190deg, rgba(255,255,255,${(strength * 0.45).toFixed(2)}) 208deg, transparent 226deg, transparent 360deg)`,
         WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
         WebkitMaskComposite: 'xor',
         mask: 'linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0)',
+        filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.55))',
       }} />
   );
 }

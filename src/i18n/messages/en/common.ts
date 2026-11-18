@@ -50,6 +50,7 @@ const common = {
     notNow: 'Not now',
     iosNotify: 'To get notifications on iPhone, add IL-Y to your Home Screen (Share → Add to Home Screen) and open it from there.',
   },
+  samsungDark: { text: "Samsung Internet is recoloring this app (red buttons, darker colours). To see the real colours: in Samsung Internet open ≡ → Settings → Labs → turn on «Use website dark theme». Or install IL-Y from Chrome.", ok: "Got it" },
   rotate: {
     title: 'Turn your phone upright',
     body: 'IL-Y works in portrait mode. Hold your phone vertically to continue.',

@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-18 — Glint v2 + Samsung Internet hint (deployed)
+- EdgeShine v2: conic spark (bright core + soft halo, weaker spark opposite) travelling round the rim with the tilt (gamma ±35° → ±80°), 2 px ring, light drop-shadow — user said v1 looked like «a simple wave».
+- Forced dark persists on Z Fold 7 despite color-scheme meta → `SamsungDarkHint` (layout): Samsung Internet UA only, one-time card «≡ → Settings → Labs → Use website dark theme, or install from Chrome», 8 languages (common.samsungDark), dismiss stored (il-y-samsung-dark-hint).
+
 ## 2026-11-18 — Every driver action button one size + glint (deployed)
 - DriverNavigation `STAGE_BTN`: «Еду к клиенту», «На месте», «Начать поездку», stop «На месте»/«Продолжить» = 65 % wide, 53 px, round, bold, EdgeShine; stop «Ожидание» and start-code button same height + glint; ☰ menu buttons same size (release min 260 px so the text fits).
 - Together with earlier: «Выйти на линию», swipes «Уйти с линии»/«Завершить поездку», fare confirm — all the same size with the glint.
