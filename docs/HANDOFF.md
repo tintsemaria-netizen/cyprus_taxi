@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-18 — Streets and hotels by the first letters (deployed)
+- Google Places autocomplete fails on prod (falls back) → `src/server/photon.ts`: OpenStreetMap search-as-you-type via photon.komoot.io (public, fair use; 2.5 s timeout; 10 min cache; Cyprus bbox; near bias; lang en). Streets, houses, hotels (kind hotel → bed icon).
+- `/places/search` without Places: popular → Photon → Google geocode (only real addresses), parallel, max 10. Tests: tests/photon.test.ts.
+- If traffic grows: self-host Photon or enable Places API (New).
+
 ## 2026-11-18 — Own frequent places first, then popular places near → far (deployed)
 - `/passenger/destinations`: last 100 rides (no CANCELED), pickups (0.6) + destinations (1), points < ~120 m merged, map pins skipped; most used first, then recent; up to 8.
 - Popular list +22 places (cruise terminal, City of Dreams, Molos, beaches, universities, hospitals, malls, waterparks, Cape Greco, Latchi…); `src/server/popular.ts` (parallel cached lookups) + `GET /api/v1/places/popular?near=` (nearest 6).

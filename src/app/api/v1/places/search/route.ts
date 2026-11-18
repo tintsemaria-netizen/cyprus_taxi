@@ -4,6 +4,7 @@ import { rateLimit } from '@/lib/rate-limit';
 import { config } from '@/lib/config';
 import { googleConfigured, googleSearch, googleAutocomplete, isPlacesDisabled } from '@/server/google';
 import { popularResults } from '@/server/popular';
+import { photonSearch } from '@/server/photon';
 
 function withPopular<T extends { label: string }>(pop: { label: string }[], rest: T[]): (T | (typeof pop)[number])[] {
   const seen = new Set(pop.map((p) => p.label.toLowerCase()));
@@ -39,13 +40,17 @@ export async function GET(req: Request) {
         }
       }
     }
-    // Forward geocoding (Cyprus-biased) — results carry real coordinates.
-    try {
-      const results = await googleSearch(q);
-      return apiOk({ provider: 'google', demo: false, results: withPopular(popular, results) });
-    } catch {
-      return popular.length ? apiOk({ provider: 'google', demo: false, results: popular }) : apiOk({ provider: 'google', demo: false, unavailable: true, results: [] });
-    }
+    // Without Google autocomplete (2026-11-18): streets / houses / hotels by the first letters from
+    // OpenStreetMap (Photon), plus Google forward geocoding for full addresses; both in parallel.
+    const [osm, geo] = await Promise.all([
+      photonSearch(q, near).catch(() => [] as Awaited<ReturnType<typeof photonSearch>>),
+      googleSearch(q).catch(() => null),
+    ]);
+    // A whole-country / town-centre geocode answer is no help while typing — keep only real addresses.
+    const geoUseful = (geo ?? []).filter((g) => /\d/.test(g.label) || g.label.split(',').length >= 3);
+    const merged = withPopular(popular, [...osm, ...geoUseful.filter((g) => !osm.some((o) => Math.abs(o.lat - g.lat) < 0.0005 && Math.abs(o.lng - g.lng) < 0.0005))]);
+    if (merged.length) return apiOk({ provider: 'google', demo: false, results: merged.slice(0, 10) });
+    return apiOk({ provider: 'google', demo: false, unavailable: geo === null && !osm.length, results: [] });
   }
 
   // No real adapter → demo fixtures only in demo mode; otherwise unavailable.
