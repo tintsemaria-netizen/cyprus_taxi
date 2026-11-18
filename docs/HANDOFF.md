@@ -1,7 +1,7 @@
 # Session handoff
 
-## 2026-11-19 — Driver sees the price as a range (branch `driver-fork`, NOT merged)
-- `fareRangeText` (src/lib/price-type.ts): taximeter estimate → ±15 % (same as passenger quote), fixed fare → one amount. Used on offer sheet, free orders (list + detail), pre-bookings (list + detail). «По таксометру — оценка» / «Фиксированная» labels removed. Waiting for «заливай».
+## 2026-11-19 — Driver sees the price as a range (deployed)
+- `fareRangeText` (src/lib/price-type.ts): taximeter estimate → ±15 % (same as passenger quote), fixed fare → one amount. Used on offer sheet, free orders (list + detail), pre-bookings (list + detail). «По таксометру — оценка» / «Фиксированная» labels removed.
 
 ## 2026-11-18 — Softer 1–3★ suggestions (deployed)
 - Same slugs (late, unsafe_driving); labels «Подача позже», «Хотелось бы лучше» (8 languages); comment placeholder for 1–3★ «Что можно улучшить? (необязательно)» (rides.rate.commentPlaceholderLow). Comment always optional (client + server).
