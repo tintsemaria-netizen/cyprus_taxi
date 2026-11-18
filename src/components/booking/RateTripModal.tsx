@@ -9,8 +9,9 @@ import { useT } from '@/i18n/I18nProvider';
 // shown depends on the star rating (positive for 4-5, constructive for 1-3) and the slugs match
 // the server vocabulary in src/server/ratings.ts.
 
-const POSITIVE = ['clean_car', 'safe_driving', 'on_time', 'friendly', 'smooth_ride', 'great_route'] as const;
-const CONSTRUCTIVE = ['late', 'unsafe_driving', 'rude', 'dirty_car', 'wrong_route', 'hard_to_find'] as const;
+// Three suggestions per band (2026-11-18) to keep the card small.
+const POSITIVE = ['safe_driving', 'clean_car', 'friendly'] as const;
+const CONSTRUCTIVE = ['late', 'unsafe_driving', 'rude'] as const;
 
 export function RateTripModal({ rideId, onClose, onDone, postUrl, inline }: { rideId?: string; onClose?: () => void; onDone: (stars: number) => void; postUrl?: string; inline?: boolean }) {
   const { t, tp, tError } = useT();
@@ -70,7 +71,7 @@ export function RateTripModal({ rideId, onClose, onDone, postUrl, inline }: { ri
 
         {stars > 0 && (
           <>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               {tagSet.map((slug) => (
                 <button
                   key={slug}
@@ -84,7 +85,8 @@ export function RateTripModal({ rideId, onClose, onDone, postUrl, inline }: { ri
               ))}
             </div>
             <textarea
-              className="field mt-3 h-20 resize-none"
+              className="field mt-3 !min-h-0 h-11 resize-none !py-2.5 text-sm"
+              rows={1}
               maxLength={500}
               placeholder={t('rides.rate.commentPlaceholder')}
               value={comment}
