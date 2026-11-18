@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-18 — Cancel → straight back to ordering the same route (branch `rebook`, NOT merged)
+- TrackApp `repeatSameRide()`: after the passenger cancels, store route + stop + class (il-y-repeat) and go to «/», which opens at the class/price step («Заказать Comfort»). «Заказать ещё раз» uses the same helper.
+- Checked locally: cancel EN_ROUTE ride → «/» with Amerikanas → Larnaca Airport priced, «Заказать Comfort». Waiting for «заливай».
+- Also showed the user the end-of-trip rating card (5 stars, tags, comment).
+
 ## 2026-11-18 — Receipt page trimmed (deployed)
 - /rides/[id]: date only (no class / passengers), no driver block, no «Оценка стоимости» lines, «Итого» (never «(оценка)»), no taximeter note, no payment status (it was always «Ожидает оплаты»: nothing sets COLLECTED). Payment method, e-mail, rating kept.
 - Note: older parked branch `receipt-ru-en` overlaps (RU/EN receipts, waiting in total); reconcile when the user returns to receipts.

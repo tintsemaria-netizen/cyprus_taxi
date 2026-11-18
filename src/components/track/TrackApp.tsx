@@ -208,13 +208,27 @@ export default function TrackApp() {
     finally { setCodeBusy(false); }
   }
 
+  function repeatSameRide() {
+    if (!view) return;
+    try {
+      sessionStorage.setItem('il-y-repeat', JSON.stringify({
+        p: view.pickup, d: view.dropoff, c: view.vClass,
+        s: view.stop ? { lat: view.stop.lat, lng: view.stop.lng, label: view.stop.label } : null,
+      }));
+    } catch { /* storage blocked: falls back to an empty form */ }
+    window.location.href = '/';
+  }
+
   async function cancel() {
     if (!view) return;
     setCancelling(true); setActionError(null);
     try {
       await api('/tracking/cancel', { method: 'POST', body: { expectedRevision: view.revision } });
       setConfirmCancel(false);
-      await load();
+      // Straight back to ordering with the same route (2026-11-18): the booking screen opens with the
+      // same pickup, stop, destination and class already filled in, at the price step — no retyping.
+      repeatSameRide();
+      return;
     } catch (e) {
       setConfirmCancel(false);
       setActionError(e instanceof ApiRequestError ? tError(e) : t('track.cancelFailed'));
@@ -559,15 +573,7 @@ export default function TrackApp() {
                     {/* No «Чек за поездку» box on the finished screen (2026-11-17): the receipt lives in «My rides». */}
                     {view.status === 'CANCELED' ? (
                       // Re-order the very same ride (route + stop + class); × above starts a fresh booking.
-                      <button type="button" className="btn-primary mt-3 w-full" data-testid="repeat-ride" onClick={() => {
-                        try {
-                          sessionStorage.setItem('il-y-repeat', JSON.stringify({
-                            p: view.pickup, d: view.dropoff, c: view.vClass,
-                            s: view.stop ? { lat: view.stop.lat, lng: view.stop.lng, label: view.stop.label } : null,
-                          }));
-                        } catch { /* storage blocked: falls back to an empty form */ }
-                        window.location.href = '/';
-                      }}>{t('track.repeatRide')}</button>
+                      <button type="button" className="btn-primary mt-3 w-full" data-testid="repeat-ride" onClick={repeatSameRide}>{t('track.repeatRide')}</button>
                     ) : (
                       <a href="/" className="btn-primary mt-3 w-full">{t('track.bookAnother')}</a>
                     )}
