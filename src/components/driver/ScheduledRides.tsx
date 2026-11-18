@@ -57,7 +57,6 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number) => void }) {
       <div className="flex items-center justify-between gap-2">
         <span className="font-semibold">{fmt.dateTime(i.pickupAt)}</span>
         <span className="flex shrink-0 gap-1">
-          {i.airport && <span className="chip !text-accent">✈ {t('driver.scheduled.airport')}</span>}
           <span className="rounded-md border-2 border-white/25 px-2 py-0.5 text-[13px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${i.vClass}` as 'common.vClass.COMFORT')}</span>
         </span>
       </div>
@@ -177,7 +176,6 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
               <div className="flex items-center justify-between gap-2">
                 <span className="text-lg font-bold">{fmt.dateTime(d.pickupAt)}</span>
                 <span className="flex shrink-0 gap-1">
-                  {d.airport && <span className="chip !text-accent">✈ {t('driver.scheduled.airport')}</span>}
                   <span className="rounded-md border-2 border-white/25 px-2 py-0.5 text-[15px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${d.vClass}` as 'common.vClass.COMFORT')}</span>
                 </span>
               </div>
