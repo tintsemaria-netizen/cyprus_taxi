@@ -13,6 +13,7 @@ import { formatFlight } from '@/lib/flight';
 import { meterWaitingCents, meterWaitingRatePerHourCents } from '@/lib/tariff';
 import { useT, type MsgKey } from '@/i18n/I18nProvider';
 import { INTL_TAG } from '@/i18n/config';
+import SwipeButton from '@/components/SwipeButton';
 import { bearingDeg, cumulative, distM, locate, maneuverIcon, nextStep, offsetPoint, promptBand, roundNavDistance, type LatLng, type NavStep } from '@/lib/nav';
 
 // Full-screen navigation for an accepted ride (replaces the tabbed driver UI while a trip is
@@ -351,7 +352,11 @@ export function DriverNavigation(props: {
               <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('stop', { action: 'continue' })}>{t('driver.stop.continue')}</button>
             </>
           )}
-          {trip.status === 'IN_PROGRESS' && leg === 'dropoff' && <button className="min-h-[56px] w-full rounded-[14px] bg-danger text-lg font-bold text-white shadow-lg active:scale-[0.99]" onClick={() => setAsk('complete')}>{t('driver.trip.completeTrip')}</button>}
+          {/* Swipe, not tap (2026-11-18): dark red, slide left → right to finish. */}
+          {trip.status === 'IN_PROGRESS' && leg === 'dropoff' && (
+            <SwipeButton label={t('driver.trip.completeTrip')} onDone={() => setAsk('complete')} testId="swipe-complete"
+              className="bg-[#7A1E1E] text-white" knobClassName="bg-white/90 text-[#7A1E1E]" />
+          )}
       </div>
       {/* Info sheet: collapses to the summary line (handle tap or swipe). */}
       <div className="pointer-events-auto rounded-t-[18px] border-t border-edge bg-elevated sm:rounded-[18px] sm:border shadow-[0_-6px_20px_rgba(0,0,0,0.35)]" ref={sheetDrag.panelRef} style={{ paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }} data-testid="nav-sheet">

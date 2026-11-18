@@ -2,6 +2,7 @@
 
 import { isFixedPrice } from '@/lib/price-type';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import SwipeButton from '@/components/SwipeButton';
 import { StaffShell } from '@/components/staff/StaffShell';
 import { NotifyToggle } from '@/components/NotifyToggle';
 import { InstallPrompt } from '@/components/InstallPrompt';
@@ -439,10 +440,18 @@ function HomeSection(props: {
             {blocker && !data.onDuty ? (
               <span className="pointer-events-auto rounded-full bg-danger/90 px-5 py-3 text-sm font-semibold text-white">{t('driver.duty.cantGoOnline')}</span>
             ) : (
-              <button className={`pointer-events-auto min-h-[56px] w-full rounded-full text-base font-semibold shadow-card ${data.onDuty ? 'border border-edge bg-page/95 text-ink' : 'bg-accent text-[#0d1608]'}`}
-                onClick={() => props.onDuty(!data.onDuty)}>
-                {data.onDuty ? t('driver.duty.goOffline') : t('driver.duty.goOnline')}
-              </button>
+              data.onDuty ? (
+                // Going offline is a swipe (2026-11-18), in a soft orange that doesn't glare at night.
+                <div className="pointer-events-auto w-full">
+                  <SwipeButton label={t('driver.duty.goOffline')} onDone={() => props.onDuty(false)} testId="swipe-offline"
+                    className="bg-[#B5621F] text-white" knobClassName="bg-white/90 text-[#B5621F]" />
+                </div>
+              ) : (
+                <button className="pointer-events-auto min-h-[56px] w-full rounded-full bg-accent text-base font-semibold text-[#0d1608] shadow-card"
+                  onClick={() => props.onDuty(true)}>
+                  {t('driver.duty.goOnline')}
+                </button>
+              )
             )}
           </div>
         )}

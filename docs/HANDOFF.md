@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-18 — Swipe to finish / go offline (branch `swipe-buttons`, NOT merged)
+- `src/components/SwipeButton.tsx`: slide knob ≥85 % (left→right; RTL mirrored), tap does nothing, Enter/Space for keyboard.
+- Driver: «Завершить поездку» = swipe, dark red #7A1E1E (fare sheet confirm also dark red); «Уйти с линии» = swipe, soft orange #B5621F. «Выйти на линию» stays a tap.
+- Checked locally with Playwright: tap / half swipe do nothing, full swipe goes offline / opens the fare sheet.
+- Waiting for «заливай».
+
 ## 2026-11-18 — Driver navigation sheet: no «Подробнее», ☰ menu, payment after start (deployed)
 - Details section removed (passenger note + flight stay visible in the sheet).
 - ☰ button right above the stage button, right side, moves with the sheet (ASSIGNED/EN_ROUTE/ARRIVED) → sheet with «Не могу взять — отказаться» → existing confirm.
