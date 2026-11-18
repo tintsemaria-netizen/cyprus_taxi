@@ -1,9 +1,8 @@
 # Session handoff
 
-## 2026-11-18 — Receipt page trimmed (branch `receipt-trim`, NOT merged)
-- /rides/[id]: date only (no class / passengers), no driver block, no «Оценка стоимости» lines, «Итого» (never «(оценка)»), no taximeter note. Payment line, e-mail, rating kept.
+## 2026-11-18 — Receipt page trimmed (deployed)
+- /rides/[id]: date only (no class / passengers), no driver block, no «Оценка стоимости» lines, «Итого» (never «(оценка)»), no taximeter note, no payment status (it was always «Ожидает оплаты»: nothing sets COLLECTED). Payment method, e-mail, rating kept.
 - Note: older parked branch `receipt-ru-en` overlaps (RU/EN receipts, waiting in total); reconcile when the user returns to receipts.
-- Waiting for «заливай».
 
 ## 2026-11-18 — Offers / free orders / pre-bookings: no price details, class badge, route on map (deployed)
 - «Подробнее о цене» removed (offer sheet, free order, pre-booking detail). Passenger count/luggage removed; `ClassBadge` (bold, soft grey outline + text, «COMFORT»/«XL» — user asked for less attention) on offer, free order (list + detail) and pre-bookings.

@@ -100,12 +100,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                   {f.totalCents != null ? eur(f.totalCents, f.currency) : '—'}
                 </span>
               </div>
-              <div className="mt-3 flex items-center justify-between text-xs">
-                <span className="text-muted">{f.paymentMethod === 'CASH_TO_DRIVER' ? t('common.payment.CASH_TO_DRIVER') : f.paymentMethod}</span>
-                <span className={f.paymentStatus === 'COLLECTED' ? 'text-accent' : 'text-muted'}>
-                  {f.paymentStatus === 'COLLECTED' ? t('rides.receipt.paid') : t('rides.receipt.paymentPending')}
-                </span>
-              </div>
+              {/* Payment method only (2026-11-18): no «Ожидает оплаты» — nothing marks cash as collected yet. */}
+              <div className="mt-3 text-xs text-muted">{f.paymentMethod === 'CASH_TO_DRIVER' ? t('common.payment.CASH_TO_DRIVER') : f.paymentMethod}</div>
             </div>
           )}
 
