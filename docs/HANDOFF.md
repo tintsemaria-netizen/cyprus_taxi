@@ -1,10 +1,10 @@
 # Session handoff
 
-## 2026-11-18 — Driver navigation sheet: no «Подробнее», ☰ menu, payment after start (branch `driver-sheet`, NOT merged)
+## 2026-11-18 — Driver navigation sheet: no «Подробнее», ☰ menu, payment after start (deployed)
 - Details section removed (passenger note + flight stay visible in the sheet).
-- ☰ button under 🔊 on the map (ASSIGNED/EN_ROUTE/ARRIVED) → sheet with «Не могу взять — отказаться» → existing confirm.
+- ☰ button right above the stage button, right side, moves with the sheet (ASSIGNED/EN_ROUTE/ARRIVED) → sheet with «Не могу взять — отказаться» → existing confirm.
 - cash/card badge only when IN_PROGRESS. New key driver.navigation.menu (8 languages).
-- Waiting for «заливай».
+
 
 ## 2026-11-18 — Passenger tracking: nose forward, whole route in view, economical (deployed)
 - carMarker `steerVehicle`: per-frame nose along the glide path tangent (look-ahead 8 %), eased; GoogleMapView vehicle glide uses it when a route is drawn (no sideways from off-road GPS fixes).
@@ -42,7 +42,7 @@
 ## 2026-11-18 — Saved places polish + map/clear buttons in every address search (branch `saved-places-2`, NOT merged)
 - «Мои адреса»: no «Другой адрес» row; name placeholder «Название вашего адреса» (8 languages).
 - PlacesInput (`mapPick`, default on unless read-only/trailing): × clear + «На карте» target button that opens AutoMapPicker in a portal → used in «Мои адреса», account saved places, tracking destination change.
-- Waiting for «заливай».
+
 
 ## 2026-11-18 — Saved places from the start screen (deployed)
 - `SavedPlace.name` + migration 20261118010000_saved_place_name; kind `C_<uuid>` = passenger's own named places (max 20).

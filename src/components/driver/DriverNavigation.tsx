@@ -296,13 +296,6 @@ export function DriverNavigation(props: {
           follow={follow} onFollowBreak={() => setFollowing(false)} idleReturnMs={4000} onIdleReturn={() => setFollowing(true)} fitPadding={wide ? { top: 60, right: 50, bottom: 60, left: 470 } : { top: 60, right: 50, bottom: panelOpen ? 520 : 330, left: 50 }} />
         <div className="absolute end-3 top-3 flex flex-col gap-2">
           <button onClick={toggleMute} className="flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-lg" aria-label={muted ? t('driver.navigation.unmute') : t('driver.navigation.mute')} aria-pressed={muted}>{muted ? '🔇' : '🔊'}</button>
-          {/* ☰ menu on the map (2026-11-18): «can't take it — release» lives here, not in the sheet. */}
-          {canRelease && (
-            <button type="button" onClick={() => setMenuOpen(true)} data-testid="nav-menu" aria-label={t('driver.navigation.menu')} title={t('driver.navigation.menu')}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-ink">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M5 7h14M5 12h14M5 17h14" /></svg>
-            </button>
-          )}
         </div>
       </div>
 
@@ -312,7 +305,7 @@ export function DriverNavigation(props: {
           <button onClick={() => setFollowing(true)} className="pointer-events-auto mx-auto mb-2 rounded-full border border-accent bg-page/95 px-4 py-2 text-sm font-semibold text-accent">{t('driver.navigation.recenter')}</button>
         )}
         {/* Bottom-right column (2026-11-15): chat two icons above Google Maps; both 20 % smaller (58 px). */}
-        <div className="pointer-events-none mb-[182px] flex flex-col items-end gap-0 px-3">
+        <div className={`pointer-events-none ${canRelease ? "mb-[130px]" : "mb-[182px]"} flex flex-col items-end gap-0 px-3`}>
           <button type="button" onClick={() => setChatOpen(true)} aria-label={t('driver.navigation.chat')} title={t('driver.navigation.chat')}
             className="pointer-events-auto relative flex h-[58px] w-[58px] items-center justify-center text-[40px] [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.55))]">
             💬
@@ -330,6 +323,15 @@ export function DriverNavigation(props: {
             </svg>
           </a>
         </div>
+      {/* ☰ right above the stage button (2026-11-18): rides up and down with the sheet. */}
+      {canRelease && (
+        <div className="pointer-events-none flex justify-end px-3 pb-2">
+          <button type="button" onClick={() => setMenuOpen(true)} data-testid="nav-menu" aria-label={t('driver.navigation.menu')} title={t('driver.navigation.menu')}
+            className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-ink shadow-lg">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M5 7h14M5 12h14M5 17h14" /></svg>
+          </button>
+        </div>
+      )}
       {/* Action bar: the one action for this stage — separate, above the info sheet, always visible. */}
       <div className="pointer-events-auto space-y-2 px-3 pb-2" data-testid="nav-actions">
           {trip.status === 'ASSIGNED' && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('status', { to: 'EN_ROUTE' })}>{t('driver.trip.onTheWay')}</button>}
