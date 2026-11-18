@@ -2,7 +2,7 @@
 
 ## 2026-11-18 — Swipe to finish / go offline (branch `swipe-buttons`, NOT merged)
 - `src/components/SwipeButton.tsx`: slide knob ≥85 % (left→right; RTL mirrored), tap does nothing, Enter/Space for keyboard.
-- Driver: «Завершить поездку» = swipe, dark red #7A1E1E (fare sheet confirm also dark red); «Уйти с линии» = swipe, brighter orange #FFA94D with dark text, 35 % smaller (h-9, 65 % width). No knob circle: three arrows travel with the finger, the whole bar is the swipe area. «Выйти на линию» stays a tap.
+- Driver: «Завершить поездку» = swipe, dark red #7A1E1E (fare sheet confirm also dark red); «Уйти с линии» = swipe, brighter orange #FFA94D with dark text; both swipe bars 35 % smaller (h-9, 65 % width). No knob circle: three arrows travel with the finger, the whole bar is the swipe area. «Выйти на линию» stays a tap.
 - Checked locally with Playwright: tap / half swipe do nothing, full swipe goes offline / opens the fare sheet.
 - Waiting for «заливай».
 

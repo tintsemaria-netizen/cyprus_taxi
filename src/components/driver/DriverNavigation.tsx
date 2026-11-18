@@ -354,8 +354,10 @@ export function DriverNavigation(props: {
           )}
           {/* Swipe, not tap (2026-11-18): dark red, slide left → right to finish. */}
           {trip.status === 'IN_PROGRESS' && leg === 'dropoff' && (
-            <SwipeButton label={t('driver.trip.completeTrip')} onDone={() => setAsk('complete')} testId="swipe-complete"
-              className="bg-[#7A1E1E] text-white" knobClassName="text-white" />
+            <div className="mx-auto w-[65%]">
+              <SwipeButton small label={t('driver.trip.completeTrip')} onDone={() => setAsk('complete')} testId="swipe-complete"
+                className="bg-[#7A1E1E] text-white" knobClassName="text-white" />
+            </div>
           )}
       </div>
       {/* Info sheet: collapses to the summary line (handle tap or swipe). */}
