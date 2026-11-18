@@ -1,6 +1,6 @@
 'use client';
 
-import { isFixedPrice } from '@/lib/price-type';
+import { fareRangeText } from '@/lib/price-type';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api-client';
 import { formatFlight } from '@/lib/flight';
@@ -66,7 +66,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number) => void }) {
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
         {i.flightNumber && <span className="font-mono text-ink">{t('driver.scheduled.flight', { flight: formatFlight(i.flightNumber) })}</span>}
-        {i.fareCents != null && <span>{t('driver.scheduled.fareEstimate', { amount: fmt.money(i.fareCents) })}</span>}
+        {i.fareCents != null && <span>{fareRangeText(i.fareCents, i.priceType, (c) => fmt.money(c))}</span>}
       </div>
       {i.note && <p className="mt-2 rounded-[10px] border border-warn/30 bg-warn/5 px-2.5 py-1.5 text-xs text-warn">💬 {i.note}</p>}
       {/* This ride's own time rules (2026-11-13: moved here from the page header). */}
@@ -186,7 +186,7 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
               <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{d.passengerName}</span></div>
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.scheduled.trip')}</span><span className="font-medium">{km(d.trip.distanceM)} · {t('driver.offer.minShort', { min: Math.max(1, Math.round(d.trip.etaSec / 60)) })}</span>{!d.trip.roadRouted && <span className="text-xs text-muted">≈</span>}</div>
-                <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{d.fareCents != null ? fmt.money(d.fareCents) : '—'}</span><span className="text-xs text-muted">{isFixedPrice(d.priceType) ? t('driver.offer.upfront') : t('driver.offer.meterEstimate')}</span></div>
+                <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{d.fareCents != null ? fareRangeText(d.fareCents, d.priceType, (c) => fmt.money(c)) : '—'}</span></div>
               </div>
               {d.note && <p className="mt-2 rounded-[10px] border border-warn/30 bg-warn/5 px-2.5 py-1.5 text-xs text-warn">💬 {d.note}</p>}
               {d.flightNumber && <p className="mt-2 font-mono text-xs text-ink">{t('driver.scheduled.flight', { flight: formatFlight(d.flightNumber) })}</p>}

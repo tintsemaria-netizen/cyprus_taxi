@@ -1,6 +1,6 @@
 'use client';
 
-import { isFixedPrice } from '@/lib/price-type';
+import { fareRangeText } from '@/lib/price-type';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import SwipeButton from '@/components/SwipeButton';
 import EdgeShine from '@/components/EdgeShine';
@@ -495,7 +495,7 @@ function HomeSection(props: {
             {offer.stop && <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.stop.via')}</span><span className="font-medium">{offer.stop.label}</span></div>}
             <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{offer.dropoff.label}</span></div>
             <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span><ClassBadge vClass={offer.vClass} /></div>
-            <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{offer.fareCents != null ? money(offer.fareCents, offer.currency) : '—'}</span><span className="text-xs text-muted">{isFixedPrice(offer.priceType) ? t('driver.offer.upfront') : t('driver.offer.meterEstimate')}</span></div>
+            <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{offer.fareCents != null ? fareRangeText(offer.fareCents, offer.priceType, (c) => money(c, offer.currency)) : '—'}</span></div>
             {offer.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(offer.scheduledAt)}</div>}
             {offer.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: offer.note })}</div>}
             {offer.flightNumber && <div className="font-mono text-xs text-ink">✈ {t('driver.scheduled.flight', { flight: formatFlight(offer.flightNumber) })}</div>}
@@ -619,7 +619,7 @@ function FreeOrdersSection({ pos, onDuty, onTaken }: { pos: { lat: number; lng: 
               <p className="mt-2 text-sm font-medium">{o.passengerName}</p>
               {o.note && <p className="mt-1 text-xs text-muted">{t('driver.offer.note', { note: o.note })}</p>}
               <div className="mt-3 flex items-center justify-between gap-3">
-                <div className="text-sm"><span className="font-semibold">{money(o.fareCents, o.currency)}</span>{o.priceType && <span className="ms-1 text-xs text-muted">{isFixedPrice(o.priceType) ? t('driver.offer.upfront') : o.priceType === 'REGULATED_METER_ESTIMATE' ? t('driver.offer.meterEstimate') : ''}</span>}</div>
+                <div className="text-sm"><span className="font-semibold">{o.fareCents != null ? fareRangeText(o.fareCents, o.priceType, (c) => money(c, o.currency)) : '—'}</span></div>
                 <button className="btn-primary min-h-[44px]" onClick={() => setViewId(o.bookingId)}>{t('driver.free.view')}</button>
               </div>
             </div>
@@ -676,7 +676,7 @@ function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
                 {o.stop && <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.stop.via')}</span><span className="font-medium">{o.stop.label}</span></div>}
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{o.dropoff.label}</span></div>
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{o.passengerName}</span><ClassBadge vClass={o.vClass} /></div>
-                <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{o.fareCents != null ? money(o.fareCents, o.currency) : '—'}</span><span className="text-xs text-muted">{isFixedPrice(o.priceType) ? t('driver.offer.upfront') : t('driver.offer.meterEstimate')}</span></div>
+                <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{o.fareCents != null ? fareRangeText(o.fareCents, o.priceType, (c) => money(c, o.currency)) : '—'}</span></div>
                 {o.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(o.scheduledAt)}</div>}
                 {o.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: o.note })}</div>}
                 {o.flightNumber && <div className="font-mono text-xs text-ink">✈ {t('driver.scheduled.flight', { flight: formatFlight(o.flightNumber) })}</div>}

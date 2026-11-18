@@ -8,3 +8,16 @@ export const FIXED_PRICE_TYPES = ['REGULATED_FIXED', 'UPFRONT_DYNAMIC'] as const
 export function isFixedPrice(priceType: string | null | undefined): boolean {
   return priceType === 'REGULATED_FIXED' || priceType === 'UPFRONT_DYNAMIC';
 }
+
+/**
+ * The price as the passenger sees it (2026-11-18): a taximeter estimate is a range ±15 % (same
+ * formula as the passenger quote, src/lib/tariff.ts), a fixed fare is one amount.
+ */
+export function fareRangeCents(cents: number, priceType: string | null | undefined): [number, number] {
+  if (isFixedPrice(priceType)) return [cents, cents];
+  return [Math.round(cents * 0.85), Math.round(cents * 1.15)];
+}
+export function fareRangeText(cents: number, priceType: string | null | undefined, money: (c: number) => string): string {
+  const [lo, hi] = fareRangeCents(cents, priceType);
+  return lo === hi ? money(lo) : `${money(lo)}–${money(hi)}`;
+}

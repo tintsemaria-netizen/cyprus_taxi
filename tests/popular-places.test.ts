@@ -21,3 +21,13 @@ describe('popular places', () => {
     expect(matchPopular('a', limassol)).toEqual([]);
   });
 });
+
+import { fareRangeText } from '@/lib/price-type';
+describe('driver price as the passenger sees it', () => {
+  const m = (c: number) => `${(c / 100).toFixed(2)} €`;
+  it('taximeter estimate → ±15 % range; fixed fare → one amount', () => {
+    expect(fareRangeText(7011, 'REGULATED_METER_ESTIMATE', m)).toBe('59.59 €–80.63 €');
+    expect(fareRangeText(3500, 'REGULATED_FIXED', m)).toBe('35.00 €');
+    expect(fareRangeText(1000, null, m)).toBe('8.50 €–11.50 €');
+  });
+});
