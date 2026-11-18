@@ -3,6 +3,7 @@
 import { isFixedPrice } from '@/lib/price-type';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import SwipeButton from '@/components/SwipeButton';
+import EdgeShine from '@/components/EdgeShine';
 import { StaffShell } from '@/components/staff/StaffShell';
 import { NotifyToggle } from '@/components/NotifyToggle';
 import { InstallPrompt } from '@/components/InstallPrompt';
@@ -447,8 +448,10 @@ function HomeSection(props: {
                     bgColor="#FFA94D" className="bg-[#FFA94D] text-[#3B2108]" knobClassName="text-[#3B2108]" />
                 </div>
               ) : (
-                <button className="pointer-events-auto min-h-[56px] w-full rounded-full bg-accent text-base font-semibold text-[#0d1608] shadow-card"
+                // Same size as the swipe bars (2026-11-18): 65 % wide, 53 px, glint on the rim.
+                <button className="pointer-events-auto relative h-[53px] w-[65%] rounded-full bg-accent text-[16px] font-bold text-[#0d1608] shadow-card"
                   onClick={() => props.onDuty(true)}>
+                  <EdgeShine />
                   {t('driver.duty.goOnline')}
                 </button>
               )

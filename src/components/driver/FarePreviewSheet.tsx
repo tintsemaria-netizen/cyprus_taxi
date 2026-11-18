@@ -1,5 +1,7 @@
 'use client';
 
+import EdgeShine from '@/components/EdgeShine';
+
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
@@ -35,7 +37,7 @@ export function FarePreviewSheet({ bookingId, passengerName: _passengerName, onC
           )}
         </div>
         {/* Red, like «Завершить поездку» on the navigation screen (2026-11-17). */}
-        <button className="mx-auto mt-4 block h-11 w-[65%] rounded-full bg-[#7A1E1E] text-[15px] font-bold text-white" onClick={onConfirm}>{t('driver.close.confirm')}</button>
+        <button className="relative mx-auto mt-4 block h-[53px] w-[65%] rounded-full bg-[#7A1E1E] text-[16px] font-bold text-white" onClick={onConfirm}><EdgeShine />{t('driver.close.confirm')}</button>
       </div>
     </div>
   );
