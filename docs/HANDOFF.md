@@ -1,9 +1,8 @@
 # Session handoff
 
-## 2026-11-18 — Driver buttons: same size, 20 % thicker, rim glint on tilt (branch `shine`, NOT merged)
+## 2026-11-18 — Driver buttons: same size, 20 % thicker, rim glint on tilt (deployed)
 - «Выйти на линию» 65 % wide like the swipe bars; swipes + online button + fare confirm 53 px high, 16 px text.
 - `src/components/EdgeShine.tsx`: 1.5 px rim highlight whose position follows the phone's left/right tilt (deviceorientation gamma, one shared rAF-throttled listener, removed when no button is mounted). iPhone: «Motion & Orientation» asked once on the first tap while a glint button is mounted; «denied» remembered in localStorage (il-y-tilt-asked), never asked again.
-- Waiting for «заливай».
 
 ## 2026-11-18 — Samsung Internet forced dark mode (deployed)
 - Z Fold 7 showed «Уйти с линии» red with white text = Samsung Internet's forced dark mode recoloring the light orange. Added `<meta name="color-scheme" content="dark">` (viewport.colorScheme) and swipe bars paint their colour as a gradient image layer (`bgColor`).
