@@ -1,7 +1,7 @@
 # Session handoff
 
 ## 2026-11-18 — Offers / free orders / pre-bookings: no price details, class badge, route on map (branch `offer-route`, NOT merged)
-- «Подробнее о цене» removed (offer sheet, free order, pre-booking detail). Passenger count/luggage removed; `ClassBadge` (bold, outlined, «COMFORT»/«XL») on offer, free order (list + detail) and pre-bookings.
+- «Подробнее о цене» removed (offer sheet, free order, pre-booking detail). Passenger count/luggage removed; `ClassBadge` (bold, soft grey outline + text, «COMFORT»/«XL» — user asked for less attention) on offer, free order (list + detail) and pre-bookings.
 - DriverHomeMap `dropoff`/`via`: one /routes/estimate per offer → route pickup → (stop) → destination drawn and fitted (offer + free order). Pre-booking detail already drew its route.
 - Locally no road route (no Google key) — markers fit; route line only on prod. Waiting for «заливай».
 

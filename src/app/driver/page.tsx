@@ -612,7 +612,7 @@ function FreeOrdersSection({ pos, onDuty, onTaken }: { pos: { lat: number; lng: 
                 <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-ink" /><span className="text-muted">{t('driver.offer.destination')}</span><span className="ms-auto text-end font-medium">{o.dropoff.label}</span></div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
-                <span className="rounded-md border-2 border-accent px-2 py-0.5 text-[13px] font-extrabold uppercase tracking-wide text-accent">{t(`common.vClass.${o.vClass}` as MsgKey)}</span>
+                <span className="rounded-md border-2 border-white/25 px-2 py-0.5 text-[13px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${o.vClass}` as MsgKey)}</span>
                 {o.scheduledAt && <span className="rounded-full bg-elevated px-2 py-1">🕒 {fmt.dateTime(o.scheduledAt)}</span>}
                 {o.flightNumber && <span className="rounded-full bg-elevated px-2 py-1">✈ {o.flightNumber}</span>}
               </div>
@@ -943,5 +943,5 @@ function BottomNav({ tab, setTab, hasOffer, freeCount, prebookCount }: { tab: Ta
 // outlined so it stands out at a glance.
 function ClassBadge({ vClass }: { vClass: string }) {
   const { t } = useT();
-  return <span className="ms-auto shrink-0 rounded-md border-2 border-accent px-2 py-0.5 text-[15px] font-extrabold uppercase tracking-wide text-accent">{t(`common.vClass.${vClass}` as MsgKey)}</span>;
+  return <span className="ms-auto shrink-0 rounded-md border-2 border-white/25 px-2 py-0.5 text-[15px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${vClass}` as MsgKey)}</span>;
 }
