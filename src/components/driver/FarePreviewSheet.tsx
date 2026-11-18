@@ -35,7 +35,7 @@ export function FarePreviewSheet({ bookingId, passengerName: _passengerName, onC
           )}
         </div>
         {/* Red, like «Завершить поездку» on the navigation screen (2026-11-17). */}
-        <button className="mx-auto mt-4 block h-9 w-[65%] rounded-full bg-[#7A1E1E] text-[13px] font-bold text-white" onClick={onConfirm}>{t('driver.close.confirm')}</button>
+        <button className="mx-auto mt-4 block h-11 w-[65%] rounded-full bg-[#7A1E1E] text-[15px] font-bold text-white" onClick={onConfirm}>{t('driver.close.confirm')}</button>
       </div>
     </div>
   );
