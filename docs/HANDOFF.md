@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-18 — PARKED until the app launch: Google Places API (New)
+- Decision (user): before launching in the app stores, enable **Places API (New)** in Google Cloud for the server key (APIs & Services → Library → Enable; Credentials → server key → API restrictions → add it). Then verify `/api/v1/places/search` returns `provider: "places"`.
+- Until then address search uses Photon (public OSM demo service, no guarantee; fine for a few hundred orders/day).
+- Remind the user at launch preparation. Other parked items: receipts RU/EN (`receipt-ru-en`), map labels (`map-labels`).
+
 ## 2026-11-18 — Streets and hotels by the first letters (deployed)
 - Google Places autocomplete fails on prod (falls back) → `src/server/photon.ts`: OpenStreetMap search-as-you-type via photon.komoot.io (public, fair use; 2.5 s timeout; 10 min cache; Cyprus bbox; near bias; lang en). Streets, houses, hotels (kind hotel → bed icon).
 - `/places/search` without Places: popular → Photon → Google geocode (only real addresses), parallel, max 10. Tests: tests/photon.test.ts.
