@@ -936,20 +936,22 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
 // ---- Bottom nav ----
 function BottomNav({ tab, setTab, hasOffer, freeCount, prebookCount }: { tab: Tab; setTab: (t: Tab) => void; hasOffer: boolean; freeCount: number; prebookCount: number }) {
   const { t } = useT();
-  const items: { id: Tab; label: string; icon: string }[] = [
-    { id: 'home', label: t('driver.nav.home'), icon: '🏠' }, { id: 'free', label: t('driver.nav.free'), icon: '📋' }, { id: 'prebook', label: t('driver.scheduled.tabPrebook'), icon: '🗓' },
+  const items: { id: Tab; label: string }[] = [
+    { id: 'home', label: t('driver.nav.home') }, { id: 'free', label: t('driver.nav.free') }, { id: 'prebook', label: t('driver.scheduled.tabPrebook') },
   ];
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-page/95 backdrop-blur" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="mx-auto flex max-w-lg">
         {items.map((it) => (
-          <button key={it.id} onClick={() => setTab(it.id)} className={`relative flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 py-1 text-xs ${tab === it.id ? 'text-accent' : 'text-muted'}`}>
-            <span className="text-base leading-none" aria-hidden>{it.icon}</span>
-            <span>{it.label}</span>
-            {it.id === 'home' && hasOffer && tab !== 'home' && <span className="absolute end-[28%] top-1.5 h-2 w-2 rounded-full bg-accent" />}
-            {/* Small red count: new free orders / open pre-bookings. */}
-            {it.id === 'free' && freeCount > 0 && <span className="absolute end-[20%] top-1 min-w-[18px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[18px] text-white">{freeCount}</span>}
-            {it.id === 'prebook' && prebookCount > 0 && <span className="absolute end-[20%] top-1 min-w-[18px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[18px] text-white">{prebookCount}</span>}
+          // Text only (2026-11-18): no emoji, bigger and bolder words; counts sit at the word's corner.
+          <button key={it.id} onClick={() => setTab(it.id)} className={`flex min-h-[56px] flex-1 items-center justify-center py-1 text-[16px] font-bold ${tab === it.id ? 'text-accent' : 'text-muted'}`}>
+            <span className="relative">
+              {it.label}
+              {it.id === 'home' && hasOffer && tab !== 'home' && <span className="absolute -end-3 -top-1 h-2 w-2 rounded-full bg-accent" />}
+              {/* Small red count: new free orders / open pre-bookings. */}
+              {it.id === 'free' && freeCount > 0 && <span className="absolute -end-5 -top-2.5 min-w-[18px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[18px] text-white">{freeCount}</span>}
+              {it.id === 'prebook' && prebookCount > 0 && <span className="absolute -end-5 -top-2.5 min-w-[18px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[18px] text-white">{prebookCount}</span>}
+            </span>
           </button>
         ))}
       </div>
