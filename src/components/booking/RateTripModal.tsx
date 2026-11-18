@@ -10,7 +10,7 @@ import { useT } from '@/i18n/I18nProvider';
 // the server vocabulary in src/server/ratings.ts.
 
 // Two suggestions per band (2026-11-18) to keep the card small. For 1–3★ the wording is soft
-// («Подача позже», «Хотелось бы спокойнее») — no harsh labels; the slugs stay the same for the server.
+// («Подача позже», «Хотелось бы лучше») — no harsh labels; the slugs stay the same for the server.
 const POSITIVE = ['safe_driving', 'clean_car'] as const;
 const CONSTRUCTIVE = ['late', 'unsafe_driving'] as const;
 

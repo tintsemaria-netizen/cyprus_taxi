@@ -57,7 +57,7 @@ const rides: Catalog<typeof en> = {
       smooth_ride: "Angenehme Fahrt",
       great_route: "Gute Route",
       late: "Etwas verspätet",
-      unsafe_driving: "Ruhiger fahren",
+      unsafe_driving: "Hätte besser sein können",
       rude: "Unhöflich",
       dirty_car: "Schmutziges Auto",
       wrong_route: "Falsche Route",

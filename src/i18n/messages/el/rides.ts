@@ -57,7 +57,7 @@ const rides: Catalog<typeof en> = {
       smooth_ride: 'Άνετη διαδρομή',
       great_route: 'Καλή διαδρομή',
       late: "Ήρθε λίγο αργά",
-      unsafe_driving: "Πιο ήπια οδήγηση",
+      unsafe_driving: "Θα μπορούσε καλύτερα",
       rude: 'Αγενής',
       dirty_car: 'Βρόμικο αυτοκίνητο',
       wrong_route: 'Λάθος διαδρομή',

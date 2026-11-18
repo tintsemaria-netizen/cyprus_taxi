@@ -54,7 +54,7 @@ const rides = {
       smooth_ride: 'Smooth ride',
       great_route: 'Great route',
       late: "Arrived a bit late",
-      unsafe_driving: "Could drive smoother",
+      unsafe_driving: "Could be better",
       rude: 'Rude',
       dirty_car: 'Dirty car',
       wrong_route: 'Wrong route',
