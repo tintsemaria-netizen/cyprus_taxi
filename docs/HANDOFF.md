@@ -1,11 +1,11 @@
 # Session handoff
 
-## 2026-11-18 — Smaller rating card (branch `rate-compact`, includes `rebook`; NOT merged)
-- RateTripModal: 2 suggestions per band (positive: safe_driving, clean_car; constructive: late, unsafe_driving), one-line comment field (44 px). Finished screen: no «Заказать ещё поездку» button (× starts a new booking). Waiting for «заливай».
+## 2026-11-18 — Smaller rating card + cancel → same route (deployed)
+- RateTripModal: 2 suggestions per band (positive: safe_driving, clean_car; constructive: late, unsafe_driving), one-line comment field (44 px). Finished screen: no «Заказать ещё поездку» button (× starts a new booking), no «Поездка завершена» pill on the map.
 
-## 2026-11-18 — Cancel → straight back to ordering the same route (branch `rebook`, NOT merged)
+## 2026-11-18 — Cancel → straight back to ordering the same route (deployed)
 - TrackApp `repeatSameRide()`: after the passenger cancels, store route + stop + class (il-y-repeat) and go to «/», which opens at the class/price step («Заказать Comfort»). «Заказать ещё раз» uses the same helper.
-- Checked locally: cancel EN_ROUTE ride → «/» with Amerikanas → Larnaca Airport priced, «Заказать Comfort». Waiting for «заливай».
+- Checked locally: cancel EN_ROUTE ride → «/» with Amerikanas → Larnaca Airport priced, «Заказать Comfort».
 - Also showed the user the end-of-trip rating card (5 stars, tags, comment).
 
 ## 2026-11-18 — Receipt page trimmed (deployed)

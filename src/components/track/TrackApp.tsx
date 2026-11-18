@@ -394,7 +394,8 @@ export default function TrackApp() {
           {/* No pill while searching (2026-11-15): the sheet already says it, bigger. */}
           {/* No pill while searching or after a cancellation (2026-11-16): the sheet says it. */}
           {/* …nor when no driver is free (2026-11-17): the sheet says it. */}
-          {view.status !== 'SEARCHING' && view.status !== 'CANCELED' && view.status !== 'NO_DRIVER' && <span className="chip !bg-page/90 !text-accent">
+          {/* No pill on the finished ride either (2026-11-18): the sheet title says it. */}
+          {view.status !== 'SEARCHING' && view.status !== 'CANCELED' && view.status !== 'NO_DRIVER' && view.status !== 'COMPLETED' && <span className="chip !bg-page/90 !text-accent">
             {view.status === 'EN_ROUTE' ? `● ${t('track.pillEnRoute')}` : `● ${statusLabel.toUpperCase()}`}
           </span>}
           {reconnecting && <span className="chip ms-2 !bg-page/90 !text-warn">{t('track.reconnecting')}</span>}
