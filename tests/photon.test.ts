@@ -23,3 +23,11 @@ describe('Photon results', () => {
     expect(r.map((x) => x.label)).toEqual(['Molos']);
   });
 });
+
+import { latinize } from '@/server/photon';
+describe('Russian-typed street names', () => {
+  it('are spelled in Latin letters', () => {
+    expect(latinize('макариоу')).toBe('makariou');
+    expect(latinize('Агиас Софиас 12')).toBe('Agias Sofias 12');
+  });
+});
