@@ -203,6 +203,9 @@ function Driver() {
   }
   async function setDuty(onDuty: boolean) {
     if (onDuty) unlockOfferSound(); // user gesture: lets the offer chime play later
+    // «Выйти на линию» also turns on location sharing (2026-11-18) — inside the same tap, so the
+    // phone's permission prompt is allowed to appear; no separate «Включить GPS» press needed.
+    if (onDuty && !gps.active) startGps();
     try {
       const r = await api<{ onDuty: boolean }>('/driver/availability', { method: 'PATCH', body: { onDuty, available: onDuty } });
       if (!r.onDuty) stopGps();

@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-18 — «Выйти на линию» also turns on GPS (deployed)
+- driver/page.tsx `setDuty(true)` calls `startGps()` inside the same tap (permission prompt allowed) unless already active. Checked locally: tap → online + «GPS включён».
+
 ## 2026-11-18 — Glint v2 + Samsung Internet hint (deployed)
 - EdgeShine v2: conic spark (bright core + soft halo, weaker spark opposite) travelling round the rim with the tilt (gamma ±35° → ±80°), 2 px ring, light drop-shadow — user said v1 looked like «a simple wave».
 - Forced dark persists on Z Fold 7 despite color-scheme meta → `SamsungDarkHint` (layout): Samsung Internet UA only, one-time card «≡ → Settings → Labs → Use website dark theme, or install from Chrome», 8 languages (common.samsungDark), dismiss stored (il-y-samsung-dark-hint).
