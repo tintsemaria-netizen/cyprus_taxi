@@ -9,7 +9,8 @@ import { useT } from '@/i18n/I18nProvider';
 // shown depends on the star rating (positive for 4-5, constructive for 1-3) and the slugs match
 // the server vocabulary in src/server/ratings.ts.
 
-// Two suggestions per band (2026-11-18) to keep the card small.
+// Two suggestions per band (2026-11-18) to keep the card small. For 1–3★ the wording is soft
+// («Подача позже», «Хотелось бы спокойнее») — no harsh labels; the slugs stay the same for the server.
 const POSITIVE = ['safe_driving', 'clean_car'] as const;
 const CONSTRUCTIVE = ['late', 'unsafe_driving'] as const;
 
@@ -88,7 +89,7 @@ export function RateTripModal({ rideId, onClose, onDone, postUrl, inline }: { ri
               className="field mt-3 !min-h-0 h-11 resize-none !py-2.5 text-sm"
               rows={1}
               maxLength={500}
-              placeholder={t('rides.rate.commentPlaceholder')}
+              placeholder={stars >= 4 ? t('rides.rate.commentPlaceholder') : t('rides.rate.commentPlaceholderLow')}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
             />

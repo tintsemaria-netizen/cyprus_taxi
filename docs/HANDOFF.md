@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-18 — Softer 1–3★ suggestions (branch `soft-tags`, NOT merged)
+- Same slugs (late, unsafe_driving); labels «Подача позже», «Хотелось бы спокойнее» (8 languages); comment placeholder for 1–3★ «Что можно улучшить? (необязательно)» (rides.rate.commentPlaceholderLow). Alternatives offered to the user in chat. Waiting for «заливай».
+
 ## 2026-11-18 — Smaller rating card + cancel → same route (deployed)
 - RateTripModal: 2 suggestions per band (positive: safe_driving, clean_car; constructive: late, unsafe_driving), one-line comment field (44 px). Finished screen: no «Заказать ещё поездку» button (× starts a new booking), no «Поездка завершена» pill on the map.
 
