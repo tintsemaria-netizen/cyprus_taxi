@@ -132,6 +132,7 @@ const booking: Catalog<typeof en> = {
     signInFirst: 'Перед подтверждением нужно будет войти.',
   },
   route: {
+    popular: "Популярные места",
     title: 'Маршрут',
     close: 'Закрыть',
     swap: 'Поменять местами',

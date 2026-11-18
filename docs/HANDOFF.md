@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-18 — Own frequent places first, then popular places near → far (deployed)
+- `/passenger/destinations`: last 100 rides (no CANCELED), pickups (0.6) + destinations (1), points < ~120 m merged, map pins skipped; most used first, then recent; up to 8.
+- Popular list +22 places (cruise terminal, City of Dreams, Molos, beaches, universities, hospitals, malls, waterparks, Cape Greco, Latchi…); `src/server/popular.ts` (parallel cached lookups) + `GET /api/v1/places/popular?near=` (nearest 6).
+- RouteEditor empty box: own places → «Популярные места» (nearest first). Typing: own matches → popular (server) → Google.
+- Tests: saved-places.db (frequent places), popular-places.
+
 ## 2026-11-18 — Popular places first in address search (deployed)
 - `src/lib/popularPlaces.ts`: 22 popular places (airports, harbours, marinas, malls, hospitals, beaches) with ru/el/en words + town names; `matchPopular` (word starts, nearest town first, then importance). Coordinates: known ones from the demo fixtures; others via `googleFindPoi` (geocode, only establishment/landmark, no partial match), cached in the search route.
 - `/places/search` puts them on top (dedup), also when Google search fails. RouteEditor shows a ☆ icon. Tests: tests/popular-places.test.ts.

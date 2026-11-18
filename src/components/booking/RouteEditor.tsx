@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { api, uuid } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { Selected } from './PlacesInput';
@@ -131,6 +131,15 @@ export function RouteEditor(p: Props) {
     if (nxt) setActive(nxt); else p.onClose();
   }
 
+  // Popular places around the passenger, nearest first, under the passenger's own places (2026-11-18).
+  const [popular, setPopular] = useState<(Result & { lat: number; lng: number })[]>([]);
+  const originKey = p.origin ? `${p.origin.lat.toFixed(2)},${p.origin.lng.toFixed(2)}` : '';
+  useEffect(() => {
+    let alive = true;
+    api<{ places: (Result & { lat: number; lng: number })[] }>(`/places/popular?x=1${nearParam(p.origin)}`).then((r) => { if (alive) setPopular(r.places); }).catch(() => {});
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [originKey]);
   const showSaved = query.length < 2;
   const allSaved: (Place & { icon: 'home' | 'work' | 'school' | 'recent' | 'pin'; name?: string })[] = [
     ...(p.home ? [{ ...p.home, icon: 'home' as const, name: t('booking.form.home') }] : []),
@@ -246,12 +255,16 @@ export function RouteEditor(p: Props) {
         {status === 'loading' && !quick.length && <p className="px-2 py-3 text-sm text-muted">{t('booking.places.searching')}</p>}
         {status === 'none' && !quick.length && <p className="px-2 py-3 text-sm text-muted">{t('booking.places.none')}</p>}
         {status === 'unavailable' && <p className="px-2 py-3 text-sm text-warn">{t('booking.places.unavailable')}</p>}
-        {listed.map((r, i) => {
+        {[...listed, ...(showSaved ? popular.filter((x) => !listed.some((l) => l.label.toLowerCase() === x.label.toLowerCase())) : [])].map((r, i, all) => {
           const [main, sub] = 'name' in r && r.name ? [r.name, r.label] : twoLines(r.label);
           const second = 'secondary' in r && r.secondary ? r.secondary : sub;
           const dist = p.origin && typeof r.lat === 'number' && typeof r.lng === 'number' ? km(p.origin, { lat: r.lat, lng: r.lng }) : null;
           return (
-            <button key={`${r.label}-${i}`} type="button" role="option" aria-selected={false} onClick={() => void pick(r)}
+            <Fragment key={`${r.label}-${i}`}>
+            {showSaved && 'kind' in r && r.kind === 'popular' && !(i > 0 && (all[i - 1] as Result).kind === 'popular') && (
+              <p className="px-2 pb-1 pt-4 text-[12px] font-semibold uppercase tracking-wide text-muted">{t('booking.route.popular')}</p>
+            )}
+            <button type="button" role="option" aria-selected={false} onClick={() => void pick(r)}
               className="flex w-full items-center gap-3 border-b border-edge px-2 py-3 text-start hover:bg-white/5 active:bg-white/5">
               <span className="shrink-0">{icon('icon' in r ? r.icon : 'kind' in r && r.kind === 'popular' ? 'star' : 'pin')}</span>
               <span className="min-w-0 flex-1">
@@ -260,6 +273,7 @@ export function RouteEditor(p: Props) {
               </span>
               {dist && <span className="shrink-0 text-[14px] text-muted">{Number(dist).toLocaleString(locale)} {t('booking.route.km')}</span>}
             </button>
+            </Fragment>
           );
         })}
       </div>

@@ -140,6 +140,7 @@ const booking: Catalog<typeof en> = {
     signInFirst: "תתחברו לפני האישור.",
   },
   route: {
+    popular: "מקומות פופולריים",
     title: "מסלול",
     close: "סגירה",
     swap: "החלפת מוצא ויעד",

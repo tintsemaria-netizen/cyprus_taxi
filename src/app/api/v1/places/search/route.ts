@@ -2,24 +2,9 @@ import { apiOk, Errors, clientIp } from '@/lib/http';
 import { searchPlaces } from '@/lib/places';
 import { rateLimit } from '@/lib/rate-limit';
 import { config } from '@/lib/config';
-import { googleConfigured, googleSearch, googleAutocomplete, googleFindPoi, isPlacesDisabled } from '@/server/google';
-import { matchPopular, type PopularPlace } from '@/lib/popularPlaces';
+import { googleConfigured, googleSearch, googleAutocomplete, isPlacesDisabled } from '@/server/google';
+import { popularResults } from '@/server/popular';
 
-// Popular places first (2026-11-18): matched locally, nearest first; coordinates cached.
-const poiCache = new Map<string, { at: { lat: number; lng: number } | null; t: number }>();
-async function popularResults(q: string, near: { lat: number; lng: number } | null, google: boolean) {
-  const out: { label: string; secondary: string; lat: number; lng: number; kind: string }[] = [];
-  for (const p of matchPopular(q, near) as PopularPlace[]) {
-    let at = p.at ?? null;
-    if (!at && p.query && google) {
-      const c = poiCache.get(p.query);
-      if (c && (c.at || Date.now() - c.t < 86_400_000)) at = c.at;
-      else { try { at = await googleFindPoi(p.query); } catch { at = null; } poiCache.set(p.query, { at, t: Date.now() }); }
-    }
-    if (at) out.push({ label: p.name, secondary: p.city, lat: at.lat, lng: at.lng, kind: 'popular' });
-  }
-  return out;
-}
 function withPopular<T extends { label: string }>(pop: { label: string }[], rest: T[]): (T | (typeof pop)[number])[] {
   const seen = new Set(pop.map((p) => p.label.toLowerCase()));
   return [...pop, ...rest.filter((r) => !seen.has(r.label.toLowerCase()))];

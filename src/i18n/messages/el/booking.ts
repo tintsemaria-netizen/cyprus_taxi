@@ -127,6 +127,7 @@ const booking: Catalog<typeof en> = {
     signInFirst: 'Θα συνδεθείτε πριν από την επιβεβαίωση.',
   },
   route: {
+    popular: "Δημοφιλή μέρη",
     title: 'Διαδρομή',
     close: 'Κλείσιμο',
     swap: 'Αντιστροφή',

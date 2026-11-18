@@ -124,6 +124,7 @@ const booking = {
     signInFirst: 'You’ll sign in before confirming.',
   },
   route: {
+    popular: "Popular places",
     title: 'Route',
     close: 'Close',
     swap: 'Swap start and destination',

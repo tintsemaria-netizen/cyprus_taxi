@@ -49,3 +49,24 @@ describe('saved places', () => {
     expect((await put({ kind: 'C_00000000-0000-0000-0000-000000000000', name: 'Z', place: { label: 'Z', lat: 34, lng: 33 } })).status).toBe(404);
   });
 });
+
+import * as destRoute from '@/app/api/v1/passenger/destinations/route';
+import { prisma } from '@/lib/db';
+describe('own frequent places', () => {
+  it('most used first (destinations and pickups), map pins skipped, cancelled ignored', async () => {
+    const me = await prisma.passengerSession.findFirst({ orderBy: { createdAt: 'desc' }, select: { passengerId: true } });
+    const pid = me!.passengerId;
+    const mk = (pu: [string, number, number], d: [string, number, number], status: 'COMPLETED' | 'CANCELED' = 'COMPLETED') => prisma.booking.create({ data: {
+      reference: `FP${Date.now()}${Math.random().toString(36).slice(2, 6)}`, passengerId: pid, status, passengerName: 'Ana', phone: '+35799123456',
+      pickupLabel: pu[0], pickupLat: pu[1], pickupLng: pu[2], dropoffLabel: d[0], dropoffLat: d[1], dropoffLng: d[2], vClass: 'COMFORT', passengerCount: 1,
+    } as never });
+    const home: [string, number, number] = ['Home st 1', 34.68, 33.04], gym: [string, number, number] = ['Gym', 34.70, 33.05], airport: [string, number, number] = ['Larnaca Airport (LCA)', 34.8751, 33.6249];
+    await mk(home, airport); await mk(home, gym); await mk(['Pin 34.70966, 33.12811', 34.70966, 33.12811], gym); await mk(gym, home); await mk(home, ['Nowhere', 34.9, 33.9], 'CANCELED');
+    const r = await (await destRoute.GET()).json() as { destinations: { label: string }[] };
+    const labels = r.destinations.map((d) => d.label);
+    expect(labels.slice(0, 2).sort()).toEqual(['Gym', 'Home st 1']);
+    expect(labels).toContain('Larnaca Airport (LCA)');
+    expect(labels.some((l) => l.startsWith('Pin '))).toBe(false);
+    expect(labels).not.toContain('Nowhere');
+  });
+});
