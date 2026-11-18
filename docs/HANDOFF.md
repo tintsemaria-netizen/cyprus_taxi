@@ -1,7 +1,7 @@
 # Session handoff
 
-## 2026-11-18 — Driver bottom nav text only (branch `nav-text`, NOT merged)
-- No emoji; labels 16 px bold; red counts at the word's top corner. Waiting for «заливай».
+## 2026-11-18 — Driver bottom nav text only (deployed)
+- No emoji; labels 16 px bold; red counts at the word top corner.
 
 ## 2026-11-18 — Driver side menu instead of the Profile tab (deployed)
 - Bottom nav: Главная / Свободные / Предзаказы (Profile removed). StaffShell header (DRIVER only): ☰ top-RIGHT → window event `il-y:driver-menu`.
