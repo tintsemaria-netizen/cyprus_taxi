@@ -184,6 +184,7 @@ const driver: Catalog<typeof en> = {
     download: "Übersicht herunterladen (CSV)",
   },
   profile: {
+    notifications: "Benachrichtigungen",
     title: "Profil",
     driverFallback: "Fahrer",
     ratings: { one: "{count} Bewertung", other: "{count} Bewertungen" },

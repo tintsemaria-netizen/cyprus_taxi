@@ -181,6 +181,7 @@ const driver = {
     download: 'Download statement (CSV)',
   },
   profile: {
+    notifications: "Notifications",
     title: 'Profile',
     driverFallback: 'Driver',
     ratings: { one: '{count} rating', other: '{count} ratings' },

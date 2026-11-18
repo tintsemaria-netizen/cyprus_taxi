@@ -184,6 +184,7 @@ const driver: Catalog<typeof en> = {
     download: "تنزيل الكشف (CSV)",
   },
   profile: {
+    notifications: "الإشعارات",
     title: "الملف الشخصي",
     driverFallback: "سائق",
     ratings: { zero: "{count} تقييم", one: "{count} تقييم", two: "{count} تقييم", few: "{count} تقييمات", many: "{count} تقييمًا", other: "{count} تقييم" },

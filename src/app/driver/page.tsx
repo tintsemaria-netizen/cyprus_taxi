@@ -417,8 +417,9 @@ function HomeSection(props: {
         {/* One button per action, right-aligned under the messages (never overlapping them). */}
         {!offer && (
           <div className="flex w-full flex-col items-end gap-2">
-            {data.onDuty && (
-              <button className={`${pill} flex h-12 items-center gap-1.5 px-4 text-sm font-medium ${gps.active ? '!border-accent text-accent' : 'text-ink'}`}
+            {/* Only problems are shown (2026-11-18): GPS off, or a weak fix — not «GPS включён». */}
+            {data.onDuty && (!gps.active || (gps.accuracyM != null && accuracyLevel(gps.accuracyM) === 'poor')) && (
+              <button className={`${pill} flex h-12 items-center gap-1.5 px-4 text-sm font-medium ${gps.active ? '!border-warn text-warn' : '!border-danger/60 text-danger'}`}
                 onClick={gps.active ? props.onStopGps : props.onStartGps} aria-pressed={gps.active}>
                 📍 {gps.active ? t('driver.home.gpsOn') : t('driver.home.gpsOff')}
                 {gps.active && gps.accuracyM != null && (
@@ -428,7 +429,7 @@ function HomeSection(props: {
                 )}
               </button>
             )}
-            <div className={`${pill} flex min-h-[48px] items-center px-4`}><NotifyToggle pushUrl="/driver/push" /></div>
+            <NotifyToggle pushUrl="/driver/push" onlyProblems className={`${pill} flex min-h-[48px] items-center !border-danger/50 px-4`} />
           </div>
         )}
       </div>
@@ -872,7 +873,11 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
             : <div className="text-xs text-muted">{t('driver.profile.noRatings')}</div>)}
         </div>
         <div className="text-xs text-muted">{t('driver.profile.eligibility', { value: dash?.driver.eligibility ? tOr(`driver.profile.eligibilityValue.${dash.driver.eligibility}`, dash.driver.eligibility) : '—' })}</div>
-        <div className="mt-2"><NotifyToggle pushUrl="/driver/push" /></div>
+        {/* Notifications in the settings (2026-11-18): status + turn on, next to the language. */}
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-edge pt-3">
+          <span className="text-sm">{t('driver.profile.notifications')}</span>
+          <NotifyToggle pushUrl="/driver/push" className="text-end" />
+        </div>
         {/* App language (2026-11-17): set by the phone's language; changed only here. */}
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-edge pt-3">
           <span className="text-sm">{t('common.language')}</span>

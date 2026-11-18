@@ -184,6 +184,7 @@ const driver: Catalog<typeof en> = {
     download: 'Λήψη κατάστασης (CSV)',
   },
   profile: {
+    notifications: "Ειδοποιήσεις",
     title: 'Προφίλ',
     driverFallback: 'Οδηγός',
     ratings: { one: '{count} αξιολόγηση', other: '{count} αξιολογήσεις' },

@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-18 — Driver home shows only problems; notifications row in profile (deployed)
+- Home: GPS pill only when GPS is off (red) or the fix is weak (amber); no «GPS включён». Notifications pill (`NotifyToggle onlyProblems`) only when off/blocked (red), hidden when working.
+- Profile: «Уведомления» row with status / turn-on, next to «Язык». Key driver.profile.notifications (8 languages).
+
 ## 2026-11-18 — «Выйти на линию» also turns on GPS (deployed)
 - driver/page.tsx `setDuty(true)` calls `startGps()` inside the same tap (permission prompt allowed) unless already active. Checked locally: tap → online + «GPS включён».
 

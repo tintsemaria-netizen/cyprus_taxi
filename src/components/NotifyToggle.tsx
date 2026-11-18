@@ -8,7 +8,9 @@ import { isIos, isStandalone } from '@/lib/pwa';
 // Notification opt-in usable anywhere (driver duty card, passenger tracking). When
 // permission is already granted it silently (re)registers the subscription for THIS
 // audience — so state reflects an actual server subscription, not just permission.
-export function NotifyToggle({ pushUrl, className }: { pushUrl: string; className?: string }) {
+// `onlyProblems` (2026-11-18, driver home): render nothing while notifications work; show the
+// message (in red) only when they are off / blocked / need the home-screen app.
+export function NotifyToggle({ pushUrl, className, onlyProblems = false }: { pushUrl: string; className?: string; onlyProblems?: boolean }) {
   const { t } = useT();
   const [state, setState] = useState<'idle' | 'on' | 'denied' | 'busy' | 'unsupported' | 'iosInstall'>('idle');
 
@@ -23,6 +25,7 @@ export function NotifyToggle({ pushUrl, className }: { pushUrl: string; classNam
   }, [pushUrl]);
 
   if (state === 'unsupported') return null;
+  if (onlyProblems && (state === 'on' || state === 'busy')) return null;
   if (state === 'iosInstall') return <div className={className}><span className="text-xs text-muted">{t('common.install.iosNotify')}</span></div>;
 
   async function turnOn() {
@@ -36,7 +39,7 @@ export function NotifyToggle({ pushUrl, className }: { pushUrl: string; classNam
       {state === 'on' ? (
         <span className="text-xs text-muted">{t('track.alerts.on')}</span>
       ) : state === 'denied' ? (
-        <span className="text-xs text-muted">{t('track.alerts.blocked')}</span>
+        <span className={`text-xs ${onlyProblems ? 'font-semibold text-danger' : 'text-muted'}`}>{t('track.alerts.blocked')}</span>
       ) : (
         <button type="button" className="text-xs text-accent hover:underline disabled:opacity-50" disabled={state === 'busy'} onClick={turnOn}>
           {state === 'busy' ? t('track.alerts.enabling') : t('track.alerts.enable')}
