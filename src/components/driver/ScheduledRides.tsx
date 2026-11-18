@@ -58,7 +58,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number) => void }) {
         <span className="font-semibold">{fmt.dateTime(i.pickupAt)}</span>
         <span className="flex shrink-0 gap-1">
           {i.airport && <span className="chip !text-accent">✈ {t('driver.scheduled.airport')}</span>}
-          <span className="chip">{t(`common.vClass.${i.vClass}` as 'common.vClass.COMFORT')}</span>
+          <span className="rounded-md border-2 border-accent px-2 py-0.5 text-[13px] font-extrabold uppercase tracking-wide text-accent">{t(`common.vClass.${i.vClass}` as 'common.vClass.COMFORT')}</span>
         </span>
       </div>
       <div className="mt-2 space-y-1 text-sm">
@@ -66,7 +66,6 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number) => void }) {
         <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0">{i.dropoffLabel}</span></div>
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-        <span>{tp('common.passengers', i.passengerCount)}</span>
         {i.flightNumber && <span className="font-mono text-ink">{t('driver.scheduled.flight', { flight: formatFlight(i.flightNumber) })}</span>}
         {i.fareCents != null && <span>{t('driver.scheduled.fareEstimate', { amount: fmt.money(i.fareCents) })}</span>}
       </div>
@@ -179,7 +178,7 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
                 <span className="text-lg font-bold">{fmt.dateTime(d.pickupAt)}</span>
                 <span className="flex shrink-0 gap-1">
                   {d.airport && <span className="chip !text-accent">✈ {t('driver.scheduled.airport')}</span>}
-                  <span className="chip">{t(`common.vClass.${d.vClass}` as 'common.vClass.COMFORT')}</span>
+                  <span className="rounded-md border-2 border-accent px-2 py-0.5 text-[15px] font-extrabold uppercase tracking-wide text-accent">{t(`common.vClass.${d.vClass}` as 'common.vClass.COMFORT')}</span>
                 </span>
               </div>
               <div className="mt-2 space-y-1 text-sm">
@@ -197,15 +196,6 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
                 <div>🕒 {t('driver.scheduled.freeUntil', { time: fmt.time(new Date(new Date(d.pickupAt).getTime() - PROTECT_MIN * 60_000)), min: PROTECT_MIN })}</div>
                 <div>🚖 {t('driver.scheduled.activeAt', { time: fmt.time(new Date(new Date(d.pickupAt).getTime() - CONVERT_MIN * 60_000)), min: CONVERT_MIN })}</div>
               </div>
-              <details className="mt-2 text-xs text-muted">
-                <summary className="cursor-pointer">{t('driver.offer.more')}</summary>
-                <div className="mt-1 space-y-0.5">
-                  {d.fareBreakdown?.length ? d.fareBreakdown.map((l, i) => (
-                    <div key={i} className="flex justify-between gap-3"><span className="min-w-0 truncate">{l.label}</span><span className="shrink-0">{fmt.money(l.cents)}</span></div>
-                  )) : <div>{t('driver.offer.noEstimate')}</div>}
-                  <div>{t('driver.offer.phoneHidden')}</div>
-                </div>
-              </details>
               {!d.mine && d.conflict && <p className="mt-2 text-xs text-warn">{t('driver.scheduled.conflict')}</p>}
             </>
           )}

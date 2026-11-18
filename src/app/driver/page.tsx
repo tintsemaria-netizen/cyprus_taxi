@@ -405,6 +405,7 @@ function HomeSection(props: {
     <>
       <DriverHomeMap pos={props.pos} fullscreen onCounts={onCounts}
         pickup={offer && !trip ? offer.pickup : null}
+        dropoff={offer && !trip ? offer.dropoff : null} via={offer && !trip ? offer.stop ?? null : null}
         fitPadding={offer && !trip ? sheetFitPadding() : undefined} />
 
       {/* Top: status + messages */}
@@ -493,23 +494,12 @@ function HomeSection(props: {
           <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
             {offer.stop && <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.stop.via')}</span><span className="font-medium">{offer.stop.label}</span></div>}
             <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{offer.dropoff.label}</span></div>
-            <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span><span className="ms-auto text-xs text-muted">{t('driver.units.paxShort', { count: offer.passengerCount })}{offer.luggageCount ? ` · 🧳 ${offer.luggageCount}` : ''} · {offer.vClass}</span></div>
+            <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span><ClassBadge vClass={offer.vClass} /></div>
             <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{offer.fareCents != null ? money(offer.fareCents, offer.currency) : '—'}</span><span className="text-xs text-muted">{isFixedPrice(offer.priceType) ? t('driver.offer.upfront') : t('driver.offer.meterEstimate')}</span></div>
             {offer.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(offer.scheduledAt)}</div>}
             {offer.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: offer.note })}</div>}
             {offer.flightNumber && <div className="font-mono text-xs text-ink">✈ {t('driver.scheduled.flight', { flight: formatFlight(offer.flightNumber) })}</div>}
           </div>
-          {/* Fare breakdown on demand. */}
-          <details className="mt-2 text-xs text-muted">
-            <summary className="cursor-pointer">{t('driver.offer.more')}</summary>
-            <div className="mt-1 space-y-0.5">
-              {offer.fareBreakdown?.length ? offer.fareBreakdown.map((l, i) => (
-                <div key={i} className="flex justify-between gap-3"><span className="min-w-0 truncate">{l.label}</span><span className="shrink-0">{money(l.cents, offer.currency)}</span></div>
-              )) : <div>{t('driver.offer.noEstimate')}</div>}
-              {!isFixedPrice(offer.priceType) && <div>{t('driver.offer.meterSettled')}</div>}
-              <div>{t('driver.offer.phoneHidden')}</div>
-            </div>
-          </details>
           {/* Kept in view while the details scroll. */}
           <div className="sticky -bottom-4 -mx-4 -mb-4 mt-4 grid grid-cols-2 gap-2 bg-panel px-4 pb-4 pt-2">
             <button className="btn-ghost min-h-[44px] !text-danger border border-danger/40" disabled={offerBusy} onClick={() => props.onDecline(offer.offerId)}>{t('driver.offer.decline')}</button>
@@ -622,7 +612,7 @@ function FreeOrdersSection({ pos, onDuty, onTaken }: { pos: { lat: number; lng: 
                 <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-ink" /><span className="text-muted">{t('driver.offer.destination')}</span><span className="ms-auto text-end font-medium">{o.dropoff.label}</span></div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
-                <span className="rounded-full bg-elevated px-2 py-1">{o.vClass}{o.luggageCount ? ` · 🧳 ${o.luggageCount}` : ''}</span>
+                <span className="rounded-md border-2 border-accent px-2 py-0.5 text-[13px] font-extrabold uppercase tracking-wide text-accent">{t(`common.vClass.${o.vClass}` as MsgKey)}</span>
                 {o.scheduledAt && <span className="rounded-full bg-elevated px-2 py-1">🕒 {fmt.dateTime(o.scheduledAt)}</span>}
                 {o.flightNumber && <span className="rounded-full bg-elevated px-2 py-1">✈ {o.flightNumber}</span>}
               </div>
@@ -668,7 +658,7 @@ function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
 
   return (
     <>
-      <DriverHomeMap pos={pos} fullscreen pickup={o ? o.pickup : null} fitPadding={sheetFitPadding()} />
+      <DriverHomeMap pos={pos} fullscreen pickup={o ? o.pickup : null} dropoff={o ? o.dropoff : null} via={o?.stop ?? null} fitPadding={sheetFitPadding()} />
       <div className="pointer-events-none fixed inset-x-0 z-10 mx-auto max-w-lg px-3" style={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
         <div className="card pointer-events-auto max-h-[60dvh] overflow-y-auto border-2 border-accent p-4">
           {!o ? <p className="py-6 text-center text-sm text-muted">{t('common.loading')}</p> : (
@@ -685,22 +675,12 @@ function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
               <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
                 {o.stop && <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.stop.via')}</span><span className="font-medium">{o.stop.label}</span></div>}
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{o.dropoff.label}</span></div>
-                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{o.passengerName}</span><span className="ms-auto text-xs text-muted">{t('driver.units.paxShort', { count: o.passengerCount })}{o.luggageCount ? ` · 🧳 ${o.luggageCount}` : ''} · {o.vClass}</span></div>
+                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{o.passengerName}</span><ClassBadge vClass={o.vClass} /></div>
                 <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{o.fareCents != null ? money(o.fareCents, o.currency) : '—'}</span><span className="text-xs text-muted">{isFixedPrice(o.priceType) ? t('driver.offer.upfront') : t('driver.offer.meterEstimate')}</span></div>
                 {o.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(o.scheduledAt)}</div>}
                 {o.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: o.note })}</div>}
                 {o.flightNumber && <div className="font-mono text-xs text-ink">✈ {t('driver.scheduled.flight', { flight: formatFlight(o.flightNumber) })}</div>}
               </div>
-              <details className="mt-2 text-xs text-muted">
-                <summary className="cursor-pointer">{t('driver.offer.more')}</summary>
-                <div className="mt-1 space-y-0.5">
-                  {o.fareBreakdown?.length ? o.fareBreakdown.map((l, i) => (
-                    <div key={i} className="flex justify-between gap-3"><span className="min-w-0 truncate">{l.label}</span><span className="shrink-0">{money(l.cents, o.currency)}</span></div>
-                  )) : <div>{t('driver.offer.noEstimate')}</div>}
-                  {!isFixedPrice(o.priceType) && <div>{t('driver.offer.meterSettled')}</div>}
-                  <div>{t('driver.offer.phoneHidden')}</div>
-                </div>
-              </details>
               {!onDuty && <p className="mt-2 rounded-[12px] border border-warn/40 bg-warn/10 p-2 text-xs text-warn">{t('driver.free.goOnline')}</p>}
             </>
           )}
@@ -957,4 +937,11 @@ function BottomNav({ tab, setTab, hasOffer, freeCount, prebookCount }: { tab: Ta
       </div>
     </nav>
   );
+}
+
+// Car class on offers / free orders (2026-11-18): no passenger count — just «Comfort» or «XL», bold and
+// outlined so it stands out at a glance.
+function ClassBadge({ vClass }: { vClass: string }) {
+  const { t } = useT();
+  return <span className="ms-auto shrink-0 rounded-md border-2 border-accent px-2 py-0.5 text-[15px] font-extrabold uppercase tracking-wide text-accent">{t(`common.vClass.${vClass}` as MsgKey)}</span>;
 }

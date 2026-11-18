@@ -17,9 +17,11 @@ const CYPRUS = { lat: 34.92, lng: 33.2 };
 // reported through `onCounts` so the overlay can show them as a button.
 // `pickup`: a new offer's pickup point — drawn as the client marker, and the map frames the driver's
 // car and the client together (fitPadding keeps both clear of the overlays).
-export function DriverHomeMap({ pos, fullscreen = false, onCounts, pickup = null, fitPadding }: {
+export function DriverHomeMap({ pos, fullscreen = false, onCounts, pickup = null, dropoff = null, via = null, fitPadding }: {
   pos: { lat: number; lng: number } | null; fullscreen?: boolean; onCounts?: (free: number, busy: number) => void;
   pickup?: { lat: number; lng: number; label: string } | null; fitPadding?: { top: number; right: number; bottom: number; left: number };
+  /** Offer / free order (2026-11-18): the ride's route from the pickup to the destination is drawn. */
+  dropoff?: { lat: number; lng: number; label: string } | null; via?: { lat: number; lng: number; label: string } | null;
 }) {
   const { t } = useT();
   const [fleet, setFleet] = useState<FleetCar[]>([]);
@@ -41,7 +43,23 @@ export function DriverHomeMap({ pos, fullscreen = false, onCounts, pickup = null
   const markers = useMemo<MapMarker[]>(() => [
     ...(pos ? [{ id: 'me', kind: 'vehicle' as const, self: true, lat: pos.lat, lng: pos.lng, label: t('driver.map.you') }] : []),
     ...(pickup ? [{ id: 'pickup', kind: 'pickup' as const, lat: pickup.lat, lng: pickup.lng, label: pickup.label }] : []),
-  ], [pos, pickup, t]);
+    ...(pickup && via ? [{ id: 'via', kind: 'stop' as const, lat: via.lat, lng: via.lng, label: via.label }] : []),
+    ...(pickup && dropoff ? [{ id: 'dropoff', kind: 'dropoff' as const, lat: dropoff.lat, lng: dropoff.lng, label: dropoff.label }] : []),
+  ], [pos, pickup, via, dropoff, t]);
+
+  // Route of the offered ride, pickup → (stop) → destination; one request per offer.
+  const [route, setRoute] = useState<[number, number][] | undefined>(undefined);
+  const rKey = pickup && dropoff ? `${pickup.lat},${pickup.lng}>${via ? `${via.lat},${via.lng}>` : ''}${dropoff.lat},${dropoff.lng}` : '';
+  useEffect(() => {
+    setRoute(undefined);
+    if (!rKey || !pickup || !dropoff) return;
+    let alive = true;
+    api<{ available?: boolean; path?: [number, number][] }>('/routes/estimate', {
+      method: 'POST', body: { from: { lat: pickup.lat, lng: pickup.lng }, to: { lat: dropoff.lat, lng: dropoff.lng }, ...(via ? { via: { lat: via.lat, lng: via.lng } } : {}) }, timeoutMs: 9000,
+    }).then((r) => { if (alive && r.available !== false && r.path) setRoute(r.path.map(([la, ln]) => [ln, la] as [number, number])); }).catch(() => {});
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rKey]);
   const free = fleet.filter((v) => v.state !== 'busy').length;
   const busy = fleet.length - free;
   useEffect(() => { onCounts?.(free, busy); }, [free, busy, onCounts]);
@@ -49,7 +67,7 @@ export function DriverHomeMap({ pos, fullscreen = false, onCounts, pickup = null
   if (fullscreen) {
     return (
       <div className="fixed inset-0 z-0">
-        <AutoMapView markers={markers} fleet={pickup ? [] : fleet} focus={pickup ? null : pos} focusZoom={13.77} center={pos ?? CYPRUS} zoom={pos ? 13.77 : 8} interactive idleReturnMs={4000} fitPadding={fitPadding} className="h-full w-full" />
+        <AutoMapView markers={markers} route={pickup ? route : undefined} fitRoute={!!pickup} fleet={pickup ? [] : fleet} focus={pickup ? null : pos} focusZoom={13.77} center={pos ?? CYPRUS} zoom={pos ? 13.77 : 8} interactive idleReturnMs={4000} fitPadding={fitPadding} className="h-full w-full" />
       </div>
     );
   }
