@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-18 — Driver side menu instead of the Profile tab (branch `driver-drawer`, NOT merged)
+- Bottom nav: Главная / Свободные / Предзаказы (Profile removed). StaffShell header (DRIVER only): ☰ top-left → window event `il-y:driver-menu`.
+- Driver page: drawer from the left (86 % wide, max 400 px, 300 ms slide, backdrop closes) with Профиль / Поездки / Заработок; «Мои поездки / заработок» links on home open it.
+- Waiting for «заливай».
+
 ## 2026-11-18 — Driver home shows only problems; notifications row in profile (deployed)
 - Home: GPS pill only when GPS is off (red) or the fix is weak (amber); no «GPS включён». Notifications pill (`NotifyToggle onlyProblems`) only when off/blocked (red), hidden when working.
 - Profile: «Уведомления» row with status / turn-on, next to «Язык». Key driver.profile.notifications (8 languages).

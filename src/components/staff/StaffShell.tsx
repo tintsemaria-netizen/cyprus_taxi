@@ -73,6 +73,14 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
     <div className="flex min-h-[100dvh] flex-col">
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-edge bg-page/95 px-4 py-2.5 backdrop-blur" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.625rem)' }}>
         <div className="flex min-w-0 items-center gap-4">
+          {/* Drivers (2026-11-18): ☰ in the top-left corner opens the side menu (profile, trips, earnings). */}
+          {me.role === 'DRIVER' && (
+            <button type="button" data-testid="driver-menu-btn" aria-label={t('driver.navigation.menu')}
+              onClick={() => window.dispatchEvent(new Event('il-y:driver-menu'))}
+              className="-ms-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink hover:bg-white/5">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+            </button>
+          )}
           <a href="/dispatch" className="shrink-0"><Logo className="h-6" /></a>
           <nav className="hidden items-center gap-1 xl:flex">
             {nav.map((n) => (

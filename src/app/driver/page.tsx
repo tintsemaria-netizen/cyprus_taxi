@@ -95,6 +95,8 @@ function Driver() {
   const tErrRef = useRef(tError);
   tErrRef.current = tError;
   const [tab, setTab] = useState<Tab>('home');
+  const [drawer, setDrawer] = useState(false);
+  useEffect(() => { const open = () => setDrawer(true); window.addEventListener('il-y:driver-menu', open); return () => window.removeEventListener('il-y:driver-menu', open); }, []);
   const [activeDetailId, setActiveDetailId] = useState<string | null>(null);
   const [data, setData] = useState<CurrentTrip | null>(null);
   const [dash, setDash] = useState<Dashboard | null>(null);
@@ -341,22 +343,36 @@ function Driver() {
           banner={banner} onDismissBanner={() => setBanner(null)}
           data={data} dash={dash} gps={gps} pos={pos} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
           onDuty={setDuty} onStartGps={startGps} onStopGps={stopGps}
-          onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => { setTab('profile'); setProfileView('trips'); }}
-          goEarnings={() => { setTab('profile'); setProfileView('earnings'); }}
+          onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => { setProfileView('trips'); setDrawer(true); }}
+          goEarnings={() => { setProfileView('earnings'); setDrawer(true); }}
         />
       )}
       {tab === 'free' && <FreeOrdersSection pos={pos} onDuty={!!data.onDuty} onTaken={async () => { setFreeCount(0); setTab('home'); await load(); await loadDash(); }} />}
       {tab === 'prebook' && <ScheduledRides onCount={setPrebookCount} />}
-      {tab === 'profile' && (
-        <SubTabs value={profileView} onChange={setProfileView} items={[
-          { id: 'me', label: t('driver.nav.profile') },
-          { id: 'trips', label: t('driver.nav.trips') },
-          { id: 'earnings', label: t('driver.nav.earnings') },
-        ]} />
-      )}
-      {tab === 'profile' && profileView === 'me' && <ProfileSection dash={dash} />}
-      {tab === 'profile' && profileView === 'trips' && <TripsSection onOpen={setActiveDetailId} activeDetail={activeDetailId} onCloseDetail={() => setActiveDetailId(null)} onSettled={() => { loadDash(); }} />}
-      {tab === 'profile' && profileView === 'earnings' && <EarningsSection />}
+      {/* Side menu (2026-11-18): ☰ top-left → slides in from the left like a new page, not the full width. */}
+      <div className={`fixed inset-0 z-50 bg-black/55 transition-opacity duration-300 ${drawer ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+        onClick={() => setDrawer(false)} aria-hidden={!drawer} />
+      <aside role="dialog" aria-modal="true" aria-label={t('driver.nav.profile')} data-testid="driver-drawer"
+        className={`fixed inset-y-0 start-0 z-50 flex w-[86%] max-w-[400px] flex-col bg-page shadow-2xl transition-transform duration-300 ease-out ${drawer ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full'}`}
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <div className="flex h-14 shrink-0 items-center justify-between px-3">
+          <button type="button" onClick={() => setDrawer(false)} aria-label={t('common.close')} className="flex h-10 w-10 items-center justify-center rounded-full text-2xl text-ink hover:bg-white/5">×</button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+          {drawer && (
+            <>
+              <SubTabs value={profileView} onChange={setProfileView} items={[
+                { id: 'me', label: t('driver.nav.profile') },
+                { id: 'trips', label: t('driver.nav.trips') },
+                { id: 'earnings', label: t('driver.nav.earnings') },
+              ]} />
+              {profileView === 'me' && <ProfileSection dash={dash} />}
+              {profileView === 'trips' && <TripsSection onOpen={setActiveDetailId} activeDetail={activeDetailId} onCloseDetail={() => setActiveDetailId(null)} onSettled={() => { loadDash(); }} />}
+              {profileView === 'earnings' && <EarningsSection />}
+            </>
+          )}
+        </div>
+      </aside>
 
       <BottomNav tab={tab} setTab={setTab} hasOffer={!!offer} freeCount={freeCount} prebookCount={prebookCount} />
     </div>
@@ -922,7 +938,6 @@ function BottomNav({ tab, setTab, hasOffer, freeCount, prebookCount }: { tab: Ta
   const { t } = useT();
   const items: { id: Tab; label: string; icon: string }[] = [
     { id: 'home', label: t('driver.nav.home'), icon: '🏠' }, { id: 'free', label: t('driver.nav.free'), icon: '📋' }, { id: 'prebook', label: t('driver.scheduled.tabPrebook'), icon: '🗓' },
-    { id: 'profile', label: t('driver.nav.profile'), icon: '👤' },
   ];
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-page/95 backdrop-blur" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
