@@ -9,9 +9,9 @@ import { useT } from '@/i18n/I18nProvider';
 // shown depends on the star rating (positive for 4-5, constructive for 1-3) and the slugs match
 // the server vocabulary in src/server/ratings.ts.
 
-// Three suggestions per band (2026-11-18) to keep the card small.
-const POSITIVE = ['safe_driving', 'clean_car', 'friendly'] as const;
-const CONSTRUCTIVE = ['late', 'unsafe_driving', 'rude'] as const;
+// Two suggestions per band (2026-11-18) to keep the card small.
+const POSITIVE = ['safe_driving', 'clean_car'] as const;
+const CONSTRUCTIVE = ['late', 'unsafe_driving'] as const;
 
 export function RateTripModal({ rideId, onClose, onDone, postUrl, inline }: { rideId?: string; onClose?: () => void; onDone: (stars: number) => void; postUrl?: string; inline?: boolean }) {
   const { t, tp, tError } = useT();

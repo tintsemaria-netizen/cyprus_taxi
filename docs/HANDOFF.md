@@ -1,7 +1,7 @@
 # Session handoff
 
 ## 2026-11-18 — Smaller rating card (branch `rate-compact`, includes `rebook`; NOT merged)
-- RateTripModal: 3 suggestions per band (positive: safe_driving, clean_car, friendly; constructive: late, unsafe_driving, rude), one-line comment field (44 px). Waiting for «заливай».
+- RateTripModal: 2 suggestions per band (positive: safe_driving, clean_car; constructive: late, unsafe_driving), one-line comment field (44 px). Finished screen: no «Заказать ещё поездку» button (× starts a new booking). Waiting for «заливай».
 
 ## 2026-11-18 — Cancel → straight back to ordering the same route (branch `rebook`, NOT merged)
 - TrackApp `repeatSameRide()`: after the passenger cancels, store route + stop + class (il-y-repeat) and go to «/», which opens at the class/price step («Заказать Comfort»). «Заказать ещё раз» uses the same helper.

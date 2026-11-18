@@ -574,9 +574,7 @@ export default function TrackApp() {
                     {view.status === 'CANCELED' ? (
                       // Re-order the very same ride (route + stop + class); × above starts a fresh booking.
                       <button type="button" className="btn-primary mt-3 w-full" data-testid="repeat-ride" onClick={repeatSameRide}>{t('track.repeatRide')}</button>
-                    ) : (
-                      <a href="/" className="btn-primary mt-3 w-full">{t('track.bookAnother')}</a>
-                    )}
+                    ) : null /* No «Заказать ещё поездку» on the finished screen (2026-11-18); × goes to a new booking. */}
                   </div>
                 )}
               </div>
