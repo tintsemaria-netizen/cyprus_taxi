@@ -14,6 +14,11 @@ import { meterWaitingCents, meterWaitingRatePerHourCents } from '@/lib/tariff';
 import { useT, type MsgKey } from '@/i18n/I18nProvider';
 import { INTL_TAG } from '@/i18n/config';
 import SwipeButton from '@/components/SwipeButton';
+import EdgeShine from '@/components/EdgeShine';
+
+// One size for every driver action button (2026-11-18): like «Выйти на линию» — 65 % wide, 53 px,
+// round, bold, glint on the rim.
+const STAGE_BTN = 'relative mx-auto block h-[53px] w-[65%] rounded-full bg-accent text-[16px] font-bold text-[#0d1608] shadow-lg active:scale-[0.99]';
 import { bearingDeg, cumulative, distM, locate, maneuverIcon, nextStep, offsetPoint, promptBand, roundNavDistance, type LatLng, type NavStep } from '@/lib/nav';
 
 // Full-screen navigation for an accepted ride (replaces the tabbed driver UI while a trip is
@@ -335,21 +340,21 @@ export function DriverNavigation(props: {
       )}
       {/* Action bar: the one action for this stage — separate, above the info sheet, always visible. */}
       <div className="pointer-events-auto space-y-2 px-3 pb-2" data-testid="nav-actions">
-          {trip.status === 'ASSIGNED' && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('status', { to: 'EN_ROUTE' })}>{t('driver.trip.onTheWay')}</button>}
-          {trip.status === 'EN_ROUTE' && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('arrive', {})}>{t('driver.trip.arrived')}</button>}
+          {trip.status === 'ASSIGNED' && <button className={STAGE_BTN} onClick={() => props.onTripAction('status', { to: 'EN_ROUTE' })}><EdgeShine />{t('driver.trip.onTheWay')}</button>}
+          {trip.status === 'EN_ROUTE' && <button className={STAGE_BTN} onClick={() => props.onTripAction('arrive', {})}><EdgeShine />{t('driver.trip.arrived')}</button>}
           {/* Start: one tap, or the passenger's 4-digit code when they switched one on (optional since 2026-11-16). */}
-          {trip.status === 'ARRIVED' && !trip.startCodeRequired && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('start', {})}>{t('driver.trip.startTrip')}</button>}
+          {trip.status === 'ARRIVED' && !trip.startCodeRequired && <button className={STAGE_BTN} onClick={() => props.onTripAction('start', {})}><EdgeShine />{t('driver.trip.startTrip')}</button>}
           {trip.status === 'ARRIVED' && trip.startCodeRequired && (
             <div className="flex gap-2 rounded-[14px] bg-page/95 p-2 shadow-lg">
               <input inputMode="numeric" maxLength={4} aria-label={t('driver.trip.startCodePlaceholder')} placeholder={t('driver.trip.startCodePlaceholder')} value={startCode} onChange={(e) => setStartCode(e.target.value.replace(/\D/g, '').slice(0, 4))} className="min-w-0 flex-1 rounded-[12px] border border-edge bg-page px-3 py-2.5 text-center font-mono text-lg tracking-[0.4em]" />
-              <button className="btn-primary min-h-[52px] shrink-0 px-4" disabled={startCode.length !== 4} onClick={() => props.onTripAction('start', { code: startCode })}>{t('driver.trip.startTrip')}</button>
+              <button className="relative h-[53px] shrink-0 rounded-full bg-accent px-5 text-[16px] font-bold text-[#0d1608] disabled:opacity-50" disabled={startCode.length !== 4} onClick={() => props.onTripAction('start', { code: startCode })}><EdgeShine />{t('driver.trip.startTrip')}</button>
             </div>
           )}
-          {leg === 'stop' && !atStop && <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('stop', { action: 'arrived' })}>{t('driver.stop.arrived')}</button>}
+          {leg === 'stop' && !atStop && <button className={STAGE_BTN} onClick={() => props.onTripAction('stop', { action: 'arrived' })}><EdgeShine />{t('driver.stop.arrived')}</button>}
           {atStop && (
             <>
-              {!stop?.waitStartedAt && <button className="btn-ghost min-h-[48px] w-full !border-warn/60 bg-page/95 text-base !text-warn shadow-lg" onClick={() => props.onTripAction('stop', { action: 'wait' })}>⏱ {t('driver.stop.startWaiting')}</button>}
-              <button className="btn-primary min-h-[52px] w-full text-base shadow-lg" onClick={() => props.onTripAction('stop', { action: 'continue' })}>{t('driver.stop.continue')}</button>
+              {!stop?.waitStartedAt && <button className="relative mx-auto block h-[53px] w-[65%] rounded-full border border-warn/60 bg-page/95 text-[16px] font-bold text-warn shadow-lg" onClick={() => props.onTripAction('stop', { action: 'wait' })}><EdgeShine />⏱ {t('driver.stop.startWaiting')}</button>}
+              <button className={STAGE_BTN} onClick={() => props.onTripAction('stop', { action: 'continue' })}><EdgeShine />{t('driver.stop.continue')}</button>
             </>
           )}
           {/* Swipe, not tap (2026-11-18): dark red, slide left → right to finish. */}
@@ -425,8 +430,8 @@ export function DriverNavigation(props: {
       {menuOpen && (
         <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) setMenuOpen(false); }} data-testid="nav-menu-sheet">
           <div className="space-y-2 rounded-t-[18px] bg-elevated p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
-            <button className="min-h-[52px] w-full rounded-[14px] border border-danger/50 bg-page text-base font-semibold text-danger" onClick={() => { setMenuOpen(false); setAsk('release'); }}>{t('driver.trip.release')}</button>
-            <button className="btn-ghost min-h-[48px] w-full" onClick={() => setMenuOpen(false)}>{t('common.cancel')}</button>
+            <button className="relative mx-auto block h-[53px] w-[65%] min-w-[260px] rounded-full border border-danger/50 bg-page px-3 text-[15px] font-bold text-danger" onClick={() => { setMenuOpen(false); setAsk('release'); }}><EdgeShine />{t('driver.trip.release')}</button>
+            <button className="relative mx-auto block h-[53px] w-[65%] rounded-full border border-edge bg-page text-[16px] font-bold text-ink" onClick={() => setMenuOpen(false)}><EdgeShine />{t('common.cancel')}</button>
           </div>
         </div>
       )}

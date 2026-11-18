@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-18 — Every driver action button one size + glint (deployed)
+- DriverNavigation `STAGE_BTN`: «Еду к клиенту», «На месте», «Начать поездку», stop «На месте»/«Продолжить» = 65 % wide, 53 px, round, bold, EdgeShine; stop «Ожидание» and start-code button same height + glint; ☰ menu buttons same size (release min 260 px so the text fits).
+- Together with earlier: «Выйти на линию», swipes «Уйти с линии»/«Завершить поездку», fare confirm — all the same size with the glint.
+
 ## 2026-11-18 — Driver buttons: same size, 20 % thicker, rim glint on tilt (deployed)
 - «Выйти на линию» 65 % wide like the swipe bars; swipes + online button + fare confirm 53 px high, 16 px text.
 - `src/components/EdgeShine.tsx`: 1.5 px rim highlight whose position follows the phone's left/right tilt (deviceorientation gamma, one shared rAF-throttled listener, removed when no button is mounted). iPhone: «Motion & Orientation» asked once on the first tap while a glint button is mounted; «denied» remembered in localStorage (il-y-tilt-asked), never asked again.
