@@ -356,7 +356,7 @@ export function DriverNavigation(props: {
           {trip.status === 'IN_PROGRESS' && leg === 'dropoff' && (
             <div className="mx-auto w-[65%]">
               <SwipeButton small label={t('driver.trip.completeTrip')} onDone={() => setAsk('complete')} testId="swipe-complete"
-                className="bg-[#7A1E1E] text-white" knobClassName="text-white" />
+                bgColor="#7A1E1E" className="bg-[#7A1E1E] text-white" knobClassName="text-white" />
             </div>
           )}
       </div>

@@ -32,6 +32,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: '#10191C',
+  // The app is dark by design (2026-11-18): tell browsers so Samsung Internet's forced dark mode
+  // does not recolor it (it turned the orange «Уйти с линии» red with white text on a Z Fold 7).
+  colorScheme: 'dark',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',

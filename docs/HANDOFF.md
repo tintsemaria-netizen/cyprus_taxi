@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-18 — Samsung Internet forced dark mode (deployed)
+- Z Fold 7 showed «Уйти с линии» red with white text = Samsung Internet's forced dark mode recoloring the light orange. Added `<meta name="color-scheme" content="dark">` (viewport.colorScheme) and swipe bars paint their colour as a gradient image layer (`bgColor`).
+- Samsung says developers cannot fully switch its dark mode off; if it persists the user can set Samsung Internet → Settings → Labs → «Use website dark theme», or install the app from Chrome.
+
 ## 2026-11-18 — Swipe to finish / go offline (deployed)
 - `src/components/SwipeButton.tsx`: slide knob ≥85 % (left→right; RTL mirrored), tap does nothing, Enter/Space for keyboard.
 - Driver: «Завершить поездку» = swipe, dark red #7A1E1E (fare sheet confirm also dark red); «Уйти с линии» = swipe, brighter orange #FFA94D with dark text; both swipe bars 65 % width, height 44 px (user: thicker), text 15 px. No knob circle: three arrows travel with the finger, the whole bar is the swipe area. «Выйти на линию» stays a tap.

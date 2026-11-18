@@ -5,7 +5,7 @@ import { useRef, useState } from 'react';
 // Swipe to confirm (2026-11-18): an important driver action («Завершить поездку», «Уйти с линии»)
 // happens only after sliding the knob across — a stray tap in the car does nothing. Follows the
 // reading direction (left → right; right → left in Hebrew / Arabic). Keyboard: Enter / Space.
-export default function SwipeButton({ label, onDone, className = '', knobClassName = '', testId, small = false }: {
+export default function SwipeButton({ label, onDone, className = '', knobClassName = '', testId, small = false, bgColor }: {
   label: string;
   onDone: () => void;
   className?: string; // track colours
@@ -13,6 +13,7 @@ export default function SwipeButton({ label, onDone, className = '', knobClassNa
   testId?: string;
   /** 35 % smaller bar (2026-11-18: «Уйти с линии»). */
   small?: boolean;
+  bgColor?: string;
 }) {
   const track = useRef<HTMLDivElement>(null);
   const start = useRef<{ x: number; max: number; rtl: boolean } | null>(null);
@@ -43,6 +44,8 @@ export default function SwipeButton({ label, onDone, className = '', knobClassNa
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onDone(); } }}
       // The whole bar can be swiped (2026-11-18): no circle, the three arrows travel with the finger.
       onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
+      // `bgImage`: colour painted as an image layer, which browser forced-dark modes leave alone.
+      style={bgColor ? { backgroundImage: `linear-gradient(${bgColor}, ${bgColor})` } : undefined}
       className={`relative ${small ? 'h-11' : 'h-14'} w-full touch-none select-none overflow-hidden rounded-full shadow-lg ${className}`}>
       <span className={`pointer-events-none absolute inset-0 flex items-center justify-center ${small ? 'ps-8 text-[15px]' : 'ps-10 text-[17px]'} font-bold`} style={{ opacity: 1 - Math.min(1, progress * 1.4) }}>
         {label}

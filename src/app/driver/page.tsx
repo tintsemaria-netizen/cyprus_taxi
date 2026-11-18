@@ -444,7 +444,7 @@ function HomeSection(props: {
                 // Going offline is a swipe (2026-11-18), in a light orange that does not glare at night.
                 <div className="pointer-events-auto w-[65%]">
                   <SwipeButton small label={t('driver.duty.goOffline')} onDone={() => props.onDuty(false)} testId="swipe-offline"
-                    className="bg-[#FFA94D] text-[#3B2108]" knobClassName="text-[#3B2108]" />
+                    bgColor="#FFA94D" className="bg-[#FFA94D] text-[#3B2108]" knobClassName="text-[#3B2108]" />
                 </div>
               ) : (
                 <button className="pointer-events-auto min-h-[56px] w-full rounded-full bg-accent text-base font-semibold text-[#0d1608] shadow-card"
