@@ -307,6 +307,7 @@ const driver = {
     toStop: 'To the stop:',
     recenter: 'Re-centre',
     details: 'Details',
+    menu: 'Menu',
     hideDetails: 'Hide',
   },
   alerts: {

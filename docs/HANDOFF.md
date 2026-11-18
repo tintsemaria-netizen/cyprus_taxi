@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-18 — Driver navigation sheet: no «Подробнее», ☰ menu, payment after start (branch `driver-sheet`, NOT merged)
+- Details section removed (passenger note + flight stay visible in the sheet).
+- ☰ button under 🔊 on the map (ASSIGNED/EN_ROUTE/ARRIVED) → sheet with «Не могу взять — отказаться» → existing confirm.
+- cash/card badge only when IN_PROGRESS. New key driver.navigation.menu (8 languages).
+- Waiting for «заливай».
+
 ## 2026-11-18 — Passenger tracking: nose forward, whole route in view, economical (deployed)
 - carMarker `steerVehicle`: per-frame nose along the glide path tangent (look-ahead 8 %), eased; GoogleMapView vehicle glide uses it when a route is drawn (no sideways from off-road GPS fixes).
 - GoogleMapView `keepInView` + `cameraFor` (Web-Mercator fit): moves the camera only when a point leaves the padded view or the remaining route allows ≥0.6 zoom closer; ≤1 move / 3 s; 1 s ease. Old fit no longer re-fits on every route change in this mode. Polyline updated with setPath.

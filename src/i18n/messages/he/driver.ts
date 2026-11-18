@@ -335,6 +335,7 @@ const driver: Catalog<typeof en> = {
     toStop: "לעצירה:",
     recenter: "מרכוז",
     details: "פרטים",
+    menu: "תפריט",
     hideDetails: "הסתרה",
   },
   alerts: {

@@ -310,6 +310,7 @@ const driver: Catalog<typeof en> = {
     toStop: 'К остановке:',
     recenter: 'К моей позиции',
     details: 'Подробнее',
+    menu: 'Меню',
     hideDetails: 'Скрыть',
   },
   alerts: {

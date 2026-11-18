@@ -310,6 +310,7 @@ const driver: Catalog<typeof en> = {
     toStop: 'Προς τη στάση:',
     recenter: 'Επανακεντράρισμα',
     details: 'Λεπτομέρειες',
+    menu: "Μενού",
     hideDetails: 'Απόκρυψη',
   },
   alerts: {

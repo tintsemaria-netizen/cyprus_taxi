@@ -44,7 +44,7 @@ export function DriverNavigation(props: {
   onStartGps: () => void; onTripAction: (path: string, body: Record<string, unknown>, opts?: { stopGps?: boolean }) => void;
 }) {
   const { trip, pos, gps, nowMs, startCode, setStartCode } = props;
-  const { t, tp, fmt, locale } = useT();
+  const { t, fmt, locale } = useT();
   // Legs: pickup → (stop, if any, until the driver continues from it) → destination.
   const stop = trip.stop ?? null;
   const leg: 'pickup' | 'stop' | 'dropoff' = trip.status !== 'IN_PROGRESS' ? 'pickup' : stop && !stop.departedAt ? 'stop' : 'dropoff';
@@ -55,12 +55,13 @@ export function DriverNavigation(props: {
   const [route, setRoute] = useState<NavRoute | null>(null);
   const [routeState, setRouteState] = useState<'loading' | 'ok' | 'unavailable'>('loading');
   const [following, setFollowing] = useState(true);
-  const [details, setDetails] = useState(false);
   // Chat lives behind a map button now (2026-11-15); kept mounted so it polls and counts unread.
   const [chatOpen, setChatOpen] = useState(false);
   const [chatUnread, setChatUnread] = useState(0);
   // Info panel open/collapsed (2026-11-15): tap the handle or swipe it up/down.
   const [panelOpen, setPanelOpen] = useState(trip.status !== 'IN_PROGRESS');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const canRelease = ['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(trip.status);
   // Tablets/desktop (≥640px): the sheet becomes a left column, so the map fit pads the left side.
   const [wide, setWide] = useState(false);
   useEffect(() => { const mq = window.matchMedia('(min-width: 640px)'); const on = () => setWide(mq.matches); on(); mq.addEventListener('change', on); return () => mq.removeEventListener('change', on); }, []);
@@ -295,6 +296,13 @@ export function DriverNavigation(props: {
           follow={follow} onFollowBreak={() => setFollowing(false)} idleReturnMs={4000} onIdleReturn={() => setFollowing(true)} fitPadding={wide ? { top: 60, right: 50, bottom: 60, left: 470 } : { top: 60, right: 50, bottom: panelOpen ? 520 : 330, left: 50 }} />
         <div className="absolute end-3 top-3 flex flex-col gap-2">
           <button onClick={toggleMute} className="flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-lg" aria-label={muted ? t('driver.navigation.unmute') : t('driver.navigation.mute')} aria-pressed={muted}>{muted ? '🔇' : '🔊'}</button>
+          {/* ☰ menu on the map (2026-11-18): «can't take it — release» lives here, not in the sheet. */}
+          {canRelease && (
+            <button type="button" onClick={() => setMenuOpen(true)} data-testid="nav-menu" aria-label={t('driver.navigation.menu')} title={t('driver.navigation.menu')}
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-ink">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M5 7h14M5 12h14M5 17h14" /></svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -382,29 +390,17 @@ export function DriverNavigation(props: {
         <div className="mt-2 flex items-center gap-2 text-lg">
           <span className="font-medium">{trip.passengerName}</span>
           {trip.passengerRating && trip.passengerRating.count > 0 && <span className="text-accent">★ {trip.passengerRating.average.toFixed(1)}</span>}
-          {/* Payment left of the class (2026-11-15): cash green, card red. */}
-          <span className={`ms-auto rounded-md border px-2 py-0.5 text-sm font-bold ${trip.payment === 'CARD' ? 'border-danger/60 text-danger' : 'border-[#34C759]/60 text-[#34C759]'}`}>{trip.payment === 'CARD' ? 'card' : 'cash'}</span>
-          <span className="text-muted">{t(`common.vClass.${trip.vClass}` as MsgKey)}</span>
+          {/* Payment left of the class (2026-11-15): cash green, card red — only once the ride has started (2026-11-18). */}
+          {trip.status === 'IN_PROGRESS' && <span className={`ms-auto rounded-md border px-2 py-0.5 text-sm font-bold ${trip.payment === 'CARD' ? 'border-danger/60 text-danger' : 'border-[#34C759]/60 text-[#34C759]'}`}>{trip.payment === 'CARD' ? 'card' : 'cash'}</span>}
+          <span className={`text-muted ${trip.status === 'IN_PROGRESS' ? '' : 'ms-auto'}`}>{t(`common.vClass.${trip.vClass}` as MsgKey)}</span>
         </div>
         {waitingNode && <div className="mt-2 rounded-[12px] border border-edge bg-page p-3 text-sm">{waitingNode}</div>}
         {stop && leg === 'pickup' && <div className="mt-1 text-sm"><span className="text-muted">{t('driver.stop.via')}</span> <span className="font-medium">{stop.label}</span></div>}
         {stopNode && <div className="mt-2 rounded-[12px] border border-edge bg-page p-3 text-sm">{stopNode}</div>}
 
-        {panelOpen && (
-          <button className="mt-2 text-sm text-muted underline-offset-2 hover:underline" onClick={() => setDetails((d) => !d)} aria-expanded={details}>{details ? t('driver.navigation.hideDetails') : t('driver.navigation.details')} ›</button>
-        )}
-
-        {details && (
-          <div className="mt-3 space-y-2 rounded-[12px] border border-edge bg-page p-3 text-sm" data-testid="nav-details">
-            <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="text-muted">{t('driver.trip.pickup')}</span><span className="ms-auto text-end font-medium">{trip.pickup.label}</span></div>
-            <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-ink" /><span className="text-muted">{t('driver.trip.destination')}</span><span className="ms-auto text-end font-medium">{trip.dropoff.label}</span></div>
-            <div>{t('driver.offer.passengerLine', { name: trip.passengerName, passengers: tp('common.passengers', trip.passengerCount), vClass: trip.vClass })}</div>
-            {trip.note && <div className="text-xs text-warn">{t('driver.trip.note', { note: trip.note })}</div>}
-            {trip.flightNumber && <div className="font-mono text-xs">✈ {t('driver.scheduled.flight', { flight: formatFlight(trip.flightNumber) })}</div>}
-            <p className="text-xs text-muted">{t('driver.trip.navigateWarning')}</p>
-            {['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(trip.status) && <button className="btn-ghost min-h-[44px] w-full border border-danger/40 !text-danger" onClick={() => setAsk('release')}>{t('driver.trip.release')}</button>}
-          </div>
-        )}
+        {/* No «Подробнее» section (2026-11-18). The passenger's comment and flight stay visible. */}
+        {trip.note && <div className="mt-2 text-sm text-warn">{t('driver.trip.note', { note: trip.note })}</div>}
+        {trip.flightNumber && <div className="mt-1 font-mono text-sm">✈ {t('driver.scheduled.flight', { flight: formatFlight(trip.flightNumber) })}</div>}
         </div>
       </div>
       </div>
@@ -417,6 +413,14 @@ export function DriverNavigation(props: {
         </div>
       </div>
 
+      {menuOpen && (
+        <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) setMenuOpen(false); }} data-testid="nav-menu-sheet">
+          <div className="space-y-2 rounded-t-[18px] bg-elevated p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+            <button className="min-h-[52px] w-full rounded-[14px] border border-danger/50 bg-page text-base font-semibold text-danger" onClick={() => { setMenuOpen(false); setAsk('release'); }}>{t('driver.trip.release')}</button>
+            <button className="btn-ghost min-h-[48px] w-full" onClick={() => setMenuOpen(false)}>{t('common.cancel')}</button>
+          </div>
+        </div>
+      )}
       {ask === 'complete' && (
         <FarePreviewSheet bookingId={trip.bookingId} passengerName={trip.passengerName}
           onConfirm={() => { setAsk(null); props.onTripAction('complete', {}, { stopGps: true }); }} onCancel={() => setAsk(null)} />
