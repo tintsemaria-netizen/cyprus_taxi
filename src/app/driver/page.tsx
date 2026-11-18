@@ -349,13 +349,13 @@ function Driver() {
       )}
       {tab === 'free' && <FreeOrdersSection pos={pos} onDuty={!!data.onDuty} onTaken={async () => { setFreeCount(0); setTab('home'); await load(); await loadDash(); }} />}
       {tab === 'prebook' && <ScheduledRides onCount={setPrebookCount} />}
-      {/* Side menu (2026-11-18): ☰ top-left → slides in from the left like a new page, not the full width. */}
+      {/* Side menu (2026-11-18): ☰ top-right → slides in from the right like a new page, not the full width. */}
       <div className={`fixed inset-0 z-50 bg-black/55 transition-opacity duration-300 ${drawer ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
         onClick={() => setDrawer(false)} aria-hidden={!drawer} />
       <aside role="dialog" aria-modal="true" aria-label={t('driver.nav.profile')} data-testid="driver-drawer"
-        className={`fixed inset-y-0 start-0 z-50 flex w-[86%] max-w-[400px] flex-col bg-page shadow-2xl transition-transform duration-300 ease-out ${drawer ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full'}`}
+        className={`fixed inset-y-0 end-0 z-50 flex w-[86%] max-w-[400px] flex-col bg-page shadow-2xl transition-transform duration-300 ease-out ${drawer ? 'translate-x-0' : 'translate-x-full rtl:-translate-x-full'}`}
         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <div className="flex h-14 shrink-0 items-center justify-between px-3">
+        <div className="flex h-14 shrink-0 items-center justify-end px-3">
           <button type="button" onClick={() => setDrawer(false)} aria-label={t('common.close')} className="flex h-10 w-10 items-center justify-center rounded-full text-2xl text-ink hover:bg-white/5">×</button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
