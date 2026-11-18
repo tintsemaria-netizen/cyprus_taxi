@@ -39,17 +39,21 @@ export default function SwipeButton({ label, onDone, className = '', knobClassNa
   return (
     <div ref={track} role="button" tabIndex={0} aria-label={label} data-testid={testId}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onDone(); } }}
-      className={`relative h-14 w-full select-none overflow-hidden rounded-full shadow-lg ${className}`}>
-      <span className="pointer-events-none absolute inset-0 flex items-center justify-center ps-12 text-[17px] font-bold" style={{ opacity: 1 - Math.min(1, progress * 1.4) }}>
+      // The whole bar can be swiped (2026-11-18): no circle, the three arrows travel with the finger.
+      onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
+      className={`relative h-14 w-full touch-none select-none overflow-hidden rounded-full shadow-lg ${className}`}>
+      <span className="pointer-events-none absolute inset-0 flex items-center justify-center ps-10 text-[17px] font-bold" style={{ opacity: 1 - Math.min(1, progress * 1.4) }}>
         {label}
-        <span aria-hidden className="ms-2 opacity-70 rtl:rotate-180">›››</span>
       </span>
-      <div onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
-        className={`absolute top-1 flex h-12 w-12 touch-none items-center justify-center rounded-full ${knobClassName} ${start.current ? '' : 'transition-transform duration-200'}`}
+      <div className={`pointer-events-none absolute top-1 flex h-12 w-12 items-center justify-center ${knobClassName} ${start.current ? '' : 'transition-transform duration-200'}`}
         style={{ insetInlineStart: PAD, transform: `translateX(${(typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? -1 : 1) * dx}px)` }}>
-        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="rtl:rotate-180">
-          {done ? <path d="M5 12.5l4.5 4.5L19 7.5" /> : <path d="M9 5l7 7-7 7" />}
-        </svg>
+        {done ? (
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+        ) : (
+          <svg viewBox="0 0 36 24" width="40" height="26" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="rtl:rotate-180">
+            <path d="M5 6l6 6-6 6" opacity="0.45" /><path d="M15 6l6 6-6 6" opacity="0.7" /><path d="M25 6l6 6-6 6" />
+          </svg>
+        )}
       </div>
     </div>
   );
