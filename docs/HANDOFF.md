@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-19 — Arrow circle without white edge; arrow outline back (deployed)
+
+- Operator meant the white edge of the CIRCLE: `.ily-nav-ring` has no border now (orange tint + shadow stay); the arrow's white outline is restored.
+
 ## 2026-11-19 — Arrow without white edge; turn hint 20 % larger (deployed)
 
 - navArrowEl: the arrow path has no white stroke any more (the white ring around it stays).
