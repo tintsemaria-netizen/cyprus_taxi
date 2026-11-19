@@ -68,7 +68,7 @@ export default function Page() {
             <div key={r.id} className="flex items-center justify-between gap-3 p-3">
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium">→ {r.dropoff}</div>
-                <div className="text-xs text-muted">{fmt.dateTime(r.at)} · {r.fareCents != null ? `≈ ${fmt.money(r.fareCents)}` : '—'}</div>
+                <div className="text-xs text-muted">{fmt.dateTime(r.at)} · {r.fareCents != null ? `${r.status === 'COMPLETED' ? '' : '≈ '}${fmt.money(r.fareCents)}` : '—'}</div>
               </div>
               <div className="shrink-0 text-end">
                 <div className="chip">{t(`common.status.${r.status}` as 'common.status.COMPLETED')}</div>
