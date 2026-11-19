@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-19 — Pre-booking board: «Принятые» count red (deployed)
+
+- ScheduledRides tabs: the «Принятые» count is red like «Свободные предзаказы» (was dark).
+
 ## 2026-11-19 — Taken pre-bookings count also red (deployed)
 
 - ☰ «Предзаказы»: the «taken» count is red like the «new» one (operator).
