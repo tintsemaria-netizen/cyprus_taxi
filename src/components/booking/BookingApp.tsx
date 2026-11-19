@@ -887,7 +887,7 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-[#0e1518]" />
           ) : (
-            <AutoMapView markers={markers} route={route?.line} fitRoute fleet={fleet} focus={pickup && dropoff ? null : myLoc} focusZoom={pickup && dropoff ? undefined : 15.49 /* 2026-11-17: 30 % further out than 16 (16 + log2 0.7) */} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} onUserMove={() => setMapMoved(true)} className="h-full w-full" />
+            <AutoMapView markers={markers} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : myLoc} focusZoom={pickup && dropoff ? undefined : 15.49 /* 2026-11-17: 30 % further out than 16 (16 + log2 0.7) */} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} onUserMove={() => setMapMoved(true)} className="h-full w-full" />
           )}
         </div>
 

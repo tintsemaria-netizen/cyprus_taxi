@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-19 — Other taxis look like the driver's own car (driver + passenger maps)
+
+- `vehicleMarkerEl` gained `state: 'peer'`: same `selfCarSvg` car, lightened (CSS filter), used at 46 px (35 % smaller than own 71 px).
+- New `fleetLikeSelf` prop on GoogleMapView/MapView; set on DriverHomeMap and the passenger BookingApp map. Fleet data unchanged (anonymised `publicFleet`).
+- Local screenshots checked (driver home, passenger home). Deployed via ff-merge to main.
+
 ## 2026-11-19 — Quiet turn hint back; no ring; notices auto-hide (deployed)
 - DriverNavigation: the manoeuvre/status content is back as a small dark see-through card top-left (`nav-hint`, 30 % background + text shadow — user asked twice for more transparency): lime manoeuvre icon, distance 17 px, instruction 12 px muted; also needGps / rerouting / unavailable + Google Maps / arrived states.
 - navArrowEl: white ring removed; orange pulse only while standing (ily-moving hides it).
