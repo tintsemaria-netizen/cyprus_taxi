@@ -128,7 +128,8 @@ services:
     networks:
       - taxicy_net
     logging: *logging
-    mem_limit: 768m
+    # 1280m (was 768m, 2026-11-19): room for the weekly OpenStreetMap address-base build (child process, ~420 MB peak).
+    mem_limit: 1280m
     cpus: 1.0
 
   # Private analytics store (Task 016 §6/§9). Pinned LTS image, persistent volume, NO public

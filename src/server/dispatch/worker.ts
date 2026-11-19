@@ -88,6 +88,8 @@ export async function runOnce(): Promise<void> {
         const r = await runMaintenance(now);
         try { const { enforceDocumentExpiries } = await import('@/server/applications'); await enforceDocumentExpiries(now); } catch (e) { console.error('[expiry] error', e); }
         try { const { runKycRetention } = await import('@/server/kyc-retention'); await runKycRetention(now); } catch (e) { console.error('[kyc-retention] error', e); }
+        // Own Cyprus address base: weekly OpenStreetMap refresh in a child process (2026-11-19).
+        try { const { maybeStartOsmImport } = await import('@/server/osm/schedule'); const s = await maybeStartOsmImport(now); if (s === 'started') console.log('[osm-import] started'); } catch (e) { console.error('[osm-import] error', e); }
         await heartbeat('maintenance', state.workerId, r);
       } catch (e) { console.error('[maintenance] error', e); }
     }

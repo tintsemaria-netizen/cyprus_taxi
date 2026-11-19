@@ -5,6 +5,7 @@ import { config } from '@/lib/config';
 import { googleConfigured, googleSearch, googleAutocomplete, isPlacesDisabled } from '@/server/google';
 import { popularResults } from '@/server/popular';
 import { photonSearch } from '@/server/photon';
+import { searchOsm } from '@/server/osm/search';
 
 function withPopular<T extends { label: string }>(pop: { label: string }[], rest: T[]): (T | (typeof pop)[number])[] {
   const seen = new Set(pop.map((p) => p.label.toLowerCase()));
@@ -27,6 +28,10 @@ export async function GET(req: Request) {
   if (q.trim().length < 2) return apiOk({ demo: config.demoMode, results: [] });
 
   const popular = await popularResults(q, near, googleConfigured());
+  // Own Cyprus address base first (2026-11-19): every named place, street and house on the island,
+  // on our server — instant and free. Outside services are asked only when it has nothing.
+  const own = await searchOsm(q, near, 8).catch((e) => { console.error('[places] own base', e); return null; });
+  if (own && own.length) return apiOk({ provider: 'osm', demo: false, attribution: '© OpenStreetMap', results: withPopular(popular, own).slice(0, 10) });
   if (googleConfigured()) {
     // Prefer Places (New) autocomplete (predictions → resolved via /places/details).
     // Falls back to forward geocoding if Places is not enabled on the project.

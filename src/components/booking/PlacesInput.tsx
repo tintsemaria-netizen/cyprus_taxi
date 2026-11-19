@@ -51,6 +51,7 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
   const tools = !onActivate && !trailing;
   const { t } = useT();
   const [results, setResults] = useState<Result[]>([]);
+  const [osm, setOsm] = useState(false);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [demo, setDemo] = useState(false);
@@ -116,6 +117,7 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
         if (my !== reqSeq.current) return; // superseded
         setResults(res.results);
         setDemo(res.demo);
+        setOsm(res.provider === 'osm');
         setStatus(res.unavailable ? 'unavailable' : res.results.length ? 'idle' : 'none');
         setActive(-1);
         setOpen(true);
@@ -124,7 +126,7 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
       } finally {
         if (my === reqSeq.current) setLoading(false);
       }
-    }, 250);
+    }, 120); // own address base answers in a few ms (2026-11-19): short debounce
   }
 
   async function choose(r: Result) {
@@ -221,10 +223,10 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
       )}
       {open && (results.length > 0 || loading || status !== 'idle') && (
         <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-[12px] border border-edge bg-elevated shadow-card" role="listbox" id={`${inputId}-list`}>
-          {loading && <div className="px-4 py-3 text-sm text-muted">{t('booking.places.searching')}</div>}
+          {loading && !results.length && <div className="px-4 py-3 text-sm text-muted">{t('booking.places.searching')}</div>}
           {!loading && status === 'none' && <div className="px-4 py-3 text-sm text-muted">{t('booking.places.none')}</div>}
           {!loading && status === 'unavailable' && <div className="px-4 py-3 text-sm text-warn">{t('booking.places.unavailable')}</div>}
-          {!loading &&
+          {(!loading || results.length > 0) &&
             results.map((r, i) => (
               <button
                 key={`${r.placeId ?? r.label}-${i}`}
@@ -242,6 +244,9 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
                 </span>
               </button>
             ))}
+          {osm && results.length > 0 && (
+            <div className="border-t border-edge px-4 py-1 text-end text-[10px] text-muted/70">© OpenStreetMap</div>
+          )}
           {!loading && demo && results.length > 0 && (
             <div className="border-t border-edge px-4 py-1.5 text-xs text-muted">{t('booking.places.demo')}</div>
           )}

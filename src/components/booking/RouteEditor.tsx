@@ -86,6 +86,7 @@ export function RouteEditor(p: Props) {
   const activeRow = p.rows.find((r) => r.slot === active) ?? p.rows[p.rows.length - 1];
   const query = activeRow.sel ? '' : activeRow.text.trim();
 
+  const [osm, setOsm] = useState(false);
   function search(text: string) {
     if (timer.current) clearTimeout(timer.current);
     const my = ++seq.current;
@@ -93,12 +94,13 @@ export function RouteEditor(p: Props) {
     setStatus('loading');
     timer.current = setTimeout(async () => {
       try {
-        const r = await api<{ results: Result[]; unavailable?: boolean }>(`/places/search?q=${encodeURIComponent(text)}&session=${token()}${nearParam(p.origin)}`, { timeoutMs: 6000 });
+        const r = await api<{ results: Result[]; unavailable?: boolean; provider?: string }>(`/places/search?q=${encodeURIComponent(text)}&session=${token()}${nearParam(p.origin)}`, { timeoutMs: 6000 });
         if (my !== seq.current) return;
         setResults(r.results);
+        setOsm(r.provider === 'osm');
         setStatus(r.unavailable ? 'unavailable' : r.results.length ? 'idle' : 'none');
       } catch { if (my === seq.current) { setResults([]); setStatus('unavailable'); } }
-    }, 200);
+    }, 120); // own address base answers in a few ms (2026-11-19)
   }
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
@@ -277,6 +279,7 @@ export function RouteEditor(p: Props) {
             </Fragment>
           );
         })}
+        {osm && listed.length > 0 && <p className="px-2 pt-2 text-end text-[10px] text-muted/70">© OpenStreetMap</p>}
       </div>
     </div>
   );

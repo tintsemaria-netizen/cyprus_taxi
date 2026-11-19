@@ -1,5 +1,6 @@
 'use client';
 
+import { Postcode } from '@/components/driver/Postcode';
 import { fareRangeText } from '@/lib/price-type';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api-client';
@@ -10,7 +11,7 @@ import AutoMapView, { type MapMarker } from '@/components/AutoMapView';
 
 // Driver pre-booking board (scheduled rides). Server: src/server/dispatch/preassign.ts.
 interface Item {
-  bookingId: string; reference: string; pickupAt: string; pickupLabel: string; dropoffLabel: string;
+  bookingId: string; reference: string; pickupAt: string; pickupLabel: string; dropoffLabel: string; dropoffPostcode?: string | null;
   vClass: string; passengerCount: number; fareCents: number | null; priceType: string | null;
   flightNumber: string | null; airport: boolean; conflict?: boolean; canReleaseFreely?: boolean;
   note?: string | null;
@@ -62,7 +63,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number) => void }) {
       </div>
       <div className="mt-2 space-y-1 text-sm">
         <div className="flex gap-2"><span className="text-accent">●</span><span className="min-w-0">{i.pickupLabel}</span></div>
-        <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0">{i.dropoffLabel}</span></div>
+        <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0">{i.dropoffLabel}<Postcode code={i.dropoffPostcode} /></span></div>
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
         {i.flightNumber && <span className="font-mono text-ink">{t('driver.scheduled.flight', { flight: formatFlight(i.flightNumber) })}</span>}
@@ -136,7 +137,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number) => void }) {
 interface Detail extends Item {
   mine: boolean; passengerName: string; luggageCount: number;
   fareBreakdown: { label: string; cents: number }[] | null;
-  pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string };
+  pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string; postcode?: string | null };
   trip: { distanceM: number; etaSec: number; path: [number, number][] | null; roadRouted: boolean };
   blocked: string | null;
 }
@@ -181,7 +182,7 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
               </div>
               <div className="mt-2 space-y-1 text-sm">
                 <div className="flex gap-2"><span className="text-accent">●</span><span className="min-w-0 font-medium">{d.pickup.label}</span></div>
-                <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0 font-medium">{d.dropoff.label}</span></div>
+                <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0 font-medium">{d.dropoff.label}<Postcode code={d.dropoff.postcode} /></span></div>
               </div>
               <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{d.passengerName}</span></div>

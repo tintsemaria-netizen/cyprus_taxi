@@ -1,5 +1,17 @@
 # Session handoff
 
+## 2026-11-19 — Own Cyprus address base (OpenStreetMap) + destination postcodes — DEPLOYED (unattended, user asleep)
+
+- User: load ALL Cyprus places (restaurants, schools, churches, beaches, hospitals, clinics, every village hotel…) with postcodes, refresh weekly, «прям все грузи и заливай».
+- `src/server/osm/pbf.ts`: dependency-free .osm.pbf reader. `extract.ts`: `buildPlaces()` → ~75.4k rows (named POIs by kind, towns/villages/hamlets, one row per street per town, ~26k house addresses), Greek shown in Latin (`greekToLatin`). Postcode: own `addr:postcode` → OSM postal_code polygons → nearest known ≤500 m / ≤3 km. Local run: 74.3k of 75.4k rows have a postcode; 12–17 s; ~420 MB peak.
+- Sources: movisda.io `admin/CY-latest.osm.pbf` + `admin/CY-XX-latest.osm.pbf` (north); fallback Geofabrik `europe/cyprus-latest.osm.pbf`; override `OSM_SOURCES`. Geofabrik is NOT reachable from the Claude sandbox, movisda is.
+- DB: migration `20261119020000_osm_places` (pg_trgm extension, `OsmPlace` (batch,id) + GIN trigram on `search`, `OsmImport` runs). Search reads latest DONE batch (60 s cache).
+- Weekly refresh: worker maintenance (~5 min cadence) → `maybeStartOsmImport()` spawns `node tsx scripts/osm-import.ts` (child process) when no DONE import or older than 7 days; FAILED retried after 6 h; `OSM_IMPORT=off` disables. Docker runner image now also copies `src/` + `tsconfig.json`; worker mem_limit 768m → 1280m.
+- `/places/search`: own base first (`provider: 'osm'`, attribution «© OpenStreetMap» under suggestions in PlacesInput + RouteEditor, debounce 120 ms); Photon/Google only when the base has no answer. Popular places resolve coordinates from the base before Google.
+- Merged branch `dropoff-postcode`: `Booking.dropoffPostcode` (migration `20261119010000`), chip on driver offer / free orders / pre-bookings / navigation. `lookupPostcode`: address text → own base (≤600 m) → Google → Photon. After each import, open bookings without a postcode are backfilled.
+- Manual import inside the app container: `node node_modules/tsx/dist/cli.mjs --tsconfig tsconfig.json scripts/osm-import.ts`.
+- Check on prod: `select id,status,rows,"withPostcode",error from "OsmImport"`; search response `provider:"osm"`.
+
 ## 2026-11-19 — Light theme (white app) with per-role choice
 
 - Neutrals/status colours are CSS variables (`--c-*` in globals.css); `<html data-theme="light|dark">` switches them. Tailwind tokens use `rgb(var(--c-x) / <alpha-value>)`; `text-accent` uses a deeper green in light. Lime accent unchanged.

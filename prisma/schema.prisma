@@ -450,6 +450,7 @@ model Booking {
   dropoffLat     Float
   dropoffLng     Float
   dropoffLabel   String
+  dropoffPostcode String? // 2026-11-19: area postcode for drivers (best effort)
   passengerName  String
   phone          String
   note           String?
@@ -876,4 +877,38 @@ model PassengerRating {
   createdAt   DateTime @default(now())
 
   @@index([passengerId])
+}
+
+/// Own Cyprus address base from OpenStreetMap (2026-11-19). Rows of one import share `batch`
+/// (= OsmImport.id); search reads the latest DONE batch. Trigram index on `search` is created in
+/// the migration SQL (prisma has no syntax for it).
+model OsmPlace {
+  batch         Int
+  id            String
+  kind          String
+  name          String
+  street        String?
+  housenumber   String?
+  locality      String?
+  postcode      String?
+  postcodeExact Boolean @default(false)
+  lat           Float
+  lng           Float
+  importance    Int
+  search        String
+  nameFold      String
+
+  @@id([batch, id])
+  @@index([batch, lat, lng])
+}
+
+/// Weekly OpenStreetMap import runs (2026-11-19).
+model OsmImport {
+  id           Int       @id @default(autoincrement())
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  status       String    @default("RUNNING")
+  rows         Int?
+  withPostcode Int?
+  error        String?
 }

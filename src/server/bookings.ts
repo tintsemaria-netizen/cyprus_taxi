@@ -1,3 +1,4 @@
+import { lookupPostcode } from '@/server/postcode';
 import { startSearchTx } from '@/server/dispatch/search';
 import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
@@ -140,6 +141,8 @@ export async function createBooking(
   // background worker picks up). Scheduled rides stay REQUESTED until their lead window
   // (scheduled-ride automation promotes them to SEARCHING later).
   const initialStatus = scheduledAt ? 'REQUESTED' : 'SEARCHING';
+  // Destination postcode for the driver (best effort, ≤ 2 s per source; never fails the booking).
+  const dropoffPostcode = await lookupPostcode(input.dropoff.lat, input.dropoff.lng, input.dropoff.label).catch(() => null);
   try {
     const body = await prisma.$transaction(async (tx) => {
       await tx.idempotencyReceipt.create({
@@ -149,7 +152,7 @@ export async function createBooking(
         data: {
           reference,
           pickupLat: input.pickup.lat, pickupLng: input.pickup.lng, pickupLabel: input.pickup.label,
-          dropoffLat: input.dropoff.lat, dropoffLng: input.dropoff.lng, dropoffLabel: input.dropoff.label,
+          dropoffLat: input.dropoff.lat, dropoffLng: input.dropoff.lng, dropoffLabel: input.dropoff.label, dropoffPostcode,
           ...(input.stop ? { stopLat: input.stop.lat, stopLng: input.stop.lng, stopLabel: input.stop.label } : {}),
           passengerName: input.passengerName, phone: input.phone, note: input.note || null, flightNumber: input.flightNumber ?? null,
           vClass: input.vClass, passengerCount: input.passengerCount, luggageCount: input.luggageCount ?? 0, scheduledAt, status: initialStatus,

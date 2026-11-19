@@ -1,4 +1,5 @@
 import { googleFindPoi } from '@/server/google';
+import { searchOsm } from '@/server/osm/search';
 import { matchPopular, nearestPopular, type PopularPlace } from '@/lib/popularPlaces';
 
 // Popular places first (2026-11-18): matched locally, nearest first; coordinates cached.
@@ -7,10 +8,15 @@ async function resolve(list: PopularPlace[], google: boolean) {
   // In parallel; each place is looked up once (cached), then kept in the given order.
   const found = await Promise.all(list.map(async (p) => {
     let at = p.at ?? null;
-    if (!at && p.query && google) {
+    if (!at && p.query) {
       const c = poiCache.get(p.query);
       if (c && (c.at || Date.now() - c.t < 86_400_000)) at = c.at;
-      else { try { at = await googleFindPoi(p.query); } catch { at = null; } poiCache.set(p.query, { at, t: Date.now() }); }
+      else {
+        // own address base first (2026-11-19), Google only if it has no answer
+        try { const hit = (await searchOsm(p.query, null, 1))?.[0]; at = hit ? { lat: hit.lat, lng: hit.lng } : null; } catch { at = null; }
+        if (!at && google) { try { at = await googleFindPoi(p.query); } catch { at = null; } }
+        poiCache.set(p.query, { at, t: Date.now() });
+      }
     }
     return at ? { label: p.name, secondary: p.city, lat: at.lat, lng: at.lng, kind: 'popular' } : null;
   }));

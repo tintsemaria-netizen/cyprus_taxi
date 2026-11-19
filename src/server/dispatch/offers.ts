@@ -182,7 +182,7 @@ export async function getDriverActiveOffer(driverId: string) {
     pickupEtaSec: o.pickupEtaSec,
     pickupDistanceM: o.pickupDistanceM,
     pickup: { lat: b.pickupLat, lng: b.pickupLng, label: b.pickupLabel },
-    dropoff: { lat: b.dropoffLat, lng: b.dropoffLng, label: b.dropoffLabel },
+    dropoff: { lat: b.dropoffLat, lng: b.dropoffLng, label: b.dropoffLabel, postcode: b.dropoffPostcode ?? null },
     stop: b.stopLat != null && b.stopLng != null ? { lat: b.stopLat, lng: b.stopLng, label: b.stopLabel ?? '' } : null,
     vClass: b.vClass,
     passengerCount: b.passengerCount,

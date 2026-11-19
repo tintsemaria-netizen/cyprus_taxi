@@ -1,5 +1,6 @@
 'use client';
 
+import { Postcode } from '@/components/driver/Postcode';
 import { navZoomTarget, nextNavZoom, smoothSpeed, NAV_ZOOM_MAX } from '@/lib/nav-zoom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
@@ -28,7 +29,7 @@ import { bearingDeg, cumulative, distM, locate, maneuverIcon, nextStep, offsetPo
 
 export interface NavTrip {
   bookingId: string; reference: string; status: string;
-  pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string };
+  pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string; postcode?: string | null };
   payment?: 'CASH' | 'CARD'; startCodeRequired?: boolean; passengerName: string; passengerRating?: { average: number; count: number } | null; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; luggageCount?: number; vClass: string;
   waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
   /** Passenger's live position, only if they chose to share it, only before pickup (2026-11-15). */
@@ -397,7 +398,7 @@ export function DriverNavigation(props: {
           </div>
         )}
         {/* Address only — no «К подаче:» label (2026-11-15); the map shows which point it is. */}
-        <div className={`mt-2 text-[26px] font-semibold leading-tight ${panelOpen ? '' : 'line-clamp-2'}`}>{target.label}</div>
+        <div className={`mt-2 text-[26px] font-semibold leading-tight ${panelOpen ? '' : 'line-clamp-2'}`}>{leg === 'dropoff' && <Postcode code={trip.dropoff.postcode} className="!ms-0 me-2 -translate-y-[2px] !text-[18px] !leading-[26px]" />}{target.label}</div>
         {paxLoc && paxFromPickupM != null && (
           <div className="mt-1 flex items-center gap-1.5 text-sm text-[#7FB6FF]">
             <span aria-hidden="true">🧍</span>

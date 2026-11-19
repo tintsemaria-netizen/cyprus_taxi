@@ -41,7 +41,7 @@ async function boundVehicle(db: Tx | typeof prisma, driverId: string) {
 }
 
 export interface BoardItem {
-  bookingId: string; reference: string; pickupAt: string; pickupLabel: string; dropoffLabel: string;
+  bookingId: string; reference: string; pickupAt: string; pickupLabel: string; dropoffLabel: string; dropoffPostcode: string | null;
   vClass: string; passengerCount: number; fareCents: number | null; priceType: string | null;
   flightNumber: string | null; airport: boolean; conflict: boolean;
   note: string | null; // the passenger writes flight, meeting point and bags here
@@ -54,11 +54,11 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
   const mineRows = await prisma.preAssignment.findMany({
     where: { driverId, status: 'COMMITTED' },
     orderBy: { pickupAt: 'asc' },
-    include: { booking: { select: { reference: true, pickupLabel: true, dropoffLabel: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, passengerCount: true, vClass: true, fareCents: true, priceType: true, flightNumber: true, note: true } } },
+    include: { booking: { select: { reference: true, pickupLabel: true, dropoffLabel: true, dropoffPostcode: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, passengerCount: true, vClass: true, fareCents: true, priceType: true, flightNumber: true, note: true } } },
   });
   const mine = mineRows.map((p) => ({
     bookingId: p.bookingId, reference: p.booking.reference, pickupAt: p.pickupAt.toISOString(),
-    pickupLabel: p.booking.pickupLabel, dropoffLabel: p.booking.dropoffLabel, vClass: p.booking.vClass,
+    pickupLabel: p.booking.pickupLabel, dropoffLabel: p.booking.dropoffLabel, dropoffPostcode: p.booking.dropoffPostcode ?? null, vClass: p.booking.vClass,
     passengerCount: p.booking.passengerCount, fareCents: p.booking.fareCents, priceType: p.booking.priceType,
     flightNumber: p.booking.flightNumber, note: p.booking.note,
     airport: isAirportPoint(p.booking.pickupLat, p.booking.pickupLng) || isAirportPoint(p.booking.dropoffLat, p.booking.dropoffLng),
@@ -79,14 +79,14 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
     },
     orderBy: { scheduledAt: 'asc' },
     take: 50,
-    select: { id: true, passengerId: true, reference: true, scheduledAt: true, pickupLabel: true, dropoffLabel: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, vClass: true, passengerCount: true, fareCents: true, priceType: true, flightNumber: true, note: true },
+    select: { id: true, passengerId: true, reference: true, scheduledAt: true, pickupLabel: true, dropoffLabel: true, dropoffPostcode: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, vClass: true, passengerCount: true, fareCents: true, priceType: true, flightNumber: true, note: true },
   });
   const gap = p.minGapMinutes * MIN;
   // Never offer a passenger this driver is blocked with (1-star either way, blocked-pairs.ts).
   const blockedPax = await blockedPassengerIdsForDriver(driverId);
   const available: BoardItem[] = rows.filter((b) => !b.passengerId || !blockedPax.has(b.passengerId)).map((b) => ({
     bookingId: b.id, reference: b.reference, pickupAt: b.scheduledAt!.toISOString(),
-    pickupLabel: b.pickupLabel, dropoffLabel: b.dropoffLabel, vClass: b.vClass, passengerCount: b.passengerCount,
+    pickupLabel: b.pickupLabel, dropoffLabel: b.dropoffLabel, dropoffPostcode: b.dropoffPostcode ?? null, vClass: b.vClass, passengerCount: b.passengerCount,
     fareCents: b.fareCents, priceType: b.priceType, flightNumber: b.flightNumber, note: b.note,
     airport: isAirportPoint(b.pickupLat, b.pickupLng) || isAirportPoint(b.dropoffLat, b.dropoffLng),
     conflict: mineRows.length >= p.maxPerDriver || mineRows.some((m) => Math.abs(m.pickupAt.getTime() - b.scheduledAt!.getTime()) < gap),
@@ -238,7 +238,7 @@ export async function scheduledRideDetail(bookingId: string, driverId: string, n
     if (Array.isArray(v)) fareBreakdown = v.filter((x) => x && typeof x.label === 'string' && typeof x.cents === 'number').map((x) => ({ label: x.label, cents: x.cents }));
   } catch { /* malformed snapshot → none */ }
   const pickup = { lat: b.pickupLat, lng: b.pickupLng, label: item.pickupLabel };
-  const dropoff = { lat: b.dropoffLat, lng: b.dropoffLng, label: item.dropoffLabel };
+  const dropoff = { lat: b.dropoffLat, lng: b.dropoffLng, label: item.dropoffLabel, postcode: item.dropoffPostcode };
   let trip: { distanceM: number; etaSec: number; path: [number, number][] | null; roadRouted: boolean } = {
     distanceM: Math.round(haversineMeters(pickup, dropoff)), etaSec: 0, path: null, roadRouted: false,
   };
