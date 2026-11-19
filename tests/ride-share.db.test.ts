@@ -89,13 +89,13 @@ beforeEach(async () => {
 });
 
 describe('ride-share pure rules', () => {
-  it('only between the airports and the towns Larnaca, Nicosia, Paphos, Ayia Napa', () => {
+  it('only between the airports and the towns Larnaca, Nicosia, Paphos, Ayia Napa, Limassol', () => {
     expect(isShareRoute(lca, marina)).toBe(true); // LCA → Nicosia
     expect(isShareRoute(lca, larnacaTown)).toBe(true); // LCA → Larnaca town
     expect(isShareRoute({ lat: 34.718, lng: 32.4857 }, { lat: 34.776, lng: 32.424 })).toBe(true); // PFO → Paphos
     expect(isShareRoute(larnacaTown, marina)).toBe(true); // Larnaca → Nicosia
     expect(isShareRoute(larnacaTown, larnacaTown2)).toBe(false); // in town
-    expect(isShareRoute(lca, limassol)).toBe(false); // Limassol is not in the list (yet)
+    expect(isShareRoute(lca, limassol)).toBe(true); // Limassol added 2026-11-19
   });
   it('30 % off, rounded to 10 cents', () => {
     expect(sharedCents(6000, 30)).toBe(4200);

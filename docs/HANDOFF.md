@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-19 — Ride-share: Limassol added (deployed)
+
+- `SHARE_TOWNS` + LIMASSOL (34.69, 33.04, 10 km: Germasogeia/Agios Tychonas … Ypsonas/Polemidia). All 7 places (LCA, PFO, Larnaca, Nicosia, Paphos, Ayia Napa, Limassol) pair with each other; never within one place.
+- tests/ride-share-limassol.test.ts; ride-share.db test updated. vitest 301 passed.
+
 ## 2026-11-19 — Ride-share «Попутчик» merged and DEPLOYED (branch `poputchik` from another session)
 
 - User: «Заливай ветку попутчика». Merged origin/poputchik (978aba5) into main. Conflicts only in docs/HANDOFF.md and prisma/schema.prisma (both sides appended models — kept both).

@@ -14,6 +14,8 @@ export const SHARE_TOWNS = [
   { key: 'NICOSIA', lat: 35.17, lng: 33.36, radiusM: 11000 },
   { key: 'PAPHOS', lat: 34.776, lng: 32.424, radiusM: 8000 },
   { key: 'AYIA_NAPA', lat: 34.988, lng: 33.999, radiusM: 6000 },
+  // Limassol added 2026-11-19 (operator): Germasogeia / Agios Tychonas to Ypsonas / Polemidia.
+  { key: 'LIMASSOL', lat: 34.69, lng: 33.04, radiusM: 10000 },
 ] as const;
 
 /** The ride-share place of a point: an airport code (checked first) or a town key; null elsewhere. */

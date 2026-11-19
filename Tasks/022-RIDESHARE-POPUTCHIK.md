@@ -8,7 +8,7 @@ build (screenshots shown to the operator). Not tried on a real phone or with Goo
 
 - Only between two DIFFERENT places of: Larnaca airport, Paphos airport, Larnaca, Nicosia, Paphos,
   Ayia Napa (e.g. LCA → Larnaca town, PFO → Paphos, Larnaca → Nicosia). Never inside one town.
-  Limassol is not in the list yet (`SHARE_TOWNS` in src/lib/share.ts). No intermediate stop.
+  Limassol added 2026-11-19 (`SHARE_TOWNS` in src/lib/share.ts, 10 km around 34.69, 33.04). No intermediate stop.
   At most **two bookings** in one car.
 - Passenger opts in at booking («Попутчик −30%»): adults, children, suitcases, and how much longer
   the ride may take for them (+10/15/20/30 min). The newcomer is not asked again.
