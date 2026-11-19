@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-19 — Driver bottom nav softer (deployed)
+
+- BottomNav: 18 px (was 16), font-extrabold, inactive `text-muted/75`, active `text-accent/70`; red count badges unchanged.
+
 ## 2026-11-19 — Arrow circle without white edge; arrow outline back (deployed)
 
 - Operator meant the white edge of the CIRCLE: `.ily-nav-ring` has no border now (orange tint + shadow stay); the arrow's white outline is restored.
