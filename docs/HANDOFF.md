@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-19 — Light theme (white app) with per-role choice
+
+- Neutrals/status colours are CSS variables (`--c-*` in globals.css); `<html data-theme="light|dark">` switches them. Tailwind tokens use `rgb(var(--c-x) / <alpha-value>)`; `text-accent` uses a deeper green in light. Lime accent unchanged.
+- Pre-paint script `THEME_SCRIPT` (src/lib/theme-script.ts) in `<head>`; `ThemeSync` re-applies on navigation / system change. Prefs in localStorage: passenger `il-y-theme` (system|light|dark, default system), driver/staff pages `il-y-theme-d` (light|dark, default dark).
+- `ThemePicker`: passenger account «Цвет приложения»; driver menu Профиль; driver registration step 1.
+- Maps: Google `colorScheme` LIGHT/DARK by theme; MapLibre uses Esri Light Gray (or `NEXT_PUBLIC_MAP_TILES_LIGHT`); AutoMapView remounts on theme change. Logo lettering follows theme.
+- Not yet reviewed in light: admin, dispatch, chat, receipt. Google cloud map style in light mode unverified locally (no key).
+
 ## 2026-11-19 — Other taxis look like the driver's own car (driver + passenger maps)
 
 - `vehicleMarkerEl` gained `state: 'peer'`: same `selfCarSvg` car, lightened (CSS filter), used at 46 px (35 % smaller than own 71 px).
