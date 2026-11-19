@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-19 — Driver analytics + earnings chart fix (deployed)
+
+- ☰ → Заработок → tile «Выполнено заказов · Подробнее ›» opens `DriverAnalytics` (back arrow): День / Неделя (Mon–Sun), ‹ › or date picker (Cyprus days). Two tiles: «Выполнено» (count + earned, pending finals) and «Не выполнено» (driver-cancelled rides = REMATCH by this driver + offers REJECTED/EXPIRED, «могли заработать» = final or estimate). Tapping a tile opens its list (back arrow).
+- API GET /api/v1/driver/analytics?period=day|week&day=YYYY-MM-DD (src/server/driver/analytics.ts). Passenger cancels are computed but not shown (operator removed that card).
+- Earnings «По дням» bars were invisible (column without height) — fixed.
+
 ## 2026-11-17 — Map labels: English + «street we are on» chip (branch `map-labels`, NOT merged)
 - Google Maps loader `language: 'en'` (street names in English for everyone).
 - `googleStreetName` (Geocoding result_type=route, language=en) + `GET /api/v1/places/street` (30 m grid cache, 20/min/IP).
