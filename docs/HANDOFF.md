@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-19 — Driver: pre-bookings in ☰ menu, pulsing П / ПП button (deployed)
+
+- Bottom bar: «Главная», «Свободные» only. ☰ drawer: first row «Предзаказы» (red count) → pre-booking board.
+- Home map (no offer, no trip, open pre-bookings > 0): round 56 px button, end-3, top 58 %: «П» lime for a pre-booking, «ПП» bright red (#FF2D2D, white text) when any open one is a ride-share pair (better paid). `.ily-fab-pulse` animates own colour ↔ soft red #C46262 with a halo. EN/other locales: P / PS (`driver.prebookFab`).
+
 ## 2026-11-19 — Pre-booked rides: calmer text, one «driver assigned» notice, no «Новый заказ» (deployed)
 
 - track.scheduledNote (8 languages): «Ожидайте — мы уведомим вас, когда будет назначен водитель.» «＋ Новый заказ» removed from the scheduled ride screen.

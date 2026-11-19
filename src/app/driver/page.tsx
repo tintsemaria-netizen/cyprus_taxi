@@ -426,8 +426,9 @@ function Driver() {
       {tab === 'home' && !offer && !data.trip && prebookCount > 0 && (
         <button type="button" onClick={() => setTab('prebook')} data-testid="prebook-fab"
           aria-label={prebookPair ? t('driver.prebookFab.pairAria') : t('driver.prebookFab.singleAria')}
-          className="ily-fab-pulse fixed end-3 top-[58%] z-30 flex h-14 w-14 items-center justify-center rounded-full text-[18px] font-extrabold text-[#0d1608] shadow-card"
-          style={{ ['--fab' as string]: prebookPair ? '#7FB6FF' : '#C8FF46' }}>
+          className={`ily-fab-pulse fixed end-3 top-[58%] z-30 flex h-14 w-14 items-center justify-center rounded-full text-[18px] font-extrabold shadow-card ${prebookPair ? 'text-white' : 'text-[#0d1608]'}`}
+          // «ПП» (ride-share pair) is the better-paid one: bright red (2026-11-19, operator).
+          style={{ ['--fab' as string]: prebookPair ? '#FF2D2D' : '#C8FF46' }}>
           {prebookPair ? t('driver.prebookFab.pair') : t('driver.prebookFab.single')}
         </button>
       )}
