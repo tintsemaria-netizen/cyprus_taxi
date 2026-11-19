@@ -21,6 +21,10 @@ function num(name: string, def: number): number {
   return Number.isFinite(n) ? n : def;
 }
 
+// APP_ENV=production marks the commercial service (launch fixes §3/§10): test OTPs are refused and
+// staff MFA is enforced regardless of the other flags. The default stays «beta».
+const IS_PRODUCTION = (process.env.APP_ENV || 'beta') === 'production';
+
 export const config = {
   appBaseUrl: process.env.APP_BASE_URL || 'http://localhost:3000',
   // Hosts we will serve/emit in absolute links. APP_BASE_URL's host plus any extra
@@ -122,7 +126,8 @@ export const config = {
     verifyService: process.env.TWILIO_VERIFY_SERVICE_SID || '',
     // The dev OTP path is NOT real verification and is refused unless deliberately enabled.
     // Never a silent substitute for real SMS (Task 015 constraint).
-    allowDevOtp: process.env.SMS_ALLOW_DEV_OTP === 'true',
+    // Launch fixes §3: never in production (APP_ENV=production), whatever SMS_ALLOW_DEV_OTP says.
+    allowDevOtp: process.env.SMS_ALLOW_DEV_OTP === 'true' && !IS_PRODUCTION,
     // Phones (E.164, comma-separated) that may use the dev OTP path. The dev code is only ever
     // generated — and only ever returned to the client — for these numbers. Empty (the default)
     // = nobody: without a real SMS provider, OTP sign-in is honestly unavailable.
@@ -176,7 +181,10 @@ export const config = {
   },
   // When true, ADMIN/DISPATCHER accounts without TOTP are limited to setting it up (2026-10-01 audit
   // Stage 1.2). Off by default so every privileged user can enroll first.
-  staffMfaEnforce: process.env.STAFF_MFA_ENFORCE === 'true',
+  // Launch fixes §10: always enforced in production (enrol every admin/dispatcher BEFORE switching
+  // APP_ENV to production — see docs/PILOT_RUNBOOK.md).
+  staffMfaEnforce: process.env.STAFF_MFA_ENFORCE === 'true' || IS_PRODUCTION,
+  isProduction: IS_PRODUCTION,
   // Max trusted proxy entries skipped from the right of X-Forwarded-For (see clientIp). Behind
   // Cloudflare → nginx exactly ONE trusted entry is appended (the CF edge nginx saw).
   trustedProxyHops: num('TRUSTED_PROXY_HOPS', 1),

@@ -12,6 +12,12 @@
 // that is the pattern Next uses to node-gate it, so the worker's Node-only deps (web-push) are
 // never bundled for the edge runtime.
 export async function register() {
+  // Launch fixes §3: the commercial service (APP_ENV=production) refuses to start without its
+  // required secrets instead of failing on the first request that needs them.
+  if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.APP_ENV === 'production') {
+    const missing = ['SESSION_SECRET', 'TRACKING_RECEIPT_SECRET', 'DATABASE_URL'].filter((n) => !process.env[n]);
+    if (missing.length) throw new Error(`Missing required env in production: ${missing.join(', ')}`);
+  }
   if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.DISPATCH_WORKER !== 'off') {
     const dedicated = process.env.DEDICATED_WORKERS === 'true';
     const isWorker = process.env.WORKER_ROLE === 'worker';

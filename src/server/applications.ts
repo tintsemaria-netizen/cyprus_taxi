@@ -106,12 +106,20 @@ async function runAdmin(applicationId: string, adminId: string, from: string[], 
   });
 }
 
+/** Documents that always expire and must carry a future expiry date to be accepted (launch fixes §3). */
+export const EXPIRING_SLOTS = new Set(['licence_front', 'taxi_licence', 'insurance', 'roadworthiness']);
+
 export async function setDocumentDecision(applicationId: string, docId: string, decision: 'ACCEPTED' | 'CHANGES', note: string | undefined, adminId: string, expiresAt?: string | null): Promise<Result> {
   const doc = await prisma.applicationDocument.findFirst({ where: { id: docId, applicationId } });
   if (!doc) return err(404, 'NO_DOC', 'Document not found.');
   // Never accept a document that has not passed a malware scan (Task 015).
   if (decision === 'ACCEPTED' && doc.scanStatus !== 'CLEAN') return err(422, 'NOT_SCANNED_CLEAN', `Cannot accept: malware scan status is ${doc.scanStatus}. A clean scan is required.`);
   const exp = expiresAt ? new Date(expiresAt) : undefined;
+  // Launch fixes §3: licence, taxi licence, insurance and roadworthiness are accepted only with a
+  // FUTURE expiry date — otherwise the expiry watcher can never suspend the driver later.
+  if (decision === 'ACCEPTED' && EXPIRING_SLOTS.has(doc.slot) && !(exp && !Number.isNaN(exp.getTime()) && exp > new Date()) && !(doc.expiresAt && doc.expiresAt > new Date())) {
+    return err(422, 'EXPIRY_REQUIRED', 'Enter the document expiry date (in the future) to accept it.');
+  }
   await prisma.applicationDocument.update({ where: { id: docId }, data: { decision, decisionNote: note ?? null, ...(exp && !Number.isNaN(exp.getTime()) ? { expiresAt: exp } : {}) } });
   await prisma.applicationEvent.create({ data: { applicationId, type: 'DOC_DECISION', actorType: 'ADMIN', actorId: adminId, visibility: 'INTERNAL', detail: `${doc.slot}:${decision}` } });
   return ok({ decision });
@@ -138,6 +146,7 @@ export async function approveApplication(applicationId: string, adminId: string,
       if (requiredDocs.some((d) => d.decision !== 'ACCEPTED')) return err(422, 'DOCS_NOT_ACCEPTED', 'Accept all required documents before approving.');
       if (requiredDocs.some((d) => d.scanStatus !== 'CLEAN')) return err(422, 'DOCS_NOT_SCANNED', 'Every document must pass a clean malware scan before approval.');
       if (requiredDocs.some((d) => d.expiresAt && d.expiresAt < new Date())) return err(422, 'DOC_EXPIRED', 'A required document has already expired.');
+      if (requiredDocs.some((d) => EXPIRING_SLOTS.has(d.slot) && !d.expiresAt)) return err(422, 'EXPIRY_REQUIRED', 'Licence, taxi licence, insurance and roadworthiness need an expiry date before approval.');
 
       const ve = JSON.parse(app.vehicle || '{}');
       const id = JSON.parse(app.identity || '{}');

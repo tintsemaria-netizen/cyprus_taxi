@@ -192,9 +192,10 @@ const staff = {
     newDocLabel: 'What needs changing? (shown to the applicant)',
     acceptDocTitle: 'Accept document',
     expiry: 'Document expiry date',
-    expiryHint: 'Leave empty if this document has no expiry.',
+    expiryHint: 'Required for licence, taxi licence, insurance and roadworthiness; leave empty only for documents without an expiry.',
   },
   alerts: {
+    system: 'System status · {env}',
     title: 'System alerts (7 days)',
     failedEmails: 'Receipt e-mails failed: {n}',
     ALERT_PREBOOK_LAPSED: 'Pre-booking: driver dropped out',

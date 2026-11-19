@@ -40,6 +40,9 @@ function Reliability() {
   // Launch fixes §8: system alerts (pre-booking lapsed / released late, failed receipt e-mails).
   const [alerts, setAlerts] = useState<{ alerts: { at: string; kind: string; detail: string | null; bookingRef: string | null }[]; failedReceiptEmails: number } | null>(null);
   useEffect(() => { api<NonNullable<typeof alerts>>('/admin/alerts').then(setAlerts).catch(() => {}); }, []);
+  // Launch fixes §3: dependency states (SMS, malware scan, e-mail, push, maps, switches).
+  const [sys, setSys] = useState<{ env: string; deps: { key: string; state: 'ok' | 'warn' | 'missing'; note: string }[] } | null>(null);
+  useEffect(() => { api<NonNullable<typeof sys>>('/admin/system').then(setSys).catch(() => {}); }, []);
 
   async function openDriver(id: string) {
     if (open === id) { setOpen(null); return; }
@@ -61,6 +64,16 @@ function Reliability() {
           ))}
         </div>
       </div>
+      {sys && (
+        <div className="card p-3 text-sm" data-testid="system-status">
+          <div className="mb-1 font-semibold">{t('staff.alerts.system', { env: sys.env })}</div>
+          <ul className="grid gap-1 sm:grid-cols-2">
+            {sys.deps.map((d) => (
+              <li key={d.key} className="flex gap-2 text-xs"><span className={d.state === 'ok' ? 'text-accent' : d.state === 'warn' ? 'text-warn' : 'text-danger'}>●</span><span className="font-medium">{d.key}</span><span className="text-muted">{d.note}</span></li>
+            ))}
+          </ul>
+        </div>
+      )}
       {alerts && (alerts.alerts.length > 0 || alerts.failedReceiptEmails > 0) && (
         <div className="card p-3 text-sm" data-testid="staff-alerts">
           <div className="mb-1 font-semibold text-warn">{t('staff.alerts.title')}</div>

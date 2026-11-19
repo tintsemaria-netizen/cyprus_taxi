@@ -27,9 +27,11 @@ export async function rateLimit(
     }
     return { ok: true, retryAfter: 0 };
   } catch (e) {
-    // Fail open on limiter storage errors (availability over strictness), but make it visible.
-    console.error('[rate-limit] storage error — failing open', bucket, (e as Error)?.message);
-    return { ok: true, retryAfter: 0 };
+    // Launch fixes §10: sign-in and code buckets fail CLOSED (a broken limiter must not open the
+    // door to code guessing); everything else fails open (availability), visibly.
+    const closed = bucket.startsWith('login') || bucket.startsWith('plogin') || bucket.startsWith('otp');
+    console.error(`[rate-limit] storage error — failing ${closed ? 'closed' : 'open'}`, bucket, (e as Error)?.message);
+    return closed ? { ok: false, retryAfter: 30 } : { ok: true, retryAfter: 0 };
   }
 }
 

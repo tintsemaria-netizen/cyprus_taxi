@@ -197,6 +197,7 @@ const staff: Catalog<typeof en> = {
     expiryHint: 'Оставьте пустым, если срока действия нет.',
   },
   alerts: {
+    system: 'Состояние системы · {env}',
     title: 'Оповещения системы (7 дней)',
     failedEmails: 'Чеки на e-mail не отправлены: {n}',
     ALERT_PREBOOK_LAPSED: 'Предзаказ: водитель выпал',

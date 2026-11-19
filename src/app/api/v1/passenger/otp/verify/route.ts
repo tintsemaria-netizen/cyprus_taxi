@@ -12,6 +12,9 @@ export async function POST(req: Request) {
   if (!phone || !body.code) return Errors.validation({ _: 'Phone and code required.' });
   const rl = await rateLimit('otp-verify', clientIp(req, config.trustedProxyHops), 20, 600);
   if (!rl.ok) return Errors.throttled(rl.retryAfter);
+  // Launch fixes §3: also per phone — spreading guesses over many IPs cannot beat the limit.
+  const rlp = await rateLimit('otp-verify-phone', phone, 10, 600);
+  if (!rlp.ok) return Errors.throttled(rlp.retryAfter);
   if (!(await checkOtp(phone, body.code))) return apiError(401, 'BAD_CODE', 'Incorrect or expired code.');
   // Attach (launch fixes, 2026-11-19): a signed-in account without a verified phone (e-mail sign-up,
   // test-mode guest) gets THIS number — its history and active ride stay with it. A number that
