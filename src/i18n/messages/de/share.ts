@@ -29,6 +29,7 @@ const share: Catalog<typeof en> = {
     arriveAt: "Ankunft ca. {time}",
     departAt: "Abfahrt {time} — {n} Min. warten",
     pickupAt: "Abholung ca. {time}",
+    meetAt: "📍 Treffpunkt: {place}",
     approx: "ungefähr",
     hide: "Ausblenden",
     answer: "Antworten",

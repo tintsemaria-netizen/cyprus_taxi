@@ -342,6 +342,28 @@ describe('pre-booked ride-share', () => {
     expect((await prisma.assignment.findFirst({ where: { activeBookingId: a.id } }))!.activeDriverId).toBe(d.driverId);
   });
 
+  it('a pair at one airport meets at its one pickup point, at one time; own point back on a break-up', async () => {
+    const { AIRPORT_MEET } = await import('@/lib/share');
+    const a = await scheduled(lca, marina, 180);
+    const b = await scheduled(lcaNear, limCentre, 190);
+    await matchPrebookings();
+    const g = (await prisma.shareGroup.findFirst({ where: { hostBookingId: a.id } }))!;
+    expect((await trackingView(b.id))!.shareProposal!.meetLabel).toBe(AIRPORT_MEET.LCA.label); // told before answering
+    await answerShare(g.id, { kind: 'PASSENGER', bookingId: a.id }, true);
+    expect(await answerShare(g.id, { kind: 'PASSENGER', bookingId: b.id }, true)).toEqual({ ok: true, status: 'MATCHED' });
+    const [a2, b2] = [await fresh(a.id), await fresh(b.id)];
+    for (const x of [a2, b2]) expect([x.pickupLat, x.pickupLng, x.pickupLabel]).toEqual([AIRPORT_MEET.LCA.lat, AIRPORT_MEET.LCA.lng, AIRPORT_MEET.LCA.label]);
+    expect(a2.scheduledAt!.getTime()).toBe(b2.scheduledAt!.getTime()); // one pickup, one time
+    expect(b2.scheduledAt!.getTime()).toBe(b.scheduledAt!.getTime()); // the later passenger never waits
+    expect(b2.shareOrigPickupLabel).toBe(lcaNear.label);
+    // The co-rider cancels: the other gets their own point, time and price back.
+    const c = await changeStatus({ bookingId: b.id, to: 'CANCELED', expectedRevision: (await fresh(b.id)).revision, actor: 'PASSENGER' });
+    expect(c.ok).toBe(true);
+    const a3 = await fresh(a.id);
+    expect([a3.pickupLat, a3.pickupLng, a3.pickupLabel, a3.shareOrigPickupLabel]).toEqual([lca.lat, lca.lng, lca.label, null]);
+    expect(a3.scheduledAt!.getTime()).toBe(a.scheduledAt!.getTime());
+  });
+
   it('rides further apart than the passengers can wait are not paired', async () => {
     await scheduled(lca, marina, 180, { wait: 0 });
     await scheduled(lcaNear, limCentre, 200, { wait: 0 });

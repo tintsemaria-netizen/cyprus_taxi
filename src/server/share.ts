@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { getSettings } from '@/lib/settings';
 import { haversineMeters, type LatLng } from '@/lib/geo';
-import { isShareRoute, sharedCents, approxLegMin, bestSharePlan, bestPrebookPlan, shareFits, prebookTiming, STOP_OF, type SharePlan, type LegFn } from '@/lib/share';
+import { isShareRoute, sharedCents, approxLegMin, bestSharePlan, bestPrebookPlan, shareFits, sharedMeetPoint, prebookTiming, STOP_OF, type SharePlan, type LegFn } from '@/lib/share';
 import { googleConfigured, googleRoute } from '@/server/google';
 import { enqueueDriver, enqueuePassenger, enqueuePassengerDriverNews } from '@/server/push';
 import { recordEvent, driverPseudo } from '@/server/events';
@@ -280,8 +280,12 @@ async function applySharedPriceTx(tx: Tx, bookingId: string, cents: number) {
 
 /** Undo the discount (the co-rider is gone): back to the price the passenger booked. */
 async function restoreFullPriceTx(tx: Tx, bookingId: string) {
-  const b = await tx.booking.findUnique({ where: { id: bookingId }, select: { status: true, shareFullCents: true, shareFullPriceType: true, shareOrigScheduledAt: true } });
+  const b = await tx.booking.findUnique({ where: { id: bookingId }, select: { status: true, shareFullCents: true, shareFullPriceType: true, shareOrigScheduledAt: true, shareOrigPickupLat: true, shareOrigPickupLng: true, shareOrigPickupLabel: true } });
   if (!b || ['COMPLETED', 'CANCELED'].includes(b.status)) return false;
+  // Not picked up yet: the passenger's own pickup point comes back (it was the airport meeting point).
+  if (b.shareOrigPickupLabel != null && b.shareOrigPickupLat != null && b.shareOrigPickupLng != null && ['REQUESTED', 'SEARCHING', 'ASSIGNED', 'EN_ROUTE'].includes(b.status)) {
+    await tx.booking.update({ where: { id: bookingId }, data: { pickupLat: b.shareOrigPickupLat, pickupLng: b.shareOrigPickupLng, pickupLabel: b.shareOrigPickupLabel, shareOrigPickupLat: null, shareOrigPickupLng: null, shareOrigPickupLabel: null } });
+  }
   // A pre-booking that has not started yet also gets its own pickup time back.
   if (b.shareOrigScheduledAt && b.status === 'REQUESTED') {
     await tx.booking.update({ where: { id: bookingId }, data: { scheduledAt: b.shareOrigScheduledAt, shareOrigScheduledAt: null } });
@@ -338,6 +342,20 @@ async function finalizePrebookTx(tx: Tx, groupId: string): Promise<ShareResult> 
       }
     }
   }
+  // Same airport: both passengers meet at its one pickup point (their own points come back on a break-up).
+  const meet = sharedMeetPoint(pt(h.pickupLat, h.pickupLng), pt(gu.pickupLat, gu.pickupLng));
+  if (meet) {
+    for (const b of [h, gu]) {
+      if (b.pickupLat === meet.lat && b.pickupLng === meet.lng && b.pickupLabel === meet.label) continue;
+      await tx.booking.update({
+        where: { id: b.id },
+        data: {
+          shareOrigPickupLat: b.shareOrigPickupLat ?? b.pickupLat, shareOrigPickupLng: b.shareOrigPickupLng ?? b.pickupLng, shareOrigPickupLabel: b.shareOrigPickupLabel ?? b.pickupLabel,
+          pickupLat: meet.lat, pickupLng: meet.lng, pickupLabel: meet.label,
+        },
+      });
+    }
+  }
   await tx.shareGroup.update({ where: { id: g.id }, data: { status: 'MATCHED', decidedAt: new Date() } });
   for (const id of [h.id, gu.id]) await tx.bookingEvent.create({ data: { bookingId: id, type: 'SHARE_MATCHED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED' } });
   await recordEvent(tx, { eventType: 'share.matched', aggregateType: 'share', aggregateId: g.id, aggregateVersion: 2, correlationId: h.id, payload: { mode: 'PREBOOK' } });
@@ -362,6 +380,16 @@ export async function expireShares(now: Date = new Date()): Promise<number> {
 // ---------------------------------------------------------------------------------------------
 // PREBOOK: match two pre-bookings
 // ---------------------------------------------------------------------------------------------
+
+type PickDrop = { pickupLat: number; pickupLng: number; dropoffLat: number; dropoffLng: number };
+/** A pair's stops; both pickups at the same airport become its one meeting point (no 2nd stop, same time). */
+function pairPoints(h: PickDrop, g: PickDrop) {
+  const meet = sharedMeetPoint(pt(h.pickupLat, h.pickupLng), pt(g.pickupLat, g.pickupLng));
+  return {
+    Hp: meet ? pt(meet.lat, meet.lng) : pt(h.pickupLat, h.pickupLng), Hd: pt(h.dropoffLat, h.dropoffLng),
+    Gp: meet ? pt(meet.lat, meet.lng) : pt(g.pickupLat, g.pickupLng), Gd: pt(g.dropoffLat, g.dropoffLng),
+  };
+}
 
 export async function matchPrebookings(now: Date = new Date()): Promise<number> {
   const settings = await getSettings();
@@ -400,7 +428,7 @@ export async function matchPrebookings(now: Date = new Date()): Promise<number> 
       if (g.scheduledAt!.getTime() - h.scheduledAt!.getTime() > (waitMin(h) + 180) * MIN) break;
       const seats = settings.classes.find((c) => c.key === h.vClass)?.maxPassengers ?? 4;
       if (!shareFits(h, g, seats, S().luggage[h.vClass])) continue;
-      const pts = { Hp: pt(h.pickupLat, h.pickupLng), Hd: pt(h.dropoffLat, h.dropoffLng), Gp: pt(g.pickupLat, g.pickupLng), Gd: pt(g.dropoffLat, g.dropoffLng) };
+      const pts = pairPoints(h, g);
       const timing = prebookTiming(h.scheduledAt!, g.scheduledAt!, approxLegMin(pts.Hp, pts.Gp), waitMin(h) + 5, waitMin(g) + 5);
       const plan = timing && bestPrebookPlan(pts, approxLegMin, { hostMaxExtra: maxExtra(h) + 5, guestMaxExtra: maxExtra(g) + 5 });
       if (timing && plan) pre.push({ g, plan, timing });
@@ -408,7 +436,7 @@ export async function matchPrebookings(now: Date = new Date()): Promise<number> 
     pre.sort((a, b) => a.plan.extraHost + a.plan.extraGuest - (b.plan.extraHost + b.plan.extraGuest));
     let best: Pick | null = null;
     for (const c of pre.slice(0, 3)) {
-      const pts = { Hp: pt(h.pickupLat, h.pickupLng), Hd: pt(h.dropoffLat, h.dropoffLng), Gp: pt(c.g.pickupLat, c.g.pickupLng), Gd: pt(c.g.dropoffLat, c.g.dropoffLng) };
+      const pts = pairPoints(h, c.g);
       // Road time with the traffic expected at the ride's own time.
       const { result, routed } = await planWithRoads((leg) => {
         const timing = prebookTiming(h.scheduledAt!, c.g.scheduledAt!, leg(pts.Hp, pts.Gp), waitMin(h), waitMin(c.g));

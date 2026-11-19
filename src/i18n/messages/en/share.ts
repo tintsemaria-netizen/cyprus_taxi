@@ -27,6 +27,7 @@ const share = {
     arriveAt: "You arrive at ~{time}",
     departAt: "Car leaves at {time} — you wait {n} min",
     pickupAt: "The car picks you up at ~{time}",
+    meetAt: "📍 Meeting point: {place}",
     approx: "approximate",
     hide: "Hide",
     answer: "Answer",

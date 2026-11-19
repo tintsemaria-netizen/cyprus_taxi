@@ -6,7 +6,7 @@ import { useT } from '@/i18n/I18nProvider';
 
 // Ride-share «Попутчик» for the passenger (Task 022).
 export interface CoRiderCounts { adults: number; children: number; luggage: number }
-interface ShareTiming { arriveAt: string | null; pickupAt: string | null; waitMin: number; approx: boolean }
+interface ShareTiming { arriveAt: string | null; pickupAt: string | null; waitMin: number; approx: boolean; meetLabel?: string | null }
 export interface ShareProposalView extends ShareTiming { groupId: string; mode: string; expiresAt: string; extraMin: number; fullFareCents: number; newFareCents: number; coRider: CoRiderCounts }
 export interface SharedView extends ShareTiming { status: string; discountPct: number; fullFareCents: number; fareCents: number; extraMin?: number; coRider: CoRiderCounts }
 
@@ -24,6 +24,7 @@ function TimingLines({ s, isPrebook }: { s: ShareTiming; isPrebook: boolean }) {
           {s.waitMin > 0 ? t('share.proposal.departAt', { time: when(s.pickupAt), n: s.waitMin }) : t('share.proposal.pickupAt', { time: when(s.pickupAt) })}
         </p>
       )}
+      {isPrebook && s.meetLabel && <p className="mt-1 text-sm font-medium" data-testid="share-meet">{t('share.proposal.meetAt', { place: s.meetLabel })}</p>}
       {s.arriveAt && (
         <p className="mt-1 text-sm font-medium">
           {t('share.proposal.arriveAt', { time: when(s.arriveAt) })}{s.approx && <span className="text-xs font-normal text-muted"> · {t('share.proposal.approx')}</span>}
