@@ -3,7 +3,7 @@ import { isPairBlocked } from './blocked-pairs';
 import { Prisma } from '@prisma/client';
 import { config } from '@/lib/config';
 import { createAssignment } from '@/server/assignments';
-import { enqueueDriver, enqueuePassenger, offerBody } from '@/server/push';
+import { enqueueDriver, offerBody, enqueuePassengerDriverNews } from '@/server/push';
 import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events';
 import type { Candidate } from './eligibility';
 import { canWork } from '@/lib/eligibility-policy';
@@ -133,7 +133,7 @@ export async function acceptOffer(offerId: string, driverId: string): Promise<Of
         payload: { bookingId: booking.id, status: 'EN_ROUTE', actorType: 'DRIVER', reason: 'auto on accept' },
       });
       await tx.dispatchJob.deleteMany({ where: { bookingId: booking.id } });
-      await enqueuePassenger(tx, booking.id, 'Driver assigned', 'A driver is on the way — track them live.');
+      await enqueuePassengerDriverNews(tx, booking.id, 'assigned', 'Driver assigned', 'A driver is on the way — track them live.');
       // A pre-booked ride-share pair (Task 022): the co-rider joins the same car.
       await attachMatchedGuestTx(tx, booking.id);
       acceptedBookingId = booking.id;

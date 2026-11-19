@@ -5,7 +5,7 @@ import { getSettings } from '@/lib/settings';
 import { haversineMeters, type LatLng } from '@/lib/geo';
 import { isShareRoute, sharedCents, approxLegMin, bestSharePlan, bestPrebookPlan, shareFits, prebookTiming, STOP_OF, type SharePlan, type LegFn } from '@/lib/share';
 import { googleConfigured, googleRoute } from '@/server/google';
-import { enqueueDriver, enqueuePassenger } from '@/server/push';
+import { enqueueDriver, enqueuePassenger, enqueuePassengerDriverNews } from '@/server/push';
 import { recordEvent, driverPseudo } from '@/server/events';
 import { stopSearchTx } from '@/server/dispatch/search';
 
@@ -465,7 +465,7 @@ export async function attachMatchedGuestTx(tx: Tx, hostId: string): Promise<bool
   await tx.booking.update({ where: { id: guest.id }, data: { status: 'ASSIGNED', revision: { increment: 1 } } });
   await tx.bookingEvent.create({ data: { bookingId: guest.id, type: 'SHARE_ASSIGNED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'ASSIGNED' } });
   await tx.shareGroup.update({ where: { id: g.id }, data: { status: 'ACCEPTED', driverId: hostAsg.driverId } });
-  await enqueuePassenger(tx, guest.id, 'Driver assigned', `${hostAsg.driverPublicName.split(' ')[0]} is assigned to your shared ride — track them live.`);
+  await enqueuePassengerDriverNews(tx, guest.id, 'assigned', 'Driver assigned', `${hostAsg.driverPublicName.split(' ')[0]} is assigned to your shared ride — track them live.`);
   return true;
 }
 

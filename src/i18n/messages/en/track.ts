@@ -22,7 +22,7 @@ const track = {
   meetDriver: 'Meet {name}',
   meetDriverEta: 'Meet {name} — {eta}',
   pillEnRoute: 'DRIVER ON THE WAY',
-  scheduledNote: 'Scheduled request — we’ll dispatch a driver near your pickup time.',
+  scheduledNote: "Please wait — we’ll notify you when a driver is assigned.",
   searchingNote: 'Matching you with the nearest available driver…',
   noDriverNote: 'No drivers are free nearby right now. You can search again.',
   reserving: 'Reserving the nearest driver for you…',

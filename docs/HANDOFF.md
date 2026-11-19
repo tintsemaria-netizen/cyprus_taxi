@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-19 — Pre-booked rides: calmer text, one «driver assigned» notice, no «Новый заказ» (deployed)
+
+- track.scheduledNote (8 languages): «Ожидайте — мы уведомим вас, когда будет назначен водитель.» «＋ Новый заказ» removed from the scheduled ride screen.
+- `enqueuePassengerDriverNews(db, bookingId, 'assigned'|'change', …)` in src/server/push.ts: rides booked NOW unchanged; pre-booked rides get ONE driver notice (marker BookingEvent `PASSENGER_TOLD_DRIVER`), driver changes (released / lapsed / re-matched / converted again) are silent. Used in preassign, offers, free-orders, assignments, lifecycle rematch, share guest join.
+- Ride-share notices (co-rider proposal, joins, cancels/no-show, pair split) unchanged. Passengers cannot change a pre-booking's time themselves yet, so there is no «co-rider moved their time» event to notify.
+- tests/prebook-driver-news.db.test.ts; preassign test now expects no lapse notice. vitest 313 passed.
 ## 2026-11-19 — Ride-share pair details (deployed via main)
 
 - Driver pre-booking detail for a pair (src/server/share-detail.ts): numbered stops on the map in trip order with the route through all of them; per stop: passenger 1/2, pickup/drop-off, approximate address (no house number, position on a ~150 m grid; exact ones open with the ride), planned time, people/children/suitcases and that passenger's price; time + km to the next stop; totals (people, suitcases, km, minutes, extra minutes, sum). Board and accepted list also show approximate addresses for pairs.

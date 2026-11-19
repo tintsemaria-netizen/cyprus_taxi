@@ -30,7 +30,7 @@ const track: Catalog<typeof en> = {
   meetDriver: "Retrouvez {name}",
   meetDriverEta: "Retrouvez {name} — {eta}",
   pillEnRoute: "CHAUFFEUR EN ROUTE",
-  scheduledNote: "Demande programmée — nous enverrons un chauffeur peu avant l’heure de prise en charge.",
+  scheduledNote: "Patientez — nous vous préviendrons dès qu’un chauffeur sera attribué.",
   searchingNote: "Recherche du chauffeur disponible le plus proche…",
   noDriverNote: "Aucun chauffeur libre à proximité pour le moment. Vous pouvez relancer la recherche.",
   reserving: "Réservation du chauffeur le plus proche…",

@@ -5,7 +5,7 @@ import { config } from '@/lib/config';
 import { haversineMeters } from '@/lib/geo';
 import { canWork } from '@/lib/eligibility-policy';
 import { createAssignment } from '@/server/assignments';
-import { enqueuePassenger } from '@/server/push';
+import { enqueuePassengerDriverNews } from '@/server/push';
 import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events';
 import { protectedDriverIds } from './preassign-core';
 import { googleConfigured, googleRoute } from '@/server/google';
@@ -182,7 +182,7 @@ export async function claimFreeOrder(bookingId: string, driverId: string, now: D
         correlationId: booking.id,
         payload: { bookingId: booking.id, status: 'EN_ROUTE', actorType: 'DRIVER', reason: 'auto on claim' },
       });
-      await enqueuePassenger(tx, booking.id, 'Driver found', 'A driver took your ride and is on the way — track them live.');
+      await enqueuePassengerDriverNews(tx, booking.id, 'assigned', 'Driver found', 'A driver took your ride and is on the way — track them live.');
       return { ok: true, status: enRoute.status, revision: enRoute.revision };
     });
   } catch (e) {

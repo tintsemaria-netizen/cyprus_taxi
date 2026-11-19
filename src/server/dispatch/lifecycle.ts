@@ -9,7 +9,7 @@ import { computeFreshness } from '@/lib/freshness';
 import { haversineMeters } from '@/lib/geo';
 import { isAirportPoint } from '@/lib/airports';
 import { startSearchTx } from './search';
-import { enqueuePassenger } from '@/server/push';
+import { enqueuePassenger, enqueuePassengerDriverNews } from '@/server/push';
 import { recordEvent, driverPseudo } from '@/server/events';
 import { afterLegEndedTx, legCompletedTx, leaveShareTx, noShowFeeCents } from '@/server/share';
 import { gpsMeterFor } from '@/server/gps-meter';
@@ -313,7 +313,7 @@ export async function rematchBooking(
   const ub = await tx.booking.update({ where: { id: bookingId }, data: { status: 'SEARCHING', arrivedAt: null, revision: { increment: 1 } } });
   await tx.bookingEvent.create({ data: { bookingId, type: 'REMATCH', actorType, actorId: actorType === 'DRIVER' ? excludeDriverId : undefined, afterStatus: 'SEARCHING', reason } });
   await recordEvent(tx, { eventType: 'booking.rematch', aggregateType: 'booking', aggregateId: bookingId, aggregateVersion: ub.revision, correlationId: bookingId, payload: { bookingId, status: 'SEARCHING', actorType, excludeDriverPseudo: driverPseudo(excludeDriverId), reason } });
-  await enqueuePassenger(tx, bookingId, 'Finding you another driver', 'Your previous driver became unavailable — we’re matching you again.');
+  await enqueuePassengerDriverNews(tx, bookingId, 'change', 'Finding you another driver', 'Your previous driver became unavailable — we’re matching you again.');
 }
 
 // Driver cancels before pickup → automatic rematch (not a terminal cancel).

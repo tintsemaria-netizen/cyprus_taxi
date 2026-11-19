@@ -5,7 +5,7 @@ import { config } from '@/lib/config';
 import { canWork } from '@/lib/eligibility-policy';
 import { isAirportPoint } from '@/lib/airports';
 import { createAssignment } from '@/server/assignments';
-import { enqueueDriver, enqueuePassenger } from '@/server/push';
+import { enqueueDriver, enqueuePassengerDriverNews } from '@/server/push';
 import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events';
 import { stopSearchTx } from './search';
 import { endPreAssignmentTx, protectedDriverIds } from './preassign-core';
@@ -171,7 +171,7 @@ export async function claimScheduled(driverId: string, bookingId: string, now: D
       const pa = await tx.preAssignment.create({ data: { bookingId, driverId, vehicleId: vehicle.id, pickupAt: b.scheduledAt, activeBookingId: bookingId } });
       await tx.bookingEvent.create({ data: { bookingId, type: 'PREASSIGNED', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED' } });
       await recordEvent(tx, { eventType: 'preassign.committed', aggregateType: 'preassign', aggregateId: pa.id, aggregateVersion: 1, correlationId: bookingId, payload: { bookingId, driverPseudo: driverPseudo(driverId), minutesAhead: Math.round((t - now.getTime()) / MIN) } });
-      await enqueuePassenger(tx, bookingId, 'Driver confirmed', `${driver.publicName.split(' ')[0]} will pick you up ${timeLabel(b.scheduledAt)}.`);
+      await enqueuePassengerDriverNews(tx, bookingId, 'assigned', 'Driver confirmed', `${driver.publicName.split(' ')[0]} will pick you up ${timeLabel(b.scheduledAt)}.`);
       return { ok: true, status: 'COMMITTED' };
     });
   } catch (e) {
@@ -188,7 +188,7 @@ export async function releaseScheduled(driverId: string, bookingId: string, now:
     const late = pa.pickupAt.getTime() - now.getTime() < config.dispatch.preassign.lateReleaseMinutes * MIN;
     await endPreAssignmentTx(tx, bookingId, 'RELEASED', late ? 'driver released late' : 'driver released');
     await tx.bookingEvent.create({ data: { bookingId, type: 'PREASSIGN_RELEASED', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED', reason: late ? 'late release' : null } });
-    await enqueuePassenger(tx, bookingId, 'Driver change', 'Your confirmed driver can no longer make it. We will find you another driver automatically before pickup.');
+    await enqueuePassengerDriverNews(tx, bookingId, 'change', 'Driver change', 'Your confirmed driver can no longer make it. We will find you another driver automatically before pickup.');
     return { ok: true, status: late ? 'RELEASED_LATE' : 'RELEASED' };
   });
 }
@@ -231,7 +231,7 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
     const lapse = async (why: string, passengerMsg: string, driverMsg: string) => {
       await endPreAssignmentTx(tx, bookingId, 'LAPSED', why, { notifyDriver: driverMsg });
       await tx.bookingEvent.create({ data: { bookingId, type: 'PREASSIGN_LAPSED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED', reason: why } });
-      await enqueuePassenger(tx, bookingId, 'Finding you a driver', passengerMsg);
+      await enqueuePassengerDriverNews(tx, bookingId, 'change', 'Finding you a driver', passengerMsg);
       return 'lapsed' as const;
     };
 
@@ -266,7 +266,7 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
     await recordEvent(tx, { eventType: 'booking.assigned', aggregateType: 'booking', aggregateId: bookingId, aggregateVersion: u.revision, correlationId: bookingId, payload: { ...bookingEventPayload({ ...b, status: 'ASSIGNED' }), driverPseudo: driverPseudo(pa.driverId), preassigned: true } });
     await endPreAssignmentTx(tx, bookingId, 'CONVERTED', 'converted to assignment');
     await attachMatchedGuestTx(tx, bookingId); // ride-share pair: the co-rider joins the same car
-    await enqueuePassenger(tx, bookingId, 'Driver assigned', `${driver.publicName.split(' ')[0]} is assigned to your ride — track them live.`);
+    await enqueuePassengerDriverNews(tx, bookingId, 'assigned', 'Driver assigned', `${driver.publicName.split(' ')[0]} is assigned to your ride — track them live.`);
     await enqueueDriver(tx, pa.driverId, 'Pre-booked ride is now active', `Pickup ${timeLabel(pa.pickupAt)} at ${b.pickupLabel}. Head to the pickup in time.`, { tag: `pre-${bookingId}` });
     return 'converted';
   });

@@ -160,7 +160,8 @@ describe('conversion near pickup', () => {
     await promoteScheduled(new Date());
     expect((await prisma.booking.findUnique({ where: { id: b.id } }))!.status).toBe('SEARCHING');
     expect(await prisma.dispatchJob.findUnique({ where: { bookingId: b.id } })).not.toBeNull();
-    expect(await prisma.notificationOutbox.count({ where: { audience: `PASSENGER:${b.id}`, title: 'Finding you a driver' } })).toBe(1);
+    // Pre-booked ride: driver changes are not announced to the passenger (2026-11-19, operator).
+    expect(await prisma.notificationOutbox.count({ where: { audience: `PASSENGER:${b.id}`, title: 'Finding you a driver' } })).toBe(0);
   });
 
   it('an offline driver at the cutoff lapses too', async () => {

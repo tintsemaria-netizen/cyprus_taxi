@@ -108,6 +108,22 @@ export async function enqueuePassenger(db: Db, bookingId: string, title: string,
   const { enqueue } = await import('@/server/outbox');
   await enqueue(db, { audience: `PASSENGER:${bookingId}`, title, body, url: opts?.url ?? '/track', tag: opts?.tag ?? `ride-${bookingId}`, dedupeKey: opts?.dedupeKey });
 }
+/**
+ * Driver news for the passenger (2026-11-19, operator). Rides booked NOW: sent as before. Pre-booked
+ * rides: the passenger hears ONCE that a driver is assigned; later driver changes (released, lapsed,
+ * re-matched, converted) are not announced — the ride screen always shows the current driver.
+ * Ride-share news (co-rider joins / cancels) is sent separately and is not affected.
+ */
+export async function enqueuePassengerDriverNews(db: Db, bookingId: string, kind: 'assigned' | 'change', title: string, body: string): Promise<void> {
+  const b = await db.booking.findUnique({ where: { id: bookingId }, select: { scheduledAt: true } });
+  if (!b) return;
+  if (!b.scheduledAt) return enqueuePassenger(db, bookingId, title, body);
+  if (kind === 'change') return;
+  const told = await db.bookingEvent.findFirst({ where: { bookingId, type: 'PASSENGER_TOLD_DRIVER' }, select: { id: true } });
+  if (told) return;
+  await db.bookingEvent.create({ data: { bookingId, type: 'PASSENGER_TOLD_DRIVER', actorType: 'SYSTEM' } });
+  await enqueuePassenger(db, bookingId, title, body);
+}
 export async function enqueueDriver(db: Db, driverId: string, title: string, body: string, opts?: { tag?: string; url?: string; offerId?: string | null; dedupeKey?: string }): Promise<void> {
   const d = await db.driver.findUnique({ where: { id: driverId }, select: { userId: true } });
   if (!d) return;

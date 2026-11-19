@@ -4,7 +4,7 @@ import { canTransition, isTerminal, PASSENGER_CANCELABLE } from '@/lib/status-ma
 import { computeFreshness } from '@/lib/freshness';
 import { canWork } from '@/lib/eligibility-policy';
 import { recordEvent, driverPseudo } from '@/server/events';
-import { enqueueDriver, enqueuePassenger } from '@/server/push';
+import { enqueueDriver, enqueuePassengerDriverNews } from '@/server/push';
 import { startSearchTx, stopSearchTx } from '@/server/dispatch/search';
 import { endPreAssignmentTx } from '@/server/dispatch/preassign-core';
 import { afterLegEndedTx, leaveShareTx } from '@/server/share';
@@ -196,7 +196,7 @@ export async function unassignBooking(params: {
       data: { bookingId: booking.id, type: 'UNASSIGNED', actorType: 'STAFF', actorId: params.actorId, beforeStatus: booking.status, afterStatus: next, reason: params.reason },
     });
     await recordEvent(tx, { eventType: 'booking.unassigned', aggregateType: 'booking', aggregateId: booking.id, aggregateVersion: updated.revision, correlationId: booking.id, payload: { bookingId: booking.id, status: next, actorType: 'STAFF', reason: params.reason ?? null } });
-    if (next === 'SEARCHING') await enqueuePassenger(tx, booking.id, 'Finding you another driver', 'Your driver was changed — we’re matching you again.');
+    if (next === 'SEARCHING') await enqueuePassengerDriverNews(tx, booking.id, 'change', 'Finding you another driver', 'Your driver was changed — we’re matching you again.');
     return { revision: updated.revision, status: updated.status };
   });
 }
