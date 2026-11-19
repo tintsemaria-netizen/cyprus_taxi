@@ -54,6 +54,8 @@ interface Props {
   fleet?: { lat: number; lng: number; stale?: boolean; state?: 'available' | 'busy' }[];
   /** Driver's map (2026-11-19): other cars drawn like the driver's own car, lighter and 35 % smaller. */
   fleetLikeSelf?: boolean;
+  /** Route line width in px (default 7; driver navigation 8 = +15 %, 2026-11-19). */
+  routeWidth?: number;
   focus?: { lat: number; lng: number } | null; // zoom the map to this point (e.g. the user's location)
   // Navigation camera (see GoogleMapView): centred, heading-up, tilted; suspends auto-fit.
   follow?: { lat: number; lng: number; heading: number; zoom?: number; tilt?: number } | null;
@@ -91,7 +93,7 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], fleetLikeSelf, focus, focusZoom: focusZoomProp, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], fleetLikeSelf, routeWidth = 7, focus, focusZoom: focusZoomProp, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
   const focusZoom = focusZoomProp ?? 15;
   // Re-frame / re-centre when the visible area changes (e.g. the sheet under the map grew or shrank).
   const padKey = fitPadding ? `${fitPadding.top},${fitPadding.right},${fitPadding.bottom},${fitPadding.left}` : '';
@@ -292,10 +294,10 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         source: id,
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         // Bold line with rounded bends (2026-11-17).
-        paint: { 'line-color': '#C8FF46', 'line-width': 7, 'line-opacity': 0.95 },
+        paint: { 'line-color': '#C8FF46', 'line-width': routeWidth, 'line-opacity': 0.95 },
       });
     }
-  }, [route, ready]);
+  }, [route, ready, routeWidth]);
 
   if (failed) {
     return (

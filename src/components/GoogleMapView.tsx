@@ -38,6 +38,8 @@ interface Props {
   fleet?: { lat: number; lng: number; stale?: boolean; state?: 'available' | 'busy' }[];
   /** Driver's map (2026-11-19): other cars drawn like the driver's own car, lighter and 35 % smaller. */
   fleetLikeSelf?: boolean;
+  /** Route line width in px (default 7; driver navigation 8 = +15 %, 2026-11-19). */
+  routeWidth?: number;
   // Zoom the map to this point (e.g. the passenger's detected location), padding-aware.
   focus?: { lat: number; lng: number } | null;
   // Navigation camera: keep this point centred, rotated to `heading` (heading-up), with tilt.
@@ -109,7 +111,7 @@ function markerEl(mk: MapMarker): HTMLElement {
   return centerOnPoint(el);
 }
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], fleetLikeSelf, focus, focusZoom, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], fleetLikeSelf, routeWidth = 7, focus, focusZoom, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const lastUpd = useRef(new Map<string, number>());
@@ -457,11 +459,11 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
         path: shownRoute.map(([lng, lat]) => ({ lat, lng })),
         strokeColor: '#C8FF46',
         strokeOpacity: 0.95,
-        strokeWeight: 7,
+        strokeWeight: routeWidth,
         map,
       });
     }
-  }, [shownRoute, ready]);
+  }, [shownRoute, ready, routeWidth]);
 
   if (failed) {
     return (

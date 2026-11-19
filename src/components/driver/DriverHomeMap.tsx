@@ -67,7 +67,7 @@ export function DriverHomeMap({ pos, fullscreen = false, onCounts, pickup = null
   if (fullscreen) {
     return (
       <div className="fixed inset-0 z-0">
-        <AutoMapView markers={markers} route={pickup ? route : undefined} fitRoute={!!pickup} fleet={pickup ? [] : fleet} fleetLikeSelf focus={pickup ? null : pos} focusZoom={13.77} center={pos ?? CYPRUS} zoom={pos ? 13.77 : 8} interactive idleReturnMs={4000} fitPadding={fitPadding} className="h-full w-full" />
+        <AutoMapView markers={markers} route={pickup ? route : undefined} fitRoute={!!pickup} fleet={pickup ? [] : fleet} fleetLikeSelf routeWidth={8} focus={pickup ? null : pos} focusZoom={13.77} center={pos ?? CYPRUS} zoom={pos ? 13.77 : 8} interactive idleReturnMs={4000} fitPadding={fitPadding} className="h-full w-full" />
       </div>
     );
   }

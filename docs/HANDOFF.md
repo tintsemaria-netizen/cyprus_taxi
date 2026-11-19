@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-19 — Driver arrow ring back; route line +15 % on driver maps (deployed)
+
+- navArrowEl: white ring (`.ily-nav-ring`, 66 % of the marker, orange tint, white 3 px border, shadow) restored on request; pulse while standing unchanged.
+- New `routeWidth` prop (GoogleMapView/MapView, default 7); DriverNavigation and DriverHomeMap (offer route to the pickup) use 8 (= +15 %). Passenger maps stay 7.
+
 ## 2026-11-19 — GPS taximeter (deployed 2026-11-19 via main)
 
 - Why: a test ride Limassol → LCA at night: app 80.04 € (= estimate 4.80 + 68.4 km × 1.10, the app never measured the ride) vs the car's taximeter 85.23 € (≈ 73.1 km). Operator: «фактический таксометр будет считать правильнее» — show a GPS meter to compare.
