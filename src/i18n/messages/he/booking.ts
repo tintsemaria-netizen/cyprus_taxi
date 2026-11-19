@@ -75,6 +75,8 @@ const booking: Catalog<typeof en> = {
     airportNote: "נסיעה לשדה תעופה: חלים מחירים קבועים רשמיים. הנהג גובה את המחיר הרשמי, שעשוי להיות שונה מההערכה.",
   },
   contact: {
+    verifyPhone: 'אימות טלפון ב-SMS',
+    verifyHint: 'הטלפון נדרש כדי שהנהג יוכל להתקשר. נשלח קוד.',
     driverAsksFor: "הנהג ישאל על",
     namePlaceholder: "השם שלכם",
     callYou: "הנהג יכול להתקשר למספר המאומת שלכם {phone}.",

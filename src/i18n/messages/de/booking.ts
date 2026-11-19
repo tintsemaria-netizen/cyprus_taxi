@@ -75,6 +75,8 @@ const booking: Catalog<typeof en> = {
     airportNote: "Flughafenfahrt: Es gelten offizielle Festpreise für Flughäfen. Der Fahrer berechnet den offiziellen Preis, der von dieser Schätzung abweichen kann.",
   },
   contact: {
+    verifyPhone: 'Telefon per SMS bestätigen',
+    verifyHint: 'Ihre Nummer wird gebraucht, damit der Fahrer Sie anrufen kann. Wir senden einen Code.',
     driverAsksFor: "Der Fahrer fragt nach",
     namePlaceholder: "Ihr Name",
     callYou: "Der Fahrer kann Sie unter Ihrer bestätigten Nummer {phone} anrufen.",

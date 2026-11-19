@@ -39,10 +39,14 @@ export async function POST(req: Request) {
   } catch {
     return Errors.validation({ _: 'Invalid JSON body.' });
   }
-  // Guest ordering (PASSENGER_TEST_MODE only): name and phone are optional.
-  if (testMode && raw && typeof raw === 'object') {
+  // An empty contact phone means «none» (the account's verified phone is used); guest ordering
+  // (PASSENGER_TEST_MODE only) also makes the name optional.
+  if (raw && typeof raw === 'object') {
     const r = raw as Record<string, unknown>;
     if (!r.phone || (typeof r.phone === 'string' && !r.phone.trim())) delete r.phone;
+  }
+  if (testMode && raw && typeof raw === 'object') {
+    const r = raw as Record<string, unknown>;
     if (!r.passengerName || (typeof r.passengerName === 'string' && !r.passengerName.trim())) r.passengerName = 'Guest';
   }
   const parsed = createGuestBookingSchema.safeParse(raw) // phone optional: the account's verified phone is used;

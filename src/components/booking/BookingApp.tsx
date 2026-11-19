@@ -636,7 +636,8 @@ export default function BookingApp() {
     else if (noRoute) e.dropoff = t('errors.NO_ROUTE' as MsgKey);
     if (passenger && !passenger.guest && !cfg?.passenger?.testMode && !name.trim()) e.name = t('booking.validation.name');
     // Email-only accounts have no verified phone: the contact number is entered per booking.
-    if (passenger && !passenger.guest && !passenger.phone && !/^\+?[\d\s()-]{7,20}$/.test(phone.trim())) e.phone = t('booking.validation.phone');
+    // Only passenger test mode takes a typed contact phone; otherwise the account phone is confirmed by SMS (launch fixes §4).
+    if (cfg?.passenger?.testMode && passenger && !passenger.guest && !passenger.phone && !/^\+?[\d\s()-]{7,20}$/.test(phone.trim())) e.phone = t('booking.validation.phone');
     if (when === 'SCHEDULE' && !scheduledAt) e.scheduledAt = t('booking.validation.scheduledAt');
     if (effPax < 1 || effPax > maxPax) e.pax = tp('booking.validation.paxRange', maxPax);
     setErrors(e);
@@ -1170,6 +1171,12 @@ export default function BookingApp() {
                         {errors.name && <p className="mt-1 text-xs text-danger">{errors.name}</p>}
                         {passenger.phone ? (
                           <p className="mt-2 text-xs text-muted">{withSlot(t('booking.contact.callYou'), 'phone', <span className="text-ink">{passenger.phone}</span>)}</p>
+                        ) : !cfg?.passenger?.testMode ? (
+                          /* Launch fixes §4: a real order needs the account phone confirmed by SMS (kept on THIS account). */
+                          <div className="mt-3">
+                            <p className="text-xs text-muted">{t('booking.contact.verifyHint')}</p>
+                            <button type="button" data-testid="verify-phone" onClick={() => { setAttachPhone(true); setShowLogin(true); }} className="btn-ghost mt-2 w-full">{t('booking.contact.verifyPhone')}</button>
+                          </div>
                         ) : (
                           <>
                             <label className="label mt-3 block" htmlFor="bk-phone">{t('booking.contact.phoneLabel')}</label>

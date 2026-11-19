@@ -75,6 +75,8 @@ const booking: Catalog<typeof en> = {
     airportNote: "رحلة مطار: تُطبَّق أسعار المطار الرسمية الثابتة. يتقاضى السائق السعر الرسمي، وقد يختلف عن هذا التقدير.",
   },
   contact: {
+    verifyPhone: 'تأكيد الهاتف عبر SMS',
+    verifyHint: 'نحتاج رقمك ليتصل بك السائق. سنرسل رمزاً.',
     driverAsksFor: "سيسأل السائق عن",
     namePlaceholder: "اسمك",
     callYou: "يمكن للسائق الاتصال بك على رقمك المؤكد {phone}.",

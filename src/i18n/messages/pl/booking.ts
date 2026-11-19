@@ -75,6 +75,8 @@ const booking: Catalog<typeof en> = {
     airportNote: "Przejazd na lotnisko: obowiązują oficjalne stałe stawki lotniskowe. Kierowca pobiera oficjalną stawkę, która może różnić się od tej wyceny.",
   },
   contact: {
+    verifyPhone: 'Potwierdź telefon SMS-em',
+    verifyHint: 'Telefon jest potrzebny, by kierowca mógł zadzwonić. Wyślemy kod.',
     driverAsksFor: "Kierowca zapyta o",
     namePlaceholder: "Twoje imię",
     callYou: "Kierowca może zadzwonić na Twój zweryfikowany numer {phone}.",

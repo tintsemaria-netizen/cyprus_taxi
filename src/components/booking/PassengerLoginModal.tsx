@@ -62,8 +62,8 @@ export function PassengerLoginModal({ onDone, onClose, sms = true, attach = fals
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-4 sm:items-center sm:pb-0" onClick={onClose}>
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="plm-title" className="card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
-        <h2 id="plm-title" className="text-lg font-bold">{t('auth.modal.title')}</h2>
-        <p className="mt-1 text-sm text-muted">{t('auth.modal.subtitle')}</p>
+        <h2 id="plm-title" className="text-lg font-bold">{attach ? t('booking.contact.verifyPhone') : t('auth.modal.title')}</h2>
+        <p className="mt-1 text-sm text-muted">{attach ? t('booking.contact.verifyHint') : t('auth.modal.subtitle')}</p>
 
         {sms && !attach && <div className="mt-4 flex gap-1 rounded-[12px] border border-edge bg-elevated p-1" role="tablist" aria-label={t('auth.modal.methodLabel')}>
           {(['email', 'phone'] as const).map((m) => (
@@ -86,7 +86,7 @@ export function PassengerLoginModal({ onDone, onClose, sms = true, attach = fals
           </form>
         ) : stage === 'phone' ? (
           <div className="mt-4 space-y-3">
-            <div><label className="label" htmlFor="plm-name">{t('auth.modal.nameOptional')}</label><input id="plm-name" className="field mt-1" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} /></div>
+            {!attach && <div><label className="label" htmlFor="plm-name">{t('auth.modal.nameOptional')}</label><input id="plm-name" className="field mt-1" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} /></div>}
             <div><label className="label" htmlFor="plm-phone">{t('auth.modal.phoneIntl')}</label><input id="plm-phone" className="field mt-1" placeholder="+35799123456" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" /></div>
             <button className="btn-primary w-full" disabled={busy || !phone} onClick={req}>{busy ? t('auth.sending') : t('auth.modal.sendCode')}</button>
           </div>

@@ -62,6 +62,8 @@ const booking = {
     airportNote: 'Airport trip: official fixed airport fares apply. The driver charges the official fare, which may differ from this estimate.',
   },
   contact: {
+    verifyPhone: 'Confirm phone by SMS',
+    verifyHint: "Your phone is needed so the driver can call you. We'll send a code.",
     driverAsksFor: 'Driver will ask for',
     namePlaceholder: 'Your name',
     callYou: 'The driver can call you on your verified number {phone}.',

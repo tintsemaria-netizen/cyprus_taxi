@@ -99,7 +99,8 @@ describe('§4 verified passenger phone (commercial mode)', () => {
     expect(after?.phone).toBe(phone);
     expect(after?.phoneVerifiedAt).not.toBeNull();
     expect(await prisma.passenger.count({ where: { phone } })).toBe(1);
-    expect((await book()).status).toBe(201);
+    // The app re-sends the same order with an empty contact field — accepted, account phone used.
+    expect((await book({ ...BODY, phone: '' })).status).toBe(201);
     expect(await prisma.booking.count({ where: { passengerId: p.id } })).toBe(1);
   });
 

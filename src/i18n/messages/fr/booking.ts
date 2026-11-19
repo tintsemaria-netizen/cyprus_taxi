@@ -75,6 +75,8 @@ const booking: Catalog<typeof en> = {
     airportNote: "Course aéroport : des tarifs fixes officiels s’appliquent. Le chauffeur applique le tarif officiel, qui peut différer de cette estimation.",
   },
   contact: {
+    verifyPhone: 'Confirmer le téléphone par SMS',
+    verifyHint: 'Votre numéro permet au chauffeur de vous appeler. Nous envoyons un code.',
     driverAsksFor: "Le chauffeur demandera",
     namePlaceholder: "Votre nom",
     callYou: "Le chauffeur peut vous appeler au numéro vérifié {phone}.",
