@@ -1,7 +1,7 @@
 # Session handoff
 
 ## 2026-11-19 — Quiet turn hint back; no ring; notices auto-hide (branch `nav-hint`, NOT merged)
-- DriverNavigation: the manoeuvre/status content is back as a small dark see-through card top-left (`nav-hint`, 55 % background — user asked a bit more transparent): lime manoeuvre icon, distance 17 px, instruction 12 px muted; also needGps / rerouting / unavailable + Google Maps / arrived states.
+- DriverNavigation: the manoeuvre/status content is back as a small dark see-through card top-left (`nav-hint`, 30 % background + text shadow — user asked twice for more transparency): lime manoeuvre icon, distance 17 px, instruction 12 px muted; also needGps / rerouting / unavailable + Google Maps / arrived states.
 - navArrowEl: white ring removed; orange pulse only while standing (ily-moving hides it).
 - driver/page: `banner` notices (e.g. OFFER_EXPIRED «Срок предложения истёк» after tapping «Взять заказ» too late) auto-hide after 6 s.
 - Waiting for «заливай».
