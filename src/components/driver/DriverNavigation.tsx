@@ -274,32 +274,32 @@ export function DriverNavigation(props: {
       {/* Map */}
       <div className="relative min-h-0 flex-1" data-nav-zoom={navZoom}>
         {/* Turn hint (2026-11-19): back, but quiet — a small dark see-through card in the top-left
-            corner instead of the bright full-width bar. */}
-        <div className="pointer-events-auto absolute start-3 top-3 z-10 max-w-[70%] rounded-[14px] border border-white/[0.08] bg-[#10191C]/30 px-3 py-2 text-ink [text-shadow:0_1px_3px_rgba(0,0,0,.85)] nav-hint-card" aria-live="polite" data-testid="nav-hint">
+            corner instead of the bright full-width bar. 20 % larger since 2026-11-19 (operator). */}
+        <div className="pointer-events-auto absolute start-3 top-3 z-10 max-w-[78%] rounded-[17px] border border-white/[0.08] bg-[#10191C]/30 px-3.5 py-2.5 text-ink [text-shadow:0_1px_3px_rgba(0,0,0,.85)] nav-hint-card" aria-live="polite" data-testid="nav-hint">
         {atStop && stop ? (
-          <div><div className="text-[15px] font-bold">{t('driver.stop.atStop')}</div><div className="truncate text-[12px] text-muted">{stop.label}</div></div>
+          <div><div className="text-[18px] font-bold">{t('driver.stop.atStop')}</div><div className="truncate text-[14.5px] text-muted">{stop.label}</div></div>
         ) : waitingAtPickup ? (
-          <div><div className="text-[15px] font-bold">{t('driver.navigation.waitingFor', { name: trip.passengerName })}</div><div className="truncate text-[12px] text-muted">{trip.pickup.label}</div></div>
+          <div><div className="text-[18px] font-bold">{t('driver.navigation.waitingFor', { name: trip.passengerName })}</div><div className="truncate text-[14.5px] text-muted">{trip.pickup.label}</div></div>
         ) : atTarget ? (
-          <div><div className="text-[15px] font-bold">{leg === 'pickup' ? t('driver.navigation.arrivedPickup') : leg === 'stop' ? t('driver.navigation.arrivedStop') : t('driver.navigation.arrivedDestination')}</div><div className="truncate text-[12px] text-muted">{target.label}</div></div>
+          <div><div className="text-[18px] font-bold">{leg === 'pickup' ? t('driver.navigation.arrivedPickup') : leg === 'stop' ? t('driver.navigation.arrivedStop') : t('driver.navigation.arrivedDestination')}</div><div className="truncate text-[14.5px] text-muted">{target.label}</div></div>
         ) : !pos ? (
-          <div className="text-[14px] font-semibold">{t('driver.navigation.needGps')}</div>
+          <div className="text-[17px] font-semibold">{t('driver.navigation.needGps')}</div>
         ) : routeState === 'unavailable' ? (
-          <div className="flex items-center justify-between gap-3"><span className="text-[13px] font-semibold">{t('driver.navigation.unavailable')}</span><a href={externalHref} target="_blank" rel="noreferrer" className="shrink-0 rounded-[10px] border border-edge px-2.5 py-1.5 text-[12px] font-semibold text-accent">{t('driver.navigation.openExternal')}</a></div>
+          <div className="flex items-center justify-between gap-3"><span className="text-[15.5px] font-semibold">{t('driver.navigation.unavailable')}</span><a href={externalHref} target="_blank" rel="noreferrer" className="shrink-0 rounded-[10px] border border-edge px-2.5 py-1.5 text-[14.5px] font-semibold text-accent">{t('driver.navigation.openExternal')}</a></div>
         ) : rerouting ? (
-          <div className="text-[15px] font-bold">{t('driver.navigation.rerouting')}</div>
+          <div className="text-[18px] font-bold">{t('driver.navigation.rerouting')}</div>
         ) : upcoming ? (
-          <div className="flex items-center gap-3">
-            <span className="text-2xl leading-none text-accent" aria-hidden>{maneuverIcon(upcoming.step.maneuver)}</span>
+          <div className="flex items-center gap-3.5">
+            <span className="text-[29px] leading-none text-accent" aria-hidden>{maneuverIcon(upcoming.step.maneuver)}</span>
             <div className="min-w-0">
-              <div className="text-[17px] font-bold leading-tight">{distLabel(upcoming.inM)}</div>
-              <div className="truncate text-[12px] text-muted" data-testid="nav-instruction">{upcoming.step.text}</div>
+              <div className="text-[20.5px] font-bold leading-tight">{distLabel(upcoming.inM)}</div>
+              <div className="truncate text-[14.5px] text-muted" data-testid="nav-instruction">{upcoming.step.text}</div>
             </div>
           </div>
         ) : routeState === 'loading' ? (
-          <div className="text-[14px] font-semibold">{t('driver.navigation.loading')}</div>
+          <div className="text-[17px] font-semibold">{t('driver.navigation.loading')}</div>
         ) : (
-          <div className="text-[15px] font-bold">{t('driver.navigation.continueTo', { place: target.label })}</div>
+          <div className="text-[18px] font-bold">{t('driver.navigation.continueTo', { place: target.label })}</div>
         )}
         </div>
         {/* keepInView (2026-11-19): whenever the follow camera is off, the car + the point (+ the road

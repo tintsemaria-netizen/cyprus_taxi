@@ -139,7 +139,8 @@ function ensureNavArrowCss() {
 }
 export function navArrowEl(opts: { size?: number; moving?: boolean; stale?: boolean; title?: string } = {}): HTMLElement {
   ensureNavArrowCss();
-  // Bigger orange arrow in a white ring (2026-11-19; the ring is back on the operator's request):
+  // Bigger orange arrow in a white ring (2026-11-19; the ring is back on the operator's request; the
+  // arrow itself has no white edge any more, same day):
   // stands out from the lime route and the blue map. The orange pulse shows only while standing.
   const { size = 120, moving = false, stale = false, title } = opts;
   const el = document.createElement('div');
@@ -151,7 +152,7 @@ export function navArrowEl(opts: { size?: number; moving?: boolean; stale?: bool
   <div class="ily-nav-ring" style="width:${ring}px;height:${ring}px"></div>
   <div class="car" style="position:absolute;left:50%;top:50%;width:${arrow}px;height:${Math.round(arrow * 1.1)}px;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))">
     <svg viewBox="0 0 40 44" width="100%" height="100%" aria-hidden="true" style="overflow:visible"><g>
-      <path d="M20 5.5c1.1 0 2 .7 2.5 1.7l12.2 27.6c.9 2.1-1.1 4.2-3.3 3.5L21.3 35a4.3 4.3 0 0 0-2.6 0L8.6 38.3c-2.2.7-4.2-1.4-3.3-3.5L17.5 7.2c.5-1 1.4-1.7 2.5-1.7z" fill="#FF9F1C" stroke="#ffffff" stroke-width="2.6" stroke-linejoin="round"/>
+      <path d="M20 5.5c1.1 0 2 .7 2.5 1.7l12.2 27.6c.9 2.1-1.1 4.2-3.3 3.5L21.3 35a4.3 4.3 0 0 0-2.6 0L8.6 38.3c-2.2.7-4.2-1.4-3.3-3.5L17.5 7.2c.5-1 1.4-1.7 2.5-1.7z" fill="#FF9F1C"/>
       <path d="M20 9.5 29 32" stroke="#FFD08A" stroke-width="1.4" stroke-linecap="round" opacity=".8"/>
     </g></svg>
   </div>`;

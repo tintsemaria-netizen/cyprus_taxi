@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-19 — Arrow without white edge; turn hint 20 % larger (deployed)
+
+- navArrowEl: the arrow path has no white stroke any more (the white ring around it stays).
+- DriverNavigation `nav-hint`: all sizes ×1.2 (texts 15→18, 12→14.5, 17→20.5, 14→17, 13→15.5 px; icon 24→29 px; padding, radius, gap; max width 70→78 %).
+
 ## 2026-11-19 — Driver arrow ring back; route line +15 % on driver maps (deployed)
 
 - navArrowEl: white ring (`.ily-nav-ring`, 66 % of the marker, orange tint, white 3 px border, shadow) restored on request; pulse while standing unchanged.
