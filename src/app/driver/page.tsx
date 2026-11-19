@@ -259,7 +259,8 @@ function Driver() {
   const [profileView, setProfileView] = useState<'me' | 'trips' | 'earnings'>('me');
   const [prebookCount, setPrebookCount] = useState(0);
   const [prebookPair, setPrebookPair] = useState(false); // any open pre-booking is a ride-share pair
-  const onPrebookCount = useCallback((n: number, pair: boolean) => { setPrebookCount(n); setPrebookPair(pair); }, []);
+  const [prebookMine, setPrebookMine] = useState(0); // pre-bookings this driver has taken
+  const onPrebookCount = useCallback((n: number, pair: boolean, mine: number) => { setPrebookCount(n); setPrebookPair(pair); setPrebookMine(mine); }, []);
   // Free orders count for the bottom-nav badge (rides automatic dispatch could not place).
   const [freeCount, setFreeCount] = useState(0);
   useEffect(() => {
@@ -276,10 +277,10 @@ function Driver() {
     const poll = async () => {
       if (document.visibilityState !== 'visible') return;
       try {
-        const r = await api<{ available: { conflict?: boolean; share?: unknown }[] }>('/driver/scheduled');
+        const r = await api<{ available: { conflict?: boolean; share?: unknown }[]; mine?: unknown[] }>('/driver/scheduled');
         if (!alive) return;
         const open = r.available.filter((i) => !i.conflict);
-        setPrebookCount(open.length); setPrebookPair(open.some((i) => !!i.share));
+        setPrebookCount(open.length); setPrebookPair(open.some((i) => !!i.share)); setPrebookMine(r.mine?.length ?? 0);
       } catch { /* transient */ }
     };
     poll(); const iv = setInterval(poll, 30_000);
@@ -408,7 +409,11 @@ function Driver() {
               <button type="button" onClick={() => { setDrawer(false); setTab('prebook'); }} data-testid="drawer-prebook"
                 className="mb-3 flex w-full items-center justify-between rounded-[12px] border border-edge bg-elevated px-4 py-3 text-start text-[16px] font-semibold">
                 <span>{t('driver.scheduled.tabPrebook')}</span>
-                {prebookCount > 0 && <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white">{prebookCount}</span>}
+                {/* 2026-11-19: lime = taken by me, red = new ones I could take. */}
+                <span className="flex items-center gap-1.5">
+                  {prebookMine > 0 && <span className="min-w-[22px] rounded-full bg-accent px-1.5 text-center text-[12px] font-bold leading-[22px] text-[#0d1608]" title={t('driver.scheduled.mine')}>{prebookMine}</span>}
+                  {prebookCount > 0 && <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white">{prebookCount}</span>}
+                </span>
               </button>
               <SubTabs value={profileView} onChange={setProfileView} items={[
                 { id: 'me', label: t('driver.nav.profile') },

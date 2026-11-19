@@ -39,7 +39,7 @@ interface Board { available: Item[]; mine: Item[]; blocked: string | null }
 const PROTECT_MIN = 75;
 const CONVERT_MIN = 30;
 
-export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolean) => void }) {
+export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolean, mine: number) => void }) {
   const { t, tp, fmt, tError } = useT();
   const [board, setBoard] = useState<Board | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
   const [openId, setOpenId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    try { const b = await api<Board>('/driver/scheduled'); setBoard(b); setErr(null); const open = b.available.filter((i) => !i.conflict); onCount?.(open.length, open.some((i) => !!i.share)); }
+    try { const b = await api<Board>('/driver/scheduled'); setBoard(b); setErr(null); const open = b.available.filter((i) => !i.conflict); onCount?.(open.length, open.some((i) => !!i.share), b.mine.length); }
     catch (e) { setErr(e ? tError(e) : t('driver.scheduled.loadFailed')); }
   }, [t, tError, onCount]);
   useEffect(() => { load(); const iv = setInterval(load, 60_000); return () => clearInterval(iv); }, [load]);
