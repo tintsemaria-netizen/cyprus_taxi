@@ -16,6 +16,7 @@ import { createShareGrant, resolveShareToken, exchangeToken, createGrant } from 
 import { shareView, trackingView, PUBLIC_RATING_MIN_COUNT } from '@/server/views';
 import { passengerSetStartCode } from '@/server/passenger-start-code';
 import type { CreateBookingInput } from '@/lib/validation';
+import * as shareViewRoute from '@/app/api/v1/share/view/route';
 
 const marina = { lat: 34.6706, lng: 33.0413, label: 'Limassol Marina' };
 const lca = { lat: 34.8751, lng: 33.6249, label: 'Larnaca Airport (LCA)' };
@@ -83,6 +84,17 @@ describe('read-only share link', () => {
     const v = await shareView(t.bookingId);
     expect(v!.status).toBe('CANCELED');
     expect(v!.location).toBeNull();
+  });
+
+  it('launch fixes §10: the shared link stops working when the trip ends (no addresses or plate after)', async () => {
+    const t = await assigned();
+    const share = await createShareGrant(t.bookingId);
+    const post = () => shareViewRoute.POST(new Request('http://localhost/api/v1/share/view', { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '198.51.100.7' }, body: JSON.stringify({ token: share.token }) }));
+    expect((await post()).status).toBe(200);
+    await changeStatus({ bookingId: t.bookingId, to: 'CANCELED', expectedRevision: t.revision, actor: 'STAFF', actorId: 's' });
+    const after = await post();
+    expect(after.status).toBe(404);
+    expect(JSON.stringify(await after.json())).not.toMatch(/Marina|plate/i);
   });
 });
 

@@ -76,14 +76,22 @@ describe('passenger sign-up with optional phone', () => {
     expect(bad.status).toBe(422);
   });
 
-  it('an email-only account books with the phone it enters, and can delete itself', async () => {
+  it('an email-only account must verify a phone (commercial); in test mode it books with the phone it enters, and can delete itself', async () => {
     const e = email();
     await register.POST(req('/passenger/register', { name: 'Leo', email: e, password: 'secret123' }));
     const contact = '+35799123456';
-    const res = await bookings.POST(req('/bookings', {
+    const body = {
       pickup: { lat: 34.6706, lng: 33.0413, label: 'A' }, dropoff: { lat: 34.8751, lng: 33.6249, label: 'B' },
       when: 'NOW', vClass: 'COMFORT', passengerCount: 1, passengerName: 'Leo', phone: contact,
-    }, { 'idempotency-key': `reg-${RUN}-${n}` }));
+    };
+    const cfg = config as unknown as { passengerTestMode: boolean };
+    const was = cfg.passengerTestMode;
+    cfg.passengerTestMode = false;
+    const refused = await bookings.POST(req('/bookings', body, { 'idempotency-key': `reg-${RUN}-${n}-c` }));
+    expect(refused.status).toBe(403); // launch fixes §4: PHONE_VERIFICATION_REQUIRED
+    cfg.passengerTestMode = true;
+    const res = await bookings.POST(req('/bookings', body, { 'idempotency-key': `reg-${RUN}-${n}` }));
+    cfg.passengerTestMode = was;
     expect([200, 201]).toContain(res.status);
     const p = (await prisma.passenger.findUnique({ where: { email: e } }))!;
     const b = await prisma.booking.findFirst({ where: { passengerId: p.id } });

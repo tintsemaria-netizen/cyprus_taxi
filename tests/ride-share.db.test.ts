@@ -64,6 +64,8 @@ async function hostOnTrip(d: { driverId: string; vehicleId: string }, o: Paramet
 
 const fresh = (id: string) => prisma.booking.findUniqueOrThrow({ where: { id } });
 
+// Launch fixes §7: ride-share is off by default (SHARE_ENABLED); these tests cover it switched on.
+(config.share as { enabled: boolean }).enabled = true;
 beforeAll(async () => {
   if (!dbName.endsWith('_test')) throw new Error(`Refusing: DB name must end in _test (got "${dbName}").`);
 });

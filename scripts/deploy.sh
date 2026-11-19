@@ -49,7 +49,15 @@ log "deploying ${NEW:0:7} (rollback target: ${PREV:-none})"
 # 2) backup
 if [ "$SKIP_BACKUP" -eq 0 ]; then
   log "backup…"
-  BACKUP_DIR="$ROOT/deploy/backups" BACKUP_PASSPHRASE_FILE="$ROOT/deploy/secrets/backup.pass" /bin/bash "$ROOT/deploy/backup.sh" | grep -E "pg-|FATAL|WARNING" || true
+  # Launch fixes §10: a failed backup STOPS the deploy (migrations must never run without one).
+  BACKUP_LOG="$(mktemp)"
+  if ! BACKUP_DIR="$ROOT/deploy/backups" BACKUP_PASSPHRASE_FILE="$ROOT/deploy/secrets/backup.pass" /bin/bash "$ROOT/deploy/backup.sh" >"$BACKUP_LOG" 2>&1; then
+    grep -E "pg-|FATAL|WARNING" "$BACKUP_LOG" || tail -n 5 "$BACKUP_LOG"
+    log "backup FAILED — deploy aborted, nothing changed"; rm -f "$BACKUP_LOG"; exit 1
+  fi
+  grep -E "pg-|FATAL|WARNING" "$BACKUP_LOG" || true
+  if ! grep -q "pg-.*dump.enc" "$BACKUP_LOG"; then log "backup produced no database dump — deploy aborted"; rm -f "$BACKUP_LOG"; exit 1; fi
+  rm -f "$BACKUP_LOG"
 fi
 
 compose() { APP_RELEASE="$1" docker compose --env-file "$ENV_FILE" "${@:2}"; }

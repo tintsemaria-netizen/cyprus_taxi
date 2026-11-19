@@ -25,6 +25,7 @@ const LEASE_MS = 10_000;
 const TICK_JOB_BUDGET_MS = 6000; // stop starting new jobs after this much of a tick
 const MAINTENANCE_EVERY_TICKS = Math.max(1, Math.round(300_000 / TICK_MS)); // ~5 min
 
+const SCHEDULED_BACKOFF_MS = 30_000; // scheduled ride with no driver in reach yet: retry every 30 s
 // Next.js compiles instrumentation.ts and route handlers into SEPARATE bundles, so a
 // plain module-level singleton would be duplicated. Anchor the worker state on globalThis
 // so the health route and the worker (started from instrumentation) share one instance,
@@ -212,7 +213,12 @@ async function processJob(jobId: string): Promise<void> {
   if (!candidate) {
     // Every eligible nearby driver has been offered the ride (or there is none): open it to all
     // drivers. A scheduled ride searched ahead of its time keeps retrying until its deadline.
-    if (job.booking.scheduledAt && job.booking.scheduledAt > now) return;
+    if (job.booking.scheduledAt && job.booking.scheduledAt > now) {
+      // Launch fixes §10: back off 30 s instead of re-routing every driver with Google on every
+      // 2-second tick (the lease owner changes, so the tick's finally does not clear it).
+      await prisma.dispatchJob.updateMany({ where: { id: jobId }, data: { leaseOwner: 'backoff', leaseUntil: new Date(Date.now() + SCHEDULED_BACKOFF_MS) } });
+      return;
+    }
     await openJob(jobId, now, 'no-candidates');
     return;
   }

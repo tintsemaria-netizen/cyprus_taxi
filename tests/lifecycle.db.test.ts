@@ -155,6 +155,8 @@ describe('M3 trip lifecycle', () => {
     const t = await assignedBooking('Andreas', 20);
     // Age the driver's GPS well past the loss threshold.
     await prisma.latestDriverLocation.update({ where: { driverId: t.driverId }, data: { sampledAt: new Date(Date.now() - 10 * 60 * 1000), receivedAt: new Date(Date.now() - 10 * 60 * 1000) } });
+    // Launch fixes §5: the window never starts before the assignment — so age that too.
+    await prisma.assignment.updateMany({ where: { activeBookingId: t.bookingId }, data: { assignedAt: new Date(Date.now() - 10 * 60 * 1000) } });
     await runOnce();
     expect((await prisma.booking.findUnique({ where: { id: t.bookingId } }))!.status).toBe('SEARCHING');
 

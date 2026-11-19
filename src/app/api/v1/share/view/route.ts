@@ -19,5 +19,8 @@ export async function POST(req: Request) {
   if (!bookingId) return Errors.notFound('This shared trip link is invalid or has expired.');
   const v = await shareView(bookingId);
   if (!v) return Errors.notFound('This shared trip link is invalid or has expired.');
+  // Launch fixes §10: a shared link ends with the trip — addresses, car and plate are no longer
+  // shown to whoever holds the link once the ride is completed or cancelled.
+  if (['COMPLETED', 'CANCELED', 'NO_DRIVER'].includes(v.status)) return Errors.notFound('This shared trip has ended.');
   return apiOk(v);
 }

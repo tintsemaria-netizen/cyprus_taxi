@@ -40,7 +40,11 @@ async function booking(from: typeof lca, to: typeof lca) {
   return prisma.booking.update({ where: { reference: r.body.reference }, data: { fareCents: 6000, priceType: 'REGULATED_FIXED' } });
 }
 
-beforeAll(() => { if (!dbName.endsWith('_test')) throw new Error('Refusing: not a _test DB'); });
+beforeAll(async () => {
+  if (!dbName.endsWith('_test')) throw new Error('Refusing: not a _test DB');
+  const { config } = await import('@/lib/config');
+  (config.share as { enabled: boolean }).enabled = true; // launch fixes §7: switched on for these tests
+});
 beforeEach(async () => {
   await prisma.shareGroup.deleteMany({});
   await prisma.preAssignment.deleteMany({});
