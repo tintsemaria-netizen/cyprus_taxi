@@ -26,6 +26,7 @@ export function DriverAnalytics({ onBack }: { onBack: () => void }) {
   const [day, setDay] = useState(cyprusToday);
   const [data, setData] = useState<Data | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [list, setList] = useState<'done' | 'notDone' | null>(null); // a tile opened as its own list (2026-11-19)
 
   const load = useCallback(async () => {
     setErr(null);
@@ -42,6 +43,21 @@ export function DriverAnalytics({ onBack }: { onBack: () => void }) {
   const canNext = period === 'day' ? day < today : (data ? data.to < today : false);
   const money = (c: number) => fmt.money(c);
 
+  const when = (at: string) => (period === 'week' ? `${dayName(at.slice(0, 10), { weekday: 'short' })} ` : '') + fmt.time(at);
+  if (list && data) {
+    const done = list === 'done';
+    return (
+      <div className="space-y-3" data-testid={`analytics-list-${list}`}>
+        <div className="flex items-center gap-1">
+          <BackArrow onBack={() => setList(null)} className="-ms-2" />
+          <h1 className="text-xl font-semibold">{done ? t('driver.analytics.doneShort') : t('driver.analytics.notDone')}</h1>
+        </div>
+        <div className="text-sm text-muted">{title}</div>
+        <MiniList items={done ? data.doneItems : data.notDoneItems} empty={t('driver.analytics.none')} money={money} time={when}
+          label={(k) => (k === 'canceled' ? t('driver.analytics.youCanceledShort') : k === 'missed' ? t('driver.analytics.missedShort') : '')} danger={!done} />
+      </div>
+    );
+  }
   return (
     <div className="space-y-3" data-testid="driver-analytics">
       <div className="flex items-center gap-1">
@@ -68,22 +84,21 @@ export function DriverAnalytics({ onBack }: { onBack: () => void }) {
         return (
           <>
             <div className="grid grid-cols-2 gap-2">
-              <div className="card p-3" data-testid="tile-done">
+              <button type="button" onClick={() => setList('done')} className="card flex flex-col items-start p-3 text-start" data-testid="tile-done">
                 <div className="text-xs text-muted">✓ {t('driver.analytics.doneShort')}</div>
                 <div className="mt-1 text-2xl font-semibold">{data.completed.count}</div>
                 <div className="text-lg font-semibold text-accent">{money(data.completed.cents)}</div>
                 {data.pendingFinal > 0 && <div className="mt-0.5 text-[11px] leading-tight text-muted">{t('driver.analytics.pending', { n: data.pendingFinal })}</div>}
-              </div>
-              <div className={`card p-3 ${notDone.count > 0 ? 'border-danger/40' : ''}`} data-testid="tile-notdone">
+                <div className="mt-1 text-xs text-muted">{t('driver.analytics.openList')} ›</div>
+              </button>
+              <button type="button" onClick={() => setList('notDone')} className={`card flex flex-col items-start p-3 text-start ${notDone.count > 0 ? 'border-danger/40' : ''}`} data-testid="tile-notdone">
                 <div className="text-xs text-muted">✕ {t('driver.analytics.notDone')}</div>
                 <div className="mt-1 text-2xl font-semibold">{notDone.count}</div>
                 <div className={`text-lg font-semibold ${notDone.count > 0 ? 'text-danger' : 'text-muted'}`}>{money(notDone.cents)}</div>
                 <div className="mt-0.5 text-[11px] leading-tight text-muted">{t('driver.analytics.could')}</div>
-              </div>
+                <div className="mt-1 text-xs text-muted">{t('driver.analytics.openList')} ›</div>
+              </button>
             </div>
-            <MiniList title={t('driver.analytics.doneShort')} items={data.doneItems} empty={t('driver.analytics.none')} money={money} time={(at) => (period === 'week' ? `${dayName(at.slice(0, 10), { weekday: 'short' })} ` : '') + fmt.time(at)} label={() => ''} />
-            <MiniList title={t('driver.analytics.notDone')} items={data.notDoneItems} empty={t('driver.analytics.none')} money={money} time={(at) => (period === 'week' ? `${dayName(at.slice(0, 10), { weekday: 'short' })} ` : '') + fmt.time(at)}
-              label={(k) => (k === 'canceled' ? t('driver.analytics.youCanceledShort') : t('driver.analytics.missedShort'))} danger />
             <p className="text-xs text-muted">{t('driver.analytics.note')}</p>
           </>
         );
@@ -92,16 +107,19 @@ export function DriverAnalytics({ onBack }: { onBack: () => void }) {
   );
 }
 
-function MiniList({ title, items, empty, money, time, label, danger }: { title: string; items: Item[]; empty: string; money: (c: number) => string; time: (at: string) => string; label: (k: Item['kind']) => string; danger?: boolean }) {
+function MiniList({ items, empty, money, time, label, danger }: { items: Item[]; empty: string; money: (c: number) => string; time: (at: string) => string; label: (k: Item['kind']) => string; danger?: boolean }) {
   return (
     <div className="card p-3">
-      <div className="mb-1 text-sm font-semibold">{title}</div>
       {items.length === 0 ? <p className="text-xs text-muted">{empty}</p> : (
         <ul className="divide-y divide-edge text-[13px]">
           {items.map((it, i) => (
-            <li key={i} className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2 py-1.5">
+            <li key={i} className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 py-2">
               <span className="tabular-nums text-muted">{time(it.at)}</span>
-              <span className="min-w-0 truncate">{label(it.kind) && <span className="me-1 text-muted">{label(it.kind)} ·</span>}→ {it.to}</span>
+              <span className="min-w-0">
+                {label(it.kind) && <span className="block text-xs text-muted">{label(it.kind)}</span>}
+                <span className="block truncate text-xs text-muted">{it.from}</span>
+                <span className="block truncate">→ {it.to}</span>
+              </span>
               <span className={`tabular-nums font-semibold ${danger ? 'text-danger' : ''}`}>{it.cents != null ? money(it.cents) : '—'}</span>
             </li>
           ))}

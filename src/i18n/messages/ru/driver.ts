@@ -166,7 +166,7 @@ const driver: Catalog<typeof en> = {
     saveFailed: 'Не удалось сохранить',
     loadFailed: 'Ошибка',
   },
-  analytics: { doneShort: "Выполнено", notDone: "Не выполнено", none: "Нет", youCanceledShort: "отменили", missedShort: "пропущено", title: "Аналитика", day: "День", week: "Неделя", prev: "Раньше", next: "Позже", pickDay: "Выбрать день", done: "Выполнено и заработано", pending: "ещё без итоговой суммы: {n}", youCanceled: "Вы отменили", paxCanceled: "Отменил клиент или не пришёл", missed: "Пропущенные предложения", could: "могли заработать", note: "«Могли заработать» — цена этих поездок (итоговая или расчётная); в заработок не входит.", dayCol: "День", doneCol: "Выполнено", lostCol: "Упущено", tileHint: "Подробнее" },
+  analytics: { openList: "Список", doneShort: "Выполнено", notDone: "Не выполнено", none: "Нет", youCanceledShort: "отменили", missedShort: "пропущено", title: "Аналитика", day: "День", week: "Неделя", prev: "Раньше", next: "Позже", pickDay: "Выбрать день", done: "Выполнено и заработано", pending: "ещё без итоговой суммы: {n}", youCanceled: "Вы отменили", paxCanceled: "Отменил клиент или не пришёл", missed: "Пропущенные предложения", could: "могли заработать", note: "«Могли заработать» — цена этих поездок (итоговая или расчётная); в заработок не входит.", dayCol: "День", doneCol: "Выполнено", lostCol: "Упущено", tileHint: "Подробнее" },
   earnings: {
     title: 'Заработок',
     completedTrips: 'Выполнено заказов',

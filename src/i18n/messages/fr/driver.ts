@@ -166,7 +166,7 @@ const driver: Catalog<typeof en> = {
     saveFailed: "Échec de l’enregistrement",
     loadFailed: "Échec",
   },
-  analytics: { doneShort: "Effectuées", notDone: "Non effectuées", none: "Aucune", youCanceledShort: "annulée", missedShort: "manquée", title: "Analyse", day: "Jour", week: "Semaine", prev: "Plus tôt", next: "Plus tard", pickDay: "Choisir un jour", done: "Effectuées et gagné", pending: "encore sans montant final : {n}", youCanceled: "Vous avez annulé", paxCanceled: "Passager a annulé ou absent", missed: "Offres manquées", could: "auriez pu gagner", note: "«Auriez pu gagner» est la valeur de ces courses (prix final ou estimé) ; ce n’est pas compté dans vos gains.", dayCol: "Jour", doneCol: "Effectuées", lostCol: "Manquées", tileHint: "Détails" },
+  analytics: { openList: "Liste", doneShort: "Effectuées", notDone: "Non effectuées", none: "Aucune", youCanceledShort: "annulée", missedShort: "manquée", title: "Analyse", day: "Jour", week: "Semaine", prev: "Plus tôt", next: "Plus tard", pickDay: "Choisir un jour", done: "Effectuées et gagné", pending: "encore sans montant final : {n}", youCanceled: "Vous avez annulé", paxCanceled: "Passager a annulé ou absent", missed: "Offres manquées", could: "auriez pu gagner", note: "«Auriez pu gagner» est la valeur de ces courses (prix final ou estimé) ; ce n’est pas compté dans vos gains.", dayCol: "Jour", doneCol: "Effectuées", lostCol: "Manquées", tileHint: "Détails" },
   earnings: {
     title: "Gains",
     completedTrips: "Courses terminées",
