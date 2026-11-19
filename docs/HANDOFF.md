@@ -1,5 +1,48 @@
 # Session handoff
 
+## 2026-11-20 — launch fixes before the commercial pilot (branch `launch-fixes`, NOT merged)
+
+**Task:** fixes before the commercial pilot (the operator's spec).
+
+**Branch:** `launch-fixes`, 8 commits on top of main as of 2026-11-19. It is **not** on `main`, because `main` autodeploys. Pushed as a branch only.
+
+**Documents**
+- `docs/LAUNCH_FIXES.md` — every item with its status.
+- `docs/VERIFICATION_REPORT.md` — commands, results, device protocol.
+- `docs/PILOT_RUNBOOK.md`
+- `docs/DRIVER_BACKGROUND_LOCATION.md`
+
+**Defaults that change on merge**
+- `PASSENGER_TEST_MODE` is off, so real orders need an SMS-verified phone.
+- `SHARE_ENABLED` is off.
+- To keep today's open testing, set `PASSENGER_TEST_MODE=on` (and `SHARE_ENABLED=on`) in the server env **before** merging. Compose now passes both through.
+
+**Done (tests green: 351 passed, 1 skipped; tsc 0; build OK)**
+- **§4 Passenger phone.** The server requires a verified phone. The booking form has an SMS step that keeps the order and resends it. Attach keeps the same account; 409 if the number belongs to another account. Browser-verified locally.
+- **§5 Assignments.** The GPS-loss window counts from server receive time and never before the assignment. The old driver is notified (push + banner). Settlement corrections need a revision. 8 race tests.
+- **§6 Fares.** One rule for the total (`src/lib/fare-total.ts`) used by receipt, history, e-mail, earnings, analytics and admin. No double waiting. «≈» until the amount is confirmed. The meter receipt e-mail waits for the amount. Fixed-price «payment received». Luggage capacity.
+- **§7 Ride-share** server switch.
+- **§8 Pre-bookings.** Conversion needs live GPS, accepting state and reach. Per-ride isolation. Staff alerts on admin «Надёжность».
+- **§3 Config and KYC.** System status (`/admin/system`). Production guards. Per-phone OTP limit. KYC expiry required. Scan states + rescan. No e-mail backlog blast. nginx upload limit in the repo config.
+- **§9 Commission** in calculation mode. Additive migration `20261120010000_commission_calc`.
+- **§10** Deploy aborts on a failed backup. Scheduled search Google back-off. Shared link ends with the trip.
+
+**Open**
+- Real devices (protocol in the verification report).
+- Twilio, ClamAV, Resend.
+- RTD answers: XL +40 % for under 6 passengers, ride-share discount, fixed fare + waiting, operator-entered airport prices vs ΚΔΠ 79/2021.
+- CSP nonces.
+- Upload rate limit.
+- Backup restore test.
+- Child seats.
+- Admin UI for commission (API only).
+
+**Next steps**
+1. The operator decides the switches (§1 of the runbook).
+2. Rebase on main and merge.
+3. Copy the nginx config to the server.
+4. Run the device protocol.
+
 ## 2026-11-19 — Driver analytics + earnings chart fix (deployed)
 
 - ☰ → Заработок → tile «Выполнено заказов · Подробнее ›» opens `DriverAnalytics` (back arrow): День / Неделя (Mon–Sun), ‹ › or date picker (Cyprus days). Two tiles: «Выполнено» (count + earned, pending finals) and «Не выполнено» (driver-cancelled rides = REMATCH by this driver + offers REJECTED/EXPIRED, «могли заработать» = final or estimate). Tapping a tile opens its list (back arrow).

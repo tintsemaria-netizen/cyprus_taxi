@@ -34,6 +34,17 @@ sudo docker compose --env-file deploy/.env.production exec -e ADMIN_LOGIN=admin 
 
 App listens on `127.0.0.1:${APP_HOST_PORT}`; put a reverse proxy in front for HTTPS. Migrations apply automatically on container start.
 
+## Service switches (launch fixes, 2026-11-20)
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `APP_ENV=production` | `beta` | commercial mode: no test OTP codes, staff MFA enforced, boot fails without secrets |
+| `PASSENGER_TEST_MODE=on` | off | orders without an SMS-verified phone (testing only) |
+| `SHARE_ENABLED=on` | off | ride-share offered |
+| `COMMISSION_MODE=calc` | off | commission ledger in calculation mode (no approved rate) |
+
+See `docs/LAUNCH_FIXES.md`, `docs/PILOT_RUNBOOK.md`, `docs/VERIFICATION_REPORT.md` and `docs/DRIVER_BACKGROUND_LOCATION.md`. All variables are listed in `.env.example`.
+
 ## Layout
 
 - `src/app` — routes (public `/`, `/track`, `/staff/login`, `/dispatch`, `/driver`, `/admin/*`) and `/api/v1` handlers.
