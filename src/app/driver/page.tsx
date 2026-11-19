@@ -259,6 +259,7 @@ function Driver() {
   const [profileView, setProfileView] = useState<'me' | 'trips' | 'earnings'>('me');
   const [prebookCount, setPrebookCount] = useState(0);
   const [prebookPair, setPrebookPair] = useState(false); // any open pre-booking is a ride-share pair
+  const onPrebookCount = useCallback((n: number, pair: boolean) => { setPrebookCount(n); setPrebookPair(pair); }, []);
   // Free orders count for the bottom-nav badge (rides automatic dispatch could not place).
   const [freeCount, setFreeCount] = useState(0);
   useEffect(() => {
@@ -283,7 +284,7 @@ function Driver() {
     };
     poll(); const iv = setInterval(poll, 30_000);
     return () => { alive = false; clearInterval(iv); };
-  }, []);
+  }, [tab]); // re-checked at once when the driver comes back to the map
 
   // Reopened app (2026-11-17): the current ride is back on screen from the server; switch the GPS
   // back on by itself as well when the driver is on a ride or on duty, so the passenger keeps seeing
@@ -389,7 +390,8 @@ function Driver() {
         />
       )}
       {tab === 'free' && <FreeOrdersSection pos={pos} onDuty={!!data.onDuty} onTaken={async () => { setFreeCount(0); setTab('home'); await load(); await loadDash(); }} />}
-      {tab === 'prebook' && <ScheduledRides onCount={setPrebookCount} />}
+      {/* Count AND «is a pair» come together, so the map button never shows «П» for a moment before «ПП» (2026-11-19). */}
+      {tab === 'prebook' && <ScheduledRides onCount={onPrebookCount} />}
       {/* Side menu (2026-11-18): ☰ top-right → slides in from the right like a new page, not the full width. */}
       <div className={`fixed inset-0 z-50 bg-black/55 transition-opacity duration-300 ${drawer ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
         onClick={() => setDrawer(false)} aria-hidden={!drawer} />

@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-19 — П/ПП button: no «П» flash before «ПП» (deployed)
+
+- Cause: the pre-booking board reported only the count (`onCount(n)`); the «is a pair» flag came from the 30 s poll, so after releasing a pair the button showed «П» until the next poll. Now `onCount(n, pair)` sets both (stable `onPrebookCount`), and the board poll re-runs at once on tab change.
+- Checked with a mocked board: release → back to the map → button reads «ПП» from the first frame (sampled 3 s).
+
 ## 2026-11-19 — Driver: pre-bookings in ☰ menu, pulsing П / ПП button (deployed)
 
 - Bottom bar: «Главная», «Свободные» only. ☰ drawer: first row «Предзаказы» (red count) → pre-booking board.
