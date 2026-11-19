@@ -51,6 +51,8 @@ interface Props {
   className?: string;
   fitPadding?: { top: number; right: number; bottom: number; left: number };
   fleet?: { lat: number; lng: number; stale?: boolean; state?: 'available' | 'busy' }[];
+  /** Driver's map (2026-11-19): other cars drawn like the driver's own car, lighter and 35 % smaller. */
+  fleetLikeSelf?: boolean;
   focus?: { lat: number; lng: number } | null; // zoom the map to this point (e.g. the user's location)
   // Navigation camera (see GoogleMapView): centred, heading-up, tilted; suspends auto-fit.
   follow?: { lat: number; lng: number; heading: number; zoom?: number; tilt?: number } | null;
@@ -87,7 +89,7 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], focus, focusZoom: focusZoomProp, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], fleetLikeSelf, focus, focusZoom: focusZoomProp, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
   const focusZoom = focusZoomProp ?? 15;
   // Re-frame / re-centre when the visible area changes (e.g. the sheet under the map grew or shrank).
   const padKey = fitPadding ? `${fitPadding.top},${fitPadding.right},${fitPadding.bottom},${fitPadding.left}` : '';
@@ -241,12 +243,12 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       fleetObjs.current.forEach((m) => m.remove());
       fleetObjs.current = [];
       for (const v of fleet) {
-        const el = vehicleMarkerEl({ state: 'available', stale: v.stale, size: 61, title: v.state === 'busy' ? 'On a trip' : 'Available' });
+        const el = vehicleMarkerEl({ state: fleetLikeSelf ? 'peer' : 'available', stale: v.stale, size: fleetLikeSelf ? 46 : 61, title: v.state === 'busy' ? 'On a trip' : 'Available' });
         fleetObjs.current.push(new maplibre.Marker({ element: el }).setLngLat([v.lng, v.lat]).addTo(map));
       }
     })();
     return () => { cancelled = true; };
-  }, [fleet, ready]);
+  }, [fleet, ready, fleetLikeSelf]);
 
   // Zoom to a focus point (e.g. the passenger's detected location), once per change.
   const focusKey = focus ? `${focus.lat.toFixed(5)},${focus.lng.toFixed(5)}` : '';

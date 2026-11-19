@@ -13,7 +13,7 @@ const GLASS = '#22303a'; // tinted glass
 const WHITE = '#FFFFFF'; // available / every non-staff car
 const BUSY = '#FFC83D'; // on a trip (staff map only): yellow
 
-export type VehicleState = 'available' | 'busy' | 'self';
+export type VehicleState = 'available' | 'busy' | 'self' | 'peer';
 
 /**
  * Top-down sedan, nose pointing up (north). `viewBox` is 40×44, the car
@@ -95,12 +95,14 @@ export function vehicleMarkerEl(opts: {
   const { state = 'available', stale = false, size = 71, heading = 0, title, tag } = opts;
   const busy = state === 'busy';
   const self = state === 'self';
+  // Other drivers on a driver's map (2026-11-19): the same car as «mine», lighter (washed out).
+  const peer = state === 'peer';
   const el = document.createElement('div');
   el.style.cssText =
     `position:relative;width:${size}px;height:${size}px;opacity:${stale ? 0.55 : 1};` +
     `filter:drop-shadow(0 2px 3px rgba(0,0,0,0.45));transition:opacity .2s ease`;
   if (self) el.style.zIndex = '1000'; // own car stays above other cars at every zoom level
-  el.innerHTML = `<div class="car" style="width:100%;height:100%">${self ? selfCarSvg(heading) : carSvg(busy ? BUSY : WHITE, heading)}</div>`;
+  el.innerHTML = `<div class="car" style="width:100%;height:100%${peer ? ';filter:brightness(1.6) contrast(.7) saturate(.6)' : ''}">${self || peer ? selfCarSvg(heading) : carSvg(busy ? BUSY : WHITE, heading)}</div>`;
   if (tag) {
     const t = document.createElement('div');
     t.textContent = tag;

@@ -35,6 +35,8 @@ interface Props {
   fitPadding?: { top: number; right: number; bottom: number; left: number };
   // Live on-duty cars to overlay (anonymized). Rendered but NOT included in the fit.
   fleet?: { lat: number; lng: number; stale?: boolean; state?: 'available' | 'busy' }[];
+  /** Driver's map (2026-11-19): other cars drawn like the driver's own car, lighter and 35 % smaller. */
+  fleetLikeSelf?: boolean;
   // Zoom the map to this point (e.g. the passenger's detected location), padding-aware.
   focus?: { lat: number; lng: number } | null;
   // Navigation camera: keep this point centred, rotated to `heading` (heading-up), with tilt.
@@ -106,7 +108,7 @@ function markerEl(mk: MapMarker): HTMLElement {
   return centerOnPoint(el);
 }
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], focus, focusZoom, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], fleetLikeSelf, focus, focusZoom, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const lastUpd = useRef(new Map<string, number>());
@@ -430,14 +432,16 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     fleetObjs.current = [];
     for (const v of fleet) {
       const el = vehicleMarkerEl({
-        state: 'available', // fleet overlays: every car white (on-trip yellow is staff-only)
+        // fleet overlays: every car white (on-trip yellow is staff-only); on a driver's map the other
+        // cars look like the driver's own, lighter, 35 % smaller (71 → 46 px).
+        state: fleetLikeSelf ? 'peer' : 'available',
         stale: v.stale,
-        size: 61,
+        size: fleetLikeSelf ? 46 : 61,
         title: v.state === 'busy' ? 'On a trip' : 'Available',
       });
       fleetObjs.current.push(new g.marker.AdvancedMarkerElement({ map, position: { lat: v.lat, lng: v.lng }, content: centerOnPoint(el), zIndex: 1 }));
     }
-  }, [fleet, ready]);
+  }, [fleet, ready, fleetLikeSelf]);
 
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
