@@ -132,7 +132,7 @@ export function CoRiderLegPill({ leg, share, onChanged, onError }: { leg: CoRide
             <div className="mt-3 space-y-1.5 text-sm">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold">{leg.passengerName}</span>
-                <a className="btn-ghost !px-3 !py-1.5 text-sm" href={`tel:${leg.passengerPhone}`}>📞 {t('share.driver.call')}</a>
+                {leg.passengerPhone && <a className="btn-ghost !px-3 !py-1.5 text-sm" href={`tel:${leg.passengerPhone}`}>📞 {t('share.driver.call')}</a>}
               </div>
               <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('share.driver.pickup')}</span><span className="font-medium">{leg.pickup.label}</span></div>
               <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('share.driver.dropoff')}</span><span className="font-medium">{leg.dropoff.label}</span></div>

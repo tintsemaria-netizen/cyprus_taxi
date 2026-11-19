@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-19 — Guest ordering: no sign-in at all for passengers (deployed, for testing) — TO TURN OFF LATER
+
+- Operator: «Без ничего просто открыл заказал, чтобы мог тестировать на разных устройствах».
+- `src/lib/features.ts` → `PASSENGER_GUEST = true`. POST /bookings without a session creates a guest Passenger (no email/phone/password) + 30-day session cookie; `createGuestBookingSchema` makes the phone optional (stored ''), empty name → «Guest». BookingApp skips the login modal and hides the contact block for guests (`/passenger/me` → `guest: true`). Ride-share driver card hides «Call» without a phone; navigation chat already hid it.
+- To restore mandatory sign-in: `PASSENGER_GUEST = false` (and `PASSENGER_SMS = true` for SMS).
+- Checked: vitest 301 passed; iPhone 12 Pro emulation (WebKit), fresh device: destination → «Заказать Comfort» → /track, booking SEARCHING with a guest passenger, no login modal.
+
 ## 2026-11-19 — Passenger SMS codes switched OFF for testing (deployed) — TO TURN BACK ON LATER
 
 - Operator: «Убери регистрацию или вход через смс пароль для клиента … Потом вернем».

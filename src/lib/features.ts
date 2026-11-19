@@ -7,3 +7,10 @@
  * Drivers are not affected (their phone sign-in stays as it is).
  */
 export const PASSENGER_SMS = false;
+
+/**
+ * Guest ordering (2026-11-19, operator, for testing on different phones): no sign-in at all — the
+ * first order creates a guest passenger on this device (session cookie, 30 days) and no name or
+ * phone is required. Set to `false` to require sign-in again (Task 014).
+ */
+export const PASSENGER_GUEST = true;

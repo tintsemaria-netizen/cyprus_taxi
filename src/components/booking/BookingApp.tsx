@@ -1,5 +1,6 @@
 'use client';
 
+import { PASSENGER_GUEST } from '@/lib/features';
 import { useKeyboardViewport } from '@/components/useKeyboardViewport';
 import { useHideClipped } from '@/components/useHideClipped';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -182,7 +183,7 @@ export default function BookingApp() {
   // The auto-detected pickup, kept so the × reset can restore it (2026-11-15).
   const autoPickupSaved = useRef<{ sel: Selected; text: string } | null>(null);
   // Task 014: passenger account + mandatory login before booking + destination history.
-  const [passenger, setPassenger] = useState<{ phone: string | null; name?: string; email?: string | null } | null>(null);
+  const [passenger, setPassenger] = useState<{ phone: string | null; name?: string; email?: string | null; guest?: boolean } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [destinations, setDestinations] = useState<{ label: string; lat: number; lng: number }[]>([]);
   const [places, setPlaces] = useState<SavedPlaces>({ home: null, work: null, school: null, custom: [] });
@@ -239,7 +240,7 @@ export default function BookingApp() {
 
   // Restore passenger session (if any) → prefill contact + load destination history.
   const loadPassenger = useCallback(() => {
-    api<{ phone: string | null; name?: string; email?: string | null }>('/passenger/me')
+    api<{ phone: string | null; name?: string; email?: string | null; guest?: boolean }>('/passenger/me')
       .then((p) => {
         setPassenger(p);
         setPhone((cur) => cur || p.phone || '');
@@ -631,9 +632,9 @@ export default function BookingApp() {
     if (!pickup) e.pickup = t('booking.validation.pickup');
     if (!dropoff) e.dropoff = t('booking.validation.dropoff');
     else if (noRoute) e.dropoff = t('errors.NO_ROUTE' as MsgKey);
-    if (passenger && !name.trim()) e.name = t('booking.validation.name');
+    if (passenger && !passenger.guest && !name.trim()) e.name = t('booking.validation.name');
     // Email-only accounts have no verified phone: the contact number is entered per booking.
-    if (passenger && !passenger.phone && !/^\+?[\d\s()-]{7,20}$/.test(phone.trim())) e.phone = t('booking.validation.phone');
+    if (passenger && !passenger.guest && !passenger.phone && !/^\+?[\d\s()-]{7,20}$/.test(phone.trim())) e.phone = t('booking.validation.phone');
     if (when === 'SCHEDULE' && !scheduledAt) e.scheduledAt = t('booking.validation.scheduledAt');
     if (effPax < 1 || effPax > maxPax) e.pax = tp('booking.validation.paxRange', maxPax);
     setErrors(e);
@@ -664,7 +665,8 @@ export default function BookingApp() {
   function toReview() {
     if (!validate()) return;
     // Contact details come from the signed-in account, so sign in before the review step.
-    if (!passenger) { pendingReview.current = true; setShowLogin(true); return; }
+    // Guest ordering (PASSENGER_GUEST): no sign-in — the order itself creates a guest account.
+    if (!passenger && !PASSENGER_GUEST) { pendingReview.current = true; setShowLogin(true); return; }
     // Keep the same idempotency key when the payload is unchanged since last time.
     const sig = payloadSignature();
     if (!idemKey.current || sig !== idemPayloadSig.current) {
@@ -1148,7 +1150,7 @@ export default function BookingApp() {
                       <div className="mt-3 text-xs text-warn">{t('booking.trip.quoteFailed', { error: quoteErr })}</div>
                     )}
 
-                    {passenger && (
+                    {passenger && !passenger.guest && (
                       <div className="mt-4 rounded-[12px] border border-edge bg-elevated px-3 py-2.5">
                         <label className="label" htmlFor="bk-name">{t('booking.contact.driverAsksFor')}</label>
                         <input id="bk-name" className={`field mt-1 ${errors.name ? 'border-danger' : ''}`} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} autoComplete="name" placeholder={t('booking.contact.namePlaceholder')} />

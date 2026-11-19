@@ -20,7 +20,7 @@ export const phoneSchema = z
     return parsed.number; // E.164
   });
 
-export const createBookingSchema = z.object({
+const bookingFields = z.object({
   pickup: coord,
   dropoff: coord,
   // One optional intermediate stop (2026-11-15).
@@ -52,7 +52,11 @@ export const createBookingSchema = z.object({
   // Pre-booking: how long the passenger can wait for the co-rider (e.g. sit at the airport a bit).
   shareWaitMin: z.number().int().min(0).max(180).optional(),
   childCount: z.number().int().min(0).max(5).optional(),
-}).refine((v) => (v.childCount ?? 0) < v.passengerCount, { message: 'At least one adult.', path: ['childCount'] });
+});
+const atLeastOneAdult = (v: { childCount?: number; passengerCount: number }) => (v.childCount ?? 0) < v.passengerCount;
+export const createBookingSchema = bookingFields.refine(atLeastOneAdult, { message: 'At least one adult.', path: ['childCount'] });
+/** Guest ordering (PASSENGER_GUEST, 2026-11-19): the contact phone is optional. */
+export const createGuestBookingSchema = bookingFields.extend({ phone: phoneSchema.optional() }).refine(atLeastOneAdult, { message: 'At least one adult.', path: ['childCount'] });
 
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 
