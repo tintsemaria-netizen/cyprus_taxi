@@ -123,7 +123,6 @@ export function vehicleMarkerEl(opts: {
  */
 const NAV_ARROW_CSS = `@keyframes ilyPulse{0%{transform:scale(.55);opacity:.75}70%{transform:scale(1);opacity:.18}100%{transform:scale(1);opacity:0}}
 .ily-nav-pulse{position:absolute;inset:0;border-radius:50%;background:rgba(255,159,28,.28);border:1.5px solid rgba(255,159,28,.5);animation:ilyPulse 1.8s ease-out infinite;transition:opacity .3s}
-.ily-nav-ring{position:absolute;left:50%;top:50%;border-radius:50%;transform:translate(-50%,-50%);background:rgba(255,159,28,.22);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.45)}
 .ily-moving .ily-nav-pulse{animation:none;opacity:0}
 @keyframes ilyPinPulse{0%{transform:translate(-50%,-50%) scale(.25);opacity:.85}100%{transform:translate(-50%,-50%) scale(1);opacity:0}}
 .ily-pin-pulse{position:absolute;left:50%;top:100%;width:84px;height:84px;border-radius:50%;background:rgba(200,255,70,.28);border:2px solid rgba(200,255,70,.6);animation:ilyPinPulse 1.6s ease-out infinite;pointer-events:none}
@@ -137,15 +136,14 @@ function ensureNavArrowCss() {
 }
 export function navArrowEl(opts: { size?: number; moving?: boolean; stale?: boolean; title?: string } = {}): HTMLElement {
   ensureNavArrowCss();
-  // Bigger orange arrow in a white ring (2026-11-19): stands out from the lime route and the blue map.
+  // Bigger orange arrow (2026-11-19): stands out from the lime route and the blue map. No ring; the
+// orange pulse shows only while the car stands still (none while moving).
   const { size = 120, moving = false, stale = false, title } = opts;
   const el = document.createElement('div');
   el.style.cssText = `position:relative;width:${size}px;height:${size}px;opacity:${stale ? 0.55 : 1};z-index:1000;pointer-events:none`;
   if (moving) el.classList.add('ily-moving');
   const arrow = Math.round(size * 0.42);
-  const ring = Math.round(size * 0.66);
   el.innerHTML = `<div class="ily-nav-pulse"></div>
-  <div class="ily-nav-ring" style="width:${ring}px;height:${ring}px"></div>
   <div class="car" style="position:absolute;left:50%;top:50%;width:${arrow}px;height:${Math.round(arrow * 1.1)}px;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))">
     <svg viewBox="0 0 40 44" width="100%" height="100%" aria-hidden="true" style="overflow:visible"><g>
       <path d="M20 5.5c1.1 0 2 .7 2.5 1.7l12.2 27.6c.9 2.1-1.1 4.2-3.3 3.5L21.3 35a4.3 4.3 0 0 0-2.6 0L8.6 38.3c-2.2.7-4.2-1.4-3.3-3.5L17.5 7.2c.5-1 1.4-1.7 2.5-1.7z" fill="#FF9F1C" stroke="#ffffff" stroke-width="2.6" stroke-linejoin="round"/>

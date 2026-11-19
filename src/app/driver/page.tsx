@@ -101,6 +101,8 @@ function Driver() {
   const [data, setData] = useState<CurrentTrip | null>(null);
   const [dash, setDash] = useState<Dashboard | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
+  // Notices like «Срок предложения истёк» go away by themselves after 6 s (2026-11-19).
+  useEffect(() => { if (!banner) return; const id = setTimeout(() => setBanner(null), 6000); return () => clearTimeout(id); }, [banner]);
   const [gps, setGps] = useState<{ active: boolean; error: string | null; last: string | null; accuracyM?: number | null }>({ active: false, error: null, last: null });
   const [offer, setOffer] = useState<Offer | null>(null);
   const [nowMs, setNowMs] = useState<number>(0);

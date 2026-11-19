@@ -19,7 +19,7 @@ import EdgeShine from '@/components/EdgeShine';
 // One size for every driver action button (2026-11-18): like «Выйти на линию» — 65 % wide, 53 px,
 // round, bold, glint on the rim.
 const STAGE_BTN = 'relative mx-auto block h-[53px] w-[65%] rounded-full bg-accent text-[16px] font-bold text-[#0d1608] shadow-lg active:scale-[0.99]';
-import { bearingDeg, cumulative, distM, locate, nextStep, offsetPoint, promptBand, roundNavDistance, type LatLng, type NavStep } from '@/lib/nav';
+import { bearingDeg, cumulative, distM, locate, maneuverIcon, nextStep, offsetPoint, promptBand, roundNavDistance, type LatLng, type NavStep } from '@/lib/nav';
 
 // Full-screen navigation for an accepted ride (replaces the tabbed driver UI while a trip is
 // active): heading-up map following the car, turn-by-turn banner with optional voice, rerouting,
@@ -272,6 +272,35 @@ export function DriverNavigation(props: {
 
       {/* Map */}
       <div className="relative min-h-0 flex-1" data-nav-zoom={navZoom}>
+        {/* Turn hint (2026-11-19): back, but quiet — a small dark see-through card in the top-left
+            corner instead of the bright full-width bar. */}
+        <div className="pointer-events-auto absolute start-3 top-3 z-10 max-w-[70%] rounded-[14px] border border-white/10 bg-[#10191C]/80 px-3 py-2 text-ink shadow-lg backdrop-blur-sm" aria-live="polite" data-testid="nav-hint">
+        {atStop && stop ? (
+          <div><div className="text-[15px] font-bold">{t('driver.stop.atStop')}</div><div className="truncate text-[12px] text-muted">{stop.label}</div></div>
+        ) : waitingAtPickup ? (
+          <div><div className="text-[15px] font-bold">{t('driver.navigation.waitingFor', { name: trip.passengerName })}</div><div className="truncate text-[12px] text-muted">{trip.pickup.label}</div></div>
+        ) : atTarget ? (
+          <div><div className="text-[15px] font-bold">{leg === 'pickup' ? t('driver.navigation.arrivedPickup') : leg === 'stop' ? t('driver.navigation.arrivedStop') : t('driver.navigation.arrivedDestination')}</div><div className="truncate text-[12px] text-muted">{target.label}</div></div>
+        ) : !pos ? (
+          <div className="text-[14px] font-semibold">{t('driver.navigation.needGps')}</div>
+        ) : routeState === 'unavailable' ? (
+          <div className="flex items-center justify-between gap-3"><span className="text-[13px] font-semibold">{t('driver.navigation.unavailable')}</span><a href={externalHref} target="_blank" rel="noreferrer" className="shrink-0 rounded-[10px] border border-edge px-2.5 py-1.5 text-[12px] font-semibold text-accent">{t('driver.navigation.openExternal')}</a></div>
+        ) : rerouting ? (
+          <div className="text-[15px] font-bold">{t('driver.navigation.rerouting')}</div>
+        ) : upcoming ? (
+          <div className="flex items-center gap-3">
+            <span className="text-2xl leading-none text-accent" aria-hidden>{maneuverIcon(upcoming.step.maneuver)}</span>
+            <div className="min-w-0">
+              <div className="text-[17px] font-bold leading-tight">{distLabel(upcoming.inM)}</div>
+              <div className="truncate text-[12px] text-muted" data-testid="nav-instruction">{upcoming.step.text}</div>
+            </div>
+          </div>
+        ) : routeState === 'loading' ? (
+          <div className="text-[14px] font-semibold">{t('driver.navigation.loading')}</div>
+        ) : (
+          <div className="text-[15px] font-bold">{t('driver.navigation.continueTo', { place: target.label })}</div>
+        )}
+        </div>
         <AutoMapView markers={markers} route={routeLine} center={pos ?? target} zoom={15} interactive className="h-full w-full"
           follow={follow} onFollowBreak={() => setFollowing(false)} idleReturnMs={4000} onIdleReturn={() => setFollowing(true)} fitPadding={wide ? { top: 60, right: 50, bottom: 60, left: 470 } : { top: 60, right: 50, bottom: panelOpen ? 520 : 330, left: 50 }} />
         <div className="absolute end-3 top-3 flex flex-col gap-2">
