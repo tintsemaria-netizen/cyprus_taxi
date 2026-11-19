@@ -46,7 +46,13 @@ export const createBookingSchema = z.object({
     .transform((s) => s.toUpperCase().replace(/[\s-]+/g, ''))
     .pipe(z.string().regex(/^[A-Z0-9]{2}\d{1,4}[A-Z]?$/, 'Use a flight number like A3 612.'))
     .optional(),
-});
+  // Ride-share «Попутчик» (Task 022): airport/intercity only (ignored elsewhere).
+  shareOptIn: z.boolean().optional(),
+  shareMaxExtraMin: z.number().int().min(5).max(60).optional(),
+  // Pre-booking: how long the passenger can wait for the co-rider (e.g. sit at the airport a bit).
+  shareWaitMin: z.number().int().min(0).max(180).optional(),
+  childCount: z.number().int().min(0).max(5).optional(),
+}).refine((v) => (v.childCount ?? 0) < v.passengerCount, { message: 'At least one adult.', path: ['childCount'] });
 
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 

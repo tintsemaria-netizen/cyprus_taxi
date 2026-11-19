@@ -11,6 +11,7 @@ import { stopSearchTx } from './search';
 import { endPreAssignmentTx, protectedDriverIds } from './preassign-core';
 import { haversineMeters } from '@/lib/geo';
 import { googleConfigured, googleRoute } from '@/server/google';
+import { attachMatchedGuestTx } from '@/server/share';
 export { endPreAssignmentTx, protectedDriverIds };
 
 // Pre-assignment of scheduled rides (airport transfers etc.).
@@ -45,6 +46,37 @@ export interface BoardItem {
   vClass: string; passengerCount: number; fareCents: number | null; priceType: string | null;
   flightNumber: string | null; airport: boolean; conflict: boolean;
   note: string | null; // the passenger writes flight, meeting point and bags here
+  share?: ShareBoardInfo | null; // ride-share pair (Task 022): one order, two passengers
+}
+
+// A pre-booked ride-share pair as one order on the board: the second passenger's stops and time,
+// the people/children/suitcases of both, and what the driver earns (both shared prices). Never names.
+export interface ShareBoardInfo {
+  guestPickupAt: string; guestPickupLabel: string; guestDropoffLabel: string;
+  passengers: number; children: number; luggage: number;
+  totalFareCents: number; extraMin: number; plan: { kind: string; who: string }[];
+}
+
+async function sharePairs(bookingIds: string[]) {
+  if (!bookingIds.length) return new Map<string, { hostId: string; info: ShareBoardInfo; guestId: string }>();
+  const groups = await prisma.shareGroup.findMany({
+    where: { status: 'MATCHED', OR: [{ activeHostBookingId: { in: bookingIds } }, { activeGuestBookingId: { in: bookingIds } }] },
+    include: { host: true, guest: true },
+  });
+  const m = new Map<string, { hostId: string; info: ShareBoardInfo; guestId: string }>();
+  for (const g of groups) {
+    const v = {
+      hostId: g.hostBookingId, guestId: g.guestBookingId,
+      info: {
+        guestPickupAt: g.guest.scheduledAt?.toISOString() ?? '', guestPickupLabel: g.guest.pickupLabel, guestDropoffLabel: g.guest.dropoffLabel,
+        passengers: g.host.passengerCount + g.guest.passengerCount, children: g.host.childCount + g.guest.childCount,
+        luggage: g.host.luggageCount + g.guest.luggageCount, totalFareCents: g.hostCents + g.guestCents,
+        extraMin: g.extraMinDriver, plan: (g.plan as { kind: string; who: string }[]) ?? [],
+      },
+    };
+    m.set(g.hostBookingId, v); m.set(g.guestBookingId, v);
+  }
+  return m;
 }
 
 // The driver's view: rides they can still commit to, and their own live commitments.
@@ -56,7 +88,9 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
     orderBy: { pickupAt: 'asc' },
     include: { booking: { select: { reference: true, pickupLabel: true, dropoffLabel: true, dropoffPostcode: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, passengerCount: true, vClass: true, fareCents: true, priceType: true, flightNumber: true, note: true } } },
   });
+  const minePairs = await sharePairs(mineRows.map((r) => r.bookingId));
   const mine = mineRows.map((p) => ({
+    share: minePairs.get(p.bookingId)?.info ?? null,
     bookingId: p.bookingId, reference: p.booking.reference, pickupAt: p.pickupAt.toISOString(),
     pickupLabel: p.booking.pickupLabel, dropoffLabel: p.booking.dropoffLabel, dropoffPostcode: p.booking.dropoffPostcode ?? null, vClass: p.booking.vClass,
     passengerCount: p.booking.passengerCount, fareCents: p.booking.fareCents, priceType: p.booking.priceType,
@@ -84,7 +118,16 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
   const gap = p.minGapMinutes * MIN;
   // Never offer a passenger this driver is blocked with (1-star either way, blocked-pairs.ts).
   const blockedPax = await blockedPassengerIdsForDriver(driverId);
-  const available: BoardItem[] = rows.filter((b) => !b.passengerId || !blockedPax.has(b.passengerId)).map((b) => ({
+  // Ride-share pairs: the co-rider is never listed alone (it rides with whoever takes the host);
+  // the pair is listed once — only to drivers who take co-riders and have the seats.
+  const pairs = await sharePairs(rows.map((r) => r.id));
+  const fitsPair = (id: string) => {
+    const p = pairs.get(id);
+    if (!p) return true;
+    return p.hostId === id && driver.acceptsShared && vehicle.seats >= p.info.passengers;
+  };
+  const available: BoardItem[] = rows.filter((b) => (!b.passengerId || !blockedPax.has(b.passengerId)) && fitsPair(b.id)).map((b) => ({
+    share: pairs.get(b.id)?.info ?? null,
     bookingId: b.id, reference: b.reference, pickupAt: b.scheduledAt!.toISOString(),
     pickupLabel: b.pickupLabel, dropoffLabel: b.dropoffLabel, dropoffPostcode: b.dropoffPostcode ?? null, vClass: b.vClass, passengerCount: b.passengerCount,
     fareCents: b.fareCents, priceType: b.priceType, flightNumber: b.flightNumber, note: b.note,
@@ -113,6 +156,11 @@ export async function claimScheduled(driverId: string, bookingId: string, now: D
       const vehicle = await boundVehicle(tx, driverId);
       if (!vehicle || vehicle.vClass !== b.vClass || vehicle.seats < b.passengerCount) return fail(409, 'VEHICLE_INELIGIBLE', 'Your vehicle doesn’t fit this ride.');
       if (await isPairBlocked(driverId, b.passengerId, tx)) return fail(409, 'BOOKING_GONE', 'This ride is no longer available.');
+      // Ride-share pair (Task 022): only the host's ride is claimed; the driver must take co-riders
+      // and have seats for both bookings.
+      const pair = await tx.shareGroup.findFirst({ where: { status: 'MATCHED', OR: [{ activeHostBookingId: bookingId }, { activeGuestBookingId: bookingId }] }, include: { guest: true } });
+      if (pair && pair.guestBookingId === bookingId) return fail(409, 'BOOKING_GONE', 'This ride is no longer available.');
+      if (pair && (!driver.acceptsShared || vehicle.seats < b.passengerCount + pair.guest.passengerCount)) return fail(409, 'VEHICLE_INELIGIBLE', 'This shared ride needs a driver who takes co-riders and seats for everyone.');
 
       const mine = await tx.preAssignment.findMany({ where: { driverId, status: 'COMMITTED' }, select: { pickupAt: true } });
       if (mine.length >= p.maxPerDriver) return fail(409, 'LIMIT', `You can hold at most ${p.maxPerDriver} pre-booked rides.`);
@@ -200,7 +248,10 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
       || !!(await tx.driverOffer.findFirst({ where: { activeDriverId: pa.driverId }, select: { id: true } }));
     if (busy) {
       // Keep trying until the normal scheduled-search lead; then fall back to automatic search.
-      if (pa.pickupAt.getTime() - now.getTime() > config.dispatch.scheduleLeadMinutes * MIN) return 'waiting';
+      // A ride-share pair waits for its driver until pairLapseMinutes, other rides until the normal lead.
+      const isPair = !!(await tx.shareGroup.findFirst({ where: { activeHostBookingId: bookingId, status: 'MATCHED' }, select: { id: true } }));
+      const cutoff = isPair ? config.share.pairLapseMinutes : config.dispatch.scheduleLeadMinutes;
+      if (pa.pickupAt.getTime() - now.getTime() > cutoff * MIN) return 'waiting';
       return lapse(driver.onDuty ? 'driver busy at conversion' : 'driver offline at conversion',
         'Your confirmed driver could not make it in time. We are finding you another driver automatically.',
         driver.onDuty ? 'Your pre-booked ride was handed to automatic dispatch because you were still on another trip.' : 'Your pre-booked ride was handed to automatic dispatch because you were offline.');
@@ -212,6 +263,7 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
     await tx.bookingEvent.create({ data: { bookingId, type: 'PREASSIGN_CONVERTED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'ASSIGNED' } });
     await recordEvent(tx, { eventType: 'booking.assigned', aggregateType: 'booking', aggregateId: bookingId, aggregateVersion: u.revision, correlationId: bookingId, payload: { ...bookingEventPayload({ ...b, status: 'ASSIGNED' }), driverPseudo: driverPseudo(pa.driverId), preassigned: true } });
     await endPreAssignmentTx(tx, bookingId, 'CONVERTED', 'converted to assignment');
+    await attachMatchedGuestTx(tx, bookingId); // ride-share pair: the co-rider joins the same car
     await enqueuePassenger(tx, bookingId, 'Driver assigned', `${driver.publicName.split(' ')[0]} is assigned to your ride — track them live.`);
     await enqueueDriver(tx, pa.driverId, 'Pre-booked ride is now active', `Pickup ${timeLabel(pa.pickupAt)} at ${b.pickupLabel}. Head to the pickup in time.`, { tag: `pre-${bookingId}` });
     return 'converted';

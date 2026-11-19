@@ -11,6 +11,7 @@ import { recordEvent } from '@/server/events';
 import { heartbeat } from '@/server/workers/heartbeat';
 import { runPassengerReminders } from './passenger-reminders';
 import { purgePassengerLocations } from '@/server/passenger-location';
+import { tryLiveShare, expireShares, matchPrebookings, dissolveUnclaimedTx } from '@/server/share';
 
 // Supervised worker loop (Task 012 §4, restructured for Task 016 §4). Postgres-backed jobs with
 // a lease so multiple instances/ticks are safe; recovers on restart because state lives in the DB.
@@ -113,6 +114,9 @@ async function runDispatchSection(now: Date): Promise<void> {
   await promoteScheduled(now);
   await rematchOnGpsLoss(now);
   await repairSearchWithoutJob(now);
+  // Ride-share (Task 022): unanswered proposals lapse; pre-bookings are paired every ~30 s.
+  await expireShares(now);
+  if (state.tickCount % 15 === 1) await matchPrebookings(now);
 
   const expired = await prisma.driverOffer.findMany({ where: { status: 'OFFERED', expiresAt: { lt: now } }, select: { id: true } });
   for (const o of expired) await expireOffer(o.id);
@@ -158,6 +162,10 @@ async function processJob(jobId: string): Promise<void> {
   if (!job.openedAt && job.deadlineAt < now) { await openJob(jobId, now, 'deadline'); return; }
   if (job.openedAt && job.deadlineAt >= now) return; // on the free-orders board; no more offers
 
+  // Ride-share (Task 022): an opted-in airport/intercity ride first tries to join a running trip
+  // on its way; while that proposal waits for the passenger + driver, no driver offers go out.
+  if (!job.openedAt && (await tryLiveShare(job.bookingId, now))) return;
+
   // Board window over without anyone taking it → give up (NO_DRIVER).
   if (job.deadlineAt < now) {
     const gaveUp = await prisma.$transaction(async (tx) => {
@@ -180,14 +188,26 @@ async function processJob(jobId: string): Promise<void> {
 
   // Find the best candidate, expanding the radius in stages if the closer ring is empty.
   // ETAs are cached across stages so an inner-ring driver is road-routed at most once per job.
+  // Pre-booked ride-share pair (Task 022): the host's ride is offered to online drivers who take
+  // co-riders and have seats for both; the co-rider joins on acceptance. If no such driver is left,
+  // the pair splits into two normal rides (full price) and both are searched as usual.
+  const pair = await prisma.shareGroup.findFirst({ where: { activeHostBookingId: job.bookingId, status: 'MATCHED' }, include: { guest: { select: { passengerCount: true } } } });
+  const target = pair ? { ...job.booking, passengerCount: job.booking.passengerCount + pair.guest.passengerCount, requireAcceptsShared: true } : job.booking;
   const etaCache = new Map<string, { etaSec: number; approx: boolean; roadM?: number }>();
   let stage = job.radiusStage;
-  let candidate = await findBestCandidate(job.booking, RADIUS_STAGES_KM[Math.min(stage, RADIUS_STAGES_KM.length - 1)], job.triedDriverIds, etaCache);
+  let candidate = await findBestCandidate(target, RADIUS_STAGES_KM[Math.min(stage, RADIUS_STAGES_KM.length - 1)], job.triedDriverIds, etaCache);
   while (!candidate && stage < RADIUS_STAGES_KM.length - 1) {
     stage++;
-    candidate = await findBestCandidate(job.booking, RADIUS_STAGES_KM[stage], job.triedDriverIds, etaCache);
+    candidate = await findBestCandidate(target, RADIUS_STAGES_KM[stage], job.triedDriverIds, etaCache);
   }
   if (stage !== job.radiusStage) await prisma.dispatchJob.update({ where: { id: jobId }, data: { radiusStage: stage } });
+  if (!candidate && pair) {
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${job.bookingId} FOR UPDATE`;
+      await dissolveUnclaimedTx(tx, job.bookingId);
+    });
+    return; // next tick: the host searches alone; the co-rider is promoted by promoteScheduled
+  }
   if (!candidate) {
     // Every eligible nearby driver has been offered the ride (or there is none): open it to all
     // drivers. A scheduled ride searched ahead of its time keeps retrying until its deadline.
@@ -208,6 +228,7 @@ async function openJob(jobId: string, now: Date, reason: 'no-candidates' | 'dead
     if (!b || b.status !== 'SEARCHING') return;
     // An outstanding offer (deadline case) is left to resolve; the board only opens without one.
     if (await tx.driverOffer.findFirst({ where: { activeBookingId: job.bookingId } })) return;
+    await dissolveUnclaimedTx(tx, job.bookingId); // a ride-share pair goes to the board as a normal ride
     await tx.dispatchJob.update({ where: { id: jobId }, data: { openedAt: now, deadlineAt: new Date(now.getTime() + FREE_BOARD_SEC * 1000) } });
     await tx.bookingEvent.create({ data: { bookingId: job.bookingId, type: 'OPENED_TO_FREE_BOARD', actorType: 'SYSTEM', beforeStatus: 'SEARCHING', afterStatus: 'SEARCHING', reason } });
   });
@@ -237,10 +258,18 @@ export async function repairSearchWithoutJob(now: Date = new Date()): Promise<nu
 // The search deadline runs to pickup time (never reserving a driver for hours ahead).
 export async function promoteScheduled(now: Date): Promise<void> {
   const leadMs = config.dispatch.scheduleLeadMinutes * 60 * 1000;
+  // Ride-share pairs (Task 022) go online earlier than other pre-bookings.
+  const pairLeadMs = config.share.pairSearchLeadMinutes * 60 * 1000;
   const due = await prisma.booking.findMany({
     // A ride a driver has pre-booked is handled by runPreassignments (converted or lapsed), never
     // searched in parallel.
-    where: { status: 'REQUESTED', scheduledAt: { not: null, lte: new Date(now.getTime() + leadMs) }, preAssignments: { none: { status: 'COMMITTED' } } },
+    where: {
+      status: 'REQUESTED', preAssignments: { none: { status: 'COMMITTED' } },
+      OR: [
+        { scheduledAt: { not: null, lte: new Date(now.getTime() + leadMs) } },
+        { scheduledAt: { not: null, lte: new Date(now.getTime() + pairLeadMs) }, shareAsHost: { some: { status: 'MATCHED', activeHostBookingId: { not: null } } } },
+      ],
+    },
     select: { id: true },
     take: 25,
   });
@@ -249,6 +278,12 @@ export async function promoteScheduled(now: Date): Promise<void> {
       await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${s.id} FOR UPDATE`;
       const b = await tx.booking.findUnique({ where: { id: s.id } });
       if (!b || b.status !== 'REQUESTED' || !b.scheduledAt) return;
+      // Ride-share pre-booked pair (Task 022): the co-rider never searches on its own while the pair
+      // holds — it rides with whoever takes the host (pre-assigned, or offered online now). An
+      // unanswered pre-booking proposal is dropped: the ride searches normally.
+      const pair = await tx.shareGroup.findFirst({ where: { OR: [{ activeHostBookingId: b.id }, { activeGuestBookingId: b.id }] } });
+      if (pair?.status === 'MATCHED' && pair.guestBookingId === b.id) return;
+      if (pair?.status === 'PROPOSED') await dissolveUnclaimedTx(tx, b.id);
       const deadline = new Date(Math.max(now.getTime() + config.dispatch.searchDeadlineSeconds * 1000, b.scheduledAt.getTime()));
       await startSearchTx(tx, b.id, { deadlineAt: deadline });
       const ub = await tx.booking.update({ where: { id: b.id }, data: { status: 'SEARCHING', revision: { increment: 1 } } });

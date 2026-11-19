@@ -20,6 +20,8 @@ import { nicosiaInputValue } from '@/lib/timezone';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
 import { NotifyPrompt } from '@/components/NotifyPrompt';
+import { ShareBookingOptions, type ShareOpts } from '@/components/share/ShareBookingOptions';
+import { isShareRoute } from '@/lib/share';
 
 interface PublicConfig {
   demoMode: boolean;
@@ -27,6 +29,7 @@ interface PublicConfig {
   classes: { key: 'COMFORT' | 'XL'; label: string; maxPassengers: number }[];
   schedule: { minMinutes: number; maxDays: number };
   operatorName: string | null;
+  share?: { discountPct: number; defaultMaxExtraMin: number; defaultWaitMin: number };
 }
 
 const CLASS_META: Record<string, { seatsLabel: MsgKey; blurb: MsgKey }> = {
@@ -57,6 +60,7 @@ export default function BookingApp() {
   const [scheduleOffsetMin, setScheduleOffsetMin] = useState<number | undefined>(undefined);
   const [ambiguous, setAmbiguous] = useState<string[] | null>(null);
   const [vClass, setVClass] = useState<'COMFORT' | 'XL'>('COMFORT');
+  const [shareOpts, setShareOpts] = useState<ShareOpts>({ on: false, adults: 1, children: 0, bags: 1, maxExtra: 15, wait: 15 });
   const [pax, setPax] = useState(1);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -483,6 +487,12 @@ export default function BookingApp() {
 
   // The stop counts only once it has been chosen (an empty stop row is ignored).
   const viaStop = hasStop && stop ? stop : null;
+  // Ride-share «Попутчик» (Task 022): airport / intercity only, no intermediate stop. When it is on,
+  // the real people / bags count matters (seats and boot are shared), so they are sent and priced.
+  const shareAllowed = !!(cfg?.share && pickup && dropoff && !viaStop && isShareRoute(pickup, dropoff));
+  const shareOn = shareAllowed && shareOpts.on;
+  const effPax = shareOn ? shareOpts.adults + shareOpts.children : 1;
+  const effBags = shareOn ? shareOpts.bags : 0;
   // Real driving route (distance + trip duration + geometry) between the two stops.
   // Debounced, aborted on change, stale-guarded — NOT recomputed on every render.
   const [route, setRoute] = useState<{ line: [number, number][]; km: number | null; min: number | null; unavailable?: boolean } | null>(null);
@@ -579,18 +589,16 @@ export default function BookingApp() {
     }, 500);
     return () => { clearTimeout(t); controller.abort(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pickup, dropoff, viaStop, pax, when, scheduledAt, scheduleOffsetMin, classKeys, tError, quoteTick]);
+  }, [pickup, dropoff, viaStop, pax, when, scheduledAt, scheduleOffsetMin, classKeys, tError, quoteTick, effPax, effBags]);
   const quote: QuoteBody | null = quotes[vClass] ?? null;
 
   // Pre-booking (2026-11-13): only a note for the driver — flight number, meeting point, bags.
   // No passenger/bag steppers: every ride is sent as 1 passenger, 0 bags (the car class covers size).
-  const effPax = 1;
-  const effBags = 0;
   const effNote = when === 'SCHEDULE' ? note.trim() : '';
   const maxPax = cfg?.classes.find((c) => c.key === vClass)?.maxPassengers ?? (vClass === 'XL' ? 6 : 4);
 
   function payloadSignature(offset = scheduleOffsetMin): string {
-    return JSON.stringify({ pickup, dropoff, when, scheduledAt, scheduleOffsetMin: offset, vClass, pax: effPax, bags: effBags, name: name.trim(), phone: phone.trim(), note: effNote });
+    return JSON.stringify({ pickup, dropoff, when, scheduledAt, scheduleOffsetMin: offset, vClass, pax: effPax, bags: effBags, name: name.trim(), phone: phone.trim(), note: effNote, share: shareOn ? shareOpts : null });
   }
 
   useEffect(() => {
@@ -695,6 +703,7 @@ export default function BookingApp() {
         passengerName: name.trim() || passenger?.name || 'Passenger',
         phone: passenger?.phone || phone.trim(),
         note: effNote || undefined,
+        ...(shareOn ? { shareOptIn: true, shareMaxExtraMin: shareOpts.maxExtra, childCount: shareOpts.children, ...(when === 'SCHEDULE' ? { shareWaitMin: shareOpts.wait } : {}) } : {}),
       };
       const res = await api<{ tracking: { token: string } }>('/bookings', {
         method: 'POST',
@@ -1186,6 +1195,9 @@ export default function BookingApp() {
                       </div>
                     )}
                     {classPicker}
+                    {shareAllowed && cfg?.share && (
+                      <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook={when === 'SCHEDULE'} />
+                    )}
                     {ambiguous ? (
                       <div className="mt-4 rounded-[12px] border border-warn/40 bg-warn/10 p-3">
                         <p className="text-sm text-warn">{t('booking.review.ambiguousPrompt')}</p>

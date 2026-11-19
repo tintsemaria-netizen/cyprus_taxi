@@ -79,6 +79,8 @@ model Driver {
   // transaction that writes a TripRating, so they are always consistent with the rating rows.
   ratingTotal Int @default(0)
   ratingCount Int @default(0)
+  // Driver takes co-riders on airport/intercity rides (Task 022). Off by default.
+  acceptsShared Boolean @default(false)
 
   bindings     DriverVehicleBinding[]
   assignments  Assignment[]
@@ -484,6 +486,14 @@ model Booking {
   arrivedAt      DateTime? // server time the driver marked ARRIVED at pickup — M3
   passengerId    String? // owning passenger account (Task 014); null for legacy/anonymous
   flightNumber   String? // optional, for airport pickups (shown to the driver; not live-tracked)
+  // Ride-share «Попутчик» (Task 022): airport/intercity only, opt-in at booking.
+  shareOptIn       Boolean @default(false)
+  shareMaxExtraMin Int? // the most extra minutes this passenger accepts for a co-rider
+  childCount       Int     @default(0) // of passengerCount; shown to co-riders/driver, never names
+  shareFullCents   Int? // the price before the shared discount (restored if the co-rider drops out)
+  shareFullPriceType String?
+  shareWaitMin     Int? // pre-booking: how long this passenger can wait for the co-rider (their choice)
+  shareOrigScheduledAt DateTime? // the booked pickup time, if a pre-booked pair moved it (restored on break-up)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -498,6 +508,8 @@ model Booking {
   settlements DriverSettlement[]
   rating      TripRating?
   preAssignments PreAssignment[]
+  shareAsHost  ShareGroup[] @relation("ShareHost")
+  shareAsGuest ShareGroup[] @relation("ShareGuest")
 
   @@index([status, createdAt])
   @@index([status, scheduledAt])
@@ -911,4 +923,55 @@ model OsmImport {
   rows         Int?
   withPostcode Int?
   error        String?
+}
+
+// Ride-share «Попутчик» (Task 022). Two bookings in one car, at most.
+//  LIVE    — host is already on a trip (assigned…in progress); a new guest booking fits the route.
+//            The host passenger and the driver answer within answerSec; the guest opted in at booking.
+//  PREBOOK — two pre-bookings fit each other; both passengers answer, then the pair is one order on
+//            the drivers' pre-booking board. Passengers never see each other's name/phone/address.
+// status: PROPOSED → ACCEPTED (live: guest attached) | MATCHED (prebook: waiting for a driver)
+//         → ENDED; or DECLINED / EXPIRED / CANCELED. active*BookingId nullable-unique = one live
+//         group per booking.
+model ShareGroup {
+  id               String    @id @default(uuid())
+  mode             String // LIVE | PREBOOK
+  status           String    @default("PROPOSED")
+  host             Booking   @relation("ShareHost", fields: [hostBookingId], references: [id], onDelete: Cascade)
+  hostBookingId    String
+  guest            Booking   @relation("ShareGuest", fields: [guestBookingId], references: [id], onDelete: Cascade)
+  guestBookingId   String
+  driverId         String? // LIVE: the host's driver
+  discountPct      Int
+  extraMinHost     Int // extra minutes for the host passenger
+  extraMinGuest    Int // extra minutes for the guest vs a direct ride
+  extraMinDriver   Int // extra minutes on the driver's whole remaining trip
+  hostFullCents    Int
+  guestFullCents   Int
+  hostCents        Int // after discount
+  guestCents       Int
+  plan             Json // ordered stops: [{ kind: 'pickup'|'dropoff', who: 'host'|'guest' }]
+  // Minutes from the plan start (live: proposal time; pre-booking: startAt) to each passenger's
+  // drop-off, the co-rider's pickup and the end of the trip — road time with traffic when Google is on.
+  arrivals         Json?
+  startAt          DateTime? // pre-booked pair: when the car leaves the first pickup
+  roadRouted       Boolean   @default(false)
+  hostAnswer       String? // YES | NO
+  guestAnswer      String?
+  driverAnswer     String?
+  expiresAt        DateTime
+  createdAt        DateTime  @default(now())
+  decidedAt        DateTime?
+  endedAt          DateTime?
+  endReason        String?
+  // Pre-booking no-show (driver waited, passenger never came): that passenger owes a part of their
+  // shared price (card charge once card payments exist); the other passenger pays the full price.
+  noShowBookingId  String?
+  noShowFeeCents   Int?
+  activeHostBookingId  String? @unique
+  activeGuestBookingId String? @unique
+
+  @@index([status, expiresAt])
+  @@index([guestBookingId])
+  @@index([hostBookingId])
 }

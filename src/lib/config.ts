@@ -71,6 +71,22 @@ export const config = {
     },
   },
   minStopDistanceMeters: num('MIN_STOP_DISTANCE_METERS', 50),
+  // Ride-share «Попутчик» (Task 022). Our own product defaults; adjust after the pilot.
+  share: {
+    discountPct: num('SHARE_DISCOUNT_PCT', 30), // each passenger's discount when a co-rider actually joins
+    answerSec: num('SHARE_ANSWER_SEC', 60), // live: host passenger + driver must both say yes within this
+    prebookAnswerMin: num('SHARE_PREBOOK_ANSWER_MIN', 30), // pre-booking: both passengers answer within this…
+    prebookAnswerBeforePickupMin: num('SHARE_PREBOOK_ANSWER_BEFORE_PICKUP_MIN', 60), // …and at the latest this long before pickup
+    noShowFeeCents: num('SHARE_NO_SHOW_FEE_CENTS', 1000), // flat no-show fee on a pre-booked pair (€10; never above their price)
+    defaultMaxExtraMin: num('SHARE_DEFAULT_MAX_EXTRA_MIN', 15),
+    defaultWaitMin: num('SHARE_DEFAULT_WAIT_MIN', 15), // pre-booking: how long a passenger can wait for the co-rider
+    // Pre-booked PAIRS only (operator, 2026-11-19; other pre-bookings keep the normal lead): an
+    // unclaimed pair is offered to online co-rider drivers this long before pickup, and a pair's
+    // pre-assigned driver who is still busy/offline is waited for until pairLapseMinutes.
+    pairSearchLeadMinutes: num('SHARE_PAIR_SEARCH_LEAD_MINUTES', 30),
+    pairLapseMinutes: num('SHARE_PAIR_LAPSE_MINUTES', 20),
+    luggage: { COMFORT: num('SHARE_LUGGAGE_COMFORT', 4), XL: num('SHARE_LUGGAGE_XL', 7) } as Record<'COMFORT' | 'XL', number>,
+  },
   // Pricing mode (Task 012 §6.1). Real charges stay REGULATED_METER_ESTIMATE unless a
   // commercial dynamic rule is authorized; UPFRONT_DYNAMIC is a synthetic/TEST engine.
   pricing: {

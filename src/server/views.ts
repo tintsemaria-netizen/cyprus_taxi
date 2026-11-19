@@ -121,6 +121,7 @@ export async function trackingView(bookingId: string) {
   const myRating = booking.status === 'COMPLETED' ? (await prisma.tripRating.findUnique({ where: { bookingId: booking.id }, select: { stars: true } }))?.stars ?? null : null;
 
   return {
+    ...(await passengerShareView(booking)),
     myRating,
     reference: booking.reference,
     status: booking.status,
@@ -151,6 +152,48 @@ export async function trackingView(bookingId: string) {
     canRetry: booking.status === 'NO_DRIVER',
     timeline: booking.events.map((e) => ({ type: e.type, at: e.createdAt.toISOString(), status: e.afterStatus })),
   };
+}
+
+// ---- Ride-share (Task 022) for the passenger: an open proposal and/or the current pair ----
+// Only counts of the other party (adults, children, suitcases) — never a name, phone or address.
+async function passengerShareView(booking: { id: string; shareOptIn: boolean }) {
+  const groups = await prisma.shareGroup.findMany({
+    where: { OR: [{ activeHostBookingId: booking.id }, { activeGuestBookingId: booking.id }] },
+    include: { host: true, guest: true },
+  });
+  const counts = (b: { passengerCount: number; childCount: number; luggageCount: number }) => ({ adults: b.passengerCount - b.childCount, children: b.childCount, luggage: b.luggageCount });
+  type Timing = { arriveAt: string | null; pickupAt: string | null; waitMin: number; approx: boolean };
+  let shareProposal = null as null | ({ groupId: string; mode: string; expiresAt: string; extraMin: number; fullFareCents: number; newFareCents: number; coRider: ReturnType<typeof counts> } & Timing);
+  let shared = null as null | ({ status: string; discountPct: number; fullFareCents: number; fareCents: number; coRider: ReturnType<typeof counts> } & Timing);
+  for (const g of groups) {
+    const isHost = g.hostBookingId === booking.id;
+    const me = isHost ? g.host : g.guest;
+    const other = isHost ? g.guest : g.host;
+    const myAnswer = isHost ? g.hostAnswer : g.guestAnswer;
+    // When this passenger arrives (road time with traffic when Google is on), and on a pre-booked
+    // pair when the car comes for them and how long that is after the time they booked.
+    const arr = (g.arrivals ?? null) as null | { host: number; guest: number; end: number; guestPickup: number };
+    const base = g.mode === 'PREBOOK' ? g.startAt : g.createdAt;
+    const at = (min: number | undefined) => (base && min != null ? new Date(base.getTime() + min * 60_000) : null);
+    const pickup = g.mode === 'PREBOOK' ? (isHost ? g.startAt : at(arr?.guestPickup)) : null;
+    const booked = me.shareOrigScheduledAt ?? me.scheduledAt;
+    const timing: Timing = {
+      arriveAt: at(isHost ? arr?.host : arr?.guest)?.toISOString() ?? null,
+      pickupAt: pickup?.toISOString() ?? null,
+      waitMin: pickup && booked ? Math.max(0, Math.round((pickup.getTime() - booked.getTime()) / 60_000)) : 0,
+      approx: !g.roadRouted,
+    };
+    if (g.status === 'PROPOSED' && !myAnswer && g.expiresAt > new Date()) {
+      shareProposal = {
+        groupId: g.id, mode: g.mode, expiresAt: g.expiresAt.toISOString(), extraMin: isHost ? g.extraMinHost : g.extraMinGuest,
+        fullFareCents: isHost ? g.hostFullCents : g.guestFullCents, newFareCents: isHost ? g.hostCents : g.guestCents, coRider: counts(other), ...timing,
+      };
+    }
+    if (g.status === 'ACCEPTED' || g.status === 'MATCHED') {
+      shared = { status: g.status, discountPct: g.discountPct, fullFareCents: isHost ? g.hostFullCents : g.guestFullCents, fareCents: isHost ? g.hostCents : g.guestCents, coRider: counts(other), ...timing };
+    }
+  }
+  return { shareOptIn: booking.shareOptIn, shareProposal, shared };
 }
 
 // A driver's rating is shown to passengers only once it rests on enough trips to mean something.
@@ -195,6 +238,58 @@ export function stopView(b: { stopLat: number | null; stopLng: number | null; st
   };
 }
 
+// ---- Ride-share (Task 022) for the driver ----
+// shareProposal: a co-rider to accept/decline (with "was → now" earnings and the extra minutes).
+// coRider: the second passenger's leg in the car (its own arrive/start/complete actions).
+async function driverShareView(driverId: string, primaryBookingId: string) {
+  const now = new Date();
+  const prop = await prisma.shareGroup.findFirst({
+    where: { mode: 'LIVE', status: 'PROPOSED', driverId, driverAnswer: null, expiresAt: { gt: now } },
+    include: { host: true, guest: true },
+  });
+  const arr = (prop?.arrivals ?? null) as null | { end: number };
+  const label = (st: { kind: string; who: string }) => {
+    const b = st.who === 'host' ? prop!.host : prop!.guest;
+    return { ...st, label: st.kind === 'pickup' ? b.pickupLabel : b.dropoffLabel, name: st.who === 'host' ? b.passengerName : null };
+  };
+  const shareProposal = prop ? {
+    groupId: prop.id, expiresAt: prop.expiresAt.toISOString(), extraMin: prop.extraMinDriver,
+    endAt: arr ? new Date(prop.createdAt.getTime() + arr.end * 60_000).toISOString() : null, approx: !prop.roadRouted,
+    stops: (prop.plan as { kind: string; who: string }[]).map(label),
+    earningsWasCents: prop.host.fareCents ?? prop.hostFullCents, earningsNowCents: prop.hostCents + prop.guestCents,
+    passengers: prop.guest.passengerCount, children: prop.guest.childCount, luggage: prop.guest.luggageCount,
+    pickupLabel: prop.guest.pickupLabel, dropoffLabel: prop.guest.dropoffLabel,
+    plan: prop.plan as { kind: string; who: string }[],
+  } : null;
+
+  const g = await prisma.shareGroup.findFirst({
+    where: { status: 'ACCEPTED', driverId, OR: [{ activeHostBookingId: primaryBookingId }, { activeGuestBookingId: primaryBookingId }] },
+  });
+  let coRider = null as null | Record<string, unknown>;
+  let share = null as null | { groupId: string; discountPct: number; totalCents: number; plan: { kind: string; who: string }[]; primaryIsHost: boolean };
+  if (g) {
+    const otherId = g.hostBookingId === primaryBookingId ? g.guestBookingId : g.hostBookingId;
+    const asg = await prisma.assignment.findFirst({ where: { activeBookingId: otherId, driverId }, include: { booking: true } });
+    share = { groupId: g.id, discountPct: g.discountPct, totalCents: g.hostCents + g.guestCents, plan: g.plan as { kind: string; who: string }[], primaryIsHost: g.hostBookingId === primaryBookingId };
+    if (asg) {
+      const o = asg.booking;
+      const w = o.status === 'ARRIVED' ? await prisma.waitingSession.findUnique({ where: { bookingId: o.id } }) : null;
+      coRider = {
+        bookingId: o.id, reference: o.reference, status: o.status, revision: o.revision,
+        pickup: { lat: o.pickupLat, lng: o.pickupLng, label: o.pickupLabel },
+        dropoff: { lat: o.dropoffLat, lng: o.dropoffLng, label: o.dropoffLabel },
+        passengerName: o.passengerName, passengerPhone: o.phone,
+        passengerCount: o.passengerCount, childCount: o.childCount, luggageCount: o.luggageCount,
+        fareCents: o.fareCents, startCodeRequired: !!o.startCode, flightNumber: o.flightNumber, note: o.note,
+        scheduledAt: o.scheduledAt?.toISOString() ?? null,
+        waiting: w ? { arrivedAt: w.arrivedAt.toISOString(), graceSeconds: w.graceSeconds, paidRateCentsPerMin: w.paidRateCentsPerMin } : null,
+        isHost: g.hostBookingId === o.id,
+      };
+    }
+  }
+  return { shareProposal, coRider, share };
+}
+
 export async function driverCurrentTrip(driverId: string) {
   const active = await prisma.assignment.findFirst({
     where: { activeDriverId: driverId },
@@ -202,11 +297,12 @@ export async function driverCurrentTrip(driverId: string) {
   });
   const driver = await prisma.driver.findUnique({ where: { id: driverId } });
   if (!active) {
-    return { onDuty: driver?.onDuty ?? false, available: driver?.available ?? false, trip: null };
+    return { onDuty: driver?.onDuty ?? false, available: driver?.available ?? false, trip: null, shareProposal: null, coRider: null, share: null };
   }
   const b = active.booking;
   const waiting = b.status === 'ARRIVED' ? await prisma.waitingSession.findUnique({ where: { bookingId: b.id } }) : null;
   return {
+    ...(await driverShareView(driverId, b.id)),
     onDuty: driver?.onDuty ?? false,
     available: driver?.available ?? false,
     trip: {
@@ -231,6 +327,8 @@ export async function driverCurrentTrip(driverId: string) {
       flightNumber: b.flightNumber,
       passengerCount: b.passengerCount,
       luggageCount: b.luggageCount,
+      childCount: b.childCount,
+      fareCents: b.fareCents,
       vClass: b.vClass,
       scheduledAt: b.scheduledAt?.toISOString() ?? null,
       waiting: waiting ? { arrivedAt: waiting.arrivedAt.toISOString(), graceSeconds: waiting.graceSeconds, paidRateCentsPerMin: waiting.paidRateCentsPerMin } : null,

@@ -17,6 +17,7 @@ import { useT } from '@/i18n/I18nProvider';
 import type { MsgKey } from '@/i18n/I18nProvider';
 import { useSheetDrag } from '@/components/useSheetDrag';
 import { PlacesInput, type Selected } from '@/components/booking/PlacesInput';
+import { ShareProposalCard, SharedBadge, type ShareProposalView, type SharedView } from '@/components/share/SharePassenger';
 
 interface TrackView {
   flightNumber?: string | null;
@@ -45,6 +46,9 @@ interface TrackView {
   canCancel: boolean;
   canRetry: boolean;
   timeline: { type: string; at: string; status: string | null }[];
+  // Ride-share «Попутчик» (Task 022)
+  shareProposal?: ShareProposalView | null;
+  shared?: SharedView | null;
 }
 
 const STATUS_KEYS = new Set(['REQUESTED', 'SEARCHING', 'NO_DRIVER', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELED']);
@@ -401,6 +405,9 @@ export default function TrackApp() {
           {reconnecting && <span className="chip ms-2 !bg-page/90 !text-warn">{t('track.reconnecting')}</span>}
         </div>
 
+        {/* Ride-share proposal: a light notification on top of the map (Task 022). */}
+        {view.shareProposal && !terminal && <ShareProposalCard key={view.shareProposal.groupId} p={view.shareProposal} onAnswered={load} />}
+
         {/* bottom sheet */}
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end sm:block">
           <div className="pointer-events-auto relative w-full sm:absolute sm:bottom-4 sm:start-4 sm:w-[400px]">
@@ -459,6 +466,7 @@ export default function TrackApp() {
                     <p className="mt-2 text-xs text-muted">{t('track.prebook.confirmedNote')}</p>
                   </div>
                 )}
+                {view.shared && !terminal && <SharedBadge s={view.shared} />}
                 {view.flightNumber && !terminal && <p className="mt-2 font-mono text-xs text-muted">✈ {t('track.prebook.flightRow', { flight: formatFlight(view.flightNumber) })}</p>}
                 {view.status === 'NO_DRIVER' && (
                   <p className="mt-1 text-sm text-muted">{t('track.noDriverNote')}</p>

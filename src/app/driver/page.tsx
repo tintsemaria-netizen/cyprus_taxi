@@ -34,7 +34,12 @@ interface Trip {
   passengerName: string; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; luggageCount?: number; vClass: string;
   scheduledAt: string | null; waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null; allowedNext: string[];
 }
-interface CurrentTrip { onDuty: boolean; available: boolean; trip: Trip | null }
+import { DriverShareProposalSheet, CoRiderLegPill, AcceptsSharedToggle, type DriverShareProposal, type CoRiderLeg, type ShareInfo } from '@/components/share/ShareDriver';
+interface CurrentTrip {
+  onDuty: boolean; available: boolean; trip: Trip | null;
+  // Ride-share «Попутчик» (Task 022)
+  shareProposal?: DriverShareProposal | null; coRider?: CoRiderLeg | null; share?: ShareInfo | null;
+}
 interface Offer {
   offerId: string; expiresAt: string; expiresInMs: number; localDeadline?: number; pickupEtaSec: number | null; pickupDistanceM: number | null;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string; postcode?: string | null }; stop?: { lat: number; lng: number; label: string } | null;
@@ -343,8 +348,13 @@ function Driver() {
   // An accepted ride takes over the whole screen: navigation + the one action for the stage, no tabs.
   if (trip) {
     return (
-      <DriverNavigation trip={trip} pos={pos} gps={gps} nowMs={nowMs} startCode={startCode} setStartCode={setStartCode}
-        banner={banner} onDismissBanner={() => setBanner(null)} onStartGps={startGps} onTripAction={tripAction} />
+      <>
+        <DriverNavigation trip={trip} pos={pos} gps={gps} nowMs={nowMs} startCode={startCode} setStartCode={setStartCode}
+          banner={banner} onDismissBanner={() => setBanner(null)} onStartGps={startGps} onTripAction={tripAction} />
+        {/* Ride-share (Task 022): the second passenger's leg, and a co-rider proposal to decide on the spot. */}
+        {data.coRider && <CoRiderLegPill leg={data.coRider} share={data.share ?? null} onChanged={() => { void load(); void loadDash(); }} onError={setBanner} />}
+        {data.shareProposal && <DriverShareProposalSheet key={data.shareProposal.groupId} p={data.shareProposal} onAnswered={() => { void load(); }} />}
+      </>
     );
   }
 
@@ -895,6 +905,10 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-edge pt-3">
           <span className="text-sm">{t('driver.profile.notifications')}</span>
           <NotifyToggle pushUrl="/driver/push" className="text-end" />
+        </div>
+        {/* Ride-share «Беру попутчиков» (Task 022). */}
+        <div className="mt-3 border-t border-edge pt-3">
+          <AcceptsSharedToggle />
         </div>
         {/* App colour (2026-11-19): chosen at registration, changed here. */}
         <div className="mt-3 border-t border-edge pt-3">

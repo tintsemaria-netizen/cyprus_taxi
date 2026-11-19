@@ -25,7 +25,9 @@ export interface Candidate {
 // drivers already tried. Screens spatially first, then ranks a bounded shortlist by real
 // Google driving ETA. Returns null if none eligible within the radius.
 export async function findBestCandidate(
-  booking: { pickupLat: number; pickupLng: number; vClass: 'COMFORT' | 'XL'; passengerCount: number; passengerId?: string | null },
+  // requireAcceptsShared: a pre-booked ride-share pair is offered only to drivers who take co-riders
+  // (passengerCount is then both bookings together).
+  booking: { pickupLat: number; pickupLng: number; vClass: 'COMFORT' | 'XL'; passengerCount: number; passengerId?: string | null; requireAcceptsShared?: boolean },
   radiusKm: number,
   triedDriverIds: string[],
   etaCache: Map<string, { etaSec: number; approx: boolean; roadM?: number }> = new Map(),
@@ -52,6 +54,7 @@ export async function findBestCandidate(
   const prelim: { driverId: string; vehicleId: string; distanceMeters: number }[] = [];
   for (const d of drivers) {
     if (!d.user.active || busy.has(d.id) || tried.has(d.id) || blockedIds.has(d.id)) continue;
+    if (booking.requireAcceptsShared && !d.acceptsShared) continue;
     const binding = d.bindings[0];
     if (!binding || !binding.vehicle.active) continue;
     const v = binding.vehicle;

@@ -1,12 +1,13 @@
 // Price types (Task 012 §6, 2026-11-17):
 //  REGULATED_METER_ESTIMATE — estimate ±15 %, the taximeter is final;
 //  REGULATED_FIXED          — fixed airport ↔ zone fare set by the operator in admin (final);
-//  UPFRONT_DYNAMIC          — synthetic/test committed price (final).
-export const FIXED_PRICE_TYPES = ['REGULATED_FIXED', 'UPFRONT_DYNAMIC'] as const;
+//  UPFRONT_DYNAMIC          — synthetic/test committed price (final);
+//  SHARED_FIXED             — ride-share price after the co-rider discount (final, Task 022).
+export const FIXED_PRICE_TYPES = ['REGULATED_FIXED', 'UPFRONT_DYNAMIC', 'SHARED_FIXED'] as const;
 
 /** The quoted amount is the final price (no taximeter settlement). */
 export function isFixedPrice(priceType: string | null | undefined): boolean {
-  return priceType === 'REGULATED_FIXED' || priceType === 'UPFRONT_DYNAMIC';
+  return priceType === 'REGULATED_FIXED' || priceType === 'UPFRONT_DYNAMIC' || priceType === 'SHARED_FIXED';
 }
 
 /**

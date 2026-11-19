@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-19 — Ride-share «Попутчик» merged and DEPLOYED (branch `poputchik` from another session)
+
+- User: «Заливай ветку попутчика». Merged origin/poputchik (978aba5) into main. Conflicts only in docs/HANDOFF.md and prisma/schema.prisma (both sides appended models — kept both).
+- Migration renamed `20261119010000_ride_share` → `20261119030000_ride_share` so it sorts after the already-deployed `…010000_dropoff_postcode` and `…020000_osm_places`.
+- Local: tsc clean, build OK, vitest 300 passed / 1 skipped, smoke of /, /driver, /prebookings without page errors. Ride-share flows themselves not re-clicked here (the other session did); not tried on a phone.
+- Details and limits: Tasks/022-RIDESHARE-POPUTCHIK.md.
+
 ## 2026-11-19 — Approaching the drop-off: map closes in step by step (driver + passenger)
 
 - User test: passenger lost the car near the drop-off; driver map zoomed out once to show the point and then did not close in as the car got nearer.
@@ -23,6 +30,14 @@
 - Merged branch `dropoff-postcode`: `Booking.dropoffPostcode` (migration `20261119010000`), chip on driver offer / free orders / pre-bookings / navigation. `lookupPostcode`: address text → own base (≤600 m) → Google → Photon. After each import, open bookings without a postcode are backfilled.
 - Manual import inside the app container: `node node_modules/tsx/dist/cli.mjs --tsconfig tsconfig.json scripts/osm-import.ts`.
 - Check on prod: `select id,status,rows,"withPostcode",error from "OsmImport"`; search response `provider:"osm"`.
+## 2026-11-19 — Ride-share «Попутчик» (Task 022) — LOCAL ONLY, not pushed/deployed
+
+- Operator asked: show before uploading. Everything is in the working tree of this session; nothing committed to `main`.
+- See Tasks/022-RIDESHARE-POPUTCHIK.md for the rules, files and known limits.
+- Round 2 (same day): towns list instead of «intercity», passenger-chosen wait for pre-bookings, answer ≤ 1 h before pickup, €10 no-show, Google road time with traffic + arrival times + stop order, pairs offered online 30 min before (pre-assigned pair driver waited for until 20 min) — ONLY pairs; other pre-bookings unchanged (15 min).
+- Evidence: vitest 294 passed / 1 skipped (16 ride-share tests), tsc clean; local build clicked through
+  (booking option, live proposal to passenger + driver, both yes → second-passenger pill, pre-booking proposal, board pair, profile switch).
+- Next: operator's OK → commit on a branch, push, deploy (migration `20261119030000_ride_share` runs on deploy).
 
 ## 2026-11-19 — Light theme (white app) with per-role choice
 

@@ -15,6 +15,23 @@ interface Item {
   vClass: string; passengerCount: number; fareCents: number | null; priceType: string | null;
   flightNumber: string | null; airport: boolean; conflict?: boolean; canReleaseFreely?: boolean;
   note?: string | null;
+  share?: ShareBoard | null; // ride-share pair (Task 022)
+}
+interface ShareBoard {
+  guestPickupAt: string; guestPickupLabel: string; guestDropoffLabel: string;
+  passengers: number; children: number; luggage: number; totalFareCents: number; extraMin: number;
+}
+
+// A pre-booked ride-share pair (Task 022): one order with two passengers; the driver earns both.
+function SharePairBox({ s }: { s: ShareBoard }) {
+  const { t, fmt } = useT();
+  return (
+    <div className="mt-2 space-y-1 rounded-[10px] border border-accent/40 bg-accent/5 px-2.5 py-2 text-xs">
+      <div className="font-semibold text-accent">👥 {t('share.driver.boardPair', { n: s.passengers, bags: s.luggage })}</div>
+      <div className="text-ink">{t('share.driver.boardSecond', { time: fmt.time(s.guestPickupAt), from: s.guestPickupLabel, to: s.guestDropoffLabel })}</div>
+      <div className="font-semibold text-ink">{t('share.driver.boardTotal', { amount: fmt.money(s.totalFareCents) })}</div>
+    </div>
+  );
 }
 interface Board { available: Item[]; mine: Item[]; blocked: string | null }
 
@@ -69,6 +86,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number) => void }) {
         {i.flightNumber && <span className="font-mono text-ink">{t('driver.scheduled.flight', { flight: formatFlight(i.flightNumber) })}</span>}
         {i.fareCents != null && <span>{fareRangeText(i.fareCents, i.priceType, (c) => fmt.money(c))}</span>}
       </div>
+      {i.share && <SharePairBox s={i.share} />}
       {i.note && <p className="mt-2 rounded-[10px] border border-warn/30 bg-warn/5 px-2.5 py-1.5 text-xs text-warn">💬 {i.note}</p>}
       {/* This ride's own time rules (2026-11-13: moved here from the page header). */}
       <div className="mt-2 space-y-0.5 rounded-[10px] border border-edge bg-page px-2.5 py-2 text-xs text-muted">
@@ -189,6 +207,7 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.scheduled.trip')}</span><span className="font-medium">{km(d.trip.distanceM)} · {t('driver.offer.minShort', { min: Math.max(1, Math.round(d.trip.etaSec / 60)) })}</span>{!d.trip.roadRouted && <span className="text-xs text-muted">≈</span>}</div>
                 <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{d.fareCents != null ? fareRangeText(d.fareCents, d.priceType, (c) => fmt.money(c)) : '—'}</span></div>
               </div>
+              {d.share && <SharePairBox s={d.share} />}
               {d.note && <p className="mt-2 rounded-[10px] border border-warn/30 bg-warn/5 px-2.5 py-1.5 text-xs text-warn">💬 {d.note}</p>}
               {d.flightNumber && <p className="mt-2 font-mono text-xs text-ink">{t('driver.scheduled.flight', { flight: formatFlight(d.flightNumber) })}</p>}
               <div className="mt-2 space-y-0.5 rounded-[10px] border border-edge bg-page px-2.5 py-2 text-xs text-muted">
