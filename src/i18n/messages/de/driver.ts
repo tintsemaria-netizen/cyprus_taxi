@@ -166,6 +166,7 @@ const driver: Catalog<typeof en> = {
     saveFailed: "Speichern fehlgeschlagen",
     loadFailed: "Fehlgeschlagen",
   },
+  analytics: { title: "Analyse", day: "Tag", week: "Woche", prev: "Früher", next: "Später", pickDay: "Tag wählen", done: "Erledigt und verdient", pending: "noch ohne Endbetrag: {n}", youCanceled: "Von Ihnen storniert", paxCanceled: "Fahrgast storniert oder nicht erschienen", missed: "Verpasste Angebote", could: "hätten Sie verdienen können", note: "«Hätten Sie verdienen können» ist der Wert dieser Fahrten (End- oder Schätzpreis); er zählt nicht zum Verdienst.", dayCol: "Tag", doneCol: "Erledigt", lostCol: "Verpasst", tileHint: "Details" },
   earnings: {
     title: "Einnahmen",
     completedTrips: "Abgeschlossene Fahrten",

@@ -166,6 +166,7 @@ const driver: Catalog<typeof en> = {
     saveFailed: "Nie udało się zapisać",
     loadFailed: "Błąd",
   },
+  analytics: { title: "Analityka", day: "Dzień", week: "Tydzień", prev: "Wcześniej", next: "Później", pickDay: "Wybierz dzień", done: "Wykonane i zarobione", pending: "jeszcze bez kwoty końcowej: {n}", youCanceled: "Anulowałeś", paxCanceled: "Pasażer anulował lub nie przyszedł", missed: "Pominięte oferty", could: "mogłeś zarobić", note: "«Mogłeś zarobić» to wartość tych kursów (cena końcowa lub szacunkowa); nie wlicza się do zarobków.", dayCol: "Dzień", doneCol: "Wykonane", lostCol: "Utracone", tileHint: "Szczegóły" },
   earnings: {
     title: "Zarobki",
     completedTrips: "Zakończone przejazdy",

@@ -1,5 +1,6 @@
 'use client';
 
+import { DriverAnalytics } from '@/components/driver/DriverAnalytics';
 import { fareRangeText } from '@/lib/price-type';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import SwipeButton from '@/components/SwipeButton';
@@ -863,6 +864,7 @@ function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string;
 // ---- Earnings ----
 function EarningsSection() {
   const { t, tp, tError } = useT();
+  const [analytics, setAnalytics] = useState(false); // «Выполнено заказов» tile → analytics sub-screen (2026-11-19)
   const { money, dur } = useDriverFmt();
   const [range, setRange] = useState<Range>('week');
   const [data, setData] = useState<{ summary: { byCurrency: { currency: string; completedTrips: number; recordedEarningsCents: number; knownFinalTrips: number; pendingFinalTrips: number; collectedCents: number }[]; completedTrips: number; pendingFinalTrips: number; onlineSeconds: number }; daily: { day: string; recordedEarningsCents: number; completedTrips: number; currency: string }[] } | null>(null);
@@ -876,6 +878,7 @@ function EarningsSection() {
   useEffect(() => { load(); }, [load]);
 
   const max = Math.max(1, ...(data?.daily.map((d) => d.recordedEarningsCents) ?? [0]));
+  if (analytics) return <DriverAnalytics onBack={() => setAnalytics(false)} />;
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-semibold">{t('driver.earnings.title')}</h1>
@@ -888,7 +891,9 @@ function EarningsSection() {
         <>
           {/* Work figures for the selected period (moved here from the Home tab). */}
           <div className="grid grid-cols-2 gap-2">
-            <Figure label={t('driver.earnings.completedTrips')} value={String(data.summary.completedTrips)} sub={t(`driver.range.${range}`)} />
+            <button type="button" onClick={() => setAnalytics(true)} data-testid="analytics-tile" className="relative rounded-[12px] text-start">
+              <Figure label={t('driver.earnings.completedTrips')} value={String(data.summary.completedTrips)} sub={t('driver.analytics.tileHint') + ' ›'} />
+            </button>
             <Figure label={t('driver.earnings.onlineTime')} value={dur(data.summary.onlineSeconds)} sub={t(`driver.range.${range}`)} />
           </div>
           {data.summary.byCurrency.length === 0 ? <p className="py-6 text-center text-sm text-muted">{t('driver.earnings.empty')}</p> : data.summary.byCurrency.map((c) => (
