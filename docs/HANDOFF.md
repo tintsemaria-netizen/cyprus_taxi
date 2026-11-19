@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-19 — Approaching the drop-off: map closes in step by step (driver + passenger)
+
+- User test: passenger lost the car near the drop-off; driver map zoomed out once to show the point and then did not close in as the car got nearer.
+- Driver: DriverNavigation map gets `keepInView` — whenever the follow camera is off, car + point + remaining road stay framed and the zoom increases as the car approaches (Google map; MapLibre ignores keepInView locally).
+- `useIdleReturn`: a pointer whose «up» never arrives is forgotten after 8 s, so the automatic camera cannot stay frozen.
+- Driver GPS keep-alive: no new fix for 8 s → `getCurrentPosition({maximumAge:0})` for a real current fix; the old fix is no longer re-sent (the server rejected it as OUT_OF_ORDER, so after 120 s the car disappeared for the passenger). Headless Chromium returns a cached timestamp, so this was NOT verifiable locally — check on a phone.
+
 ## 2026-11-19 — Passenger tracking: trip in progress without the car's position
 
 - User screenshot (Larnaca airport, «В пути», no car on the map): the map was a close-up of the destination with the route cut off. Cause: no live car position (GPS stale/disconnected — e.g. driver app in the background), so only one marker → `framePoint` close-up, route ignored.

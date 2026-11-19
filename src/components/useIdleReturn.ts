@@ -32,7 +32,13 @@ export function useIdleReturn(
     };
     const start = () => { if (!active.current) cbRef.current.onStart?.(); active.current = true; };
     // Synthetic events (the two-finger camera's pointercancel to the map) are not the user's fingers.
-    const onDown = (e: PointerEvent) => { if (!e.isTrusted) return; pointers.add(e.pointerId); start(); clearTimeout(timer); };
+    // A finger whose «up» never arrives (iOS hands the touch to a system gesture, the app goes to the
+    // background) must not freeze the automatic camera forever (2026-11-19): forget it after 8 s.
+    let stuck: ReturnType<typeof setTimeout> | undefined;
+    const onDown = (e: PointerEvent) => {
+      if (!e.isTrusted) return; pointers.add(e.pointerId); start(); clearTimeout(timer);
+      clearTimeout(stuck); stuck = setTimeout(() => { if (pointers.size) { pointers.clear(); arm(); } }, 8000);
+    };
     const onUp = (e: PointerEvent) => { if (!e.isTrusted) return; if (!pointers.delete(e.pointerId)) return; if (!pointers.size) arm(); };
     const onWheel = () => { start(); arm(); };
     el.addEventListener('pointerdown', onDown, true);
@@ -40,7 +46,7 @@ export function useIdleReturn(
     window.addEventListener('pointercancel', onUp, true);
     el.addEventListener('wheel', onWheel, { capture: true, passive: true });
     return () => {
-      clearTimeout(timer);
+      clearTimeout(timer); clearTimeout(stuck);
       el.removeEventListener('pointerdown', onDown, true);
       window.removeEventListener('pointerup', onUp, true);
       window.removeEventListener('pointercancel', onUp, true);

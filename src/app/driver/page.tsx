@@ -200,8 +200,26 @@ function Driver() {
     if (retryTimer.current) clearInterval(retryTimer.current);
     retryTimer.current = setInterval(() => { if (!highModeRef.current && watchId.current !== null) beginWatch(true); }, 30_000);
   }
+  const keepAliveBusy = useRef(false);
   async function sendSample() {
-    const p = lastPos.current; if (!p) return; seq.current += 1;
+    let p = lastPos.current; if (!p) return;
+    // Keep-alive (2026-11-19): phones deliver no new fixes while the car stands or creeps (and the
+    // server ignores a repeated old fix), so after ~2 min the car vanished from the passenger's map.
+    // No fresh fix for 8 s → ask the GPS for a real current one (never a made-up position).
+    if (Date.now() - p.timestamp > 8000) {
+      if (keepAliveBusy.current) return;
+      keepAliveBusy.current = true;
+      const fresh = await new Promise<GeolocationPosition | null>((res) => navigator.geolocation.getCurrentPosition(res, () => res(null), { enableHighAccuracy: true, maximumAge: 0, timeout: 6000 }));
+      keepAliveBusy.current = false;
+      if (fresh && fresh.timestamp > p.timestamp) {
+        const r = filterFix(filterRef.current, { lat: fresh.coords.latitude, lng: fresh.coords.longitude, accuracyM: fresh.coords.accuracy ?? 9999, t: fresh.timestamp || Date.now() });
+        filterRef.current = r.state;
+        if (r.verdict === 'accept') { lastPos.current = fresh; const c = { lat: fresh.coords.latitude, lng: fresh.coords.longitude }; posRef.current = c; setPos(c); }
+        p = lastPos.current ?? p;
+      }
+      if (Date.now() - p.timestamp > 8000) return; // still nothing new: don't resend the same old fix
+    }
+    seq.current += 1;
     try {
       await api('/driver/location', { method: 'POST', body: { lat: p.coords.latitude, lng: p.coords.longitude, accuracyM: p.coords.accuracy ?? 0, heading: p.coords.heading ?? undefined, speed: p.coords.speed ?? undefined, sampledAt: new Date(p.timestamp).toISOString(), gpsSession: session.current, sequence: seq.current } });
       setGps((g) => ({ ...g, last: new Date().toISOString(), error: null }));
