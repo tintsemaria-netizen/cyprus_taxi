@@ -1073,7 +1073,7 @@ export default function BookingApp() {
                           {anyErr.map((e) => <p key={e} className="mt-1 text-xs text-danger">{e}</p>)}
                           {/* Quick picks under «Пункт назначения» (2026-11-17): saved Home / Work / School and the
                               last three destinations — one tap sets the destination and goes on to the price.
-                              2026-11-19: the recent-trips list is no longer on the main screen (still in the address editor). */}
+                              2026-11-19: the last TWO only, each cut at ~60 % of the width. */}
                           {!addrOpen && passenger && !dropoff && (
                             <div className="mt-1.5" data-testid="quick-picks">
                               <div className="flex gap-2">
@@ -1097,6 +1097,21 @@ export default function BookingApp() {
                                   <span aria-hidden className="text-muted">•••</span><span className="truncate">{t('booking.form.more')}</span>
                                 </button>
                               </div>
+                              {destinations.length > 0 && (
+                                <ul className="mt-1">
+                                  {destinations.slice(0, 2).map((d, i) => (
+                                    <li key={`${d.label}-${i}`}>
+                                      <button type="button" data-testid="quick-recent" onClick={() => pickQuick(d)}
+                                        className={`flex h-9 w-full items-center gap-2.5 text-start ${i ? 'border-t border-white/[0.06]' : ''}`}>
+                                        <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-muted">
+                                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>
+                                        </span>
+                                        <span className="min-w-0 max-w-[60%] truncate text-[14px] text-ink">{d.label}</span>
+                                      </button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
                             </div>
                           )}
                           {addrOpen && !hasStop && (
