@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-19 — Passenger SMS codes switched OFF for testing (deployed) — TO TURN BACK ON LATER
+
+- Operator: «Убери регистрацию или вход через смс пароль для клиента … Потом вернем».
+- `src/lib/features.ts` → `PASSENGER_SMS = false`. Effects: login modal has no «phone» tab (email + password only); sign-up form has no phone field; register API never sends a code (account created at once, `phoneSkipped` false). Drivers' phone sign-in unchanged.
+- To restore: set `PASSENGER_SMS = true` (tests follow the flag).
+- Checked: vitest 301 passed; sign-up on iPhone 12 Pro emulation (WebKit) → signed in, back on «/».
+
 ## 2026-11-19 — Ride-share: Limassol added (deployed)
 
 - `SHARE_TOWNS` + LIMASSOL (34.69, 33.04, 10 km: Germasogeia/Agios Tychonas … Ypsonas/Polemidia). All 7 places (LCA, PFO, Larnaca, Nicosia, Paphos, Ayia Napa, Limassol) pair with each other; never within one place.

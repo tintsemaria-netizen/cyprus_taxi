@@ -1,5 +1,6 @@
 'use client';
 
+import { PASSENGER_SMS } from '@/lib/features';
 import { useEffect, useRef, useState } from 'react';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
@@ -62,14 +63,14 @@ export function PassengerLoginModal({ onDone, onClose }: { onDone: (p: { phone: 
         <h2 id="plm-title" className="text-lg font-bold">{t('auth.modal.title')}</h2>
         <p className="mt-1 text-sm text-muted">{t('auth.modal.subtitle')}</p>
 
-        <div className="mt-4 flex gap-1 rounded-[12px] border border-edge bg-elevated p-1" role="tablist" aria-label={t('auth.modal.methodLabel')}>
+        {PASSENGER_SMS && <div className="mt-4 flex gap-1 rounded-[12px] border border-edge bg-elevated p-1" role="tablist" aria-label={t('auth.modal.methodLabel')}>
           {(['email', 'phone'] as const).map((m) => (
             <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => { setMode(m); setErr(null); }}
               className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium transition ${mode === m ? 'bg-accent text-[#0d1608]' : 'text-muted hover:text-ink'}`}>
               {m === 'email' ? t('auth.modal.tabEmail') : t('auth.modal.tabPhone')}
             </button>
           ))}
-        </div>
+        </div>}
 
         {dev && mode === 'phone' && <p className="mt-3 rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">{t('auth.testCodePrefix')} <b>{dev}</b></p>}
         {err && <p role="alert" className="mt-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}
