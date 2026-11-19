@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-19 — PARKED (operator: «потом, пока тестируем»): contact phone for guest orders
+
+- With guest ordering (`PASSENGER_GUEST = true`) passengers give no phone, so drivers have no «📞 Позвонить» for the host (chat sheet) nor for the co-rider («👥 Попутчик» pill). Proposed: a required «Ваш телефон для водителя» field (no SMS) in guest orders. Do it when the operator returns to it / when sign-in comes back.
+
 ## 2026-11-19 — П/ПП button: no «П» flash before «ПП» (deployed)
 
 - Cause: the pre-booking board reported only the count (`onCount(n)`); the «is a pair» flag came from the 30 s poll, so after releasing a pair the button showed «П» until the next poll. Now `onCount(n, pair)` sets both (stable `onPrebookCount`), and the board poll re-runs at once on tab change.
