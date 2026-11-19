@@ -70,6 +70,15 @@ import frDriver from './fr/driver';
 import frDriverReg from './fr/driverReg';
 import frRides from './fr/rides';
 
+import enShare from './en/share';
+import elShare from './el/share';
+import ruShare from './ru/share';
+import heShare from './he/share';
+import arShare from './ar/share';
+import plShare from './pl/share';
+import deShare from './de/share';
+import frShare from './fr/share';
+
 const en = {
   common: enCommon,
   errors: enErrors,
@@ -80,6 +89,7 @@ const en = {
   driverReg: enDriverReg,
   rides: enRides,
   staff: enStaff,
+  share: enShare,
 };
 export type Messages = typeof en;
 
@@ -93,6 +103,7 @@ const el: Catalog<Messages> = {
   driverReg: elDriverReg,
   rides: elRides,
   staff: elStaff,
+  share: elShare,
 };
 const ru: Catalog<Messages> = {
   common: ruCommon,
@@ -104,6 +115,7 @@ const ru: Catalog<Messages> = {
   driverReg: ruDriverReg,
   rides: ruRides,
   staff: ruStaff,
+  share: ruShare,
 };
 
 // Staff/admin panel stays English for he (internal tool).
@@ -117,6 +129,7 @@ const he: Catalog<Messages> = {
   driverReg: heDriverReg,
   rides: heRides,
   staff: enStaff,
+  share: heShare,
 };
 // Staff/admin panel stays English for ar (internal tool).
 const ar: Catalog<Messages> = {
@@ -129,6 +142,7 @@ const ar: Catalog<Messages> = {
   driverReg: arDriverReg,
   rides: arRides,
   staff: enStaff,
+  share: arShare,
 };
 // Staff/admin panel stays English for pl (internal tool).
 const pl: Catalog<Messages> = {
@@ -141,6 +155,7 @@ const pl: Catalog<Messages> = {
   driverReg: plDriverReg,
   rides: plRides,
   staff: enStaff,
+  share: plShare,
 };
 // Staff/admin panel stays English for de (internal tool).
 const de: Catalog<Messages> = {
@@ -153,6 +168,7 @@ const de: Catalog<Messages> = {
   driverReg: deDriverReg,
   rides: deRides,
   staff: enStaff,
+  share: deShare,
 };
 // Staff/admin panel stays English for fr (internal tool).
 const fr: Catalog<Messages> = {
@@ -165,6 +181,7 @@ const fr: Catalog<Messages> = {
   driverReg: frDriverReg,
   rides: frRides,
   staff: enStaff,
+  share: frShare,
 };
 
 export const MESSAGES: Record<Locale, Catalog<Messages>> = { en, el, ru, he, ar, pl, de, fr };

@@ -11,6 +11,7 @@ import { isAirportPoint } from '@/lib/airports';
 import { startSearchTx } from './search';
 import { enqueuePassenger } from '@/server/push';
 import { recordEvent, driverPseudo } from '@/server/events';
+import { afterLegEndedTx, legCompletedTx, leaveShareTx, noShowFeeCents } from '@/server/share';
 
 // M3 trip lifecycle after assignment: arrival + pickup waiting, code-gated start,
 // immutable fare receipt on completion, and pre-pickup rematch. Booking-status
@@ -95,7 +96,7 @@ async function finalizeCompletion(
     priceType,
     estimateCents: b.fareCents ?? null,
     waitingCents,
-    note: priceType === 'REGULATED_FIXED' ? 'Fixed airport fare (final).' : isUpfront ? 'Accepted upfront price (final).' : 'Estimate; final regulated meter amount is settled with the driver.',
+    note: priceType === 'REGULATED_FIXED' ? 'Fixed airport fare (final).' : priceType === 'SHARED_FIXED' ? 'Shared ride price after the co-rider discount (final).' : isUpfront ? 'Accepted upfront price (final).' : 'Estimate; final regulated meter amount is settled with the driver.',
     breakdown: b.fareBreakdown ? safeParse(b.fareBreakdown) : null,
   };
   const existing = await tx.fare.findUnique({ where: { bookingId: b.id } }); // immutable: write once
@@ -109,8 +110,10 @@ async function finalizeCompletion(
     });
   }
   await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason: 'completed', activeBookingId: null, activeDriverId: null, activeVehicleId: null } });
-  await tx.driver.update({ where: { id: a.driverId }, data: { available: true } });
+  // A shared ride's other leg may still be in the car: it takes over and the driver stays busy.
+  await afterLegEndedTx(tx, a);
   const u = await tx.booking.update({ where: { id: b.id }, data: { status: 'COMPLETED', revision: { increment: 1 } } });
+  await legCompletedTx(tx, b.id);
   await tx.bookingEvent.create({ data: { bookingId: b.id, type: 'COMPLETED', actorType: actor.type, actorId: actor.id, beforeStatus: 'IN_PROGRESS', afterStatus: 'COMPLETED' } });
   // E-mailed receipt (2026-11-17): queued atomically with the completion; the worker sends it.
   await enqueueReceiptEmail(tx, b.id);
@@ -294,10 +297,12 @@ export async function rematchBooking(
   reason: string,
   actorType: 'DRIVER' | 'SYSTEM',
 ): Promise<void> {
+  // A shared ride breaks up first: the other passenger goes back to the full price.
+  await leaveShareTx(tx, bookingId, `rematch: ${reason}`);
   const a = await tx.assignment.findFirst({ where: { activeBookingId: bookingId } });
   if (a) {
     await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason, activeBookingId: null, activeDriverId: null, activeVehicleId: null } });
-    await tx.driver.update({ where: { id: a.driverId }, data: { available: true } });
+    await afterLegEndedTx(tx, a);
   }
   await tx.waitingSession.deleteMany({ where: { bookingId } });
   await startSearchTx(tx, bookingId, { triedDriverIds: [excludeDriverId] });
@@ -324,4 +329,35 @@ export async function driverCancelPrePickup(bookingId: string, driverId: string,
 
 function safeParse(s: string): unknown {
   try { return JSON.parse(s); } catch { return null; }
+}
+
+// ---- Ride-share no-show (Task 022) ----
+// The driver waited at the pickup of a shared ride (past the free waiting time) and the passenger
+// never came. That leg is cancelled; on a pre-booked pair the no-show owes noShowFeePct of their
+// shared price (recorded on the group — charged by card once card payments exist). The other
+// passenger keeps riding at the full price (leaveShareTx).
+export async function driverShareNoShow(bookingId: string, driverId: string, expectedRevision: number): Promise<LifeResult> {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
+    const b = await tx.booking.findUnique({ where: { id: bookingId } });
+    if (!b) return err(404, 'NOT_FOUND', 'Booking not found.');
+    if (b.revision !== expectedRevision) return err(409, 'CONFLICT', 'The booking changed. Refresh and retry.');
+    if (b.status !== 'ARRIVED') return err(409, 'BAD_STATE', 'Only after you arrived at the pickup.');
+    const a = await activeAssignmentFor(tx, bookingId, driverId);
+    if (!a) return err(403, 'FORBIDDEN', 'Not your assignment.');
+    const g = await tx.shareGroup.findFirst({ where: { OR: [{ activeHostBookingId: bookingId }, { activeGuestBookingId: bookingId }], status: 'ACCEPTED' } });
+    if (!g) return err(409, 'NOT_SHARED', 'Only for a shared ride.');
+    const w = await tx.waitingSession.findUnique({ where: { bookingId } });
+    if (w && Date.now() - w.arrivedAt.getTime() < w.graceSeconds * 1000) return err(409, 'TOO_EARLY', 'Wait until the free waiting time is over.');
+    const sharedPrice = g.hostBookingId === bookingId ? g.hostCents : g.guestCents;
+    const fee = g.mode === 'PREBOOK' ? noShowFeeCents(sharedPrice) : null;
+    await leaveShareTx(tx, bookingId, 'no-show', fee != null ? { noShowFeeCents: fee } : {});
+    await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason: 'no-show', activeBookingId: null, activeDriverId: null, activeVehicleId: null } });
+    await afterLegEndedTx(tx, a);
+    const u = await tx.booking.update({ where: { id: bookingId }, data: { status: 'CANCELED', revision: { increment: 1 } } });
+    await tx.bookingEvent.create({ data: { bookingId, type: 'NO_SHOW', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'ARRIVED', afterStatus: 'CANCELED', reason: fee != null ? `no-show fee ${fee} cents` : 'no-show' } });
+    await recordEvent(tx, { eventType: 'booking.canceled', aggregateType: 'booking', aggregateId: bookingId, aggregateVersion: u.revision, correlationId: bookingId, payload: { bookingId, status: 'CANCELED', actorType: 'DRIVER', reason: 'no-show', noShowFeeCents: fee } });
+    await enqueuePassenger(tx, bookingId, 'Ride canceled — no-show', fee != null ? `The driver waited but you did not come. A no-show fee of €${(fee / 100).toFixed(2)} applies.` : 'The driver waited but you did not come.');
+    return ok(u.status, u.revision, { noShowFeeCents: fee });
+  });
 }

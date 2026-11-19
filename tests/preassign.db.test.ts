@@ -154,8 +154,8 @@ describe('conversion near pickup', () => {
     expect((await runPreassignments(new Date())).converted).toBe(0);
     expect((await prisma.preAssignment.findFirst({ where: { bookingId: b.id } }))!.status).toBe('COMMITTED'); // still waiting
     // Time passes to inside the scheduled-search lead → lapse, then normal promotion searches.
-    await prisma.preAssignment.updateMany({ where: { bookingId: b.id }, data: { pickupAt: new Date(Date.now() + (config.dispatch.scheduleLeadMinutes - 1) * MIN) } });
-    await prisma.booking.update({ where: { id: b.id }, data: { scheduledAt: new Date(Date.now() + (config.dispatch.scheduleLeadMinutes - 1) * MIN) } });
+    await prisma.preAssignment.updateMany({ where: { bookingId: b.id }, data: { pickupAt: new Date(Date.now() + (P.lapseMinutes - 1) * MIN) } });
+    await prisma.booking.update({ where: { id: b.id }, data: { scheduledAt: new Date(Date.now() + (P.lapseMinutes - 1) * MIN) } });
     expect((await runPreassignments(new Date())).lapsed).toBe(1);
     await promoteScheduled(new Date());
     expect((await prisma.booking.findUnique({ where: { id: b.id } }))!.status).toBe('SEARCHING');
@@ -164,7 +164,7 @@ describe('conversion near pickup', () => {
   });
 
   it('an offline driver at the cutoff lapses too', async () => {
-    const { b } = await committed(config.dispatch.scheduleLeadMinutes - 1, false);
+    const { b } = await committed(P.lapseMinutes - 1, false);
     expect((await runPreassignments(new Date())).lapsed).toBe(1);
     expect((await prisma.preAssignment.findFirst({ where: { bookingId: b.id } }))!.endReason).toBe('driver offline at conversion');
   });

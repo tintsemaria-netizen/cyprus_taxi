@@ -10,7 +10,7 @@ import { isFixedPrice } from '@/lib/price-type';
 export async function farePreview(bookingId: string, driverId: string, now = new Date()) {
   const b = await prisma.booking.findUnique({ where: { id: bookingId } });
   if (!b) return null;
-  const active = await prisma.assignment.findFirst({ where: { activeBookingId: bookingId, activeDriverId: driverId }, select: { id: true } });
+  const active = await prisma.assignment.findFirst({ where: { activeBookingId: bookingId, driverId } /* a shared ride's second leg has no activeDriverId */, select: { id: true } });
   if (!active) return null;
   const w = await prisma.waitingSession.findUnique({ where: { bookingId } });
   const pickupWaitCents = w?.accruedCents ?? 0;

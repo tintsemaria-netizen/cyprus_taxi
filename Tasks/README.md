@@ -17,6 +17,7 @@ Status legend per stage — **impl** (code), **auto** (unit/DB tests), **browser
 | [009](009-FIX-OSM-TILE-403.md) | Restore blocked map tiles + fix picker not loading | ✅ | ✅ | ✅ | ⬜ | ✅ |
 | [011](011-GOOGLE-MAPS-CSP-FIX.md) | Fix CSP connect-src blocking the Google vector map | ✅ | ✅ | ✅ | ⬜ | ✅ |
 | [010](010-MAP-STABILITY-REAL-ADDRESSES-AND-BOOKING-FIXES.md) | Picker flicker hotfix + FULL Google Maps migration (maps/geocode/routes) | ✅ | ✅ | ✅ | ⬜ | ✅ |
+| [022](022-RIDESHARE-POPUTCHIK.md) | Ride-share «Попутчик»: airport/intercity, live + pre-booked pairs, 30 % off | ✅ | ✅ | ✅ local | ⬜ | ⬜ |
 
 ✅ done · ⬜ pending · ➖ n/a. **Automated + browser QA are done** (24 vitest + 6
 Playwright, see `docs/BROWSER_QA.md` and `docs/qa-screenshots/`). The remaining open

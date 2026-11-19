@@ -7,6 +7,7 @@ import { enqueueDriver, enqueuePassenger, offerBody } from '@/server/push';
 import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events';
 import type { Candidate } from './eligibility';
 import { canWork } from '@/lib/eligibility-policy';
+import { attachMatchedGuestTx } from '@/server/share';
 
 // How long one driver has to accept before the request moves on to the next eligible driver.
 // 10 s since 2026-11-12 (was 20 s).
@@ -133,6 +134,8 @@ export async function acceptOffer(offerId: string, driverId: string): Promise<Of
       });
       await tx.dispatchJob.deleteMany({ where: { bookingId: booking.id } });
       await enqueuePassenger(tx, booking.id, 'Driver assigned', 'A driver is on the way — track them live.');
+      // A pre-booked ride-share pair (Task 022): the co-rider joins the same car.
+      await attachMatchedGuestTx(tx, booking.id);
       acceptedBookingId = booking.id;
       return { ok: true, status: enRoute.status, revision: enRoute.revision };
     });

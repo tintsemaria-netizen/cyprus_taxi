@@ -10,6 +10,7 @@ import { nicosiaWallTimeToUtc } from '@/lib/timezone';
 import { consumeQuote } from '@/server/quote';
 import { recordEvent, bookingEventPayload } from '@/server/events';
 import { Prisma } from '@prisma/client';
+import { isShareRoute } from '@/lib/share';
 
 export type CreateResult =
   | { ok: true; body: BookingCreatedBody }
@@ -83,8 +84,12 @@ export async function createBooking(
       // Only when present, so hashes of requests without a flight number stay unchanged.
       ...(input.flightNumber ? { f: input.flightNumber } : {}),
       ...(input.stop ? { st: input.stop } : {}),
+      ...(input.shareOptIn ? { sh: [input.shareMaxExtraMin ?? null, input.childCount ?? 0, input.shareWaitMin ?? null] } : {}),
+      ...(!input.shareOptIn && input.childCount ? { ch: input.childCount } : {}),
     }),
   );
+  // Ride-share only where it is offered: airport or intercity, no intermediate stop.
+  const shareOptIn = !!input.shareOptIn && !input.stop && isShareRoute(input.pickup, input.dropoff);
 
   // 5. Replay an existing receipt BEFORE time-dependent schedule validation, so a
   // valid original booking is recoverable even if its scheduled time is now inside
@@ -153,6 +158,8 @@ export async function createBooking(
           ...(input.stop ? { stopLat: input.stop.lat, stopLng: input.stop.lng, stopLabel: input.stop.label } : {}),
           passengerName: input.passengerName, phone: input.phone, note: input.note || null, flightNumber: input.flightNumber ?? null,
           vClass: input.vClass, passengerCount: input.passengerCount, luggageCount: input.luggageCount ?? 0, scheduledAt, status: initialStatus,
+          childCount: input.childCount ?? 0,
+          ...(shareOptIn ? { shareOptIn: true, shareMaxExtraMin: input.shareMaxExtraMin ?? config.share.defaultMaxExtraMin, ...(scheduledAt ? { shareWaitMin: input.shareWaitMin ?? config.share.defaultWaitMin } : {}) } : {}),
           ...(passengerId ? { passengerId } : {}),
           ...(fare ? { quoteId: input.quoteId, fareCents: fare.fareCents, priceType: fare.priceType, fareBreakdown: fare.fareBreakdown } : {}),
         },

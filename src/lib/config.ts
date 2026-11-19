@@ -51,7 +51,9 @@ export const config = {
   // Autonomous dispatch tunables (Task 012 §4.4/§6.4 — our own beta engineering
   // defaults, clearly labelled, not statutory Cyprus rules).
   dispatch: {
-    scheduleLeadMinutes: num('DISPATCH_SCHEDULE_LEAD_MINUTES', 15), // promote a scheduled ride to SEARCHING this long before pickup
+    // A pre-booking nobody has pre-assigned is offered to online drivers this long before pickup
+    // (2026-11-19, operator: 30 min; was 15).
+    scheduleLeadMinutes: num('DISPATCH_SCHEDULE_LEAD_MINUTES', 30),
     searchDeadlineSeconds: num('DISPATCH_SEARCH_DEADLINE_SECONDS', 180),
     arrivalRadiusMeters: num('DISPATCH_ARRIVAL_RADIUS_METERS', 150), // driver must be within this of pickup to mark ARRIVED (airport zones exempt)
     waitingGraceSeconds: num('DISPATCH_WAITING_GRACE_SECONDS', 180), // free wait after arrival (TEST default 3 min)
@@ -63,6 +65,9 @@ export const config = {
     preassign: {
       horizonHours: num('PREASSIGN_HORIZON_HOURS', 72), // how far ahead drivers can commit
       convertMinutes: num('PREASSIGN_CONVERT_MINUTES', 30), // convert into a real assignment this long before pickup
+      // A pre-assigned driver still busy/offline is waited for until this long before pickup, then the
+      // ride is offered to online drivers (2026-11-19, operator: «за 30 или 20 минут»).
+      lapseMinutes: num('PREASSIGN_LAPSE_MINUTES', 20),
       protectMinutes: num('PREASSIGN_PROTECT_MINUTES', 75), // no new immediate offers this close to a commitment
       remindMinutes: num('PREASSIGN_REMIND_MINUTES', 60), // driver reminder push
       lateReleaseMinutes: num('PREASSIGN_LATE_RELEASE_MINUTES', 60), // releasing later than this is flagged
@@ -71,6 +76,17 @@ export const config = {
     },
   },
   minStopDistanceMeters: num('MIN_STOP_DISTANCE_METERS', 50),
+  // Ride-share «Попутчик» (Task 022). Our own product defaults; adjust after the pilot.
+  share: {
+    discountPct: num('SHARE_DISCOUNT_PCT', 30), // each passenger's discount when a co-rider actually joins
+    answerSec: num('SHARE_ANSWER_SEC', 60), // live: host passenger + driver must both say yes within this
+    prebookAnswerMin: num('SHARE_PREBOOK_ANSWER_MIN', 30), // pre-booking: both passengers answer within this…
+    prebookAnswerBeforePickupMin: num('SHARE_PREBOOK_ANSWER_BEFORE_PICKUP_MIN', 60), // …and at the latest this long before pickup
+    noShowFeeCents: num('SHARE_NO_SHOW_FEE_CENTS', 1000), // flat no-show fee on a pre-booked pair (€10; never above their price)
+    defaultMaxExtraMin: num('SHARE_DEFAULT_MAX_EXTRA_MIN', 15),
+    defaultWaitMin: num('SHARE_DEFAULT_WAIT_MIN', 15), // pre-booking: how long a passenger can wait for the co-rider
+    luggage: { COMFORT: num('SHARE_LUGGAGE_COMFORT', 4), XL: num('SHARE_LUGGAGE_XL', 7) } as Record<'COMFORT' | 'XL', number>,
+  },
   // Pricing mode (Task 012 §6.1). Real charges stay REGULATED_METER_ESTIMATE unless a
   // commercial dynamic rule is authorized; UPFRONT_DYNAMIC is a synthetic/TEST engine.
   pricing: {

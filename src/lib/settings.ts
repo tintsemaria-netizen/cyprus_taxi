@@ -83,5 +83,7 @@ export async function getPublicConfig() {
     schedule: { minMinutes: s.scheduleMinMinutes, maxDays: s.scheduleMaxDays },
     serviceAreaPolygon: s.serviceAreaPolygon,
     fareWording: 'Metered fare estimate — settled with the driver',
+    // Ride-share «Попутчик» (Task 022): offered on airport / intercity routes only.
+    share: { discountPct: config.share.discountPct, defaultMaxExtraMin: config.share.defaultMaxExtraMin, defaultWaitMin: config.share.defaultWaitMin },
   };
 }

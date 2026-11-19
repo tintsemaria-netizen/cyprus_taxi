@@ -7,6 +7,7 @@ import { recordEvent, driverPseudo } from '@/server/events';
 import { enqueueDriver, enqueuePassenger } from '@/server/push';
 import { startSearchTx, stopSearchTx } from '@/server/dispatch/search';
 import { endPreAssignmentTx } from '@/server/dispatch/preassign-core';
+import { afterLegEndedTx, leaveShareTx } from '@/server/share';
 
 export type Actor = 'STAFF' | 'DRIVER' | 'PASSENGER';
 
@@ -50,13 +51,16 @@ async function loadLockedBooking(tx: Prisma.TransactionClient, id: string) {
 
 // End the currently-active assignment for a booking and free that driver.
 async function endActiveAssignment(tx: Prisma.TransactionClient, bookingId: string, reason: string) {
+  // Leaving a shared ride early (cancel / unassign / terminate): the other passenger goes back to
+  // the full price. A normal completion goes through lifecycle.finalizeCompletion instead.
+  if (reason !== 'completed') await leaveShareTx(tx, bookingId, reason);
   const active = await tx.assignment.findFirst({ where: { activeBookingId: bookingId } });
   if (active) {
     await tx.assignment.update({
       where: { id: active.id },
       data: { endedAt: new Date(), reason, activeBookingId: null, activeDriverId: null, activeVehicleId: null },
     });
-    await tx.driver.update({ where: { id: active.driverId }, data: { available: true } });
+    await afterLegEndedTx(tx, active);
   }
   return active;
 }
@@ -276,6 +280,7 @@ export async function changeStatus(params: {
     if (params.to === 'SEARCHING') await startSearchTx(tx, booking.id);
     if (params.to === 'CANCELED' || params.to === 'NO_DRIVER') await stopSearchTx(tx, booking.id);
     if (params.to === 'CANCELED') await endPreAssignmentTx(tx, booking.id, 'RELEASED', 'booking canceled', { notifyDriver: 'A ride you pre-booked was canceled by the passenger.' });
+    if (params.to === 'CANCELED' || params.to === 'NO_DRIVER') await leaveShareTx(tx, booking.id, `booking ${String(params.to).toLowerCase()}`);
 
     const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: params.to, revision: { increment: 1 } } });
     await tx.bookingEvent.create({
