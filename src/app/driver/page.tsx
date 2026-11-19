@@ -968,7 +968,8 @@ function BottomNav({ tab, setTab, hasOffer, freeCount, prebookCount }: { tab: Ta
       <div className="mx-auto flex max-w-lg">
         {items.map((it) => (
           // Text only (2026-11-18): no emoji, bigger and bolder words; counts sit at the word's corner.
-          <button key={it.id} onClick={() => setTab(it.id)} className={`flex min-h-[56px] flex-1 items-center justify-center py-1 text-[16px] font-bold ${tab === it.id ? 'text-accent' : 'text-muted'}`}>
+          // 2026-11-19: 18 px, a touch heavier, letters a bit see-through, the chosen one a duller lime.
+          <button key={it.id} onClick={() => setTab(it.id)} className={`flex min-h-[56px] flex-1 items-center justify-center py-1 text-[18px] font-extrabold ${tab === it.id ? 'text-accent/70' : 'text-muted/75'}`}>
             <span className="relative">
               {it.label}
               {it.id === 'home' && hasOffer && tab !== 'home' && <span className="absolute -end-3 -top-1 h-2 w-2 rounded-full bg-accent" />}
