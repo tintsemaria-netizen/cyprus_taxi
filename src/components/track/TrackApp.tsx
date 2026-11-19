@@ -425,6 +425,11 @@ export default function TrackApp() {
                   <div className="absolute bottom-full end-0 mb-2 w-56 overflow-hidden rounded-[14px] border border-edge bg-page shadow-2xl" role="menu">
                     <button type="button" role="menuitem" className="flex w-full items-center gap-3 px-4 py-3.5 text-start text-[15px] hover:bg-white/5" onClick={() => { setMenuOpen(false); share(); }}>{t('track.shareTrip')}</button>
                     <button type="button" role="menuitem" className="flex w-full items-center gap-3 border-t border-edge px-4 py-3.5 text-start text-[15px] hover:bg-white/5" onClick={() => { setMenuOpen(false); setSafety(true); }}>{t('track.safety')}</button>
+                    {/* «Отменить заказ» lives in this menu (2026-11-19), not as a button on the sheet. */}
+                    {view.canCancel && (
+                      <button type="button" role="menuitem" className="flex w-full items-center gap-3 border-t border-edge px-4 py-3.5 text-start text-[15px] text-danger hover:bg-danger/10 disabled:opacity-50" disabled={cancelling}
+                        onClick={() => { setMenuOpen(false); setConfirmCancel(true); }}>{cancelling ? t('track.cancelling') : t('track.cancelBooking')}</button>
+                    )}
                   </div>
                 )}
                 <button type="button" aria-label={t('track.menu')} aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)}
@@ -556,11 +561,6 @@ export default function TrackApp() {
                     {view.canRetry && (
                       <button className="btn-primary w-full" onClick={retry} disabled={retrying}>
                         {retrying ? t('track.searching') : t('track.searchAgain')}
-                      </button>
-                    )}
-                    {view.canCancel && (
-                      <button className="w-full rounded-[12px] border border-danger/40 px-4 py-2.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-50" onClick={() => setConfirmCancel(true)} disabled={cancelling}>
-                        {cancelling ? t('track.cancelling') : t('track.cancelBooking')}
                       </button>
                     )}
                   </div>
