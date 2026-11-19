@@ -16,6 +16,10 @@ Confirmed beta target: https://cyprustaxi.ackedberryes.store on 92.39.53.229. Cl
 
 <!-- BEGIN:nextjs-agent-rules -->
 
+# Operator UI rules (from the operator, keep for every session)
+
+- Every new screen, tab or sub-screen that is not a main screen gets a back arrow «‹» at the top left (use `BackArrow`; driver sub-screens: the arrow in the top bar via the `il-y:driver-back-visible` event). When you add or change such a screen, put the arrow there and tell the operator that you did (or that it was already there).
+
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.

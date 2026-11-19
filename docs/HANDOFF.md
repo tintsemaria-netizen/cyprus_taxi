@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-19 — Driver sub-screens get a ‹ back arrow; operator rule recorded (deployed)
+
+- StaffShell (DRIVER): `BackArrow` left of the logo while the driver page shows a sub-screen (pre-bookings, free orders); the page announces it with `il-y:driver-back-visible` and listens for `il-y:driver-back` → map. Hooks sit before StaffShell's early return.
+- CLAUDE.md «Operator UI rules»: every new non-main screen gets a back arrow, and the operator is told about it.
+
 ## 2026-11-19 — Pre-booking board: «Принятые» count red (deployed)
 
 - ScheduledRides tabs: the «Принятые» count is red like «Свободные предзаказы» (was dark).

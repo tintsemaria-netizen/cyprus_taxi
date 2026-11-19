@@ -106,6 +106,10 @@ function Driver() {
   const [tab, setTab] = useState<Tab>('home');
   const [drawer, setDrawer] = useState(false);
   useEffect(() => { const open = () => setDrawer(true); window.addEventListener('il-y:driver-menu', open); return () => window.removeEventListener('il-y:driver-menu', open); }, []);
+  // ‹ back arrow in the top bar on every sub-screen (pre-bookings, free orders) → back to the map (2026-11-19).
+  useEffect(() => { window.dispatchEvent(new CustomEvent('il-y:driver-back-visible', { detail: tab !== 'home' })); }, [tab]);
+  useEffect(() => { const back = () => setTab('home'); window.addEventListener('il-y:driver-back', back); return () => window.removeEventListener('il-y:driver-back', back); }, []);
+  useEffect(() => () => { window.dispatchEvent(new CustomEvent('il-y:driver-back-visible', { detail: false })); }, []);
   const [activeDetailId, setActiveDetailId] = useState<string | null>(null);
   const [data, setData] = useState<CurrentTrip | null>(null);
   const [dash, setDash] = useState<Dashboard | null>(null);
