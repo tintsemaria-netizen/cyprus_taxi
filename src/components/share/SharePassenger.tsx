@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { enablePush, pushPermission, pushSupported, rememberPushLocale } from '@/lib/push-client';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 
@@ -138,31 +137,3 @@ export function SharedBadge({ s }: { s: SharedView }) {
   );
 }
 
-/**
- * For a ride with «Попутчик» on: get notifications switched on, so the co-rider offer reaches the
- * passenger even with the app closed or the phone locked. On an iPhone, web notifications only work
- * once the site is on the Home Screen (Apple's rule) — then we say how.
- */
-export function ShareNotifyCard() {
-  const { t, locale } = useT();
-  const [state, setState] = useState<'hidden' | 'ask' | 'ios' | 'on'>('hidden');
-  useEffect(() => {
-    void rememberPushLocale(locale); // the notification is shown in this language
-    if (pushSupported()) { setState(pushPermission() === 'default' ? 'ask' : 'hidden'); return; }
-    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
-    const standalone = (navigator as unknown as { standalone?: boolean }).standalone === true;
-    if (ios && !standalone) setState('ios');
-  }, [locale]);
-  if (state === 'hidden') return null;
-  if (state === 'on') return <p className="mt-3 text-xs text-accent" data-testid="share-notify-on">🔔 {t('share.notify.on')}</p>;
-  return (
-    <div className="mt-3 rounded-[12px] border border-warn/40 bg-warn/10 p-3 text-sm" data-testid="share-notify">
-      <p>🔔 {state === 'ios' ? t('share.notify.ios') : t('share.notify.ask')}</p>
-      {state === 'ask' && (
-        <button type="button" className="btn-primary mt-2 w-full" onClick={async () => { const r = await enablePush('/tracking/push'); setState(r.ok ? 'on' : 'hidden'); }}>
-          {t('share.notify.enable')}
-        </button>
-      )}
-    </div>
-  );
-}

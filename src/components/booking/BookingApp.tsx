@@ -826,7 +826,7 @@ export default function BookingApp() {
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
       {resuming && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-page text-muted" data-testid="resuming-ride">{t('common.loading')}</div>}
-      <NotifyPrompt pushUrl="/passenger/push" active={!!passenger} />
+      <NotifyPrompt pushUrl="/passenger/push" active />
       <input ref={proxyRef} aria-hidden tabIndex={-1} readOnly={false} className="pointer-events-none fixed start-0 top-0 h-px w-px opacity-0" style={{ fontSize: 16 }} />
       {savedSheet && (
         <SavedPlacesSheet mode={savedSheet} places={places} onSaved={reloadPlaces} onClose={() => setSavedSheet(null)}

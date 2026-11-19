@@ -17,7 +17,7 @@ import { useT } from '@/i18n/I18nProvider';
 import type { MsgKey } from '@/i18n/I18nProvider';
 import { useSheetDrag } from '@/components/useSheetDrag';
 import { PlacesInput, type Selected } from '@/components/booking/PlacesInput';
-import { ShareProposalCard, SharedBadge, ShareNotifyCard, type ShareProposalView, type SharedView } from '@/components/share/SharePassenger';
+import { ShareProposalCard, SharedBadge, type ShareProposalView, type SharedView } from '@/components/share/SharePassenger';
 
 interface TrackView {
   flightNumber?: string | null;
@@ -468,7 +468,6 @@ export default function TrackApp() {
                   </div>
                 )}
                 {view.shared && !terminal && <SharedBadge s={view.shared} />}
-                {view.shareOptIn && !terminal && (view.status === 'REQUESTED' || view.status === 'SEARCHING') && <ShareNotifyCard />}
                 {view.flightNumber && !terminal && <p className="mt-2 font-mono text-xs text-muted">✈ {t('track.prebook.flightRow', { flight: formatFlight(view.flightNumber) })}</p>}
                 {view.status === 'NO_DRIVER' && (
                   <p className="mt-1 text-sm text-muted">{t('track.noDriverNote')}</p>
