@@ -26,6 +26,7 @@ const errors: Catalog<typeof en> = {
   NO_VEHICLE: "Ihnen ist kein Fahrzeug zugewiesen, daher erhalten Sie keine Fahrtangebote. Wenden Sie sich an den Betreiber.",
   NOT_COMPLETED: "Sie können eine Fahrt erst nach ihrem Ende bewerten.",
   NOT_ELIGIBLE: "Ihr Konto kann gerade keine Fahrten annehmen.",
+  SHARE_NO_STOP: "Bei einer Fahrt mit Mitfahrer ist kein Zwischenstopp möglich.",
   STOP_LOCKED: "Das Auto ist bereits am Zwischenstopp — er kann nicht mehr geändert werden.",
   NOT_FOUND: "Nicht gefunden.",
   NOT_RETRYABLE: "Für diese Fahrt kann nicht erneut gesucht werden.",

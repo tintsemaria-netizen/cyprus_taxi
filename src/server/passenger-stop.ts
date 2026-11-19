@@ -17,6 +17,8 @@ export async function passengerSetStop(bookingId: string, stop: StopChange): Pro
   if (!b) return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Booking not found.' };
   if (!OPEN.includes(b.status)) return { ok: false, status: 409, code: 'BAD_STATE', message: 'The ride is over.' };
   if (b.stopArrivedAt) return { ok: false, status: 409, code: 'STOP_LOCKED', message: 'The car is already at (or past) the stop.' };
+  // Ride-share «Попутчик» (2026-11-19): a co-rider ride has no intermediate stop.
+  if (stop && b.shareOptIn) return { ok: false, status: 409, code: 'SHARE_NO_STOP', message: 'A ride with a co-rider cannot have a stop.' };
   if (!stop && b.stopLat == null) return { ok: true, fareCents: b.fareCents ?? null };
 
   // New estimate for the new route (outside the lock — it may call the routing API).

@@ -26,6 +26,7 @@ const errors: Catalog<typeof en> = {
   NO_VEHICLE: "Aucun véhicule ne vous est attribué, vous ne pouvez donc pas recevoir d’offres. Contactez l’opérateur.",
   NOT_COMPLETED: "Vous ne pouvez noter une course qu’une fois terminée.",
   NOT_ELIGIBLE: "Votre compte ne peut pas prendre de courses pour le moment.",
+  SHARE_NO_STOP: "Un trajet avec covoyageur ne peut pas avoir d’arrêt.",
   STOP_LOCKED: "La voiture est déjà à l’arrêt — il ne peut plus être modifié.",
   NOT_FOUND: "Introuvable.",
   NOT_RETRYABLE: "Cette course ne peut pas être relancée.",

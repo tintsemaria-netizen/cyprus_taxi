@@ -285,7 +285,12 @@ export default function TrackApp() {
     ro.observe(sheetEl);
     return () => ro.disconnect();
   }, [sheetEl]);
-  const mapPad = useMemo(() => ({ top: 72, right: 40, bottom: sheetH + 24, left: 40 }), [sheetH]);
+  // Keep at least ~140 px of map visible: MapLibre silently skips a fit whose padding does not fit
+  // (a tall sheet on a pre-booking left the map zoomed in on the pickup — 2026-11-19).
+  const mapPad = useMemo(() => {
+    const h = typeof window !== 'undefined' ? window.innerHeight : 800;
+    return { top: 72, right: 40, bottom: Math.max(24, Math.min(sheetH + 24, h - 72 - 140)), left: 40 };
+  }, [sheetH]);
   const prevStatus = useRef<string | null>(null);
   useEffect(() => {
     const st = view?.status ?? null;
@@ -369,7 +374,8 @@ export default function TrackApp() {
   // During the trip and after it (2026-11-15) the map stays on the destination, not the pickup.
   // While searching (2026-11-17) both ends of the chosen route show, with the route line between.
   const onTrip = view.status === 'IN_PROGRESS' || view.status === 'COMPLETED';
-  if (onTrip || view.status === 'SEARCHING') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
+  // A pre-booking (2026-11-19) shows the whole route from afar too: both ends, framed together.
+  if (onTrip || view.status === 'SEARCHING' || view.status === 'REQUESTED') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
   if (!onTrip) markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label, pulse: view.status === 'SEARCHING' });
   if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: t('track.yourDriver'), stale: liveLocation.freshness === 'stale' });
 
@@ -390,7 +396,7 @@ export default function TrackApp() {
       <div className="relative flex-1">
         <div className="absolute inset-0">
           <AutoMapView markers={markers} route={shownRoute.length ? shownRoute : undefined} center={view.pickup} zoom={12} interactive className="h-full w-full"
-            fitPadding={mapPad} fitRoute={view.status === 'SEARCHING' || liveTrip || view.status === 'ASSIGNED' || view.status === 'EN_ROUTE' || view.status === 'IN_PROGRESS'} keepInView={liveTrip}
+            fitPadding={mapPad} fitRoute={view.status === 'REQUESTED' || view.status === 'SEARCHING' || liveTrip || view.status === 'ASSIGNED' || view.status === 'EN_ROUTE' || view.status === 'IN_PROGRESS'} keepInView={liveTrip}
             idleReturnMs={4000} />
         </div>
 
@@ -446,9 +452,6 @@ export default function TrackApp() {
                       <h1 className="text-lg font-medium leading-snug text-ink" role="status" aria-live="polite">{t('track.searchingNote')}</h1>
                     </>
                   : <h1 className="text-xl font-bold" role="status" aria-live="polite">{headline}</h1>}
-                {view.status === 'REQUESTED' && !view.confirmedDriver && (
-                  <p className="mt-1 text-sm text-muted">{t('track.scheduledNote')}</p>
-                )}
                 {/* A pre-booking doesn't block further orders (2026-11-13). */}
                 {view.status === 'REQUESTED' && view.confirmedDriver && (
                   <div className="mt-3 rounded-[12px] border border-accent/40 bg-accent/5 p-3">
@@ -466,7 +469,7 @@ export default function TrackApp() {
                     <p className="mt-2 text-xs text-muted">{t('track.prebook.confirmedNote')}</p>
                   </div>
                 )}
-                {view.shared && !terminal && <SharedBadge s={view.shared} />}
+                {view.shared && !terminal && <SharedBadge s={view.shared} to={view.dropoff.label} />}
                 {view.flightNumber && !terminal && <p className="mt-2 font-mono text-xs text-muted">✈ {t('track.prebook.flightRow', { flight: formatFlight(view.flightNumber) })}</p>}
                 {view.status === 'NO_DRIVER' && (
                   <p className="mt-1 text-sm text-muted">{t('track.noDriverNote')}</p>
@@ -506,7 +509,7 @@ export default function TrackApp() {
 
                 {/* Route (2026-11-15): the same dotted box as when ordering, with room between points;
                     a stop can be added/removed in the middle until the car reaches it. */}
-                <TrackRoute view={view} editable={!terminal && !view.stop?.arrivedAt} onChanged={load} />
+                <TrackRoute view={view} editable={!terminal && !view.stop?.arrivedAt} canAddStop={!view.shareOptIn && !view.shared} onChanged={load} />
                 {view.stop?.arrivedAt && !view.stop.departedAt && (
                   <p className="mt-2 rounded-[10px] border border-[#FFC83D]/40 bg-[#FFC83D]/10 px-3 py-2 text-xs text-[#FFC83D]">{view.stop.waitStartedAt ? t('track.stopWaitingPaid') : t('track.atStop')}</p>
                 )}
@@ -636,7 +639,7 @@ function Centered({ children }: { children: React.ReactNode }) {
 // rows, and the stop in the middle — add one if plans changed, or remove it — while the car has
 // not reached it. The estimate is re-quoted on the server; the driver is notified.
 type RoutePoint = { lat: number; lng: number; label: string };
-function TrackRoute({ view, editable, onChanged }: { view: { pickup: RoutePoint; dropoff: RoutePoint; stop?: (RoutePoint & { arrivedAt?: string | null }) | null }; editable: boolean; onChanged: () => void }) {
+function TrackRoute({ view, editable, canAddStop = true, onChanged }: { view: { pickup: RoutePoint; dropoff: RoutePoint; stop?: (RoutePoint & { arrivedAt?: string | null }) | null }; editable: boolean; canAddStop?: boolean; onChanged: () => void }) {
   const { t, tError } = useT();
   const [picking, setPicking] = useState(false);
   const [sel, setSel] = useState<Selected | null>(null);
@@ -646,7 +649,7 @@ function TrackRoute({ view, editable, onChanged }: { view: { pickup: RoutePoint;
   const ROW = 58;
   const rows: { key: string; label: string; dot: 'p' | 's' | 'd' | 'add' }[] = [
     { key: 'p', label: view.pickup.label, dot: 'p' },
-    ...(view.stop ? [{ key: 's', label: view.stop.label, dot: 's' as const }] : editable ? [{ key: 'add', label: t('booking.form.addStop'), dot: 'add' as const }] : []),
+    ...(view.stop ? [{ key: 's', label: view.stop.label, dot: 's' as const }] : editable && canAddStop ? [{ key: 'add', label: t('booking.form.addStop'), dot: 'add' as const }] : []),
     { key: 'd', label: view.dropoff.label, dot: 'd' },
   ];
   async function save(stop: Selected | null) {

@@ -122,21 +122,42 @@ export function ShareProposalCard({ p, onAnswered, route }: { p: ShareProposalVi
   );
 }
 
-/** In the ride sheet once the co-rider is confirmed: the discount, the new price and who rides along. */
-export function SharedBadge({ s }: { s: SharedView }) {
+/**
+ * In the ride sheet once the co-rider is confirmed (2026-11-19: compact). Folded: the label, when
+ * (departure / pickup, or arrival), the price and where this passenger goes. A tap unfolds the
+ * rest: the full price it replaces, the extra minutes, the wait, arrival and who rides along.
+ */
+export function SharedBadge({ s, to }: { s: SharedView; to?: string }) {
   const { t, fmt } = useT();
   const who = useWho();
+  const [open, setOpen] = useState(false);
+  const isPrebook = s.status === 'MATCHED';
+  const whenIso = (isPrebook ? s.pickupAt : null) ?? s.arriveAt;
+  const when = whenIso ? (sameCyprusDay(new Date(whenIso), new Date()) ? fmt.time(whenIso) : fmt.dateTime(whenIso)) : null;
   return (
-    <div className="mt-3 rounded-[12px] border border-accent/40 bg-accent/5 p-3" data-testid="shared-badge">
-      <div className="text-xs font-semibold uppercase tracking-wide text-accent">👥 {t('share.shared.badge', { pct: s.discountPct })}</div>
-      <div className="mt-1 text-base font-semibold tabular-nums">{t('share.shared.price', { to: fmt.money(s.fareCents), from: fmt.money(s.fullFareCents) })}</div>
-      {s.extraMin != null && (
-        <p className="mt-1 text-sm">{s.extraMin > 0 ? t('share.proposal.longer', { n: s.extraMin }) : t('share.proposal.sameTime')}</p>
+    <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
+      className="mt-3 block w-full rounded-[12px] border border-accent/40 bg-accent/5 p-3 text-start" data-testid="shared-badge">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wide text-accent">👥 {t('share.shared.badge', { pct: s.discountPct })}</span>
+        <span aria-hidden className={`text-muted transition-transform ${open ? 'rotate-180' : ''}`}>▾</span>
+      </div>
+      <div className="mt-1 flex items-baseline justify-between gap-2">
+        <span className="text-sm font-medium tabular-nums">{when}</span>
+        <span className="text-base font-bold tabular-nums">{fmt.money(s.fareCents)}</span>
+      </div>
+      {to && <p className="mt-0.5 truncate text-sm text-muted">→ {to}</p>}
+      {open && (
+        <div className="mt-2 border-t border-accent/20 pt-2">
+          <div className="text-sm tabular-nums">{t('share.shared.price', { to: fmt.money(s.fareCents), from: fmt.money(s.fullFareCents) })}</div>
+          {s.extraMin != null && (
+            <p className="mt-1 text-sm">{s.extraMin > 0 ? t('share.proposal.longer', { n: s.extraMin }) : t('share.proposal.sameTime')}</p>
+          )}
+          <TimingLines s={s} isPrebook={isPrebook} />
+          <p className="mt-1 text-xs text-muted">{t('share.shared.with', { who: who(s.coRider) })}</p>
+          {isPrebook && <p className="mt-1 text-xs text-muted">{t('share.shared.matched')}</p>}
+        </div>
       )}
-      <TimingLines s={s} isPrebook={s.status === 'MATCHED'} />
-      <p className="mt-1 text-xs text-muted">{t('share.shared.with', { who: who(s.coRider) })}</p>
-      {s.status === 'MATCHED' && <p className="mt-1 text-xs text-muted">{t('share.shared.matched')}</p>}
-    </div>
+    </button>
   );
 }
 

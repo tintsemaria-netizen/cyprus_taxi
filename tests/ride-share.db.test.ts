@@ -204,6 +204,13 @@ describe('live ride-share', () => {
     expect(await tryLiveShare(guest2.id)).toBe(false);
   });
 
+  it('a co-rider ride cannot get an intermediate stop', async () => {
+    const { passengerSetStop } = await import('@/server/passenger-stop');
+    const b = await booking(lca, marina);
+    const r = await passengerSetStop(b.id, { lat: 34.9, lng: 33.5, label: 'Somewhere' });
+    expect(r).toMatchObject({ ok: false, code: 'SHARE_NO_STOP' });
+  });
+
   it('never: driver switched co-riders off, a passenger did not opt in, too many people/bags, or a city ride', async () => {
     const d = await driver('Andreas', { acceptsShared: false });
     await hostOnTrip(d);
