@@ -409,9 +409,9 @@ function Driver() {
               <button type="button" onClick={() => { setDrawer(false); setTab('prebook'); }} data-testid="drawer-prebook"
                 className="mb-3 flex w-full items-center justify-between rounded-[12px] border border-edge bg-elevated px-4 py-3 text-start text-[16px] font-semibold">
                 <span>{t('driver.scheduled.tabPrebook')}</span>
-                {/* 2026-11-19: lime = taken by me, red = new ones I could take. */}
+                {/* 2026-11-19: taken by me and new ones I could take — both red (operator). */}
                 <span className="flex items-center gap-1.5">
-                  {prebookMine > 0 && <span className="min-w-[22px] rounded-full bg-accent px-1.5 text-center text-[12px] font-bold leading-[22px] text-[#0d1608]" title={t('driver.scheduled.mine')}>{prebookMine}</span>}
+                  {prebookMine > 0 && <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white" title={t('driver.scheduled.mine')}>{prebookMine}</span>}
                   {prebookCount > 0 && <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white">{prebookCount}</span>}
                 </span>
               </button>
