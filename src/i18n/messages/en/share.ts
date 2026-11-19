@@ -101,6 +101,7 @@ const share = {
       atTime: "at {time}",
     },
     boardTotal: 'Both: {amount}',
+    boardCompact: 'Pre-booking · ride-share',
   },
 };
 export default share;

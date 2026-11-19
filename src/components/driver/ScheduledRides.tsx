@@ -70,7 +70,20 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
     finally { setBusy(null); }
   }
 
-  const row = (i: Item, action: React.ReactNode) => (
+  // A ride-share pair (2026-11-19): a short card — date/time, label, from → to, total — and the
+  // whole card opens the details (no separate «Посмотреть» button).
+  const pairRow = (i: Item, s: ShareBoard) => (
+    <button key={i.bookingId} type="button" data-testid="pair-card" onClick={() => setOpenId(i.bookingId)}
+      className="block w-full rounded-[12px] border border-accent/40 bg-elevated p-3 text-start active:bg-accent/10">
+      <div className="text-lg font-semibold">{fmt.dateTime(i.pickupAt)}</div>
+      <div className="mt-1 text-sm font-semibold text-accent">👥 {t('share.driver.boardCompact')}</div>
+      <div className="mt-1.5 text-sm">{i.pickupLabel} → {i.dropoffLabel}</div>
+      <div className="mt-1.5 text-base font-bold">{fmt.money(s.totalFareCents)}</div>
+      {i.conflict && <p className="mt-1 text-xs text-warn">{t('driver.scheduled.conflict')}</p>}
+    </button>
+  );
+
+  const row = (i: Item, action: React.ReactNode) => i.share ? pairRow(i, i.share) : (
     <div key={i.bookingId} className="rounded-[12px] border border-edge bg-elevated p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="font-semibold">{fmt.dateTime(i.pickupAt)}</span>

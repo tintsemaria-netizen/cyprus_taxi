@@ -103,6 +103,7 @@ const share: Catalog<typeof en> = {
       atTime: "à {time}",
     },
     boardTotal: "Les deux : {amount}",
+    boardCompact: "Réservation · covoiturage",
   },
 };
 export default share;
