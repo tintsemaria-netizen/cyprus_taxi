@@ -166,7 +166,7 @@ const driver: Catalog<typeof en> = {
     saveFailed: "השמירה נכשלה",
     loadFailed: "נכשל",
   },
-  analytics: { title: "ניתוח", day: "יום", week: "שבוע", prev: "מוקדם יותר", next: "מאוחר יותר", pickDay: "בחרו יום", done: "בוצעו והרווחתם", pending: "עדיין ללא סכום סופי: {n}", youCanceled: "ביטלתם", paxCanceled: "הנוסע ביטל או לא הגיע", missed: "הצעות שהוחמצו", could: "יכולתם להרוויח", note: "«יכולתם להרוויח» הוא שווי הנסיעות האלה (מחיר סופי או משוער); זה לא חלק מהרווחים.", dayCol: "יום", doneCol: "בוצעו", lostCol: "הוחמצו", tileHint: "פרטים" },
+  analytics: { doneShort: "בוצעו", notDone: "לא בוצעו", none: "אין", youCanceledShort: "בוטל", missedShort: "הוחמץ", title: "ניתוח", day: "יום", week: "שבוע", prev: "מוקדם יותר", next: "מאוחר יותר", pickDay: "בחרו יום", done: "בוצעו והרווחתם", pending: "עדיין ללא סכום סופי: {n}", youCanceled: "ביטלתם", paxCanceled: "הנוסע ביטל או לא הגיע", missed: "הצעות שהוחמצו", could: "יכולתם להרוויח", note: "«יכולתם להרוויח» הוא שווי הנסיעות האלה (מחיר סופי או משוער); זה לא חלק מהרווחים.", dayCol: "יום", doneCol: "בוצעו", lostCol: "הוחמצו", tileHint: "פרטים" },
   earnings: {
     title: "רווחים",
     completedTrips: "נסיעות שהושלמו",

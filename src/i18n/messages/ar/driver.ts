@@ -166,7 +166,7 @@ const driver: Catalog<typeof en> = {
     saveFailed: "فشل الحفظ",
     loadFailed: "فشل",
   },
-  analytics: { title: "التحليلات", day: "يوم", week: "أسبوع", prev: "أقدم", next: "أحدث", pickDay: "اختر يومًا", done: "المنجز والأرباح", pending: "بدون مبلغ نهائي بعد: {n}", youCanceled: "ألغيتَ", paxCanceled: "ألغى الراكب أو لم يحضر", missed: "عروض فائتة", could: "كان يمكنك أن تربح", note: "«كان يمكنك أن تربح» هو قيمة هذه الرحلات (السعر النهائي أو التقديري)؛ ولا يدخل في أرباحك.", dayCol: "اليوم", doneCol: "منجز", lostCol: "فائت", tileHint: "التفاصيل" },
+  analytics: { doneShort: "منجزة", notDone: "غير منجزة", none: "لا شيء", youCanceledShort: "أُلغيت", missedShort: "فائتة", title: "التحليلات", day: "يوم", week: "أسبوع", prev: "أقدم", next: "أحدث", pickDay: "اختر يومًا", done: "المنجز والأرباح", pending: "بدون مبلغ نهائي بعد: {n}", youCanceled: "ألغيتَ", paxCanceled: "ألغى الراكب أو لم يحضر", missed: "عروض فائتة", could: "كان يمكنك أن تربح", note: "«كان يمكنك أن تربح» هو قيمة هذه الرحلات (السعر النهائي أو التقديري)؛ ولا يدخل في أرباحك.", dayCol: "اليوم", doneCol: "منجز", lostCol: "فائت", tileHint: "التفاصيل" },
   earnings: {
     title: "الأرباح",
     completedTrips: "الرحلات المكتملة",

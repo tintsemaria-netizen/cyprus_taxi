@@ -163,7 +163,7 @@ const driver = {
     saveFailed: 'Failed to save',
     loadFailed: 'Failed',
   },
-  analytics: { title: "Analytics", day: "Day", week: "Week", prev: "Earlier", next: "Later", pickDay: "Pick a day", done: "Done and earned", pending: "still without a final amount: {n}", youCanceled: "You cancelled", paxCanceled: "Passenger cancelled or no-show", missed: "Missed offers", could: "could have earned", note: "«Could have earned» is what those rides were worth (final or estimated price); it is not part of your earnings.", dayCol: "Day", doneCol: "Done", lostCol: "Missed", tileHint: "Details" },
+  analytics: { doneShort: "Done", notDone: "Not done", none: "None", youCanceledShort: "cancelled", missedShort: "missed", title: "Analytics", day: "Day", week: "Week", prev: "Earlier", next: "Later", pickDay: "Pick a day", done: "Done and earned", pending: "still without a final amount: {n}", youCanceled: "You cancelled", paxCanceled: "Passenger cancelled or no-show", missed: "Missed offers", could: "could have earned", note: "«Could have earned» is what those rides were worth (final or estimated price); it is not part of your earnings.", dayCol: "Day", doneCol: "Done", lostCol: "Missed", tileHint: "Details" },
   earnings: {
     title: 'Earnings',
     completedTrips: 'Completed trips',
