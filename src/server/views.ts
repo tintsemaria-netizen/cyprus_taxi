@@ -165,7 +165,7 @@ async function passengerShareView(booking: { id: string; shareOptIn: boolean }) 
   const counts = (b: { passengerCount: number; childCount: number; luggageCount: number }) => ({ adults: b.passengerCount - b.childCount, children: b.childCount, luggage: b.luggageCount });
   type Timing = { arriveAt: string | null; pickupAt: string | null; waitMin: number; approx: boolean };
   let shareProposal = null as null | ({ groupId: string; mode: string; expiresAt: string; extraMin: number; fullFareCents: number; newFareCents: number; coRider: ReturnType<typeof counts> } & Timing);
-  let shared = null as null | ({ status: string; discountPct: number; fullFareCents: number; fareCents: number; coRider: ReturnType<typeof counts> } & Timing);
+  let shared = null as null | ({ status: string; discountPct: number; fullFareCents: number; fareCents: number; extraMin: number; coRider: ReturnType<typeof counts> } & Timing);
   for (const g of groups) {
     const isHost = g.hostBookingId === booking.id;
     const me = isHost ? g.host : g.guest;
@@ -191,7 +191,7 @@ async function passengerShareView(booking: { id: string; shareOptIn: boolean }) 
       };
     }
     if (g.status === 'ACCEPTED' || g.status === 'MATCHED') {
-      shared = { status: g.status, discountPct: g.discountPct, fullFareCents: isHost ? g.hostFullCents : g.guestFullCents, fareCents: isHost ? g.hostCents : g.guestCents, coRider: counts(other), ...timing };
+      shared = { status: g.status, discountPct: g.discountPct, fullFareCents: isHost ? g.hostFullCents : g.guestFullCents, fareCents: isHost ? g.hostCents : g.guestCents, extraMin: isHost ? g.extraMinHost : g.extraMinGuest, coRider: counts(other), ...timing };
     }
   }
   return { shareOptIn: booking.shareOptIn, shareProposal, shared };

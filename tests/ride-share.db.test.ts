@@ -89,6 +89,12 @@ beforeEach(async () => {
 });
 
 describe('ride-share pure rules', () => {
+  it('approximate address: no house number, no country', async () => {
+    const { approxLabel } = await import('@/server/share-detail');
+    expect(approxLabel('Lisandrou 2, Lemesos 3066, Cyprus')).toBe('Lisandrou, Lemesos 3066');
+    expect(approxLabel('12 Makariou Ave, Nicosia')).toBe('Makariou Ave, Nicosia');
+    expect(approxLabel('Larnaca Airport (LCA)')).toBe('Larnaca Airport (LCA)');
+  });
   it('only between the airports and the towns Larnaca, Nicosia, Paphos, Ayia Napa, Limassol', () => {
     expect(isShareRoute(lca, marina)).toBe(true); // LCA → Nicosia
     expect(isShareRoute(lca, larnacaTown)).toBe(true); // LCA → Larnaca town
@@ -272,6 +278,16 @@ describe('pre-booked ride-share', () => {
     const board = await scheduledBoard(yes.driverId);
     expect(board.available.map((i) => i.bookingId)).toEqual([a.id]);
     expect(board.available[0].share).toMatchObject({ passengers: 3, luggage: 3, totalFareCents: 7700 });
+    // Detail: the whole trip in stop order, approximate addresses, per-stop info and totals.
+    const { scheduledRideDetail } = await import('@/server/dispatch/preassign');
+    const det = (await scheduledRideDetail(a.id, yes.driverId))!;
+    expect(det.pair!.stops.map((s) => `${s.kind}:${s.passenger}`)).toEqual(['pickup:1', 'pickup:2', ...det.pair!.stops.slice(2).map((s) => `${s.kind}:${s.passenger}`)]);
+    expect(det.pair!.stops).toHaveLength(4);
+    expect(det.pair!.stops[1]).toMatchObject({ adults: 1, children: 0, luggage: 1, fareCents: 3500 });
+    expect(det.pair!.stops[3].toNext).toBeNull();
+    expect(det.pair!.stops[0].toNext!.min).toBeGreaterThanOrEqual(0);
+    expect(det.pair!.totals).toMatchObject({ passengers: 3, luggage: 3, fareCents: 7700 });
+    expect(det.pair!.totals.km).toBeGreaterThan(0);
     expect((await claimScheduled(yes.driverId, b.id)).ok).toBe(false); // the co-rider is never claimed alone
     expect(await claimScheduled(yes.driverId, a.id)).toEqual({ ok: true, status: 'COMMITTED' });
 

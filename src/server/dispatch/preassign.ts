@@ -12,6 +12,7 @@ import { endPreAssignmentTx, protectedDriverIds } from './preassign-core';
 import { haversineMeters } from '@/lib/geo';
 import { googleConfigured, googleRoute } from '@/server/google';
 import { attachMatchedGuestTx } from '@/server/share';
+import { pairDetail, approxLabel } from '@/server/share-detail';
 export { endPreAssignmentTx, protectedDriverIds };
 
 // Pre-assignment of scheduled rides (airport transfers etc.).
@@ -68,7 +69,7 @@ async function sharePairs(bookingIds: string[]) {
     const v = {
       hostId: g.hostBookingId, guestId: g.guestBookingId,
       info: {
-        guestPickupAt: g.guest.scheduledAt?.toISOString() ?? '', guestPickupLabel: g.guest.pickupLabel, guestDropoffLabel: g.guest.dropoffLabel,
+        guestPickupAt: g.guest.scheduledAt?.toISOString() ?? '', guestPickupLabel: approxLabel(g.guest.pickupLabel), guestDropoffLabel: approxLabel(g.guest.dropoffLabel),
         passengers: g.host.passengerCount + g.guest.passengerCount, children: g.host.childCount + g.guest.childCount,
         luggage: g.host.luggageCount + g.guest.luggageCount, totalFareCents: g.hostCents + g.guestCents,
         extraMin: g.extraMinDriver, plan: (g.plan as { kind: string; who: string }[]) ?? [],
@@ -92,7 +93,7 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
   const mine = mineRows.map((p) => ({
     share: minePairs.get(p.bookingId)?.info ?? null,
     bookingId: p.bookingId, reference: p.booking.reference, pickupAt: p.pickupAt.toISOString(),
-    pickupLabel: p.booking.pickupLabel, dropoffLabel: p.booking.dropoffLabel, dropoffPostcode: p.booking.dropoffPostcode ?? null, vClass: p.booking.vClass,
+    pickupLabel: minePairs.get(p.bookingId) ? approxLabel(p.booking.pickupLabel) : p.booking.pickupLabel, dropoffLabel: minePairs.get(p.bookingId) ? approxLabel(p.booking.dropoffLabel) : p.booking.dropoffLabel, dropoffPostcode: p.booking.dropoffPostcode ?? null, vClass: p.booking.vClass,
     passengerCount: p.booking.passengerCount, fareCents: p.booking.fareCents, priceType: p.booking.priceType,
     flightNumber: p.booking.flightNumber, note: p.booking.note,
     airport: isAirportPoint(p.booking.pickupLat, p.booking.pickupLng) || isAirportPoint(p.booking.dropoffLat, p.booking.dropoffLng),
@@ -129,7 +130,8 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
   const available: BoardItem[] = rows.filter((b) => (!b.passengerId || !blockedPax.has(b.passengerId)) && fitsPair(b.id)).map((b) => ({
     share: pairs.get(b.id)?.info ?? null,
     bookingId: b.id, reference: b.reference, pickupAt: b.scheduledAt!.toISOString(),
-    pickupLabel: b.pickupLabel, dropoffLabel: b.dropoffLabel, dropoffPostcode: b.dropoffPostcode ?? null, vClass: b.vClass, passengerCount: b.passengerCount,
+    // A ride-share pair shows approximate addresses until the ride starts (operator, 2026-11-19).
+    pickupLabel: pairs.get(b.id) ? approxLabel(b.pickupLabel) : b.pickupLabel, dropoffLabel: pairs.get(b.id) ? approxLabel(b.dropoffLabel) : b.dropoffLabel, dropoffPostcode: b.dropoffPostcode ?? null, vClass: b.vClass, passengerCount: b.passengerCount,
     fareCents: b.fareCents, priceType: b.priceType, flightNumber: b.flightNumber, note: b.note,
     airport: isAirportPoint(b.pickupLat, b.pickupLng) || isAirportPoint(b.dropoffLat, b.dropoffLng),
     conflict: mineRows.length >= p.maxPerDriver || mineRows.some((m) => Math.abs(m.pickupAt.getTime() - b.scheduledAt!.getTime()) < gap),
@@ -301,6 +303,26 @@ export async function scheduledRideDetail(bookingId: string, driverId: string, n
       if (r) trip = { distanceM: Math.round(r.distanceKm * 1000), etaSec: r.etaMinutes * 60, path: r.path, roadRouted: true };
     } catch { /* keep the estimate */ }
   }
+  // Ride-share pair: the whole trip through both passengers' stops, approximate addresses.
+  const pair = item.share ? await pairDetail(bookingId) : null;
+  if (pair) {
+    const first = pair.stops[0];
+    const last = pair.stops[pair.stops.length - 1];
+    return {
+      ...item,
+      pickupLabel: approxLabel(item.pickupLabel), dropoffLabel: approxLabel(item.dropoffLabel),
+      mine: !!mine,
+      conflict: mine ? false : (item as BoardItem).conflict,
+      passengerName: b.passengerName,
+      luggageCount: b.luggageCount,
+      fareBreakdown: null,
+      pickup: { lat: first.lat, lng: first.lng, label: first.label },
+      dropoff: { lat: last.lat, lng: last.lng, label: last.label, postcode: null },
+      trip: { distanceM: Math.round(pair.totals.km * 1000), etaSec: pair.totals.min * 60, path: pair.path, roadRouted: pair.roadRouted },
+      pair,
+      blocked: mine ? null : board.blocked,
+    };
+  }
   return {
     ...item,
     mine: !!mine,
@@ -309,6 +331,7 @@ export async function scheduledRideDetail(bookingId: string, driverId: string, n
     luggageCount: b.luggageCount,
     fareBreakdown,
     pickup, dropoff, trip,
+    pair: null,
     blocked: mine ? null : board.blocked,
   };
 }

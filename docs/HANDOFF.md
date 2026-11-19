@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-19 — Ride-share pair details (deployed via main)
+
+- Driver pre-booking detail for a pair (src/server/share-detail.ts): numbered stops on the map in trip order with the route through all of them; per stop: passenger 1/2, pickup/drop-off, approximate address (no house number, position on a ~150 m grid; exact ones open with the ride), planned time, people/children/suitcases and that passenger's price; time + km to the next stop; totals (people, suitcases, km, minutes, extra minutes, sum). Board and accepted list also show approximate addresses for pairs.
+- Passenger shared badge: «+N мин» (or «почти не изменится») in addition to price, departure/wait, arrival, co-rider counts.
+- Not done yet: co-rider stops as markers on the driver's live navigation map (the co-rider pill opens Google Maps).
+
 ## 2026-11-19 — Co-rider offer as a push on top of everything (deployed via main)
 
 - Operator: «предложение попутчика должно выходить поверх всего даже если не в приложении или заблокирован телефон; открывать окно предзаказа».

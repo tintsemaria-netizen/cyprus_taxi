@@ -90,6 +90,18 @@ const share: Catalog<typeof en> = {
       ARRIVED: "Περιμένω",
       IN_PROGRESS: "Στο αυτοκίνητο",
     },
+    pair: {
+      stopsTitle: "Στάσεις με σειρά",
+      passengerN: "Επιβάτης {n}",
+      pickupWord: "Παραλαβή",
+      dropoffWord: "Αποβίβαση",
+      toNext: "επόμενη στάση: {min} λεπ. · {km} χλμ",
+      tripTitle: "Όλη η διαδρομή",
+      tripLine: "άτομα: {people} · βαλίτσες: {bags} · {km} χλμ · {min} λεπ.",
+      extraLine: "ο συνεπιβάτης προσθέτει ~{n} λεπ.",
+      approxNote: "Οι διευθύνσεις είναι κατά προσέγγιση — οι ακριβείς ανοίγουν με τη διαδρομή.",
+      atTime: "στις {time}",
+    },
     boardTotal: "Και οι δύο: {amount}",
   },
 };

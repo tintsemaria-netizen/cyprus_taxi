@@ -88,6 +88,18 @@ const share = {
       ARRIVED: 'Waiting at pickup',
       IN_PROGRESS: 'On board',
     },
+    pair: {
+      stopsTitle: "Stops in order",
+      passengerN: "Passenger {n}",
+      pickupWord: "Pick up",
+      dropoffWord: "Drop off",
+      toNext: "next stop: {min} min · {km} km",
+      tripTitle: "Whole trip",
+      tripLine: "{people} people · {bags} suitcases · {km} km · {min} min",
+      extraLine: "co-rider adds ~{n} min",
+      approxNote: "Addresses are approximate — exact ones open with the ride.",
+      atTime: "at {time}",
+    },
     boardTotal: 'Both: {amount}',
   },
 };

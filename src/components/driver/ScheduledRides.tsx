@@ -157,7 +157,55 @@ interface Detail extends Item {
   fareBreakdown: { label: string; cents: number }[] | null;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string; postcode?: string | null };
   trip: { distanceM: number; etaSec: number; path: [number, number][] | null; roadRouted: boolean };
+  pair?: PairDetail | null; // ride-share pair (2026-11-19)
   blocked: string | null;
+}
+
+interface PairStop {
+  n: number; kind: 'pickup' | 'dropoff'; who: 'host' | 'guest'; passenger: 1 | 2;
+  label: string; lat: number; lng: number; at: string | null;
+  adults: number; children: number; luggage: number; fareCents: number | null;
+  toNext: { min: number; km: number } | null;
+}
+interface PairDetail {
+  stops: PairStop[];
+  totals: { passengers: number; children: number; luggage: number; km: number; min: number; extraMin: number; fareCents: number };
+  path: [number, number][]; roadRouted: boolean;
+}
+
+// Ride-share pair in the pre-booking detail: every stop in order with its passenger, approximate
+// address, time, people / suitcases, price, and time + km to the next stop; then the whole trip.
+function PairStops({ p }: { p: PairDetail }) {
+  const { t, fmt } = useT();
+  const who = (s: PairStop) => [
+    t('share.who.adults', { n: s.adults }), ...(s.children ? [t('share.who.children', { n: s.children })] : []), t('share.who.luggage', { n: s.luggage }),
+  ].join(' · ');
+  return (
+    <div className="mt-2 space-y-2" data-testid="pair-stops">
+      <div className="text-xs font-semibold uppercase tracking-wide text-accent">👥 {t('share.driver.pair.stopsTitle')}</div>
+      {p.stops.map((s) => (
+        <div key={s.n} className="rounded-[12px] border border-edge bg-elevated p-3 text-sm">
+          <div className="flex items-center gap-2">
+            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${s.passenger === 2 ? 'bg-accent text-black' : 'bg-edge-strong text-ink'}`}>{s.n}</span>
+            <span className="font-semibold">{s.kind === 'pickup' ? t('share.driver.pair.pickupWord') : t('share.driver.pair.dropoffWord')} · {t('share.driver.pair.passengerN', { n: s.passenger })}</span>
+            {s.at && <span className="ms-auto shrink-0 text-xs text-muted">{t('share.driver.pair.atTime', { time: fmt.time(s.at) })}</span>}
+          </div>
+          <div className="mt-1 font-medium">{s.label}</div>
+          {s.kind === 'pickup' && (
+            <div className="mt-0.5 text-muted">{who(s)}{s.fareCents != null && <> · <span className="font-semibold text-ink">{fmt.money(s.fareCents)}</span></>}</div>
+          )}
+          {s.toNext && <div className="mt-1 text-xs text-accent">→ {t('share.driver.pair.toNext', { min: s.toNext.min, km: s.toNext.km.toLocaleString(undefined, { maximumFractionDigits: 1 }) })}</div>}
+        </div>
+      ))}
+      <div className="rounded-[12px] border border-accent/50 bg-accent/5 p-3 text-sm">
+        <div className="font-semibold">{t('share.driver.pair.tripTitle')}{!p.roadRouted && <span className="text-xs font-normal text-muted"> ≈</span>}</div>
+        <div className="mt-0.5">{t('share.driver.pair.tripLine', { people: p.totals.passengers, bags: p.totals.luggage, km: p.totals.km.toLocaleString(undefined, { maximumFractionDigits: 1 }), min: p.totals.min })}</div>
+        {p.totals.extraMin > 0 && <div className="text-xs text-muted">{t('share.driver.pair.extraLine', { n: p.totals.extraMin })}</div>}
+        <div className="mt-1 text-lg font-bold">{fmt.money(p.totals.fareCents)}</div>
+      </div>
+      <p className="text-xs text-muted">{t('share.driver.pair.approxNote')}</p>
+    </div>
+  );
 }
 
 // Pre-booking review screen: map with the ride's route, then pickup time, from/to, client name,
@@ -175,10 +223,13 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const markers = useMemo<MapMarker[]>(() => d ? [
-    { id: 'p', kind: 'pickup', lat: d.pickup.lat, lng: d.pickup.lng, label: d.pickup.label },
-    { id: 'd', kind: 'dropoff', lat: d.dropoff.lat, lng: d.dropoff.lng, label: d.dropoff.label },
-  ] : [], [d]);
+  const markers = useMemo<MapMarker[]>(() => !d ? [] : d.pair
+    // A pair: every stop on the map, numbered in the order the trip runs.
+    ? d.pair.stops.map((s) => ({ id: `s${s.n}`, kind: s.kind, lat: s.lat, lng: s.lng, label: `${s.n}. ${s.label}` }))
+    : [
+      { id: 'p', kind: 'pickup', lat: d.pickup.lat, lng: d.pickup.lng, label: d.pickup.label },
+      { id: 'd', kind: 'dropoff', lat: d.dropoff.lat, lng: d.dropoff.lng, label: d.dropoff.label },
+    ], [d]);
   const route = useMemo(() => d?.trip.path?.map(([la, ln]) => [ln, la] as [number, number]), [d]);
   const km = (m: number) => (m >= 1000 ? `${(m / 1000).toFixed(1)} ${t('driver.units.kmShort')}` : `${m} ${t('driver.units.mShort')}`);
 
@@ -207,7 +258,7 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.scheduled.trip')}</span><span className="font-medium">{km(d.trip.distanceM)} · {t('driver.offer.minShort', { min: Math.max(1, Math.round(d.trip.etaSec / 60)) })}</span>{!d.trip.roadRouted && <span className="text-xs text-muted">≈</span>}</div>
                 <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{d.fareCents != null ? fareRangeText(d.fareCents, d.priceType, (c) => fmt.money(c)) : '—'}</span></div>
               </div>
-              {d.share && <SharePairBox s={d.share} />}
+              {d.pair ? <PairStops p={d.pair} /> : d.share && <SharePairBox s={d.share} />}
               {d.note && <p className="mt-2 rounded-[10px] border border-warn/30 bg-warn/5 px-2.5 py-1.5 text-xs text-warn">💬 {d.note}</p>}
               {d.flightNumber && <p className="mt-2 font-mono text-xs text-ink">{t('driver.scheduled.flight', { flight: formatFlight(d.flightNumber) })}</p>}
               <div className="mt-2 space-y-0.5 rounded-[10px] border border-edge bg-page px-2.5 py-2 text-xs text-muted">

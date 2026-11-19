@@ -90,6 +90,18 @@ const share: Catalog<typeof en> = {
       ARRIVED: "Czekam na miejscu",
       IN_PROGRESS: "W aucie",
     },
+    pair: {
+      stopsTitle: "Przystanki po kolei",
+      passengerN: "Pasażer {n}",
+      pickupWord: "Odbiór",
+      dropoffWord: "Wysiadka",
+      toNext: "do następnego: {min} min · {km} km",
+      tripTitle: "Cały kurs",
+      tripLine: "osoby: {people} · walizki: {bags} · {km} km · {min} min",
+      extraLine: "współpasażer dodaje ~{n} min",
+      approxNote: "Adresy przybliżone — dokładne pojawią się w trakcie kursu.",
+      atTime: "o {time}",
+    },
     boardTotal: "Oba: {amount}",
   },
 };

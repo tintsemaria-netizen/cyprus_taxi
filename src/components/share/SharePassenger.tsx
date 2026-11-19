@@ -8,7 +8,7 @@ import { useT } from '@/i18n/I18nProvider';
 export interface CoRiderCounts { adults: number; children: number; luggage: number }
 interface ShareTiming { arriveAt: string | null; pickupAt: string | null; waitMin: number; approx: boolean }
 export interface ShareProposalView extends ShareTiming { groupId: string; mode: string; expiresAt: string; extraMin: number; fullFareCents: number; newFareCents: number; coRider: CoRiderCounts }
-export interface SharedView extends ShareTiming { status: string; discountPct: number; fullFareCents: number; fareCents: number; coRider: CoRiderCounts }
+export interface SharedView extends ShareTiming { status: string; discountPct: number; fullFareCents: number; fareCents: number; extraMin?: number; coRider: CoRiderCounts }
 
 /** When the car comes (pre-booking, with the wait the passenger agreed to) and when they arrive. */
 const sameCyprusDay = (a: Date, b: Date) => a.toLocaleDateString('en-CA', { timeZone: 'Europe/Nicosia' }) === b.toLocaleDateString('en-CA', { timeZone: 'Europe/Nicosia' });
@@ -130,6 +130,9 @@ export function SharedBadge({ s }: { s: SharedView }) {
     <div className="mt-3 rounded-[12px] border border-accent/40 bg-accent/5 p-3" data-testid="shared-badge">
       <div className="text-xs font-semibold uppercase tracking-wide text-accent">👥 {t('share.shared.badge', { pct: s.discountPct })}</div>
       <div className="mt-1 text-base font-semibold tabular-nums">{t('share.shared.price', { to: fmt.money(s.fareCents), from: fmt.money(s.fullFareCents) })}</div>
+      {s.extraMin != null && (
+        <p className="mt-1 text-sm">{s.extraMin > 0 ? t('share.proposal.longer', { n: s.extraMin }) : t('share.proposal.sameTime')}</p>
+      )}
       <TimingLines s={s} isPrebook={s.status === 'MATCHED'} />
       <p className="mt-1 text-xs text-muted">{t('share.shared.with', { who: who(s.coRider) })}</p>
       {s.status === 'MATCHED' && <p className="mt-1 text-xs text-muted">{t('share.shared.matched')}</p>}
