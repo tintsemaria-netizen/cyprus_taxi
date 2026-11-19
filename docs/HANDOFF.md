@@ -319,7 +319,7 @@
 
 - The «Ехать сейчас» link in the schedule panel is gone; the «Запланировать» pill toggles schedule off.
 
-## 2026-11-17 — PARKED: receipts RU/EN (owner: «вернёмся к чекам, когда скажу»)
+## 2026-11-17 — PARKED: receipts RU/EN (owner: «вернёмся к чекам, когда скажу») — DEPLOYED 2026-11-19 (see below)
 
 - Ready, NOT deployed, on branch `receipt-ru-en` (pushed to origin, commit «receipts: Russian/English …»). When the owner says
   «вернись к чекам», show the last preview (screenshots: rides list «→ destination» + same total; receipt in RU for a Russian app,
@@ -2188,3 +2188,7 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
   (migration 20261119180000_share_meet_point). The proposal shows «📍 Место встречи» (share.proposal.meetAt, 8 languages).
 - Driver pre-bookings: a pair is a compact tappable card (date/time, «Предзаказ · попутчик», from → to, total).
 - Open: confirm exact meeting-point coordinates with the operator; the 2nd passenger's stops on the driver's live navigation map.
+
+## 2026-11-19 — Receipts RU/EN deployed (branch `receipt-ru-en` rebased onto main)
+- Receipt page: language RU for a Russian app, else EN, picker for others (remembered); kept main's short receipt (only «Итого» + payment method).
+- E-mail receipts only RU/EN (`receiptLocale`). Rides list: «→ destination», same total as the receipt (waiting included), no «≈» for completed rides.
