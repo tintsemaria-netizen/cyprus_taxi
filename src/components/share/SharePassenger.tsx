@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { enablePush, pushPermission, pushSupported, rememberPushLocale } from '@/lib/push-client';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 
@@ -11,18 +12,22 @@ export interface ShareProposalView extends ShareTiming { groupId: string; mode: 
 export interface SharedView extends ShareTiming { status: string; discountPct: number; fullFareCents: number; fareCents: number; coRider: CoRiderCounts }
 
 /** When the car comes (pre-booking, with the wait the passenger agreed to) and when they arrive. */
+const sameCyprusDay = (a: Date, b: Date) => a.toLocaleDateString('en-CA', { timeZone: 'Europe/Nicosia' }) === b.toLocaleDateString('en-CA', { timeZone: 'Europe/Nicosia' });
+
 function TimingLines({ s, isPrebook }: { s: ShareTiming; isPrebook: boolean }) {
   const { t, fmt } = useT();
+  // A pre-booking is usually another day: show the date too, not just «14:56».
+  const when = (iso: string) => (sameCyprusDay(new Date(iso), new Date()) ? fmt.time(iso) : fmt.dateTime(iso));
   return (
     <>
       {isPrebook && s.pickupAt && (
         <p className="mt-1 text-sm font-medium">
-          {s.waitMin > 0 ? t('share.proposal.departAt', { time: fmt.time(s.pickupAt), n: s.waitMin }) : t('share.proposal.pickupAt', { time: fmt.time(s.pickupAt) })}
+          {s.waitMin > 0 ? t('share.proposal.departAt', { time: when(s.pickupAt), n: s.waitMin }) : t('share.proposal.pickupAt', { time: when(s.pickupAt) })}
         </p>
       )}
       {s.arriveAt && (
         <p className="mt-1 text-sm font-medium">
-          {t('share.proposal.arriveAt', { time: fmt.time(s.arriveAt) })}{s.approx && <span className="text-xs font-normal text-muted"> · {t('share.proposal.approx')}</span>}
+          {t('share.proposal.arriveAt', { time: when(s.arriveAt) })}{s.approx && <span className="text-xs font-normal text-muted"> · {t('share.proposal.approx')}</span>}
         </p>
       )}
     </>
@@ -42,8 +47,9 @@ export function useWho() {
  * The light notification a passenger gets: «Появился попутчик: … Поездка станет дольше на N мин и
  * дешевле на X». A live proposal counts down (silence = no); a pre-booking one shows its deadline.
  */
-export function ShareProposalCard({ p, onAnswered }: { p: ShareProposalView; onAnswered: () => void }) {
+export function ShareProposalCard({ p, onAnswered, route }: { p: ShareProposalView; onAnswered: () => void; route?: { from: string; to: string } }) {
   const { t, fmt, tError } = useT();
+  const [collapsed, setCollapsed] = useState(false);
   const who = useWho();
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
@@ -62,6 +68,17 @@ export function ShareProposalCard({ p, onAnswered }: { p: ShareProposalView; onA
     } finally { setBusy(false); }
   }
   const live = p.mode === 'LIVE';
+  if (collapsed) {
+    // Folded to a pill so the ride's page underneath can be read; one tap brings the offer back.
+    return (
+      <button type="button" onClick={() => setCollapsed(false)} data-testid="share-proposal-pill"
+        className="fixed inset-x-0 top-0 z-50 mx-auto flex w-fit items-center gap-2 rounded-full border border-accent/60 bg-page/95 px-4 py-2 text-sm font-semibold shadow-xl"
+        style={{ marginTop: 'calc(env(safe-area-inset-top) + 10px)' }}>
+        <span aria-hidden>👥</span>{live ? t('share.proposal.title') : t('share.proposal.titlePrebook')}
+        <span className="rounded-full bg-accent px-2 py-0.5 text-xs text-black">{t('share.proposal.answer')}</span>
+      </button>
+    );
+  }
   return (
     <div className="pointer-events-auto fixed inset-x-0 top-0 z-50 flex justify-center px-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 10px)' }} role="alertdialog" aria-labelledby="share-prop-title" data-testid="share-proposal">
       <div className="w-full max-w-md rounded-[18px] border border-accent/50 bg-page/95 p-4 shadow-2xl backdrop-blur">
@@ -71,8 +88,11 @@ export function ShareProposalCard({ p, onAnswered }: { p: ShareProposalView; onA
             <h2 id="share-prop-title" className="font-semibold leading-snug">{live ? t('share.proposal.title') : t('share.proposal.titlePrebook')}</h2>
             <p className="mt-0.5 text-sm text-muted">{who(p.coRider)}</p>
           </div>
-          <span className="shrink-0 rounded-full bg-elevated px-2 py-1 text-xs font-semibold tabular-nums text-muted">
-            {live ? t('share.proposal.secondsLeft', { s: left }) : t('share.proposal.until', { time: fmt.time(p.expiresAt) })}
+          <span className="flex shrink-0 flex-col items-end gap-1">
+            <span className="rounded-full bg-elevated px-2 py-1 text-xs font-semibold tabular-nums text-muted">
+              {live ? t('share.proposal.secondsLeft', { s: left }) : t('share.proposal.until', { time: fmt.time(p.expiresAt) })}
+            </span>
+            <button type="button" className="text-xs text-muted underline" onClick={() => setCollapsed(true)}>{t('share.proposal.hide')}</button>
           </span>
         </div>
         <p className="mt-3 text-sm">
@@ -88,6 +108,9 @@ export function ShareProposalCard({ p, onAnswered }: { p: ShareProposalView; onA
             </>
           )}
         </p>
+        {route && (
+          <p className="mt-2 text-xs text-muted"><span className="font-semibold text-ink">{t('share.proposal.yourRide')}:</span> {route.from} → {route.to}</p>
+        )}
         <TimingLines s={p} isPrebook={!live} />
         <p className="mt-1 text-xs text-muted">{t('share.proposal.privacy')}</p>
         {err && <p className="mt-2 text-xs text-danger">{err}</p>}
@@ -111,6 +134,35 @@ export function SharedBadge({ s }: { s: SharedView }) {
       <TimingLines s={s} isPrebook={s.status === 'MATCHED'} />
       <p className="mt-1 text-xs text-muted">{t('share.shared.with', { who: who(s.coRider) })}</p>
       {s.status === 'MATCHED' && <p className="mt-1 text-xs text-muted">{t('share.shared.matched')}</p>}
+    </div>
+  );
+}
+
+/**
+ * For a ride with «Попутчик» on: get notifications switched on, so the co-rider offer reaches the
+ * passenger even with the app closed or the phone locked. On an iPhone, web notifications only work
+ * once the site is on the Home Screen (Apple's rule) — then we say how.
+ */
+export function ShareNotifyCard() {
+  const { t, locale } = useT();
+  const [state, setState] = useState<'hidden' | 'ask' | 'ios' | 'on'>('hidden');
+  useEffect(() => {
+    void rememberPushLocale(locale); // the notification is shown in this language
+    if (pushSupported()) { setState(pushPermission() === 'default' ? 'ask' : 'hidden'); return; }
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    const standalone = (navigator as unknown as { standalone?: boolean }).standalone === true;
+    if (ios && !standalone) setState('ios');
+  }, [locale]);
+  if (state === 'hidden') return null;
+  if (state === 'on') return <p className="mt-3 text-xs text-accent" data-testid="share-notify-on">🔔 {t('share.notify.on')}</p>;
+  return (
+    <div className="mt-3 rounded-[12px] border border-warn/40 bg-warn/10 p-3 text-sm" data-testid="share-notify">
+      <p>🔔 {state === 'ios' ? t('share.notify.ios') : t('share.notify.ask')}</p>
+      {state === 'ask' && (
+        <button type="button" className="btn-primary mt-2 w-full" onClick={async () => { const r = await enablePush('/tracking/push'); setState(r.ok ? 'on' : 'hidden'); }}>
+          {t('share.notify.enable')}
+        </button>
+      )}
     </div>
   );
 }

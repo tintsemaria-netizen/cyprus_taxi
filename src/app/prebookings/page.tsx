@@ -1,7 +1,7 @@
 'use client';
 
 import { PassengerTopBar } from '@/components/PassengerTopBar';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PassengerLoginModal } from '@/components/booking/PassengerLoginModal';
 import { useSilentPush } from '@/components/NotifyPrompt';
@@ -45,6 +45,17 @@ export default function Page() {
       setTimeout(() => setToast(null), 5000);
     }
   }
+  // A notification (e.g. «Нашёлся попутчик», 2026-11-19) links here with ?open=<bookingId>:
+  // open that ride straight away — its page shows the proposal and the ride's details.
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current) return;
+    const id = new URLSearchParams(window.location.search).get('open');
+    if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return;
+    opened.current = true;
+    void open(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div>

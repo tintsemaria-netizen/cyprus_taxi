@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-19 — Co-rider offer as a push on top of everything (deployed via main)
+
+- Operator: «предложение попутчика должно выходить поверх всего даже если не в приложении или заблокирован телефон; открывать окно предзаказа».
+- Proposal pushes have their own tags (share-p-<group> passenger, share-d-<group> driver); public/sw.js shows them in the app language, requireInteraction + long vibration (stay until answered). Format guarded by tests/share-push.test.ts.
+- Pre-booking proposal push opens /prebookings?open=<bookingId> → that ride's page with the proposal and details.
+- Ride page with «Попутчик» on asks to turn notifications on (iPhone without Home Screen icon: explains Add to Home Screen — Apple only delivers web push to Home Screen apps).
+- Proposal card: date shown when not today, own route line, «Свернуть» to a pill.
+
 ## 2026-11-19 — Driver bottom nav softer (deployed)
 
 - BottomNav: 18 px (was 16), font-extrabold, inactive `text-muted/75`, active `text-accent/70`; red count badges unchanged.

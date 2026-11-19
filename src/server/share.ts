@@ -171,14 +171,23 @@ async function proposeLive(hostId: string, guestId: string, driverId: string, pl
       await tx.bookingEvent.create({ data: { bookingId: guestId, type: 'SHARE_PROPOSED', actorType: 'SYSTEM', reason: `joins ${h.reference}` } });
       await recordEvent(tx, { eventType: 'share.proposed', aggregateType: 'share', aggregateId: group.id, aggregateVersion: 1, correlationId: guestId, payload: { mode: 'LIVE', driverPseudo: driverPseudo(driverId), extraMinHost: plan.extraHost, extraMinGuest: plan.extraGuest } });
       const saving = (h.fareCents ?? 0) - group.hostCents;
-      await enqueuePassenger(tx, hostId, 'A co-rider wants to join', `${peopleText(g)}. +${plan.extraHost} min, €${(saving / 100).toFixed(2)} cheaper. Answer within ${S().answerSec} s.`);
-      await enqueueDriver(tx, driverId, 'Co-rider on your route', `+${plan.extraDriver} min · €${((group.hostCents + group.guestCents) / 100).toFixed(2)} instead of €${((h.fareCents ?? 0) / 100).toFixed(2)}. Answer within ${S().answerSec} s.`, { tag: `share-${group.id}` });
+      await enqueuePassenger(tx, hostId, 'A co-rider wants to join', proposalBody(g, plan.extraHost, saving), { tag: `share-p-${group.id}`, url: '/track' });
+      await enqueueDriver(tx, driverId, 'Co-rider on your route', driverProposalBody(plan.extraDriver, group.hostCents + group.guestCents, h.fareCents ?? 0), { tag: `share-d-${group.id}` });
       return true;
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return false; // another group won the race
     throw e;
   }
+}
+
+// Proposal notifications (2026-11-19): shown on top of other apps / the lock screen and kept until
+// answered. public/sw.js parses these exact English formats to show them in the app's language.
+function proposalBody(other: { passengerCount: number; childCount: number; luggageCount: number }, extraMin: number, saveCents: number): string {
+  return `${peopleText(other)} · +${extraMin} min · €${(saveCents / 100).toFixed(2)} cheaper — tap to answer`;
+}
+function driverProposalBody(extraMin: number, nowCents: number, wasCents: number): string {
+  return `+${extraMin} min · €${(nowCents / 100).toFixed(2)} instead of €${(wasCents / 100).toFixed(2)} — tap to answer`;
 }
 
 function peopleText(b: { passengerCount: number; childCount: number; luggageCount: number }): string {
@@ -428,8 +437,9 @@ async function proposePrebook(hostId: string, guestId: string, plan: SharePlan, 
       if (await tx.preAssignment.findFirst({ where: { activeBookingId: { in: [hostId, guestId] } } })) return false;
       const group = await tx.shareGroup.create({ data: groupData('PREBOOK', h, g, plan, expiresAt, { routed, startAt }) });
       await recordEvent(tx, { eventType: 'share.proposed', aggregateType: 'share', aggregateId: group.id, aggregateVersion: 1, correlationId: hostId, payload: { mode: 'PREBOOK', extraMinHost: plan.extraHost, extraMinGuest: plan.extraGuest } });
-      await enqueuePassenger(tx, hostId, 'A co-rider for your ride', `${peopleText(g)}. +${plan.extraHost} min, €${((h.fareCents! - group.hostCents) / 100).toFixed(2)} cheaper. Tap to answer.`);
-      await enqueuePassenger(tx, guestId, 'A co-rider for your ride', `${peopleText(h)}. +${plan.extraGuest} min, €${((g.fareCents! - group.guestCents) / 100).toFixed(2)} cheaper. Tap to answer.`);
+      // Opens that pre-booking (its page shows the proposal and the ride's details).
+      await enqueuePassenger(tx, hostId, 'A co-rider for your ride', proposalBody(g, plan.extraHost, h.fareCents! - group.hostCents), { tag: `share-p-${group.id}`, url: `/prebookings?open=${hostId}` });
+      await enqueuePassenger(tx, guestId, 'A co-rider for your ride', proposalBody(h, plan.extraGuest, g.fareCents! - group.guestCents), { tag: `share-p-${group.id}`, url: `/prebookings?open=${guestId}` });
       return true;
     });
   } catch (e) {
@@ -530,5 +540,5 @@ export async function dissolveUnclaimedTx(tx: Tx, bookingId: string): Promise<bo
   return true;
 }
 
-export const shareInternals = { closeGroupTx, restoreFullPriceTx, activeGroupOf, peopleText };
+export const shareInternals = { closeGroupTx, restoreFullPriceTx, activeGroupOf, peopleText, proposalBody, driverProposalBody };
 export const SHARE_MIN = MIN;
