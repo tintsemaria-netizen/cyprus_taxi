@@ -227,6 +227,7 @@ const driver: Catalog<typeof en> = {
     take: 'Ανάληψη',
     taking: 'Ανάληψη…',
   },
+  prebookFab: { single: "P", pair: "PS", singleAria: "Νέα προκράτηση", pairAria: "Νέα κοινή προκράτηση" },
   nav: {
     orders: 'Παραγγελίες',
     work: 'Διαδρομές & έσοδα',

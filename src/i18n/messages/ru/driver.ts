@@ -227,6 +227,7 @@ const driver: Catalog<typeof en> = {
     take: 'Взять заказ',
     taking: 'Берём…',
   },
+  prebookFab: { single: "П", pair: "ПП", singleAria: "Новый предзаказ", pairAria: "Новый предзаказ с попутчиком" },
   nav: {
     orders: 'Заказы',
     work: 'Поездки и заработок',

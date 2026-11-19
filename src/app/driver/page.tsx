@@ -258,6 +258,7 @@ function Driver() {
   // Sub-views of the merged tabs.
   const [profileView, setProfileView] = useState<'me' | 'trips' | 'earnings'>('me');
   const [prebookCount, setPrebookCount] = useState(0);
+  const [prebookPair, setPrebookPair] = useState(false); // any open pre-booking is a ride-share pair
   // Free orders count for the bottom-nav badge (rides automatic dispatch could not place).
   const [freeCount, setFreeCount] = useState(0);
   useEffect(() => {
@@ -273,7 +274,12 @@ function Driver() {
     let alive = true;
     const poll = async () => {
       if (document.visibilityState !== 'visible') return;
-      try { const r = await api<{ available: { conflict?: boolean }[] }>('/driver/scheduled'); if (alive) setPrebookCount(r.available.filter((i) => !i.conflict).length); } catch { /* transient */ }
+      try {
+        const r = await api<{ available: { conflict?: boolean; share?: unknown }[] }>('/driver/scheduled');
+        if (!alive) return;
+        const open = r.available.filter((i) => !i.conflict);
+        setPrebookCount(open.length); setPrebookPair(open.some((i) => !!i.share));
+      } catch { /* transient */ }
     };
     poll(); const iv = setInterval(poll, 30_000);
     return () => { alive = false; clearInterval(iv); };
@@ -396,6 +402,12 @@ function Driver() {
         <div className="min-h-0 flex-1 overflow-y-auto px-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
           {drawer && (
             <>
+              {/* Pre-bookings moved from the bottom bar into the menu (2026-11-19). */}
+              <button type="button" onClick={() => { setDrawer(false); setTab('prebook'); }} data-testid="drawer-prebook"
+                className="mb-3 flex w-full items-center justify-between rounded-[12px] border border-edge bg-elevated px-4 py-3 text-start text-[16px] font-semibold">
+                <span>{t('driver.scheduled.tabPrebook')}</span>
+                {prebookCount > 0 && <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white">{prebookCount}</span>}
+              </button>
               <SubTabs value={profileView} onChange={setProfileView} items={[
                 { id: 'me', label: t('driver.nav.profile') },
                 { id: 'trips', label: t('driver.nav.trips') },
@@ -409,7 +421,17 @@ function Driver() {
         </div>
       </aside>
 
-      <BottomNav tab={tab} setTab={setTab} hasOffer={!!offer} freeCount={freeCount} prebookCount={prebookCount} />
+      {/* New pre-booking (2026-11-19): a round button on the right of the map, a little below the middle —
+          «П» for a pre-booking, «ПП» when it is a ride-share pair; pulses between its colour and a soft red. */}
+      {tab === 'home' && !offer && !data.trip && prebookCount > 0 && (
+        <button type="button" onClick={() => setTab('prebook')} data-testid="prebook-fab"
+          aria-label={prebookPair ? t('driver.prebookFab.pairAria') : t('driver.prebookFab.singleAria')}
+          className="ily-fab-pulse fixed end-3 top-[58%] z-30 flex h-14 w-14 items-center justify-center rounded-full text-[18px] font-extrabold text-[#0d1608] shadow-card"
+          style={{ ['--fab' as string]: prebookPair ? '#7FB6FF' : '#C8FF46' }}>
+          {prebookPair ? t('driver.prebookFab.pair') : t('driver.prebookFab.single')}
+        </button>
+      )}
+      <BottomNav tab={tab} setTab={setTab} hasOffer={!!offer} freeCount={freeCount} />
     </div>
   );
 }
@@ -958,10 +980,11 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
 }
 
 // ---- Bottom nav ----
-function BottomNav({ tab, setTab, hasOffer, freeCount, prebookCount }: { tab: Tab; setTab: (t: Tab) => void; hasOffer: boolean; freeCount: number; prebookCount: number }) {
+function BottomNav({ tab, setTab, hasOffer, freeCount }: { tab: Tab; setTab: (t: Tab) => void; hasOffer: boolean; freeCount: number }) {
   const { t } = useT();
   const items: { id: Tab; label: string }[] = [
-    { id: 'home', label: t('driver.nav.home') }, { id: 'free', label: t('driver.nav.free') }, { id: 'prebook', label: t('driver.scheduled.tabPrebook') },
+    // Pre-bookings live in the ☰ menu now (2026-11-19); a new one shows as the round «П» button on the map.
+    { id: 'home', label: t('driver.nav.home') }, { id: 'free', label: t('driver.nav.free') },
   ];
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-page/95 backdrop-blur" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
@@ -975,7 +998,6 @@ function BottomNav({ tab, setTab, hasOffer, freeCount, prebookCount }: { tab: Ta
               {it.id === 'home' && hasOffer && tab !== 'home' && <span className="absolute -end-3 -top-1 h-2 w-2 rounded-full bg-accent" />}
               {/* Small red count: new free orders / open pre-bookings. */}
               {it.id === 'free' && freeCount > 0 && <span className="absolute -end-5 -top-2.5 min-w-[18px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[18px] text-white">{freeCount}</span>}
-              {it.id === 'prebook' && prebookCount > 0 && <span className="absolute -end-5 -top-2.5 min-w-[18px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[18px] text-white">{prebookCount}</span>}
             </span>
           </button>
         ))}

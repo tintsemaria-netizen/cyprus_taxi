@@ -227,6 +227,7 @@ const driver: Catalog<typeof en> = {
     take: "Weź przejazd",
     taking: "Przyjmowanie…",
   },
+  prebookFab: { single: "P", pair: "PS", singleAria: "Nowa rezerwacja", pairAria: "Nowa wspólna rezerwacja" },
   nav: {
     orders: "Zlecenia",
     work: "Przejazdy i zarobki",
