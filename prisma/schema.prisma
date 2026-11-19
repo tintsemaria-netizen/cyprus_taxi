@@ -585,6 +585,12 @@ model Fare {
   basis            String // JSON: estimate vs final basis + breakdown snapshot
   paymentMethod    String   @default("CASH_TO_DRIVER")
   paymentStatus    String   @default("PENDING") // PENDING | COLLECTED (never auto-COLLECTED on COMPLETED)
+  // GPS taximeter at completion (2026-11-19) — recorded for comparison with the car's taximeter;
+  // not charged. km = charged by distance; slowSec = charged by time; gapSec = no GPS (estimated).
+  gpsMeterCents    Int?
+  gpsMeterKm       Float?
+  gpsMeterSlowSec  Int?
+  gpsMeterGapSec   Int?
   createdAt        DateTime @default(now())
 }
 

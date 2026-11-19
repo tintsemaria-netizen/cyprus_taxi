@@ -314,5 +314,16 @@ const driver = {
   alerts: {
     noVehicle: 'No vehicle is assigned to you, so you won’t receive ride offers. Contact the operator.',
   },
+  // GPS taximeter (2026-11-19): comparison with the car's meter; not charged.
+  gpsMeter: {
+    title: "GPS taximeter",
+    test: "test",
+    km: "{km} km",
+    slow: "waiting {t}",
+    gap: "no GPS {t}",
+    preview: "GPS taximeter (test)",
+    day: "Day tariff",
+    night: "Night tariff",
+  },
 };
 export default driver;

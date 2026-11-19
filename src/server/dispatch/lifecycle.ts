@@ -12,6 +12,7 @@ import { startSearchTx } from './search';
 import { enqueuePassenger } from '@/server/push';
 import { recordEvent, driverPseudo } from '@/server/events';
 import { afterLegEndedTx, legCompletedTx, leaveShareTx, noShowFeeCents } from '@/server/share';
+import { gpsMeterFor } from '@/server/gps-meter';
 
 // M3 trip lifecycle after assignment: arrival + pickup waiting, code-gated start,
 // immutable fare receipt on completion, and pre-pickup rematch. Booking-status
@@ -101,10 +102,13 @@ async function finalizeCompletion(
   };
   const existing = await tx.fare.findUnique({ where: { bookingId: b.id } }); // immutable: write once
   if (!existing) {
+    // GPS taximeter reading, kept next to the estimate for comparison (not charged).
+    const meter = await gpsMeterFor(tx, b.id, a.driverId).catch(() => null);
     await tx.fare.create({
       data: {
         bookingId: b.id, priceType, currency: config.currency,
         estimateCents: b.fareCents ?? null, waitingCents, finalCents,
+        ...(meter ? { gpsMeterCents: meter.totalCents, gpsMeterKm: meter.totalKm, gpsMeterSlowSec: meter.slowSec, gpsMeterGapSec: meter.gapSec } : {}),
         basis: JSON.stringify(basis), paymentMethod: 'CASH_TO_DRIVER', paymentStatus: 'PENDING',
       },
     });

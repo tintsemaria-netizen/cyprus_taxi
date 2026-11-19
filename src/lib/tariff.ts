@@ -6,7 +6,7 @@ export const TARIFF_VERSION = 'cy-urban-2026-09-13';
 // Rule version for XL quotes: the urban meter + our XL vehicle surcharge.
 export const TARIFF_VERSION_XL = 'cy-urban-2026-09-13+xl40-2026-11-16';
 
-const TARIFF = {
+export const TARIFF = {
   day: { initialCents: 380, perKmCents: 95 }, // 06:01–20:30
   night: { initialCents: 480, perKmCents: 110 }, // 20:31–06:00
   // Waiting, urban taximeter: €17.00/h day, €19.00/h night (same source as above).

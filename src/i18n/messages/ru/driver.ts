@@ -317,5 +317,16 @@ const driver: Catalog<typeof en> = {
   alerts: {
     noVehicle: 'К вам не привязан автомобиль, поэтому заказы не поступают. Обратитесь к оператору.',
   },
+  // GPS taximeter (2026-11-19): comparison with the car's meter; not charged.
+  gpsMeter: {
+    title: "GPS-таксометр",
+    test: "тест",
+    km: "{km} км",
+    slow: "ожидание {t}",
+    gap: "без GPS {t}",
+    preview: "GPS-таксометр (тест)",
+    day: "Тариф 1",
+    night: "Тариф 2",
+  },
 };
 export default driver;

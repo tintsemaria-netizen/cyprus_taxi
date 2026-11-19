@@ -342,5 +342,16 @@ const driver: Catalog<typeof en> = {
   alerts: {
     noVehicle: "Nie masz przypisanego pojazdu, więc nie otrzymasz ofert przejazdów. Skontaktuj się z operatorem.",
   },
+  // GPS taximeter (2026-11-19): comparison with the car's meter; not charged.
+  gpsMeter: {
+    title: "Taksometr GPS",
+    test: "test",
+    km: "{km} km",
+    slow: "postój {t}",
+    gap: "bez GPS {t}",
+    preview: "Taksometr GPS (test)",
+    day: "Taryfa 1",
+    night: "Taryfa 2",
+  },
 };
 export default driver;
