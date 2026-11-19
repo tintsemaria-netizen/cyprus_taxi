@@ -342,5 +342,16 @@ const driver: Catalog<typeof en> = {
   alerts: {
     noVehicle: "לא שויך אליכם רכב, ולכן לא תקבלו הצעות נסיעה. פנו למפעיל.",
   },
+  // GPS taximeter (2026-11-19): comparison with the car's meter; not charged.
+  gpsMeter: {
+    title: "מונה GPS",
+    test: "בדיקה",
+    km: "{km} ק״מ",
+    slow: "המתנה {t}",
+    gap: "ללא GPS {t}",
+    preview: "מונה GPS (בדיקה)",
+    day: "תעריף 1",
+    night: "תעריף 2",
+  },
 };
 export default driver;

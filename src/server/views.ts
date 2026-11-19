@@ -1,4 +1,5 @@
 import { config } from '@/lib/config';
+import { gpsMeterFor } from '@/server/gps-meter';
 import { passengerRatingSummary } from '@/server/trip-close';
 import { passengerLocationForDriver } from '@/server/passenger-location';
 import { prisma } from '@/lib/db';
@@ -297,12 +298,14 @@ export async function driverCurrentTrip(driverId: string) {
   });
   const driver = await prisma.driver.findUnique({ where: { id: driverId } });
   if (!active) {
-    return { onDuty: driver?.onDuty ?? false, available: driver?.available ?? false, trip: null, shareProposal: null, coRider: null, share: null };
+    return { onDuty: driver?.onDuty ?? false, available: driver?.available ?? false, trip: null, shareProposal: null, coRider: null, share: null, gpsMeter: null };
   }
   const b = active.booking;
   const waiting = b.status === 'ARRIVED' ? await prisma.waitingSession.findUnique({ where: { bookingId: b.id } }) : null;
   return {
     ...(await driverShareView(driverId, b.id)),
+    // GPS taximeter while the passenger is on board (comparison with the car's meter; not charged).
+    gpsMeter: b.status === 'IN_PROGRESS' ? await gpsMeterFor(prisma, b.id, driverId).catch(() => null) : null,
     onDuty: driver?.onDuty ?? false,
     available: driver?.available ?? false,
     trip: {

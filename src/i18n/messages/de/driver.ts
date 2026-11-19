@@ -342,5 +342,16 @@ const driver: Catalog<typeof en> = {
   alerts: {
     noVehicle: "Ihnen ist kein Fahrzeug zugewiesen, daher erhalten Sie keine Fahrtangebote. Wenden Sie sich an den Betreiber.",
   },
+  // GPS taximeter (2026-11-19): comparison with the car's meter; not charged.
+  gpsMeter: {
+    title: "GPS-Taxameter",
+    test: "Test",
+    km: "{km} km",
+    slow: "Wartezeit {t}",
+    gap: "ohne GPS {t}",
+    preview: "GPS-Taxameter (Test)",
+    day: "Tarif 1",
+    night: "Tarif 2",
+  },
 };
 export default driver;

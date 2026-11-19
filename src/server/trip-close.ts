@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { meterWaitingCents } from '@/lib/tariff';
 import { isFixedPrice } from '@/lib/price-type';
+import { gpsMeterFor } from '@/server/gps-meter';
 
 // Trip close-out for the driver (2026-11-15):
 //  1. fare preview before the final «Завершить» — what the completion will record, so the driver
@@ -29,6 +30,8 @@ export async function farePreview(bookingId: string, driverId: string, now = new
     pickupLabel: b.pickupLabel,
     dropoffLabel: b.dropoffLabel,
     passengerName: b.passengerName,
+    // GPS taximeter so far (comparison with the car's meter; not charged).
+    gpsMeter: b.status === 'IN_PROGRESS' ? await gpsMeterFor(prisma, bookingId, driverId, now).catch(() => null) : null,
   };
 }
 

@@ -342,5 +342,16 @@ const driver: Catalog<typeof en> = {
   alerts: {
     noVehicle: "Aucun véhicule ne vous est attribué, vous ne recevrez donc pas de propositions de course. Contactez l’opérateur.",
   },
+  // GPS taximeter (2026-11-19): comparison with the car's meter; not charged.
+  gpsMeter: {
+    title: "Taximètre GPS",
+    test: "test",
+    km: "{km} km",
+    slow: "attente {t}",
+    gap: "sans GPS {t}",
+    preview: "Taximètre GPS (test)",
+    day: "Tarif 1",
+    night: "Tarif 2",
+  },
 };
 export default driver;

@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-19 — GPS taximeter (deployed 2026-11-19 via main)
+
+- Why: a test ride Limassol → LCA at night: app 80.04 € (= estimate 4.80 + 68.4 km × 1.10, the app never measured the ride) vs the car's taximeter 85.23 € (≈ 73.1 km). Operator: «фактический таксометр будет считать правильнее» — show a GPS meter to compare.
+- `src/lib/gps-meter.ts`: urban-meter rules on the driver's GPS track since TRIP_STARTED — distance (€/km) when faster than the cross-over speed (≈17–18 km/h), time (€/h) when slower; day/night per stretch; jumps (>250 km/h) and poor fixes (>50 m) skipped; gaps >30 s charged as straight line × 1.2. Extras as in the estimate (luggage, 5–6 pax, XL, holiday).
+- Shown live on the driver's navigation screen (card «GPS-таксометр») and in «Стоимость поездки» under «Итого»; saved on completion in Fare.gpsMeterCents/Km/SlowSec/GapSec (migration 20261119120000_gps_meter). The charged price is unchanged.
+- Evidence: vitest 308 passed / 1 skipped (tests/gps-meter.test.ts 6, tests/gps-meter.db.test.ts 1); local build screenshot of the driver screen.
+- Next: operator test rides comparing car meter vs GPS meter vs estimate; then decide (charge by GPS meter / wider band / own markup).
 ## 2026-11-19 — Guest ordering: no sign-in at all for passengers (deployed, for testing) — TO TURN OFF LATER
 
 - Operator: «Без ничего просто открыл заказал, чтобы мог тестировать на разных устройствах».

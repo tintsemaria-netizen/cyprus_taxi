@@ -317,5 +317,16 @@ const driver: Catalog<typeof en> = {
   alerts: {
     noVehicle: 'Δεν σας έχει ανατεθεί όχημα, οπότε δεν θα λαμβάνετε προσφορές διαδρομών. Επικοινωνήστε με τον διαχειριστή.',
   },
+  // GPS taximeter (2026-11-19): comparison with the car's meter; not charged.
+  gpsMeter: {
+    title: "Ταξίμετρο GPS",
+    test: "δοκιμή",
+    km: "{km} χλμ",
+    slow: "αναμονή {t}",
+    gap: "χωρίς GPS {t}",
+    preview: "Ταξίμετρο GPS (δοκιμή)",
+    day: "Ταρίφα 1",
+    night: "Ταρίφα 2",
+  },
 };
 export default driver;

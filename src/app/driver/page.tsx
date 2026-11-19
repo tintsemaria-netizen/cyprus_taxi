@@ -34,11 +34,13 @@ interface Trip {
   passengerName: string; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; luggageCount?: number; vClass: string;
   scheduledAt: string | null; waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null; allowedNext: string[];
 }
+import { GpsMeterCard, type GpsMeterView } from '@/components/driver/GpsMeterCard';
 import { DriverShareProposalSheet, CoRiderLegPill, AcceptsSharedToggle, type DriverShareProposal, type CoRiderLeg, type ShareInfo } from '@/components/share/ShareDriver';
 interface CurrentTrip {
   onDuty: boolean; available: boolean; trip: Trip | null;
   // Ride-share «Попутчик» (Task 022)
   shareProposal?: DriverShareProposal | null; coRider?: CoRiderLeg | null; share?: ShareInfo | null;
+  gpsMeter?: GpsMeterView | null; // GPS taximeter while on board (comparison, not charged)
 }
 interface Offer {
   offerId: string; expiresAt: string; expiresInMs: number; localDeadline?: number; pickupEtaSec: number | null; pickupDistanceM: number | null;
@@ -352,6 +354,7 @@ function Driver() {
         <DriverNavigation trip={trip} pos={pos} gps={gps} nowMs={nowMs} startCode={startCode} setStartCode={setStartCode}
           banner={banner} onDismissBanner={() => setBanner(null)} onStartGps={startGps} onTripAction={tripAction} />
         {/* Ride-share (Task 022): the second passenger's leg, and a co-rider proposal to decide on the spot. */}
+        {trip.status === 'IN_PROGRESS' && data.gpsMeter && <GpsMeterCard m={data.gpsMeter} />}
         {data.coRider && <CoRiderLegPill leg={data.coRider} share={data.share ?? null} onChanged={() => { void load(); void loadDash(); }} onError={setBanner} />}
         {data.shareProposal && <DriverShareProposalSheet key={data.shareProposal.groupId} p={data.shareProposal} onAnswered={() => { void load(); }} />}
       </>

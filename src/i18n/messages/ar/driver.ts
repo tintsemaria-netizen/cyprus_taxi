@@ -342,5 +342,16 @@ const driver: Catalog<typeof en> = {
   alerts: {
     noVehicle: "لا توجد مركبة مخصّصة لك، لذا لن تتلقى عروض رحلات. تواصل مع المشغّل.",
   },
+  // GPS taximeter (2026-11-19): comparison with the car's meter; not charged.
+  gpsMeter: {
+    title: "عداد GPS",
+    test: "تجربة",
+    km: "{km} كم",
+    slow: "انتظار {t}",
+    gap: "بدون GPS {t}",
+    preview: "عداد GPS (تجربة)",
+    day: "تعريفة 1",
+    night: "تعريفة 2",
+  },
 };
 export default driver;
