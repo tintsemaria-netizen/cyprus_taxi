@@ -5,7 +5,6 @@ import { hashPassword } from '@/lib/auth';
 import { normalizePhone } from '@/server/applicant';
 import { passengerByEmail, createEmailPassenger, createPassengerSession } from '@/server/passenger';
 import { sendOtp } from '@/server/sms';
-import { PASSENGER_SMS } from '@/lib/features';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,7 +39,7 @@ export async function POST(req: Request) {
   const byEmail = await passengerByEmail(email);
   if (byEmail && (!phone || byEmail.phone !== phone)) return apiError(409, 'EMAIL_TAKEN', 'That email is already registered.');
 
-  if (phone && PASSENGER_SMS) {
+  if (phone && !config.passengerTestMode) {
     const rlP = await rateLimit('reg-phone', phone, 5, 600);
     if (!rlP.ok) return Errors.throttled(rlP.retryAfter);
     try {
@@ -56,8 +55,8 @@ export async function POST(req: Request) {
   try {
     const p = await createEmailPassenger({ email, passwordHash: await hashPassword(password), name });
     await createPassengerSession(p.id);
-    // SMS switched off (PASSENGER_SMS): no «phone could not be verified» stop — straight in.
-    return apiOk({ sent: false, created: true, phoneSkipped: !!phone && PASSENGER_SMS });
+    // Test mode: no SMS, no «phone could not be verified» stop — straight in.
+    return apiOk({ sent: false, created: true, phoneSkipped: !!phone && !config.passengerTestMode });
   } catch (e) {
     if ((e as Error).message === 'email-taken') return apiError(409, 'EMAIL_TAKEN', 'That email is already registered.');
     throw e;

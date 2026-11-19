@@ -1,6 +1,5 @@
 'use client';
 
-import { PASSENGER_GUEST } from '@/lib/features';
 import { useKeyboardViewport } from '@/components/useKeyboardViewport';
 import { useHideClipped } from '@/components/useHideClipped';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -30,7 +29,9 @@ interface PublicConfig {
   classes: { key: 'COMFORT' | 'XL'; label: string; maxPassengers: number }[];
   schedule: { minMinutes: number; maxDays: number };
   operatorName: string | null;
-  share?: { discountPct: number; defaultMaxExtraMin: number; defaultWaitMin: number };
+  share?: { enabled?: boolean; discountPct: number; defaultMaxExtraMin: number; defaultWaitMin: number };
+  /** Passenger test mode (guest orders without phone). Off = an SMS-verified phone is required. */
+  passenger?: { testMode: boolean };
 }
 
 const CLASS_META: Record<string, { seatsLabel: MsgKey; blurb: MsgKey }> = {
@@ -185,6 +186,7 @@ export default function BookingApp() {
   // Task 014: passenger account + mandatory login before booking + destination history.
   const [passenger, setPassenger] = useState<{ phone: string | null; name?: string; email?: string | null; guest?: boolean } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [attachPhone, setAttachPhone] = useState(false); // signed in, but the account needs an SMS-verified phone
   const [destinations, setDestinations] = useState<{ label: string; lat: number; lng: number }[]>([]);
   const [places, setPlaces] = useState<SavedPlaces>({ home: null, work: null, school: null, custom: [] });
   // Saved places sheet (2026-11-18): set Home/Work from the start screen; «Ещё» = the passenger's own places.
@@ -490,7 +492,7 @@ export default function BookingApp() {
   const viaStop = hasStop && stop ? stop : null;
   // Ride-share «Попутчик» (Task 022): airport / intercity only, no intermediate stop. When it is on,
   // the real people / bags count matters (seats and boot are shared), so they are sent and priced.
-  const shareAllowed = !!(cfg?.share && pickup && dropoff && !viaStop && isShareRoute(pickup, dropoff));
+  const shareAllowed = !!(cfg?.share?.enabled && pickup && dropoff && !viaStop && isShareRoute(pickup, dropoff));
   const shareOn = shareAllowed && shareOpts.on;
   const effPax = shareOn ? shareOpts.adults + shareOpts.children : 1;
   const effBags = shareOn ? shareOpts.bags : 0;
@@ -632,7 +634,7 @@ export default function BookingApp() {
     if (!pickup) e.pickup = t('booking.validation.pickup');
     if (!dropoff) e.dropoff = t('booking.validation.dropoff');
     else if (noRoute) e.dropoff = t('errors.NO_ROUTE' as MsgKey);
-    if (passenger && !passenger.guest && !name.trim()) e.name = t('booking.validation.name');
+    if (passenger && !passenger.guest && !cfg?.passenger?.testMode && !name.trim()) e.name = t('booking.validation.name');
     // Email-only accounts have no verified phone: the contact number is entered per booking.
     if (passenger && !passenger.guest && !passenger.phone && !/^\+?[\d\s()-]{7,20}$/.test(phone.trim())) e.phone = t('booking.validation.phone');
     if (when === 'SCHEDULE' && !scheduledAt) e.scheduledAt = t('booking.validation.scheduledAt');
@@ -665,8 +667,8 @@ export default function BookingApp() {
   function toReview() {
     if (!validate()) return;
     // Contact details come from the signed-in account, so sign in before the review step.
-    // Guest ordering (PASSENGER_GUEST): no sign-in — the order itself creates a guest account.
-    if (!passenger && !PASSENGER_GUEST) { pendingReview.current = true; setShowLogin(true); return; }
+    // Passenger test mode only: no sign-in — the order itself creates a guest account.
+    if (!passenger && !cfg?.passenger?.testMode) { pendingReview.current = true; setShowLogin(true); return; }
     // Keep the same idempotency key when the payload is unchanged since last time.
     const sig = payloadSignature();
     if (!idemKey.current || sig !== idemPayloadSig.current) {
@@ -721,6 +723,16 @@ export default function BookingApp() {
       router.push('/track');
     } catch (err) {
       if (err instanceof ApiRequestError) {
+        if (err.body.code === 'PHONE_VERIFICATION_REQUIRED') {
+          // Launch fixes: confirm the account's phone by SMS, then the same order (route, class, time,
+          // note — all still in this screen) is sent again; the server re-checks price and time.
+          pendingSubmit.current = effOffset;
+          pendingSubmitActive.current = true;
+          setAttachPhone(true);
+          setShowLogin(true);
+          setSubmitting(false);
+          return;
+        }
         if (err.body.code === 'LOGIN_REQUIRED') {
           // Mandatory passenger login/registration (Task 014): open the modal, then resume.
           pendingSubmit.current = effOffset;
@@ -1256,9 +1268,11 @@ export default function BookingApp() {
 
       {showLogin && (
         <PassengerLoginModal
-          onClose={() => { setShowLogin(false); pendingSubmitActive.current = false; pendingReview.current = false; }}
+          sms={!cfg?.passenger?.testMode}
+          attach={attachPhone}
+          onClose={() => { setShowLogin(false); setAttachPhone(false); pendingSubmitActive.current = false; pendingReview.current = false; }}
           onDone={(p) => {
-            setShowLogin(false);
+            setShowLogin(false); setAttachPhone(false);
             setPassenger(p);
             setPhone((cur) => cur || p.phone || '');
             if (p.name) setName((cur) => cur || p.name!);

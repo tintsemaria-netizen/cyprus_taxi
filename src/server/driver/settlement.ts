@@ -61,7 +61,9 @@ export async function reportSettlement(
     const cur = await tx.driverSettlement.findFirst({ where: { bookingId }, orderBy: { revision: 'desc' } });
     const nextRev = (cur?.revision ?? 0) + 1;
     if (cur) {
-      if (input.expectedRevision != null && input.expectedRevision !== cur.revision) return err(409, 'REVISION_CONFLICT', 'This settlement changed. Refresh and retry.');
+      // Launch fixes §5/§6: a correction must name the revision it corrects — two parallel
+      // corrections (or a repeated first entry) can never silently overwrite each other.
+      if (input.expectedRevision == null || input.expectedRevision !== cur.revision) return err(409, 'REVISION_CONFLICT', 'This settlement changed. Refresh and retry.');
       if (!input.correctionReason || input.correctionReason.trim().length < 3) return err(422, 'REASON_REQUIRED', 'A reason is required to correct a settlement.');
     }
     const fare = await tx.fare.findUnique({ where: { bookingId }, select: { currency: true } });

@@ -55,7 +55,8 @@ const bookingFields = z.object({
 });
 const atLeastOneAdult = (v: { childCount?: number; passengerCount: number }) => (v.childCount ?? 0) < v.passengerCount;
 export const createBookingSchema = bookingFields.refine(atLeastOneAdult, { message: 'At least one adult.', path: ['childCount'] });
-/** Guest ordering (PASSENGER_GUEST, 2026-11-19): the contact phone is optional. */
+/** Booking body with an optional phone: the server uses the account's SMS-verified phone (or, in
+ *  passenger test mode only, an optional one from the body). */
 export const createGuestBookingSchema = bookingFields.extend({ phone: phoneSchema.optional() }).refine(atLeastOneAdult, { message: 'At least one adult.', path: ['childCount'] });
 
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;

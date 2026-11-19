@@ -355,5 +355,6 @@ const driver: Catalog<typeof en> = {
     day: "تعريفة 1",
     night: "تعريفة 2",
   },
+  rideRemoved: 'أُزيلت الرحلة منك (أُلغيت أو أُسندت إلى سائق آخر) — لا تذهب إلى نقطة الالتقاء.',
 };
 export default driver;

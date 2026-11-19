@@ -330,5 +330,6 @@ const driver: Catalog<typeof en> = {
     day: "Ταρίφα 1",
     night: "Ταρίφα 2",
   },
+  rideRemoved: 'Η διαδρομή αφαιρέθηκε από εσάς (ακυρώθηκε ή δόθηκε σε άλλον οδηγό) — μην πάτε στην παραλαβή.',
 };
 export default driver;

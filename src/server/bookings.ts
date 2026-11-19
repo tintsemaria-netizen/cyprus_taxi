@@ -90,7 +90,9 @@ export async function createBooking(
     }),
   );
   // Ride-share only where it is offered: airport or intercity, no intermediate stop.
-  const shareOptIn = !!input.shareOptIn && !input.stop && isShareRoute(input.pickup, input.dropoff);
+  // …and only while the server switch is on (SHARE_ENABLED, launch fixes): otherwise the opt-in is
+  // ignored and the ride is booked as a normal one at the normal price.
+  const shareOptIn = config.share.enabled && !!input.shareOptIn && !input.stop && isShareRoute(input.pickup, input.dropoff);
 
   // 5. Replay an existing receipt BEFORE time-dependent schedule validation, so a
   // valid original booking is recoverable even if its scheduled time is now inside

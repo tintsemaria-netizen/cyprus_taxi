@@ -355,5 +355,6 @@ const driver: Catalog<typeof en> = {
     day: "Tarif 1",
     night: "Tarif 2",
   },
+  rideRemoved: 'Die Fahrt wurde Ihnen entzogen (storniert oder an einen anderen Fahrer vergeben) — nicht zur Abholung fahren.',
 };
 export default driver;

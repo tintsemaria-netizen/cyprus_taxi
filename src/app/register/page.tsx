@@ -1,7 +1,6 @@
 'use client';
 
-import { PASSENGER_SMS } from '@/lib/features';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Brand';
 import { BackArrow } from '@/components/BackArrow';
@@ -17,6 +16,9 @@ export const dynamic = 'force-dynamic';
 export default function Register() {
   const router = useRouter();
   const [step, setStep] = useState<'form' | 'code' | 'done'>('form');
+  // Passenger SMS is off only in passenger test mode (server config, launch fixes 2026-11-19).
+  const [smsOn, setSmsOn] = useState(true);
+  useEffect(() => { api<{ passenger?: { testMode: boolean } }>('/public/config').then((c) => setSmsOn(!c.passenger?.testMode)).catch(() => {}); }, []);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -68,7 +70,7 @@ export default function Register() {
               <div><label className="label" htmlFor="register-f1">{t('auth.name')}</label><input id="register-f1" className="field mt-1" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></div>
               <div><label className="label" htmlFor="register-f2">{t('auth.email')}</label><input id="register-f2" type="email" className="field mt-1" value={email} onChange={(e) => setEmail(e.target.value)} autoCapitalize="none" autoComplete="email" inputMode="email" /></div>
               <div><label className="label" htmlFor="register-f3">{t('auth.password')}</label><PasswordInput id="register-f3" className="field mt-1" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" /><p className="mt-1 text-xs text-muted">{t('auth.register.passwordHint')}</p></div>
-              {PASSENGER_SMS && <div><label className="label" htmlFor="register-f4">{t('auth.phoneOptional')}</label><input id="register-f4" type="tel" className="field mt-1" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+357…" autoComplete="tel" inputMode="tel" /><p className="mt-1 text-xs text-muted">{t('auth.register.phoneHint')}</p></div>}
+              {smsOn && <div><label className="label" htmlFor="register-f4">{t('auth.phoneOptional')}</label><input id="register-f4" type="tel" className="field mt-1" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+357…" autoComplete="tel" inputMode="tel" /><p className="mt-1 text-xs text-muted">{t('auth.register.phoneHint')}</p></div>}
             </div>
             <button className="btn-primary mt-5 min-h-[44px] w-full" disabled={busy || !name || !email || password.length < 8}>{busy ? t('auth.sending') : t('auth.register.continue')}</button>
             <a href="/login" className="mt-4 block text-center text-sm text-muted hover:text-ink">{t('auth.register.haveAccount')}</a>

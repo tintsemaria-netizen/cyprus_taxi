@@ -355,5 +355,6 @@ const driver: Catalog<typeof en> = {
     day: "תעריף 1",
     night: "תעריף 2",
   },
+  rideRemoved: 'הנסיעה הוסרה ממך (בוטלה או הועברה לנהג אחר) — אין צורך להגיע לאיסוף.',
 };
 export default driver;

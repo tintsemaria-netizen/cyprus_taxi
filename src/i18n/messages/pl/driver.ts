@@ -355,5 +355,6 @@ const driver: Catalog<typeof en> = {
     day: "Taryfa 1",
     night: "Taryfa 2",
   },
+  rideRemoved: 'Kurs został Ci odebrany (anulowany lub przekazany innemu kierowcy) — nie jedź na odbiór.',
 };
 export default driver;

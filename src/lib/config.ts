@@ -72,7 +72,20 @@ export const config = {
   },
   minStopDistanceMeters: num('MIN_STOP_DISTANCE_METERS', 50),
   // Ride-share «Попутчик» (Task 022). Our own product defaults; adjust after the pilot.
+  /**
+   * Passenger TEST MODE (launch fixes, 2026-11-19). OFF by default = commercial rules: a real order
+   * needs a passenger session with an SMS-verified phone. ON (PASSENGER_TEST_MODE=on) = operator
+   * testing on many phones: guest orders without name/phone, passenger SMS hidden. The readiness
+   * check reports ON as «not for real orders».
+   */
+  passengerTestMode: (process.env.PASSENGER_TEST_MODE || '').toLowerCase() === 'on',
   share: {
+    /**
+     * Server switch for NEW ride-share («Попутчик») operations (launch fixes, 2026-11-19). OFF by
+     * default for the public pilot: no new shared opt-ins, no new pairing / live proposals, no new
+     * answers that would create a pair. Existing groups are only wound down (see share.ts).
+     */
+    enabled: (process.env.SHARE_ENABLED || '').toLowerCase() === 'on',
     discountPct: num('SHARE_DISCOUNT_PCT', 30), // each passenger's discount when a co-rider actually joins
     answerSec: num('SHARE_ANSWER_SEC', 60), // live: host passenger + driver must both say yes within this
     prebookAnswerMin: num('SHARE_PREBOOK_ANSWER_MIN', 30), // pre-booking: both passengers answer within this…

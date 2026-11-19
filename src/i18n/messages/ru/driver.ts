@@ -330,5 +330,6 @@ const driver: Catalog<typeof en> = {
     day: "Тариф 1",
     night: "Тариф 2",
   },
+  rideRemoved: 'Заказ снят с вас (отменён или передан другому водителю) — ехать на подачу не нужно.',
 };
 export default driver;

@@ -327,5 +327,6 @@ const driver = {
     day: "Day tariff",
     night: "Night tariff",
   },
+  rideRemoved: 'The ride was taken off you (cancelled or given to another driver) — do not go to the pickup.',
 };
 export default driver;

@@ -1,6 +1,5 @@
 'use client';
 
-import { PASSENGER_SMS } from '@/lib/features';
 import { useEffect, useRef, useState } from 'react';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
@@ -8,8 +7,11 @@ import { PasswordInput } from '@/components/PasswordInput';
 
 // Task 014: mandatory passenger sign-in before requesting a ride. Email + password is the default
 // (it works without SMS); the phone-code tab is used when SMS verification is available.
-export function PassengerLoginModal({ onDone, onClose }: { onDone: (p: { phone: string | null; name?: string }) => void; onClose: () => void }) {
-  const [mode, setMode] = useState<'email' | 'phone'>('email');
+// Launch fixes (2026-11-19): `sms` = passenger SMS available (off in passenger test mode); `attach` = the
+// signed-in account has no verified phone yet — only the phone step is shown and the verified number
+// is added to THIS account (history kept), never merged into another one.
+export function PassengerLoginModal({ onDone, onClose, sms = true, attach = false }: { onDone: (p: { phone: string | null; name?: string }) => void; onClose: () => void; sms?: boolean; attach?: boolean }) {
+  const [mode, setMode] = useState<'email' | 'phone'>(attach ? 'phone' : sms ? 'phone' : 'email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
@@ -52,7 +54,7 @@ export function PassengerLoginModal({ onDone, onClose }: { onDone: (p: { phone: 
   async function ver() {
     setBusy(true); setErr(null);
     try {
-      const r = await api<{ phone: string; name?: string }>('/passenger/otp/verify', { method: 'POST', body: { phone, code, name: name.trim() || undefined } });
+      const r = await api<{ phone: string; name?: string }>('/passenger/otp/verify', { method: 'POST', body: { phone, code, name: name.trim() || undefined, attach: attach || undefined } });
       onDone({ phone: r.phone, name: r.name || name.trim() || undefined });
     } catch (e) { if (e instanceof ApiRequestError) setErr(tError(e)); } finally { setBusy(false); }
   }
@@ -63,7 +65,7 @@ export function PassengerLoginModal({ onDone, onClose }: { onDone: (p: { phone: 
         <h2 id="plm-title" className="text-lg font-bold">{t('auth.modal.title')}</h2>
         <p className="mt-1 text-sm text-muted">{t('auth.modal.subtitle')}</p>
 
-        {PASSENGER_SMS && <div className="mt-4 flex gap-1 rounded-[12px] border border-edge bg-elevated p-1" role="tablist" aria-label={t('auth.modal.methodLabel')}>
+        {sms && !attach && <div className="mt-4 flex gap-1 rounded-[12px] border border-edge bg-elevated p-1" role="tablist" aria-label={t('auth.modal.methodLabel')}>
           {(['email', 'phone'] as const).map((m) => (
             <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => { setMode(m); setErr(null); }}
               className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium transition ${mode === m ? 'bg-accent text-[#0d1608]' : 'text-muted hover:text-ink'}`}>

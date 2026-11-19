@@ -197,6 +197,7 @@ export async function unassignBooking(params: {
     });
     await recordEvent(tx, { eventType: 'booking.unassigned', aggregateType: 'booking', aggregateId: booking.id, aggregateVersion: updated.revision, correlationId: booking.id, payload: { bookingId: booking.id, status: next, actorType: 'STAFF', reason: params.reason ?? null } });
     if (next === 'SEARCHING') await enqueuePassengerDriverNews(tx, booking.id, 'change', 'Finding you another driver', 'Your driver was changed — we’re matching you again.');
+    if (prior) await enqueueDriver(tx, prior.driverId, 'Ride removed', 'Dispatch took this ride off you. Do not go to the pickup.', { tag: `lost-${booking.id}`, dedupeKey: `lost-${booking.id}-${updated.revision}` });
     return { revision: updated.revision, status: updated.status };
   });
 }
@@ -220,7 +221,8 @@ export async function reassignBooking(params: {
     // the transaction rolls back and the old assignment/driver/revision are preserved.
     const { driver, vehicle } = await validateCandidate(tx, booking, params.driverId, params.vehicleId, params.acknowledgeNoGps, booking.id);
 
-    await endActiveAssignment(tx, booking.id, params.reason || 'reassigned');
+    const old = await endActiveAssignment(tx, booking.id, params.reason || 'reassigned');
+    if (old && old.driverId !== driver.id) await enqueueDriver(tx, old.driverId, 'Ride removed', 'Dispatch gave this ride to another driver. Do not go to the pickup.', { tag: `lost-${booking.id}` });
     await createAssignment(tx, booking, driver, vehicle, params.actorId, params.reason);
 
     const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: 'ASSIGNED', revision: { increment: 1 } } });

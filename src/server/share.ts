@@ -105,6 +105,7 @@ async function activeGroupOf(db: Tx | typeof prisma, bookingId: string) {
  * share proposal for this booking is pending (the worker then waits instead of offering drivers).
  */
 export async function tryLiveShare(guestId: string, now: Date = new Date()): Promise<boolean> {
+  if (!config.share.enabled) return false; // ride-share switched off: no new live proposals (launch fixes)
   const guest = await prisma.booking.findUnique({ where: { id: guestId } });
   if (!guest || guest.status !== 'SEARCHING' || guest.scheduledAt || !shareCapable(guest)) return false;
   const pending = await prisma.shareGroup.findFirst({ where: { guestBookingId: guestId, status: 'PROPOSED' } });
@@ -219,6 +220,9 @@ export type ShareResult = { ok: true; status: string } | { ok: false; status: nu
 const fail = (status: number, code: string, message: string): ShareResult => ({ ok: false, status, code, message });
 
 export async function answerShare(groupId: string, party: ShareParty, accept: boolean, now: Date = new Date()): Promise<ShareResult> {
+  // Ride-share switched off: an answer to an old proposal can still say «no», but a «yes» must not
+  // complete a NEW pair — it is recorded as a decline (launch fixes, 2026-11-19).
+  if (!config.share.enabled) accept = false;
   const pre = await prisma.shareGroup.findUnique({ where: { id: groupId } });
   if (!pre) return fail(404, 'NOT_FOUND', 'Proposal not found.');
   return prisma.$transaction(async (tx) => {
@@ -369,6 +373,7 @@ export async function expireShares(now: Date = new Date()): Promise<number> {
 // ---------------------------------------------------------------------------------------------
 
 export async function matchPrebookings(now: Date = new Date()): Promise<number> {
+  if (!config.share.enabled) return 0; // no new pre-booked pairs while ride-share is off
   const settings = await getSettings();
   // Leave room for both answers (≤ prebookAnswerMin) to end ≥ prebookAnswerBeforePickupMin before pickup.
   const earliest = new Date(now.getTime() + (S().prebookAnswerBeforePickupMin + 5) * MIN);

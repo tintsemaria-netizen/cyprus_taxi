@@ -1,4 +1,4 @@
-import { PASSENGER_SMS } from '@/lib/features';
+import { config } from '@/lib/config';
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 
 // Sign-up with phone OPTIONAL (2026-11-12): email-only accounts, SMS-unavailable fallback, and
@@ -59,8 +59,8 @@ describe('passenger sign-up with optional phone', () => {
     const phone = `+3579981${String(n).padStart(4, '0')}`;
     const res = await register.POST(req('/passenger/register', { name: 'Nik', email: e, password: 'secret123', phone }));
     expect(res.status).toBe(200);
-    // With passenger SMS switched off (PASSENGER_SMS) there is no «could not verify» notice.
-    expect(await res.json()).toMatchObject({ created: true, phoneSkipped: PASSENGER_SMS });
+    // Outside passenger test mode an unverifiable phone is reported (phoneSkipped).
+    expect(await res.json()).toMatchObject({ created: true, phoneSkipped: !config.passengerTestMode });
     expect((await prisma.passenger.findUnique({ where: { email: e } }))?.phone).toBeNull();
     expect(await prisma.passenger.findUnique({ where: { phone } })).toBeNull();
   });

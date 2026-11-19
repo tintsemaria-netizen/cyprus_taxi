@@ -303,7 +303,10 @@ async function rematchOnGpsLoss(now: Date): Promise<void> {
   });
   for (const a of active) {
     const loc = await prisma.latestDriverLocation.findUnique({ where: { driverId: a.driverId } });
-    const lastAt = loc ? Math.max(loc.sampledAt.getTime(), loc.receivedAt.getTime()) : a.assignedAt.getTime();
+    // Launch fixes §5: the 90 s window counts from SERVER receive time (a fast phone clock can't
+    // stretch it) and never starts before the assignment itself (a driver assigned with old GPS is
+    // not rematched on the very next tick).
+    const lastAt = Math.max(loc ? loc.receivedAt.getTime() : 0, a.assignedAt.getTime());
     if (lastAt >= cutoff) continue; // still fresh enough (cheap pre-check)
     const rematched = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${a.activeBookingId!} FOR UPDATE`;
@@ -314,7 +317,7 @@ async function rematchOnGpsLoss(now: Date): Promise<void> {
       const cur = await tx.assignment.findFirst({ where: { activeBookingId: b.id } });
       if (!cur || cur.id !== a.id || cur.driverId !== a.driverId) return false;
       const loc2 = await tx.latestDriverLocation.findUnique({ where: { driverId: cur.driverId } });
-      const lastAt2 = loc2 ? Math.max(loc2.sampledAt.getTime(), loc2.receivedAt.getTime()) : cur.assignedAt.getTime();
+      const lastAt2 = Math.max(loc2 ? loc2.receivedAt.getTime() : 0, cur.assignedAt.getTime());
       if (lastAt2 >= now.getTime() - config.dispatch.gpsLossRematchSeconds * 1000) return false; // GPS recovered under lock
       await rematchBooking(tx, b.id, cur.driverId, 'prolonged pre-pickup GPS loss', 'SYSTEM');
       return true;
