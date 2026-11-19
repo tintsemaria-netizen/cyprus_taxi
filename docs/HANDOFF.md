@@ -2209,3 +2209,13 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
 ## 2026-11-19 — Receipts RU/EN deployed (branch `receipt-ru-en` rebased onto main)
 - Receipt page: language RU for a Russian app, else EN, picker for others (remembered); kept main's short receipt (only «Итого» + payment method).
 - E-mail receipts only RU/EN (`receiptLocale`). Rides list: «→ destination», same total as the receipt (waiting included), no «≈» for completed rides.
+
+## 2026-11-19 — PARKED: fewer labels on the Google map (owner: «отложи на потом»)
+- Map labels in English + «street the car is on» chip are DEPLOYED (main f2c583a).
+- Hiding minor labels (POI, bus stops, local-road labels below ~z17) needs the Cloud map style on Map ID
+  29d3947762ce2031a068f61d (browser key AIzaSyDa…nflk). That Google account is unknown: the owner's
+  zimonidis@gmail.com («My Maps Project») has no keys and no such Map ID. Options given: find the September
+  account (Google Cloud e-mails / card statements / whoever set up the server) or move maps to the owner's
+  account (billing on, new keys + Map ID + style, swap on the server). Owner asked about cost: style is free;
+  Maps is pay-as-you-go with a monthly free cap.
+- Also still open: 2nd co-rider's stops on the driver's live navigation map; airport meeting point for pairs (with the airport setup).
