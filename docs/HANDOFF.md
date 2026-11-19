@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-19 — Driver menu «Предзаказы»: taken + new counts (deployed)
+
+- ☰ row shows a lime count of pre-bookings the driver has taken (`mine`) and a red count of open ones he could take; both from the 30 s board poll and from ScheduledRides `onCount(n, pair, mine)`.
+
 ## 2026-11-19 — PARKED (operator: «потом, пока тестируем»): contact phone for guest orders
 
 - With guest ordering (`PASSENGER_GUEST = true`) passengers give no phone, so drivers have no «📞 Позвонить» for the host (chat sheet) nor for the co-rider («👥 Попутчик» pill). Proposed: a required «Ваш телефон для водителя» field (no SMS) in guest orders. Do it when the operator returns to it / when sign-in comes back.
