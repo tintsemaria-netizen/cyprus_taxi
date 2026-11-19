@@ -21,7 +21,7 @@ interface Receipt {
   driver: { name: string; vehicle: string; plate: string } | null;
   fare: {
     priceType: string; currency: string; isUpfront: boolean;
-    estimateCents: number | null; waitingCents: number; finalCents: number | null; totalCents: number | null;
+    estimateCents: number | null; waitingCents: number; finalCents: number | null; totalCents: number | null; totalApprox?: boolean;
     lines: Line[]; note: string; paymentMethod: string; paymentStatus: string;
   };
   rating: { stars: number } | null;
@@ -120,9 +120,10 @@ function ReceiptCard({ receipt, lang, onLang, sendMail, mailBusy, mailNote }: { 
             <div className="mt-4 border-t border-edge pt-3">
               {/* Receipt (2026-11-18): just the total (waiting included) — no class / passengers / driver / fare lines / meter note. */}
               <div className="flex items-baseline justify-between">
-                <span className="font-semibold">{t('rides.receipt.total')}</span>
+                {/* Launch fixes §6: an amount the driver has not confirmed from the taximeter keeps «≈». */}
+                <span className="font-semibold">{t(f.totalApprox ? 'rides.receipt.estimatedTotal' : 'rides.receipt.total')}</span>
                 <span className="text-lg font-bold tabular-nums">
-                  {f.totalCents != null ? eur(f.totalCents, f.currency) : '—'}
+                  {f.totalCents != null ? `${f.totalApprox ? '≈ ' : ''}${eur(f.totalCents, f.currency)}` : '—'}
                 </span>
               </div>
               {/* Payment method only (2026-11-18): no «Ожидает оплаты» — nothing marks cash as collected yet. */}

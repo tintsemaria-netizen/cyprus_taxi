@@ -39,7 +39,7 @@ export async function driverAnalytics(driverId: string, fromDay: string, days: 1
   for (let i = 0; i < days; i++) { const k = addDays(fromDay, i); byDay.set(k, empty(k)); }
   const bucket = (at: Date) => byDay.get(nicosiaDayKey(at));
 
-  const fareSel = { select: { finalCents: true, estimateCents: true, currency: true, paymentStatus: true } } as const;
+  const fareSel = { select: { finalCents: true, estimateCents: true, currency: true, paymentStatus: true, waitingCents: true, priceType: true } } as const;
   // Rides this driver was on that ended in the window.
   const asgs = await prisma.assignment.findMany({
     where: { driverId, endedAt: { gte: from, lt: to } },

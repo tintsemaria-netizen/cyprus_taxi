@@ -47,6 +47,11 @@ export async function createBooking(
       passengerCount: `Max ${cls.maxPassengers} for ${cls.label}.`,
     });
   }
+  // Launch fixes §6: bags must fit the class too (a car that cannot take them is not a valid order).
+  const bagMax = config.luggageMax[input.vClass as 'COMFORT' | 'XL'];
+  if (bagMax != null && (input.luggageCount ?? 0) > bagMax) {
+    return fail(422, 'VALIDATION', 'Too much luggage for this class.', { luggageCount: `Max ${bagMax} bags for ${cls.label}.` });
+  }
 
   // 2. Service area (both stops inside configured polygon)
   const poly = settings.serviceAreaPolygon;

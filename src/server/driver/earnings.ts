@@ -2,6 +2,7 @@ import { nicosiaDayKey } from '@/lib/timezone';
 import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { onlineSecondsInWindow } from './duty';
+import { fareTotal, confirmedCents } from '@/lib/fare-total';
 
 // Driver earnings (Task 017 §5) — financially truthful. "Recorded earnings" = completed trips with
 // a KNOWN driver-attributable final amount (driver-reported settlement, or an accepted upfront
@@ -12,13 +13,20 @@ import { onlineSecondsInWindow } from './duty';
 
 export interface FinalResolution { finalCents: number | null; source: 'settlement' | 'upfront' | null; currency: string; collected: boolean }
 
+// Launch fixes §6: the same rule as the receipt (src/lib/fare-total.ts) — a fixed price includes
+// the recorded pickup waiting; a meter ride counts only the driver's entered taximeter amount.
 export function resolveFinal(
-  fare: { finalCents: number | null; currency: string; paymentStatus: string } | null,
+  fare: { finalCents: number | null; currency: string; paymentStatus: string; waitingCents?: number; estimateCents?: number | null; priceType?: string } | null,
   settlement: { reportedFinalCents: number; currency: string; paymentReceived: boolean } | null,
 ): FinalResolution {
-  if (settlement) return { finalCents: settlement.reportedFinalCents, source: 'settlement', currency: settlement.currency, collected: settlement.paymentReceived };
-  if (fare && fare.finalCents != null) return { finalCents: fare.finalCents, source: 'upfront', currency: fare.currency, collected: fare.paymentStatus === 'COLLECTED' };
-  return { finalCents: null, source: null, currency: fare?.currency ?? config.currency, collected: false };
+  const priceType = fare?.priceType ?? (fare?.finalCents != null ? 'REGULATED_FIXED' : 'REGULATED_METER_ESTIMATE');
+  const t = fareTotal({
+    priceType, completed: true, settlement,
+    fare: fare ? { estimateCents: fare.estimateCents ?? null, waitingCents: fare.waitingCents ?? 0, finalCents: fare.finalCents, currency: fare.currency, paymentStatus: fare.paymentStatus } : null,
+  });
+  const cents = confirmedCents(t);
+  if (cents == null) return { finalCents: null, source: null, currency: fare?.currency ?? config.currency, collected: false };
+  return { finalCents: cents, source: t.source === 'meter' ? 'settlement' : 'upfront', currency: t.currency ?? config.currency, collected: t.state === 'PAID' };
 }
 
 // Map bookingId → current (max-revision) settlement for a set of bookings (no N+1).
@@ -50,7 +58,7 @@ export interface EarningsSummary {
 async function completedAssignments(driverId: string, from: Date, to: Date) {
   return prisma.assignment.findMany({
     where: { driverId, reason: 'completed', endedAt: { gte: from, lt: to } },
-    select: { bookingId: true, endedAt: true, booking: { select: { fare: { select: { finalCents: true, currency: true, paymentStatus: true } } } } },
+    select: { bookingId: true, endedAt: true, booking: { select: { fare: { select: { finalCents: true, currency: true, paymentStatus: true, waitingCents: true, estimateCents: true, priceType: true } } } } },
   });
 }
 

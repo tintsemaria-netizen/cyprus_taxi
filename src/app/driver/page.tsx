@@ -815,7 +815,7 @@ function TripsSection({ onOpen, activeDetail, onCloseDetail, onSettled }: { onOp
 
 interface Detail extends TripCard {
   timestamps: { assignedAt: string; endedAt: string | null }; fareBreakdown: { label?: string; amountCents?: number }[] | null;
-  releaseReason: string | null; settlement: { current: { revision: number; reportedFinalCents: number; currency: string; paymentReceived: boolean } | null; history: unknown[] } | null; canResume: boolean; canSettle: boolean;
+  releaseReason: string | null; settlement: { current: { revision: number; reportedFinalCents: number; currency: string; paymentReceived: boolean } | null; history: unknown[] } | null; canResume: boolean; canSettle: boolean; canMarkPaid?: boolean;
 }
 function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string; onClose: () => void; onSettled: () => void }) {
   const { t, tError, fmt } = useT();
@@ -840,6 +840,12 @@ function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string;
     } catch (e) { setErr(e instanceof ApiRequestError ? tError(e) : t('driver.detail.saveFailed')); } finally { setBusy(false); }
   }
 
+  async function markPaid() {
+    setBusy(true); setErr(null);
+    try { await api(`/driver/bookings/${bookingId}/payment-received`, { method: 'POST' }); await load(); onSettled(); }
+    catch (e) { setErr(e instanceof ApiRequestError ? tError(e) : t('driver.detail.saveFailed')); } finally { setBusy(false); }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4" onClick={onClose}>
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-[16px] border border-edge bg-page p-4 sm:rounded-[16px]" onClick={(e) => e.stopPropagation()}>
@@ -856,6 +862,7 @@ function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string;
               {d.settlement?.current && <div className="mt-1 text-xs text-muted">{d.settlement.current.paymentReceived ? t('driver.detail.reportedReceived', { rev: d.settlement.current.revision }) : t('driver.detail.reported', { rev: d.settlement.current.revision })}</div>}
             </div>
             {d.canResume && <a href="/driver" className="btn-primary block w-full text-center">{t('driver.detail.returnToTrip')}</a>}
+            {d.canMarkPaid && <button onClick={markPaid} disabled={busy} className="btn-primary w-full">{busy ? t('driver.detail.saving') : t('driver.detail.paymentReceived')}</button>}
             {d.canSettle && (
               <div className="rounded-[12px] border border-edge bg-elevated p-3">
                 <p className="font-medium">{d.settlement?.current ? t('driver.detail.correctSettlement') : t('driver.detail.recordMetered')}</p>

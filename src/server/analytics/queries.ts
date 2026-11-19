@@ -1,5 +1,7 @@
 import { config } from '@/lib/config';
 import { chSelect, chDateTime } from './clickhouse';
+import { prisma } from '@/lib/db';
+import { fareTotal, confirmedCents } from '@/lib/fare-total';
 
 // Canonical analytics queries (Task 016 §8) over ClickHouse domain_events. All queries dedup by
 // eventId semantics (count(DISTINCT ...) / argMax by version), so at-least-once delivery and
@@ -113,27 +115,34 @@ export interface FareSummary {
   note: string;
 }
 export async function fareSummary(f: AnalyticsFilter): Promise<FareSummary> {
-  // From fare.recorded events. finalCents may be null (regulated meter settled with the driver):
-  // count those as pending, NEVER as zero income, and NEVER sum the estimate as paid.
-  const rows = await chSelect<{ currency: string; trips: string; knownFinal: string; pendingFinal: string; recordedFinal: string }>(
-    `SELECT JSONExtractString(payload,'currency') AS currency,
-            count(DISTINCT aggregateId) AS trips,
-            countIf(JSONExtractRaw(payload,'finalCents') != 'null') AS knownFinal,
-            countIf(JSONExtractRaw(payload,'finalCents') =  'null') AS pendingFinal,
-            sumIf(JSONExtractInt(payload,'finalCents'), JSONExtractRaw(payload,'finalCents') != 'null') AS recordedFinal
-     FROM ${DB()}.domain_events
-     WHERE ${scope(f, "eventType='fare.recorded'")}
-     GROUP BY currency`,
-  );
+  // Launch fixes §6: money comes from the operational Postgres with the SAME rule as the receipt and
+  // driver earnings (src/lib/fare-total.ts): the driver's latest taximeter amount for meter rides,
+  // price + recorded waiting for fixed prices. The event stream only had the completion-time
+  // Fare.finalCents (null for every meter ride) and never saw later amounts or corrections.
+  const rows = await prisma.booking.findMany({
+    where: {
+      status: 'COMPLETED', ...(f.includeTest ? {} : { isTest: false }),
+      events: { some: { type: 'COMPLETED', createdAt: { gte: f.from, lt: f.to } } },
+    },
+    select: { id: true, priceType: true, fare: { select: { estimateCents: true, waitingCents: true, finalCents: true, currency: true, paymentStatus: true, priceType: true } } },
+    take: 20000,
+  });
+  const ids = rows.map((r) => r.id);
+  const sets = ids.length ? await prisma.driverSettlement.findMany({ where: { bookingId: { in: ids } }, orderBy: { revision: 'asc' }, select: { bookingId: true, reportedFinalCents: true, currency: true, paymentReceived: true } }) : [];
+  const settle = new Map(sets.map((s) => [s.bookingId, s]));
+  const by = new Map<string, FareSummary['byCurrency'][number]>();
+  for (const r of rows) {
+    const t = fareTotal({ priceType: r.fare?.priceType ?? r.priceType, completed: true, fare: r.fare, settlement: settle.get(r.id) ?? null });
+    const cur = t.currency ?? config.currency;
+    const c = by.get(cur) ?? { currency: cur, completedTrips: 0, recordedFinalCents: 0, knownFinalTrips: 0, pendingFinalTrips: 0 };
+    c.completedTrips += 1;
+    const known = confirmedCents(t);
+    if (known != null) { c.recordedFinalCents += known; c.knownFinalTrips += 1; } else c.pendingFinalTrips += 1;
+    by.set(cur, c);
+  }
   return {
-    byCurrency: rows.map((r) => ({
-      currency: r.currency || config.currency,
-      completedTrips: Number(r.trips),
-      recordedFinalCents: Number(r.recordedFinal),
-      knownFinalTrips: Number(r.knownFinal),
-      pendingFinalTrips: Number(r.pendingFinal),
-    })),
-    note: 'Recorded final fares only, grouped by currency. Trips with an unknown metered amount are counted as pending, not zero. Estimates are never counted as income. Currencies are never summed together.',
+    byCurrency: [...by.values()],
+    note: 'Confirmed amounts only (driver-entered taximeter amount or accepted fixed price incl. recorded waiting), grouped by currency. Trips whose meter amount was not entered yet are counted as pending, not zero. Estimates are never counted as income.',
   };
 }
 

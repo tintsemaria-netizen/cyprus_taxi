@@ -100,6 +100,9 @@ export const config = {
     pairLapseMinutes: num('SHARE_PAIR_LAPSE_MINUTES', 20),
     luggage: { COMFORT: num('SHARE_LUGGAGE_COMFORT', 4), XL: num('SHARE_LUGGAGE_XL', 7) } as Record<'COMFORT' | 'XL', number>,
   },
+  // Launch fixes §6: bags one car of the class can take (checked at booking). Same defaults as the
+  // ride-share luggage limits; set per fleet with LUGGAGE_MAX_COMFORT / LUGGAGE_MAX_XL.
+  luggageMax: { COMFORT: num('LUGGAGE_MAX_COMFORT', 4), XL: num('LUGGAGE_MAX_XL', 7) } as Record<'COMFORT' | 'XL', number>,
   // Pricing mode (Task 012 §6.1). Real charges stay REGULATED_METER_ESTIMATE unless a
   // commercial dynamic rule is authorized; UPFRONT_DYNAMIC is a synthetic/TEST engine.
   pricing: {

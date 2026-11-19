@@ -17,8 +17,8 @@ export function receiptEmail(r: Receipt, locale: Locale, link: string, reviewUrl
   const alignEnd = rtl ? 'left' : 'right';
   const f = r.fare;
   const subject = tr(locale, 'rides.email.subject', { ref: r.reference });
-  const totalLabel = f.isUpfront ? tr(locale, 'rides.receipt.total') : tr(locale, 'rides.receipt.estimatedTotal');
-  const total = f.totalCents != null ? money(f.totalCents) : '—';
+  const totalLabel = f.totalApprox ? tr(locale, 'rides.receipt.estimatedTotal') : tr(locale, 'rides.receipt.total');
+  const total = f.totalCents != null ? `${f.totalApprox ? '≈ ' : ''}${money(f.totalCents)}` : '—';
 
   const routeRows: [string, string][] = [
     [tr(locale, 'track.pickup'), r.pickup],

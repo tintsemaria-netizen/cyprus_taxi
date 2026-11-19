@@ -10,7 +10,10 @@ import { createBooking } from '@/server/bookings';
 import { assignBooking, changeStatus } from '@/server/assignments';
 import { arriveAtPickup, startTrip, completeTrip } from '@/server/dispatch/lifecycle';
 import { passengerReceipt } from '@/server/receipt';
-import { drainReceiptEmails, requestReceiptEmail } from '@/server/email/receipts';
+import { drainReceiptEmails, requestReceiptEmail, METER_HOLD_MS } from '@/server/email/receipts';
+import { reportSettlement } from '@/server/driver/settlement';
+// Past the meter-amount hold (launch fixes §6) — the e-mail is due.
+const later = () => new Date(Date.now() + METER_HOLD_MS + 1000);
 import type { CreateBookingInput } from '@/lib/validation';
 
 const marina = { lat: 34.6706, lng: 33.0413, label: 'Limassol Marina' };
@@ -116,13 +119,13 @@ describe('e-mailed trip receipts (2026-11-17)', () => {
     expect(row.status).toBe('PENDING');
     expect(row.locale).toBe('ru');
 
-    // No provider configured: nothing is sent, the row waits.
+    // Meter ride: the e-mail is held for the driver's taximeter amount; no provider → nothing sent.
     const idle = await drainReceiptEmails(new Date());
     expect(idle.configured).toBe(false);
     expect((await prisma.receiptEmail.findUniqueOrThrow({ where: { id: row.id } })).status).toBe('PENDING');
 
     const calls = mockProvider();
-    const r = await drainReceiptEmails(new Date());
+    const r = await drainReceiptEmails(later());
     expect(r.claimed).toBe(1);
     expect(calls).toHaveLength(1);
     expect(calls[0].body.to).toEqual([row.toEmail]);
@@ -142,7 +145,7 @@ describe('e-mailed trip receipts (2026-11-17)', () => {
     expect(rc.ok && rc.receipt.fare.totalCents).toBe(965);
 
     // A second drain sends nothing more.
-    await drainReceiptEmails(new Date());
+    await drainReceiptEmails(later());
     expect(calls).toHaveLength(1);
   });
 
@@ -157,11 +160,11 @@ describe('e-mailed trip receipts (2026-11-17)', () => {
   it('«send again» re-queues with a new idempotency key, capped at 3', async () => {
     const t = await completedBooking();
     const calls = mockProvider();
-    await drainReceiptEmails(new Date());
+    await drainReceiptEmails(later());
     for (let i = 1; i <= 3; i++) {
       const r = await requestReceiptEmail(t.bookingId, t.passengerId);
       expect(r.ok).toBe(true);
-      await drainReceiptEmails(new Date());
+      await drainReceiptEmails(later());
       expect(calls[i].headers['Idempotency-Key']).toBe(`receipt-${t.bookingId}-${i}`);
     }
     const over = await requestReceiptEmail(t.bookingId, t.passengerId);
@@ -175,15 +178,45 @@ describe('e-mailed trip receipts (2026-11-17)', () => {
   it('a rejected address (4xx) fails without retry; a 5xx retries later', async () => {
     const t = await completedBooking();
     mockProvider(422);
-    await drainReceiptEmails(new Date());
+    await drainReceiptEmails(later());
     expect((await prisma.receiptEmail.findUniqueOrThrow({ where: { bookingId: t.bookingId } })).status).toBe('FAILED');
 
     const t2 = await completedBooking('second@example.com');
     vi.unstubAllGlobals();
     mockProvider(503);
-    await drainReceiptEmails(new Date());
+    await drainReceiptEmails(later());
     const row = await prisma.receiptEmail.findUniqueOrThrow({ where: { bookingId: t2.bookingId } });
     expect(row.status).toBe('RETRY');
     expect(row.nextAttemptAt.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('launch fixes §6: the driver\'s meter amount releases the e-mail at once and is the total (no «≈»)', async () => {
+    const t = await completedBooking();
+    const before = await passengerReceipt(t.bookingId, t.passengerId);
+    expect(before.ok && before.receipt.fare.totalApprox).toBe(true);
+    const asg = await prisma.assignment.findFirstOrThrow({ where: { bookingId: t.bookingId, reason: 'completed' } });
+    const s = await reportSettlement(asg.driverId, t.bookingId, { reportedFinalCents: 1840 });
+    expect(s.ok).toBe(true);
+    const calls = mockProvider();
+    await drainReceiptEmails(new Date(Date.now() + 1000)); // well before the hold would end
+    expect(calls).toHaveLength(1);
+    expect(String(calls[0].body.html)).toMatch(/18,40/);
+    expect(String(calls[0].body.html)).not.toContain('≈');
+    const after = await passengerReceipt(t.bookingId, t.passengerId);
+    expect(after.ok && after.receipt.fare.totalCents).toBe(1840); // meter amount, waiting NOT added again
+    expect(after.ok && after.receipt.fare.totalApprox).toBe(false);
+  });
+
+  it('launch fixes §3: without a provider, due e-mails are skipped — enabling later sends no backlog', async () => {
+    const t = await completedBooking();
+    await drainReceiptEmails(later()); // no provider
+    expect((await prisma.receiptEmail.findUniqueOrThrow({ where: { bookingId: t.bookingId } })).status).toBe('SKIPPED');
+    const calls = mockProvider();
+    await drainReceiptEmails(later());
+    expect(calls).toHaveLength(0);
+    // The passenger can still ask for it explicitly.
+    expect((await requestReceiptEmail(t.bookingId, t.passengerId)).ok).toBe(true);
+    await drainReceiptEmails(later());
+    expect(calls).toHaveLength(1);
   });
 });

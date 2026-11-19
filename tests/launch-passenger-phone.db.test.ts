@@ -153,3 +153,14 @@ describe('§7 ride-share switch (SHARE_ENABLED)', () => {
     expect((await (await publicConfig.GET()).json()).share.enabled).toBe(true);
   });
 });
+
+describe('§6 capacity', () => {
+  it('more bags than the class takes → 422 on luggageCount; within the limit → ok', async () => {
+    const base = { pickup: { lat: 34.6706, lng: 33.0413, label: 'A' }, dropoff: { lat: 34.8751, lng: 33.6249, label: 'B' }, when: 'NOW', vClass: 'COMFORT', passengerCount: 2, passengerName: 'P', phone: '+35799123456' };
+    const tooMany = await createBooking(createBookingSchema.parse({ ...base, luggageCount: config.luggageMax.COMFORT + 1 }), `lf-bags-${RUN}-${++n}`);
+    expect(tooMany.ok).toBe(false);
+    if (!tooMany.ok) expect(Object.keys(tooMany.fieldErrors ?? {})).toContain('luggageCount');
+    const fits = await createBooking(createBookingSchema.parse({ ...base, luggageCount: config.luggageMax.COMFORT }), `lf-bags-${RUN}-${++n}`);
+    expect(fits.ok).toBe(true);
+  });
+});

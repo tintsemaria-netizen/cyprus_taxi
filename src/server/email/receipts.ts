@@ -11,6 +11,7 @@ import { asLocale } from '@/i18n/translate';
 import { buildReceipt, RECEIPT_RESEND_MAX } from '@/server/receipt';
 import { emailConfigured, sendEmail } from './provider';
 import { receiptEmail } from './receipt-template';
+import { isFixedPrice } from '@/lib/price-type';
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
@@ -33,7 +34,18 @@ export async function enqueueReceiptEmail(db: Db, bookingId: string): Promise<vo
   if (!p?.email) return;
   const exists = await db.receiptEmail.findUnique({ where: { bookingId }, select: { id: true } });
   if (exists) return;
-  await db.receiptEmail.create({ data: { bookingId, passengerId: b.passengerId, toEmail: p.email, locale: receiptLocale(p.locale) } });
+  // Launch fixes §6: a meter ride's real amount comes from the driver after completion. Hold the
+  // e-mail up to METER_HOLD_MS so it carries that amount; entering it releases the e-mail at once
+  // (releaseReceiptEmail). If the driver never enters it, the e-mail goes with «≈ estimate».
+  const fare = await db.fare.findUnique({ where: { bookingId }, select: { priceType: true } });
+  const hold = fare && !isFixedPrice(fare.priceType) ? new Date(Date.now() + METER_HOLD_MS) : new Date();
+  await db.receiptEmail.create({ data: { bookingId, passengerId: b.passengerId, toEmail: p.email, locale: receiptLocale(p.locale), nextAttemptAt: hold } });
+}
+
+export const METER_HOLD_MS = 20 * 60_000;
+/** The driver entered the taximeter amount → send the held receipt e-mail now (inside his transaction). */
+export async function releaseReceiptEmail(db: Db, bookingId: string): Promise<void> {
+  await db.receiptEmail.updateMany({ where: { bookingId, status: 'PENDING', sentAt: null }, data: { nextAttemptAt: new Date() } });
 }
 
 export type ResendResult = { ok: true; status: string } | { ok: false; status: number; code: string; message: string };
@@ -66,7 +78,13 @@ export async function drainReceiptEmails(now: Date = new Date(), batch = 20): Pr
   await prisma.receiptEmail.updateMany({ where: { status: 'PROCESSING', leaseUntil: { lt: now } }, data: { status: 'RETRY', nextAttemptAt: now, leaseToken: null, leaseUntil: null } });
   // Too old to be useful.
   await prisma.receiptEmail.updateMany({ where: { status: { in: ['PENDING', 'RETRY'] }, nextAttemptAt: { lt: new Date(now.getTime() - STALE_MS) } }, data: { status: 'SKIPPED', lastError: 'stale' } });
-  if (!emailConfigured()) return { claimed: 0, configured: false };
+  // Launch fixes §3: without a provider, due e-mails are closed as SKIPPED («no-provider») instead of
+  // piling up — turning e-mail on later must not blast a backlog of old receipts. The passenger can
+  // still ask for the copy from the receipt screen.
+  if (!emailConfigured()) {
+    await prisma.receiptEmail.updateMany({ where: { status: { in: ['PENDING', 'RETRY'] }, nextAttemptAt: { lte: now } }, data: { status: 'SKIPPED', lastError: 'no-provider' } });
+    return { claimed: 0, configured: false };
+  }
 
   const token = randomUUID();
   const rows = await prisma.$queryRaw<Row[]>`

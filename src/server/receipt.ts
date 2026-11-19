@@ -1,4 +1,5 @@
 import { isFixedPrice } from '@/lib/price-type';
+import { fareTotal } from '@/lib/fare-total';
 import { prisma } from '@/lib/db';
 
 // Passenger-facing ride receipt (Task 020 follow-on). Built from the IMMUTABLE Fare written once
@@ -31,6 +32,8 @@ export interface Receipt {
     finalCents: number | null;
     /** What the passenger pays: final (upfront) or estimate + waiting — the driver's «Итого». */
     totalCents: number | null;
+    totalApprox: boolean;
+    totalState: import("@/lib/fare-total").TotalState;
     lines: ReceiptLine[];
     note: string;
     paymentMethod: string;
@@ -125,11 +128,17 @@ export async function buildReceipt(bookingId: string, passengerId?: string): Pro
     b.passengerId ? prisma.passenger.findUnique({ where: { id: b.passengerId }, select: { email: true } }) : Promise.resolve(null),
     prisma.receiptEmail.findUnique({ where: { bookingId }, select: { status: true, toEmail: true, sentAt: true, resendCount: true } }),
   ]);
+  // Launch fixes §6: one rule for the total (src/lib/fare-total.ts) — the driver's entered meter
+  // amount once there is one, otherwise an approximate estimate.
+  const settlement = await prisma.driverSettlement.findFirst({ where: { bookingId }, orderBy: { revision: 'desc' }, select: { reportedFinalCents: true, currency: true, paymentReceived: true } });
+  const total = fareTotal({ priceType: b.fare.priceType, completed: true, fare: b.fare, settlement });
 
   const isUpfront = isFixedPrice(b.fare.priceType);
   const note = isUpfront
     ? 'Accepted upfront price — this is the final amount.'
-    : 'Estimated fare. The final regulated-meter amount is shown in the vehicle and paid to the driver.';
+    : total.approx
+      ? 'Estimated fare. The final regulated-meter amount is shown in the vehicle and paid to the driver.'
+      : 'Final amount from the vehicle taximeter, entered by the driver.';
 
   return {
     ok: true,
@@ -155,7 +164,9 @@ export async function buildReceipt(bookingId: string, passengerId?: string): Pro
         estimateCents: b.fare.estimateCents,
         waitingCents: b.fare.waitingCents,
         finalCents: b.fare.finalCents,
-        totalCents: isUpfront ? (b.fare.finalCents != null ? b.fare.finalCents + b.fare.waitingCents : null) : b.fare.estimateCents != null ? b.fare.estimateCents + b.fare.waitingCents : null,
+        totalCents: total.cents,
+        totalApprox: total.approx,
+        totalState: total.state,
         lines: parseLines(b.fareBreakdown),
         note,
         paymentMethod: b.fare.paymentMethod,

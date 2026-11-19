@@ -40,7 +40,7 @@ export async function listDriverTrips(driverId: string, opts: { from?: Date; to?
     ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
     select: {
       id: true, assignedAt: true, endedAt: true, reason: true, bookingId: true,
-      booking: { select: { reference: true, status: true, pickupLabel: true, dropoffLabel: true, vClass: true, passengerCount: true, fareCents: true, fare: { select: { finalCents: true, currency: true, paymentStatus: true } } } },
+      booking: { select: { reference: true, status: true, pickupLabel: true, dropoffLabel: true, vClass: true, passengerCount: true, fareCents: true, fare: { select: { finalCents: true, currency: true, paymentStatus: true, waitingCents: true, estimateCents: true, priceType: true } } } },
     },
   });
   const hasMore = rows.length > limit;
@@ -82,13 +82,14 @@ export interface TripDetail extends TripCard {
   settlement: { current: unknown | null; history: unknown[] } | null;
   canResume: boolean;
   canSettle: boolean;
+  canMarkPaid: boolean;
 }
 
 export async function driverTripDetail(driverId: string, bookingId: string): Promise<TripDetail | null> {
   // Authorize by the driver's OWN assignment (most recent for this booking).
   const asg = await prisma.assignment.findFirst({
     where: { driverId, bookingId }, orderBy: { assignedAt: 'desc' },
-    select: { id: true, assignedAt: true, endedAt: true, reason: true, booking: { select: { reference: true, status: true, pickupLabel: true, dropoffLabel: true, vClass: true, passengerCount: true, fareCents: true, fareBreakdown: true, fare: { select: { finalCents: true, currency: true, paymentStatus: true } } } } },
+    select: { id: true, assignedAt: true, endedAt: true, reason: true, booking: { select: { reference: true, status: true, pickupLabel: true, dropoffLabel: true, vClass: true, passengerCount: true, fareCents: true, fareBreakdown: true, fare: { select: { finalCents: true, currency: true, paymentStatus: true, waitingCents: true, estimateCents: true, priceType: true } } } } },
   });
   if (!asg) return null;
   const ds = driverStatus(asg.reason, asg.endedAt, asg.booking.status);
@@ -108,6 +109,8 @@ export async function driverTripDetail(driverId: string, bookingId: string): Pro
 
   // Upfront prices are fixed and cannot be settled by the driver.
   const canSettle = completed && asg.booking.fare?.finalCents == null; // regulated meter → driver settles
+  // Launch fixes §6: a fixed price only needs «payment received» from the completing driver.
+  const canMarkPaid = completed && asg.reason === 'completed' && asg.booking.fare?.finalCents != null && asg.booking.fare.paymentStatus !== 'COLLECTED';
 
   return {
     bookingId, reference: asg.booking.reference, at: asg.assignedAt.toISOString(),
@@ -119,6 +122,7 @@ export async function driverTripDetail(driverId: string, bookingId: string): Pro
     settlement: completed ? { current: settle, history: await settlementHistory(bookingId) } : null,
     canResume: active,
     canSettle,
+    canMarkPaid,
   };
 }
 

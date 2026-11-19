@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { releaseReceiptEmail } from '@/server/email/receipts';
 import { isFixedPrice } from '@/lib/price-type';
 import { config } from '@/lib/config';
 import { recordEvent, driverPseudo } from '@/server/events';
@@ -84,7 +85,27 @@ export async function reportSettlement(
       aggregateType: 'settlement', aggregateId: bookingId, aggregateVersion: nextRev, correlationId: bookingId,
       payload: { bookingId, driverPseudo: driverPseudo(driverId), reportedFinalCents: input.reportedFinalCents, currency, paymentReceived: !!input.paymentReceived, revision: nextRev },
     });
+    if (nextRev === 1) await releaseReceiptEmail(tx, bookingId); // receipt e-mail now carries the real amount
     return { ok: true, settlement: view(s) };
+  });
+}
+
+// Launch fixes §6: a fixed-price ride (airport zone, shared, upfront) has its amount already;
+// the driver confirms only that the passenger paid. Idempotent, audited, completing driver only.
+export async function markFixedPaymentReceived(driverId: string, bookingId: string): Promise<{ ok: true } | { ok: false; status: number; code: string; message: string }> {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
+    const b = await tx.booking.findUnique({ where: { id: bookingId }, select: { status: true, priceType: true } });
+    if (!b) return err(404, 'NOT_FOUND', 'Trip not found.');
+    if (b.status !== 'COMPLETED') return err(409, 'NOT_COMPLETED', 'Only a completed trip can be marked paid.');
+    const asg = await tx.assignment.findFirst({ where: { bookingId, reason: 'completed' }, orderBy: { endedAt: 'desc' } });
+    if (!asg || asg.driverId !== driverId) return err(403, 'NOT_YOUR_TRIP', 'Only the driver who completed this trip can mark it paid.');
+    const fare = await tx.fare.findUnique({ where: { bookingId }, select: { priceType: true, paymentStatus: true } });
+    if (!fare || !isFixedPrice(fare.priceType)) return err(409, 'NOT_FIXED_PRICE', 'A meter trip is marked paid together with the meter amount.');
+    if (fare.paymentStatus === 'COLLECTED') return { ok: true as const }; // repeated tap
+    await tx.fare.update({ where: { bookingId }, data: { paymentStatus: 'COLLECTED' } });
+    await tx.auditEvent.create({ data: { actorId: driverId, actorRole: 'DRIVER', action: 'PAYMENT_RECEIVED', target: bookingId, detail: 'fixed price' } });
+    return { ok: true as const };
   });
 }
 
