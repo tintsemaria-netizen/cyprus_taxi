@@ -63,12 +63,33 @@ describe('Task 015 — application lifecycle + provisioning', () => {
     if (!r.ok) expect(r.code).toBe('INCOMPLETE');
   });
 
+  it('launch fixes §3: licence/insurance without a future expiry cannot be accepted or approved', async () => {
+    const { applicantId, appId } = await completeDraft();
+    expect((await submitApplication(applicantId)).ok).toBe(true);
+    await startReview(appId, 'admin');
+    const ins = (await prisma.applicationDocument.findFirst({ where: { applicationId: appId, slot: 'insurance' } }))!;
+    await prisma.applicationDocument.update({ where: { id: ins.id }, data: { scanStatus: 'CLEAN' } });
+    const noDate = await setDocumentDecision(appId, ins.id, 'ACCEPTED', undefined, 'admin');
+    expect(noDate.ok).toBe(false);
+    if (!noDate.ok) expect(noDate.code).toBe('EXPIRY_REQUIRED');
+    const past = await setDocumentDecision(appId, ins.id, 'ACCEPTED', undefined, 'admin', new Date(Date.now() - 86_400_000).toISOString());
+    expect(past.ok).toBe(false);
+    const future = await setDocumentDecision(appId, ins.id, 'ACCEPTED', undefined, 'admin', new Date(Date.now() + 200 * 86_400_000).toISOString());
+    expect(future.ok).toBe(true);
+    // Forced-accepted documents without dates still block approval.
+    await prisma.applicationDocument.updateMany({ where: { applicationId: appId }, data: { decision: 'ACCEPTED', scanStatus: 'CLEAN', expiresAt: null } });
+    const rev = (await prisma.driverApplication.findUnique({ where: { id: appId } }))!.revision;
+    const appr = await approveApplication(appId, 'admin', rev);
+    expect(appr.ok).toBe(false);
+    if (!appr.ok) expect(appr.code).toBe('EXPIRY_REQUIRED');
+  });
+
   it('complete application: submit → review → approve provisions ONE driver+vehicle+binding, off-duty & APPROVED', async () => {
     const { applicantId, appId } = await completeDraft();
     expect((await submitApplication(applicantId)).ok).toBe(true);
     expect((await prisma.driverApplication.findUnique({ where: { id: appId } }))!.status).toBe('SUBMITTED');
     await startReview(appId, 'admin');
-    await prisma.applicationDocument.updateMany({ where: { applicationId: appId }, data: { decision: 'ACCEPTED', scanStatus: 'CLEAN' } });
+    await prisma.applicationDocument.updateMany({ where: { applicationId: appId }, data: { decision: 'ACCEPTED', scanStatus: 'CLEAN', expiresAt: new Date(Date.now() + 365 * 86_400_000) } });
     const rev = (await prisma.driverApplication.findUnique({ where: { id: appId } }))!.revision;
     const appr = await approveApplication(appId, 'admin', rev);
     expect(appr.ok).toBe(true);
@@ -89,7 +110,7 @@ describe('Task 015 — application lifecycle + provisioning', () => {
     const { applicantId, appId } = await completeDraft();
     await submitApplication(applicantId);
     await startReview(appId, 'admin');
-    await prisma.applicationDocument.updateMany({ where: { applicationId: appId }, data: { decision: 'ACCEPTED', scanStatus: 'CLEAN' } });
+    await prisma.applicationDocument.updateMany({ where: { applicationId: appId }, data: { decision: 'ACCEPTED', scanStatus: 'CLEAN', expiresAt: new Date(Date.now() + 365 * 86_400_000) } });
     const stale = 999;
     const r = await approveApplication(appId, 'admin', stale);
     expect(r.ok).toBe(false);
@@ -126,7 +147,7 @@ describe('Task 015 — application lifecycle + provisioning', () => {
     const { applicantId, appId } = await completeDraft();
     await submitApplication(applicantId);
     await startReview(appId, 'admin');
-    await prisma.applicationDocument.updateMany({ where: { applicationId: appId }, data: { decision: 'ACCEPTED', scanStatus: 'CLEAN' } });
+    await prisma.applicationDocument.updateMany({ where: { applicationId: appId }, data: { decision: 'ACCEPTED', scanStatus: 'CLEAN', expiresAt: new Date(Date.now() + 365 * 86_400_000) } });
     const rev = (await prisma.driverApplication.findUnique({ where: { id: appId } }))!.revision;
     expect((await approveApplication(appId, 'admin', rev)).ok).toBe(true);
     const d = (await prisma.driver.findFirst({ where: { applicationId: appId } }))!;

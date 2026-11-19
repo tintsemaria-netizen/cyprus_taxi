@@ -37,6 +37,9 @@ function Reliability() {
     catch (e) { setErr(e instanceof ApiRequestError ? e.body.message : t('staff.rel.loadFailed')); }
   }, [days]);
   useEffect(() => { load(); }, [load]);
+  // Launch fixes §3: dependency states (SMS, malware scan, e-mail, push, maps, switches).
+  const [sys, setSys] = useState<{ env: string; deps: { key: string; state: 'ok' | 'warn' | 'missing'; note: string }[] } | null>(null);
+  useEffect(() => { api<NonNullable<typeof sys>>('/admin/system').then(setSys).catch(() => {}); }, []);
 
   async function openDriver(id: string) {
     if (open === id) { setOpen(null); return; }
@@ -58,6 +61,16 @@ function Reliability() {
           ))}
         </div>
       </div>
+      {sys && (
+        <div className="card p-3 text-sm" data-testid="system-status">
+          <div className="mb-1 font-semibold">{t('staff.alerts.system', { env: sys.env })}</div>
+          <ul className="grid gap-1 sm:grid-cols-2">
+            {sys.deps.map((d) => (
+              <li key={d.key} className="flex gap-2 text-xs"><span className={d.state === 'ok' ? 'text-accent' : d.state === 'warn' ? 'text-warn' : 'text-danger'}>●</span><span className="font-medium">{d.key}</span><span className="text-muted">{d.note}</span></li>
+            ))}
+          </ul>
+        </div>
+      )}
       {err && <p role="alert" className="rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}
       {!rows ? <p className="text-muted">{t('staff.loading')}</p> : (
         <div className="space-y-2">

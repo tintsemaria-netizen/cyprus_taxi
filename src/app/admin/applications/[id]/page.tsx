@@ -47,7 +47,9 @@ function Detail() {
     // Capture an expiry date on accept where the document type has one (drives DOCUMENTS_EXPIRED).
     let expiresAt: string | undefined;
     if (EXPIRY_SLOTS.includes(slot)) {
-      const d = await ask({ title: t('staff.apps.acceptDocTitle'), confirmLabel: t('staff.apps.accept'), input: { label: t('staff.apps.expiry'), type: 'date', hint: t('staff.apps.expiryHint') } });
+      // Licence, taxi licence, insurance, roadworthiness: the expiry date is required (launch fixes §3).
+      const must = ['licence_front', 'taxi_licence', 'insurance', 'roadworthiness'].includes(slot);
+      const d = await ask({ title: t('staff.apps.acceptDocTitle'), confirmLabel: t('staff.apps.accept'), input: { label: t('staff.apps.expiry'), type: 'date', required: must, hint: must ? t('staff.apps.expiryRequired') : t('staff.apps.expiryHint') } });
       if (d === null) return; // cancelled → nothing is accepted
       if (d) { const dt = new Date(d); if (!Number.isNaN(dt.getTime())) expiresAt = dt.toISOString(); }
     }

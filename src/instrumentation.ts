@@ -12,6 +12,12 @@
 // that is the pattern Next uses to node-gate it, so the worker's Node-only deps (web-push) are
 // never bundled for the edge runtime.
 export async function register() {
+  // Launch fixes §3 (ported report-only, 2026-11-23): a missing required secret is logged loudly and
+  // shown on admin «Надёжность»; the service still starts (refusing to boot could take the live site down).
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const missing = ['SESSION_SECRET', 'TRACKING_RECEIPT_SECRET', 'DATABASE_URL'].filter((n) => !process.env[n]);
+    if (missing.length) console.error(`[boot] Missing required env: ${missing.join(', ')}`);
+  }
   if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.DISPATCH_WORKER !== 'off') {
     const dedicated = process.env.DEDICATED_WORKERS === 'true';
     const isWorker = process.env.WORKER_ROLE === 'worker';

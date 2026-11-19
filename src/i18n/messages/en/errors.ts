@@ -1,6 +1,7 @@
 // Translations for API error codes shown to passengers/drivers. Unknown codes fall back to the
 // server's English message (see tError in I18nProvider).
 const errors = {
+  EXPIRY_REQUIRED: "Enter the document’s expiry date (in the future) to accept it.",
   ORDER_GONE: 'This ride was just taken or is no longer available.',
   DRIVER_BUSY: 'You already have an active trip or offer.',
   DRIVER_PROTECTED: 'You have a pre-booked ride soon, so you can’t take other rides now.',

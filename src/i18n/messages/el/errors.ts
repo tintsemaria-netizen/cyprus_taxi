@@ -2,6 +2,7 @@ import type { Catalog } from '../../types';
 import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
+  EXPIRY_REQUIRED: "Συμπληρώστε ημερομηνία λήξης (μελλοντική) για αποδοχή.",
   ORDER_GONE: 'Αυτή η διαδρομή μόλις αναλήφθηκε ή δεν είναι πλέον διαθέσιμη.',
   DRIVER_BUSY: 'Έχετε ήδη ενεργή διαδρομή ή προσφορά.',
   DRIVER_PROTECTED: 'Έχετε σύντομα προκράτηση, οπότε δεν μπορείτε να αναλάβετε άλλες διαδρομές τώρα.',

@@ -2,6 +2,7 @@ import type { Catalog } from '../../types';
 import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
+  EXPIRY_REQUIRED: "הזינו תאריך תפוגה עתידי כדי לאשר את המסמך.",
   ORDER_GONE: "הנסיעה הזו נלקחה זה עתה או שאינה זמינה עוד.",
   DRIVER_BUSY: "כבר יש לך נסיעה או הצעה פעילה.",
   DRIVER_PROTECTED: "יש לך בקרוב נסיעה שהוזמנה מראש, ולכן אי אפשר לקבל נסיעות אחרות כעת.",

@@ -2,6 +2,7 @@ import type { Catalog } from '../../types';
 import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
+  EXPIRY_REQUIRED: "Indiquez une date d’expiration future pour accepter le document.",
   ORDER_GONE: "Cette course vient d’être prise ou n’est plus disponible.",
   DRIVER_BUSY: "Vous avez déjà une course ou une offre en cours.",
   DRIVER_PROTECTED: "Vous avez bientôt une course réservée, vous ne pouvez donc pas en prendre d’autres maintenant.",

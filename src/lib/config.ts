@@ -21,6 +21,11 @@ function num(name: string, def: number): number {
   return Number.isFinite(n) ? n : def;
 }
 
+// APP_ENV=production marks the commercial service (launch fixes §3/§10). Ported 2026-11-23 as REPORT-ONLY:
+// we cannot see the live server's APP_ENV, and forcing «no test codes» / staff MFA / a boot check there
+// could lock drivers and staff out (no Twilio yet). Admin «Надёжность» shows the state; switch on later.
+const IS_PRODUCTION = (process.env.APP_ENV || 'beta') === 'production';
+
 export const config = {
   appBaseUrl: process.env.APP_BASE_URL || 'http://localhost:3000',
   // Hosts we will serve/emit in absolute links. APP_BASE_URL's host plus any extra
@@ -168,6 +173,7 @@ export const config = {
   // When true, ADMIN/DISPATCHER accounts without TOTP are limited to setting it up (2026-10-01 audit
   // Stage 1.2). Off by default so every privileged user can enroll first.
   staffMfaEnforce: process.env.STAFF_MFA_ENFORCE === 'true',
+  isProduction: IS_PRODUCTION,
   // Max trusted proxy entries skipped from the right of X-Forwarded-For (see clientIp). Behind
   // Cloudflare → nginx exactly ONE trusted entry is appended (the CF edge nginx saw).
   trustedProxyHops: num('TRUSTED_PROXY_HOPS', 1),
