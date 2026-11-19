@@ -196,6 +196,12 @@ const staff: Catalog<typeof en> = {
     expiry: 'Срок действия документа',
     expiryHint: 'Оставьте пустым, если срока действия нет.',
   },
+  alerts: {
+    title: 'Оповещения системы (7 дней)',
+    failedEmails: 'Чеки на e-mail не отправлены: {n}',
+    ALERT_PREBOOK_LAPSED: 'Предзаказ: водитель выпал',
+    ALERT_PREBOOK_LATE_RELEASE: 'Предзаказ снят поздно',
+  },
   rel: {
     title: 'Надёжность водителей',
     summary: 'Активных водителей: {n} · на проверку: {f} · за {d} дн.',

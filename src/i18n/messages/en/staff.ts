@@ -194,6 +194,12 @@ const staff = {
     expiry: 'Document expiry date',
     expiryHint: 'Leave empty if this document has no expiry.',
   },
+  alerts: {
+    title: 'System alerts (7 days)',
+    failedEmails: 'Receipt e-mails failed: {n}',
+    ALERT_PREBOOK_LAPSED: 'Pre-booking: driver dropped out',
+    ALERT_PREBOOK_LATE_RELEASE: 'Pre-booking released late',
+  },
   rel: {
     title: 'Driver reliability',
     summary: '{n} active drivers · {f} flagged for review · last {d} days',

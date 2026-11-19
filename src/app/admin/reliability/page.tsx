@@ -37,6 +37,9 @@ function Reliability() {
     catch (e) { setErr(e instanceof ApiRequestError ? e.body.message : t('staff.rel.loadFailed')); }
   }, [days]);
   useEffect(() => { load(); }, [load]);
+  // Launch fixes §8: system alerts (pre-booking lapsed / released late, failed receipt e-mails).
+  const [alerts, setAlerts] = useState<{ alerts: { at: string; kind: string; detail: string | null; bookingRef: string | null }[]; failedReceiptEmails: number } | null>(null);
+  useEffect(() => { api<NonNullable<typeof alerts>>('/admin/alerts').then(setAlerts).catch(() => {}); }, []);
 
   async function openDriver(id: string) {
     if (open === id) { setOpen(null); return; }
@@ -58,6 +61,17 @@ function Reliability() {
           ))}
         </div>
       </div>
+      {alerts && (alerts.alerts.length > 0 || alerts.failedReceiptEmails > 0) && (
+        <div className="card p-3 text-sm" data-testid="staff-alerts">
+          <div className="mb-1 font-semibold text-warn">{t('staff.alerts.title')}</div>
+          {alerts.failedReceiptEmails > 0 && <div className="text-xs text-muted">{t('staff.alerts.failedEmails', { n: alerts.failedReceiptEmails })}</div>}
+          <ul className="mt-1 space-y-1">
+            {alerts.alerts.slice(0, 10).map((a, i) => (
+              <li key={i} className="flex flex-wrap gap-x-2 text-xs"><span className="text-muted">{fmt.dateTime(a.at)}</span><span className="font-mono text-accent">{a.bookingRef ?? '—'}</span><span>{lbl(t, `staff.alerts.${a.kind}`, a.kind)}</span>{a.detail && <span className="text-muted">· {a.detail}</span>}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {err && <p role="alert" className="rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}
       {!rows ? <p className="text-muted">{t('staff.loading')}</p> : (
         <div className="space-y-2">

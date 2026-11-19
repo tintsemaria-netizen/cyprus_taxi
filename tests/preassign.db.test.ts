@@ -131,8 +131,29 @@ describe('conversion near pickup', () => {
     expect((await claimScheduled(d, b.id)).ok).toBe(true);
     await prisma.booking.update({ where: { id: b.id }, data: { scheduledAt: new Date(Date.now() + minutes * MIN) } });
     await prisma.preAssignment.updateMany({ where: { bookingId: b.id }, data: { pickupAt: new Date(Date.now() + minutes * MIN) } });
+    // Launch fixes §8: conversion needs live GPS within reach of the pickup — an on-duty driver here
+    // is 2 km from the airport pickup with a fresh fix.
+    if (onDuty) await gpsAt(d, lca.lat + 0.018, lca.lng);
     return { d, b };
   }
+  async function gpsAt(d: string, lat: number, lng: number, ageMs = 0) {
+    const at = new Date(Date.now() - ageMs);
+    const pos = { lat, lng, accuracyM: 8, sampledAt: at, receivedAt: at, gpsSession: `pa-${RUN}`, sequence: ++n };
+    await prisma.latestDriverLocation.upsert({ where: { driverId: d }, update: pos, create: { driverId: d, ...pos } });
+  }
+
+  it('launch fixes §8: no live GPS or too far to make it → waits, then lapses with a staff alert', async () => {
+    const { d, b } = await committed(P.convertMinutes - 5, true);
+    await gpsAt(d, lca.lat, lca.lng, 10 * 60_000); // last fix 10 min ago
+    expect((await runPreassignments(new Date())).converted).toBe(0);
+    expect((await prisma.preAssignment.findFirst({ where: { bookingId: b.id } }))!.status).toBe('COMMITTED');
+    await gpsAt(d, 35.17, 33.36); // fresh, but in Nicosia — ~50 km away, cannot make a 25-min pickup
+    expect((await runPreassignments(new Date())).converted).toBe(0);
+    await prisma.preAssignment.updateMany({ where: { bookingId: b.id }, data: { pickupAt: new Date(Date.now() + (config.dispatch.scheduleLeadMinutes - 1) * MIN) } });
+    expect((await runPreassignments(new Date())).lapsed).toBe(1);
+    const alert = await prisma.auditEvent.findFirst({ where: { action: 'ALERT_PREBOOK_LAPSED', target: b.id } });
+    expect(alert?.detail).toMatch(/too far/);
+  });
 
   it('a free, on-duty driver gets the real assignment (start code, ASSIGNED)', async () => {
     const { d, b } = await committed(P.convertMinutes - 5, true);

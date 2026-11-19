@@ -189,8 +189,21 @@ export async function releaseScheduled(driverId: string, bookingId: string, now:
     await endPreAssignmentTx(tx, bookingId, 'RELEASED', late ? 'driver released late' : 'driver released');
     await tx.bookingEvent.create({ data: { bookingId, type: 'PREASSIGN_RELEASED', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED', reason: late ? 'late release' : null } });
     await enqueuePassengerDriverNews(tx, bookingId, 'change', 'Driver change', 'Your confirmed driver can no longer make it. We will find you another driver automatically before pickup.');
+    if (late) await staffAlertTx(tx, 'ALERT_PREBOOK_LATE_RELEASE', bookingId, 'driver released a pre-booking late');
     return { ok: true, status: late ? 'RELEASED_LATE' : 'RELEASED' };
   });
+}
+
+// Launch fixes §8: straight-line ETA check at conversion (no Google call inside the row lock).
+// Road ≈ 1.3 × straight line at ~45 km/h average; a driver may be up to 10 min late before the ride
+// is handed to automatic dispatch instead.
+const PREBOOK_ROAD_KMH = 45;
+const PREBOOK_ROAD_FACTOR = 1.3;
+const PREBOOK_LATE_GRACE_MIN = 10;
+
+/** Staff alert: an audit row the admin «Reliability» screen lists (no PII in detail). */
+export async function staffAlertTx(tx: Prisma.TransactionClient, action: `ALERT_${string}`, bookingId: string, detail: string): Promise<void> {
+  await tx.auditEvent.create({ data: { actorRole: 'SYSTEM', action, target: bookingId, detail: detail.slice(0, 200) } });
 }
 
 // ---- worker step (runs every dispatch tick, BEFORE scheduled promotion) ----
@@ -208,11 +221,17 @@ export async function runPreassignments(now: Date = new Date()): Promise<{ remin
   }
 
   // 2) Convert (or lapse) commitments inside the conversion window.
-  const window = await prisma.preAssignment.findMany({ where: { status: 'COMMITTED', pickupAt: { lte: new Date(now.getTime() + p.convertMinutes * MIN) } }, select: { bookingId: true }, take: 25 });
+  // Launch fixes §8: earliest pickup first, and one failing ride never stalls the others (or the
+  // rest of the dispatch tick).
+  const window = await prisma.preAssignment.findMany({ where: { status: 'COMMITTED', pickupAt: { lte: new Date(now.getTime() + p.convertMinutes * MIN) } }, select: { bookingId: true }, orderBy: { pickupAt: 'asc' }, take: 25 });
   for (const w of window) {
-    const r = await convertOne(w.bookingId, now);
-    if (r === 'converted') converted++;
-    if (r === 'lapsed') lapsed++;
+    try {
+      const r = await convertOne(w.bookingId, now);
+      if (r === 'converted') converted++;
+      if (r === 'lapsed') lapsed++;
+    } catch (e) {
+      console.error('[preassign] conversion failed', w.bookingId, e instanceof Error ? e.message : e);
+    }
   }
   return { reminded, converted, lapsed };
 }
@@ -232,6 +251,7 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
       await endPreAssignmentTx(tx, bookingId, 'LAPSED', why, { notifyDriver: driverMsg });
       await tx.bookingEvent.create({ data: { bookingId, type: 'PREASSIGN_LAPSED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED', reason: why } });
       await enqueuePassengerDriverNews(tx, bookingId, 'change', 'Finding you a driver', passengerMsg);
+      await staffAlertTx(tx, 'ALERT_PREBOOK_LAPSED', bookingId, why); // staff see it in admin → reliability
       return 'lapsed' as const;
     };
 
@@ -245,7 +265,14 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
     if (await isPairBlocked(pa.driverId, b.passengerId, tx)) {
       return lapse('pair blocked by a 1-star rating', 'We are finding you another driver automatically.', 'Your pre-booked ride was released.');
     }
-    const busy = !driver.onDuty
+    // Launch fixes §8: converting means «go now», so the driver must be online, accepting rides
+    // (not paused), with live GPS, and close enough to make the pickup — otherwise keep waiting
+    // until the cut-off, then hand the ride to automatic dispatch.
+    const loc = await tx.latestDriverLocation.findUnique({ where: { driverId: pa.driverId } });
+    const gpsFresh = !!loc && now.getTime() - loc.receivedAt.getTime() <= config.dispatch.gpsLossRematchSeconds * 1000;
+    const etaMin = loc ? haversineMeters({ lat: loc.lat, lng: loc.lng }, { lat: b.pickupLat, lng: b.pickupLng }) / 1000 / PREBOOK_ROAD_KMH * 60 * PREBOOK_ROAD_FACTOR : Infinity;
+    const tooFar = etaMin > (pa.pickupAt.getTime() - now.getTime()) / MIN + PREBOOK_LATE_GRACE_MIN;
+    const busy = !driver.onDuty || !driver.available || !gpsFresh || tooFar
       || !!(await tx.assignment.findFirst({ where: { activeDriverId: pa.driverId }, select: { id: true } }))
       || !!(await tx.driverOffer.findFirst({ where: { activeDriverId: pa.driverId }, select: { id: true } }));
     if (busy) {
@@ -254,7 +281,7 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
       const isPair = !!(await tx.shareGroup.findFirst({ where: { activeHostBookingId: bookingId, status: 'MATCHED' }, select: { id: true } }));
       const cutoff = isPair ? config.share.pairLapseMinutes : config.dispatch.scheduleLeadMinutes;
       if (pa.pickupAt.getTime() - now.getTime() > cutoff * MIN) return 'waiting';
-      return lapse(driver.onDuty ? 'driver busy at conversion' : 'driver offline at conversion',
+      return lapse(!driver.onDuty ? 'driver offline at conversion' : !gpsFresh ? 'driver GPS lost at conversion' : tooFar ? `driver too far at conversion (~${Math.round(etaMin)} min)` : 'driver busy at conversion',
         'Your confirmed driver could not make it in time. We are finding you another driver automatically.',
         driver.onDuty ? 'Your pre-booked ride was handed to automatic dispatch because you were still on another trip.' : 'Your pre-booked ride was handed to automatic dispatch because you were offline.');
     }
