@@ -256,10 +256,18 @@ export async function repairSearchWithoutJob(now: Date = new Date()): Promise<nu
 // The search deadline runs to pickup time (never reserving a driver for hours ahead).
 export async function promoteScheduled(now: Date): Promise<void> {
   const leadMs = config.dispatch.scheduleLeadMinutes * 60 * 1000;
+  // Ride-share pairs (Task 022) go online earlier than other pre-bookings.
+  const pairLeadMs = config.share.pairSearchLeadMinutes * 60 * 1000;
   const due = await prisma.booking.findMany({
     // A ride a driver has pre-booked is handled by runPreassignments (converted or lapsed), never
     // searched in parallel.
-    where: { status: 'REQUESTED', scheduledAt: { not: null, lte: new Date(now.getTime() + leadMs) }, preAssignments: { none: { status: 'COMMITTED' } } },
+    where: {
+      status: 'REQUESTED', preAssignments: { none: { status: 'COMMITTED' } },
+      OR: [
+        { scheduledAt: { not: null, lte: new Date(now.getTime() + leadMs) } },
+        { scheduledAt: { not: null, lte: new Date(now.getTime() + pairLeadMs) }, shareAsHost: { some: { status: 'MATCHED', activeHostBookingId: { not: null } } } },
+      ],
+    },
     select: { id: true },
     take: 25,
   });

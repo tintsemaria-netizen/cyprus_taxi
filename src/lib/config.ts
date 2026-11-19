@@ -51,9 +51,7 @@ export const config = {
   // Autonomous dispatch tunables (Task 012 §4.4/§6.4 — our own beta engineering
   // defaults, clearly labelled, not statutory Cyprus rules).
   dispatch: {
-    // A pre-booking nobody has pre-assigned is offered to online drivers this long before pickup
-    // (2026-11-19, operator: 30 min; was 15).
-    scheduleLeadMinutes: num('DISPATCH_SCHEDULE_LEAD_MINUTES', 30),
+    scheduleLeadMinutes: num('DISPATCH_SCHEDULE_LEAD_MINUTES', 15), // promote a scheduled ride to SEARCHING this long before pickup
     searchDeadlineSeconds: num('DISPATCH_SEARCH_DEADLINE_SECONDS', 180),
     arrivalRadiusMeters: num('DISPATCH_ARRIVAL_RADIUS_METERS', 150), // driver must be within this of pickup to mark ARRIVED (airport zones exempt)
     waitingGraceSeconds: num('DISPATCH_WAITING_GRACE_SECONDS', 180), // free wait after arrival (TEST default 3 min)
@@ -65,9 +63,6 @@ export const config = {
     preassign: {
       horizonHours: num('PREASSIGN_HORIZON_HOURS', 72), // how far ahead drivers can commit
       convertMinutes: num('PREASSIGN_CONVERT_MINUTES', 30), // convert into a real assignment this long before pickup
-      // A pre-assigned driver still busy/offline is waited for until this long before pickup, then the
-      // ride is offered to online drivers (2026-11-19, operator: «за 30 или 20 минут»).
-      lapseMinutes: num('PREASSIGN_LAPSE_MINUTES', 20),
       protectMinutes: num('PREASSIGN_PROTECT_MINUTES', 75), // no new immediate offers this close to a commitment
       remindMinutes: num('PREASSIGN_REMIND_MINUTES', 60), // driver reminder push
       lateReleaseMinutes: num('PREASSIGN_LATE_RELEASE_MINUTES', 60), // releasing later than this is flagged
@@ -85,6 +80,11 @@ export const config = {
     noShowFeeCents: num('SHARE_NO_SHOW_FEE_CENTS', 1000), // flat no-show fee on a pre-booked pair (€10; never above their price)
     defaultMaxExtraMin: num('SHARE_DEFAULT_MAX_EXTRA_MIN', 15),
     defaultWaitMin: num('SHARE_DEFAULT_WAIT_MIN', 15), // pre-booking: how long a passenger can wait for the co-rider
+    // Pre-booked PAIRS only (operator, 2026-11-19; other pre-bookings keep the normal lead): an
+    // unclaimed pair is offered to online co-rider drivers this long before pickup, and a pair's
+    // pre-assigned driver who is still busy/offline is waited for until pairLapseMinutes.
+    pairSearchLeadMinutes: num('SHARE_PAIR_SEARCH_LEAD_MINUTES', 30),
+    pairLapseMinutes: num('SHARE_PAIR_LAPSE_MINUTES', 20),
     luggage: { COMFORT: num('SHARE_LUGGAGE_COMFORT', 4), XL: num('SHARE_LUGGAGE_XL', 7) } as Record<'COMFORT' | 'XL', number>,
   },
   // Pricing mode (Task 012 §6.1). Real charges stay REGULATED_METER_ESTIMATE unless a

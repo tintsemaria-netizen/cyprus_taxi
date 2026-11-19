@@ -248,7 +248,10 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
       || !!(await tx.driverOffer.findFirst({ where: { activeDriverId: pa.driverId }, select: { id: true } }));
     if (busy) {
       // Keep trying until the normal scheduled-search lead; then fall back to automatic search.
-      if (pa.pickupAt.getTime() - now.getTime() > config.dispatch.preassign.lapseMinutes * MIN) return 'waiting';
+      // A ride-share pair waits for its driver until pairLapseMinutes, other rides until the normal lead.
+      const isPair = !!(await tx.shareGroup.findFirst({ where: { activeHostBookingId: bookingId, status: 'MATCHED' }, select: { id: true } }));
+      const cutoff = isPair ? config.share.pairLapseMinutes : config.dispatch.scheduleLeadMinutes;
+      if (pa.pickupAt.getTime() - now.getTime() > cutoff * MIN) return 'waiting';
       return lapse(driver.onDuty ? 'driver busy at conversion' : 'driver offline at conversion',
         'Your confirmed driver could not make it in time. We are finding you another driver automatically.',
         driver.onDuty ? 'Your pre-booked ride was handed to automatic dispatch because you were still on another trip.' : 'Your pre-booked ride was handed to automatic dispatch because you were offline.');

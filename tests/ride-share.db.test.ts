@@ -356,6 +356,38 @@ describe('pre-booked ride-share', () => {
     expect((await prisma.shareGroup.findUniqueOrThrow({ where: { id: g.id } })).status).toBe('ACCEPTED');
   });
 
+  it('only the pair goes online 30 min before; an ordinary pre-booking keeps the normal 15 min', async () => {
+    const { a, b } = await matchedPair(); // pair at +25 min
+    const plain = await scheduled(larnacaTown, marina, 25, { share: false });
+    const { promoteScheduled } = await import('@/server/dispatch/worker');
+    await promoteScheduled(new Date());
+    expect((await fresh(a.id)).status).toBe('SEARCHING');
+    expect((await fresh(b.id)).status).toBe('REQUESTED'); // rides with the host's driver
+    expect((await fresh(plain.id)).status).toBe('REQUESTED'); // 25 min > 15 min lead
+  });
+
+  it('a pair’s pre-assigned driver who is busy is waited for until 20 min before, then online search', async () => {
+    const a = await scheduled(lca, marina, 180);
+    const b = await scheduled(lcaNear, limCentre, 190);
+    await matchPrebookings();
+    const g = (await prisma.shareGroup.findFirst({ where: { hostBookingId: a.id } }))!;
+    await answerShare(g.id, { kind: 'PASSENGER', bookingId: a.id }, true);
+    await answerShare(g.id, { kind: 'PASSENGER', bookingId: b.id }, true);
+    const d = await driver('Andreas', { onDuty: false });
+    expect((await claimScheduled(d.driverId, a.id)).ok).toBe(true);
+    const at = async (min: number) => {
+      await prisma.booking.updateMany({ where: { id: { in: [a.id, b.id] } }, data: { scheduledAt: new Date(Date.now() + min * MIN) } });
+      await prisma.preAssignment.updateMany({ where: { bookingId: a.id }, data: { pickupAt: new Date(Date.now() + min * MIN) } });
+      return runPreassignments();
+    };
+    expect((await at(22)).lapsed).toBe(0); // still waiting for the offline driver
+    expect((await at(19)).lapsed).toBe(1);
+    const { promoteScheduled } = await import('@/server/dispatch/worker');
+    await promoteScheduled(new Date());
+    expect((await fresh(a.id)).status).toBe('SEARCHING');
+    expect((await prisma.shareGroup.findUniqueOrThrow({ where: { id: g.id } })).status).toBe('MATCHED'); // still a pair, searched online
+  });
+
   it('with no co-rider driver online the pair splits into two normal rides at the full price', async () => {
     const { a, b, g } = await matchedPair();
     await driver('Maria', { acceptsShared: false });
@@ -365,6 +397,7 @@ describe('pre-booked ride-share', () => {
     expect((await prisma.shareGroup.findUniqueOrThrow({ where: { id: g.id } })).status).toBe('ENDED');
     await promoteScheduled(new Date());
     const [ha, hb] = await Promise.all([fresh(a.id), fresh(b.id)]);
-    expect([ha.status, ha.fareCents, hb.status, hb.fareCents]).toEqual(['SEARCHING', 6000, 'SEARCHING', 6000]);
+    // The host keeps searching; the co-rider is now an ordinary pre-booking (online at the normal 15 min).
+    expect([ha.status, ha.fareCents, hb.status, hb.fareCents]).toEqual(['SEARCHING', 6000, 'REQUESTED', 6000]);
   });
 });

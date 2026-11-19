@@ -4,8 +4,8 @@
 
 - Operator asked: show before uploading. Everything is in the working tree of this session; nothing committed to `main`.
 - See Tasks/022-RIDESHARE-POPUTCHIK.md for the rules, files and known limits.
-- Round 2 (same day): towns list instead of «intercity», passenger-chosen wait for pre-bookings, answer ≤ 1 h before pickup, €10 no-show, Google road time with traffic + arrival times + stop order, pairs offered online 30 min before; ALL pre-bookings now search online 30 min before (was 15), pre-assigned driver waited for until 20 min.
-- Evidence: vitest 292 passed / 1 skipped (14 ride-share tests), tsc clean; local build clicked through
+- Round 2 (same day): towns list instead of «intercity», passenger-chosen wait for pre-bookings, answer ≤ 1 h before pickup, €10 no-show, Google road time with traffic + arrival times + stop order, pairs offered online 30 min before (pre-assigned pair driver waited for until 20 min) — ONLY pairs; other pre-bookings unchanged (15 min).
+- Evidence: vitest 294 passed / 1 skipped (16 ride-share tests), tsc clean; local build clicked through
   (booking option, live proposal to passenger + driver, both yes → second-passenger pill, pre-booking proposal, board pair, profile switch).
 - Next: operator's OK → commit on a branch, push, deploy (migration `20261119010000_ride_share` runs on deploy).
 

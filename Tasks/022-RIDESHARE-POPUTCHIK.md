@@ -24,14 +24,12 @@ build (screenshots shown to the operator). Not tried on a real phone or with Goo
   arrive — no names, phones or addresses. Both yes → the pickup times move to the shared departure
   (restored if the pair breaks up) and the pair is one order on the pre-bookings board for drivers
   with «Беру попутчиков» and enough seats.
-- **Search times (all pre-bookings, 2026-11-19)**: a pre-booking nobody pre-assigned is offered to
-  online drivers 30 min before pickup (`DISPATCH_SCHEDULE_LEAD_MINUTES`, was 15). A pre-assigned
-  driver becomes active 30 min before; if still busy/offline he is waited for until 20 min before
-  (`PREASSIGN_LAPSE_MINUTES`), then online search. A pair is offered only to online drivers who
-  take co-riders (co-rider joins on accept); if none, it splits into two normal rides (full price).
-- Price: each passenger gets `SHARE_DISCOUNT_PCT` (30 %) off **only if the co-rider actually joins**
-  (price type `SHARED_FIXED`, final). The driver earns both shared prices. Nobody joins → our
-  normal price.
+- **Search times — ride-share pairs only** (operator, 2026-11-19; other pre-bookings unchanged:
+  online search 15 min before): an unclaimed pair is offered to online co-rider drivers 30 min
+  before pickup (`SHARE_PAIR_SEARCH_LEAD_MINUTES`); a pair's pre-assigned driver becomes active 30 min
+  before and, if still busy/offline, is waited for until 20 min before (`SHARE_PAIR_LAPSE_MINUTES`),
+  then the pair is searched online. If no co-rider driver is online, the pair splits into two
+  normal rides (full price, normal timing).
 - Times: every plan is road-routed with Google Routes (traffic-aware, at the ride's own time for
   pre-bookings; cached 10 min) when Google is configured; otherwise a straight-line estimate
   marked «примерно». Each passenger sees their own arrival time; the driver sees the stop order
