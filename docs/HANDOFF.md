@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-19 — Passenger tracking: trip in progress without the car's position
+
+- User screenshot (Larnaca airport, «В пути», no car on the map): the map was a close-up of the destination with the route cut off. Cause: no live car position (GPS stale/disconnected — e.g. driver app in the background), so only one marker → `framePoint` close-up, route ignored.
+- Fix: TrackApp passes `fitRoute` for IN_PROGRESS too; GoogleMapView/MapView frame «one point + route» like two points (whole route above the sheet). With a live car nothing changes (keep-in-view camera).
+
 ## 2026-11-19 — Own Cyprus address base (OpenStreetMap) + destination postcodes — DEPLOYED (unattended, user asleep)
 
 - User: load ALL Cyprus places (restaurants, schools, churches, beaches, hospitals, clinics, every village hotel…) with postcodes, refresh weekly, «прям все грузи и заливай».

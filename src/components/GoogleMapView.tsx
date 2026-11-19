@@ -329,7 +329,9 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     // A focus point with its own zoom owns the camera (2026-11-17): don't fit the markers around it.
     if (focus && focusZoom != null) return;
     const pad = fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 };
-    if (markers.length >= 2) {
+    // One point + a drawn route (2026-11-19: trip in progress while the car's position is not known)
+    // frames the whole route too, instead of a close-up of the destination with the line cut off.
+    if (markers.length >= 2 || (markers.length === 1 && fitRoute && route && route.length > 1)) {
       const b = new g.LatLngBounds();
       markers.forEach((m) => b.extend({ lat: m.lat, lng: m.lng }));
       // The drawn route can bulge outside its end points — include it so all of it shows.

@@ -385,7 +385,7 @@ export default function TrackApp() {
       <div className="relative flex-1">
         <div className="absolute inset-0">
           <AutoMapView markers={markers} route={shownRoute.length ? shownRoute : undefined} center={view.pickup} zoom={12} interactive className="h-full w-full"
-            fitPadding={mapPad} fitRoute={view.status === 'SEARCHING' || liveTrip || view.status === 'ASSIGNED' || view.status === 'EN_ROUTE'} keepInView={liveTrip}
+            fitPadding={mapPad} fitRoute={view.status === 'SEARCHING' || liveTrip || view.status === 'ASSIGNED' || view.status === 'EN_ROUTE' || view.status === 'IN_PROGRESS'} keepInView={liveTrip}
             idleReturnMs={4000} />
         </div>
 

@@ -217,7 +217,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       if (key === lastFit.current) return;
       lastFit.current = key;
       if (focus && focusZoomProp != null) return; // a focus point with its own zoom owns the camera (2026-11-17)
-      if (markers.length >= 2) {
+      if (markers.length >= 2 || (markers.length === 1 && fitRoute && route && route.length > 1)) { // route + one point (2026-11-19)
         const b = new maplibre.LngLatBounds();
         markers.forEach((m) => b.extend([m.lng, m.lat]));
         if (fitRoute && route) route.forEach((p) => b.extend(p as [number, number]));
