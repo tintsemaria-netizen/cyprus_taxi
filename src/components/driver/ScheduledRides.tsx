@@ -249,6 +249,8 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
                   <span className="rounded-md border-2 border-white/25 px-2 py-0.5 text-[15px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${d.vClass}` as 'common.vClass.COMFORT')}</span>
                 </span>
               </div>
+              {/* A pair has its own stop list and totals instead of one passenger's from/to and sum. */}
+              {!d.pair && <>
               <div className="mt-2 space-y-1 text-sm">
                 <div className="flex gap-2"><span className="text-accent">●</span><span className="min-w-0 font-medium">{d.pickup.label}</span></div>
                 <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0 font-medium">{d.dropoff.label}<Postcode code={d.dropoff.postcode} /></span></div>
@@ -258,6 +260,7 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.scheduled.trip')}</span><span className="font-medium">{km(d.trip.distanceM)} · {t('driver.offer.minShort', { min: Math.max(1, Math.round(d.trip.etaSec / 60)) })}</span>{!d.trip.roadRouted && <span className="text-xs text-muted">≈</span>}</div>
                 <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{d.fareCents != null ? fareRangeText(d.fareCents, d.priceType, (c) => fmt.money(c)) : '—'}</span></div>
               </div>
+              </>}
               {d.pair ? <PairStops p={d.pair} /> : d.share && <SharePairBox s={d.share} />}
               {d.note && <p className="mt-2 rounded-[10px] border border-warn/30 bg-warn/5 px-2.5 py-1.5 text-xs text-warn">💬 {d.note}</p>}
               {d.flightNumber && <p className="mt-2 font-mono text-xs text-ink">{t('driver.scheduled.flight', { flight: formatFlight(d.flightNumber) })}</p>}
