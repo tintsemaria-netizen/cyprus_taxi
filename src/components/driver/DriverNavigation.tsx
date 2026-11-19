@@ -20,7 +20,7 @@ import EdgeShine from '@/components/EdgeShine';
 // One size for every driver action button (2026-11-18): like «Выйти на линию» — 65 % wide, 53 px,
 // round, bold, glint on the rim.
 const STAGE_BTN = 'relative mx-auto block h-[53px] w-[65%] rounded-full bg-accent text-[16px] font-bold text-[#0d1608] shadow-lg active:scale-[0.99]';
-import { CarStreetChip } from '@/components/useStreetName';
+import { useStreetName } from '@/components/useStreetName';
 import { bearingDeg, cumulative, distM, locate, maneuverIcon, nextStep, offsetPoint, promptBand, roundNavDistance, type LatLng, type NavStep } from '@/lib/nav';
 
 // Full-screen navigation for an accepted ride (replaces the tabbed driver UI while a trip is
@@ -176,6 +176,7 @@ export function DriverNavigation(props: {
   const remainingSec = route && remainingM != null && route.distanceM > 0 ? Math.round(route.durationSec * (remainingM / route.distanceM)) : null;
   const upcoming = route && progress ? nextStep(route.steps, cum, progress.alongM) : null;
   const atTarget = !waitingAtPickup && pos != null && distM(pos, target) < 50;
+  const street = useStreetName(pos);
   const rerouting = !!progress && progress.offRouteM > OFF_ROUTE_M;
 
   function distLabel(m: number) {
@@ -308,8 +309,6 @@ export function DriverNavigation(props: {
             zoom-out that stays put. */}
         <AutoMapView markers={markers} route={routeLine} center={pos ?? target} zoom={15} interactive className="h-full w-full" keepInView routeWidth={8}
           follow={follow} onFollowBreak={() => setFollowing(false)} idleReturnMs={4000} onIdleReturn={() => setFollowing(true)} fitPadding={wide ? { top: 60, right: 50, bottom: 60, left: 470 } : { top: 60, right: 50, bottom: panelOpen ? 520 : 330, left: 50 }} />
-        {/* The street we are on (2026-11-17): the map labels only main roads at this zoom. */}
-        <CarStreetChip pos={pos} />
         <div className="absolute end-3 top-3 flex flex-col gap-2">
           <button onClick={toggleMute} className="flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-lg" aria-label={muted ? t('driver.navigation.unmute') : t('driver.navigation.mute')} aria-pressed={muted}>{muted ? '🔇' : '🔊'}</button>
         </div>
@@ -340,12 +339,19 @@ export function DriverNavigation(props: {
           </a>
         </div>
       {/* ☰ right above the stage button (2026-11-18): rides up and down with the sheet. */}
-      {canRelease && (
-        <div className="pointer-events-none flex justify-end px-3 pb-2">
-          <button type="button" onClick={() => setMenuOpen(true)} data-testid="nav-menu" aria-label={t('driver.navigation.menu')} title={t('driver.navigation.menu')}
+      {/* The street the car is on (2026-11-17; 2026-11-19 moved down here, next to ☰, so it never covers
+          the turn hint): the map labels only the main roads at this zoom. */}
+      {(canRelease || street) && (
+        <div className="pointer-events-none relative flex min-h-[44px] items-center justify-end px-3 pb-2">
+          {street && (
+            <div className="absolute inset-x-16 top-0 flex h-[44px] items-center justify-center" data-testid="street-chip">
+              <span className="max-w-full truncate rounded-full border border-white/15 bg-[#10191C]/90 px-3 py-1.5 text-[14px] font-semibold text-ink shadow">{street}</span>
+            </div>
+          )}
+          {canRelease && <button type="button" onClick={() => setMenuOpen(true)} data-testid="nav-menu" aria-label={t('driver.navigation.menu')} title={t('driver.navigation.menu')}
             className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-ink shadow-lg">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M5 7h14M5 12h14M5 17h14" /></svg>
-          </button>
+          </button>}
         </div>
       )}
       {/* Action bar: the one action for this stage — separate, above the info sheet, always visible. */}

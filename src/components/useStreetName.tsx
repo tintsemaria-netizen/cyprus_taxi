@@ -8,17 +8,19 @@ import { haversineMeters } from '@/lib/geo';
 export function useStreetName(pos: { lat: number; lng: number } | null | undefined, enabled = true): string | null {
   const [name, setName] = useState<string | null>(null);
   const last = useRef<{ lat: number; lng: number; at: number } | null>(null);
+  // Unmount guard only: a re-render while a lookup is in flight must not throw its answer away
+  // (the next lookup is throttled, so the chip would stay empty — seen on the passenger page).
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const lat = pos?.lat, lng = pos?.lng;
   useEffect(() => {
     if (!enabled || lat == null || lng == null) return;
     const l = last.current;
     if (l && (Date.now() - l.at < 8000 || haversineMeters(l, { lat, lng }) < 80)) return;
     last.current = { lat, lng, at: Date.now() };
-    let alive = true;
     api<{ name: string | null }>(`/places/street?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}`)
-      .then((r) => { if (alive) setName(r.name); })
+      .then((r) => { if (mounted.current) setName(r.name); })
       .catch(() => { /* keep the last name */ });
-    return () => { alive = false; };
   }, [lat, lng, enabled]);
   return enabled ? name : null;
 }
