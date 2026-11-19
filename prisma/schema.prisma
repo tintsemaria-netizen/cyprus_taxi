@@ -986,3 +986,41 @@ model ShareGroup {
   @@index([guestBookingId])
   @@index([hostBookingId])
 }
+
+// Commission — CALCULATION MODE ONLY (launch fixes §9, 2026-11-20). No business rate is approved:
+// rules are entered by an admin and every figure is labelled «расчётный режим». Nothing here asks a
+// driver to pay, blocks offers or charges anyone. Amounts in integer cents.
+model CommissionRule {
+  id            String   @id @default(uuid())
+  version       Int      @unique
+  rateBp        Int // basis points of the confirmed ride total (1200 = 12 %)
+  base          String   @default("CONFIRMED_TOTAL") // only base supported
+  currency      String   @default("EUR")
+  effectiveFrom DateTime // applies to rides completed at/after this moment
+  note          String?
+  createdById   String
+  createdAt     DateTime @default(now())
+
+  @@index([effectiveFrom])
+}
+
+// Append-only ledger. Signed amounts: ACCRUAL/ADJUSTMENT (+/−) = commission owed;
+// PAYMENT (−) = money an admin confirmed as received; CREDIT (−) / WRITE_OFF (−) = admin decisions.
+// sourceKey makes every entry idempotent (a replayed event or double tap never books twice).
+model CommissionEntry {
+  id          String   @id @default(uuid())
+  driverId    String
+  bookingId   String?
+  kind        String // ACCRUAL | ADJUSTMENT | PAYMENT | CREDIT | WRITE_OFF
+  amountCents Int
+  currency    String   @default("EUR")
+  ruleVersion Int?
+  basisCents  Int? // confirmed ride total the accrual was computed from
+  sourceKey   String   @unique
+  note        String?
+  createdById String? // staff id for manual entries; null = system
+  createdAt   DateTime @default(now())
+
+  @@index([driverId, createdAt])
+  @@index([bookingId])
+}

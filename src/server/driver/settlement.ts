@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { releaseReceiptEmail } from '@/server/email/receipts';
+import { accrueCommissionTx } from '@/server/commission';
 import { isFixedPrice } from '@/lib/price-type';
 import { config } from '@/lib/config';
 import { recordEvent, driverPseudo } from '@/server/events';
@@ -85,6 +86,7 @@ export async function reportSettlement(
       aggregateType: 'settlement', aggregateId: bookingId, aggregateVersion: nextRev, correlationId: bookingId,
       payload: { bookingId, driverPseudo: driverPseudo(driverId), reportedFinalCents: input.reportedFinalCents, currency, paymentReceived: !!input.paymentReceived, revision: nextRev },
     });
+    await accrueCommissionTx(tx, bookingId); // calculation mode only (launch fixes §9); a correction books the difference
     if (nextRev === 1) await releaseReceiptEmail(tx, bookingId); // receipt e-mail now carries the real amount
     return { ok: true, settlement: view(s) };
   });

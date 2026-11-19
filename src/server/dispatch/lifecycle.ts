@@ -1,4 +1,5 @@
 import { meterWaitingCents } from '@/lib/tariff';
+import { accrueCommissionTx } from '@/server/commission';
 import { isFixedPrice } from '@/lib/price-type';
 import { enqueueReceiptEmail } from '@/server/email/receipts';
 import { randomInt } from 'crypto';
@@ -121,6 +122,8 @@ async function finalizeCompletion(
   await tx.bookingEvent.create({ data: { bookingId: b.id, type: 'COMPLETED', actorType: actor.type, actorId: actor.id, beforeStatus: 'IN_PROGRESS', afterStatus: 'COMPLETED' } });
   // E-mailed receipt (2026-11-17): queued atomically with the completion; the worker sends it.
   await enqueueReceiptEmail(tx, b.id);
+  // Commission (calculation mode only, launch fixes §9): a fixed price is confirmed right here.
+  await accrueCommissionTx(tx, b.id);
   // Completed-booking projection + a separate fare fact (money is analyzed from the fare
   // event; finalCents may be null under regulated metering — never coerced to 0).
   await recordEvent(tx, {

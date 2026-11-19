@@ -49,14 +49,14 @@ async function seedDrivers(count: number) {
   const now = new Date();
   const users: { id: string; login: string; role: 'DRIVER'; passwordHash: string; active: boolean; displayName: string }[] = [];
   const vehicles: { id: string; plate: string; make: string; model: string; color: string; vClass: 'COMFORT'; seats: number; active: boolean }[] = [];
-  const drivers: { id: string; userId: string; publicName: string; phone: string; active: boolean; onDuty: boolean; available: boolean }[] = [];
+  const drivers: { id: string; userId: string; publicName: string; phone: string; active: boolean; onDuty: boolean; available: boolean; eligibility: 'APPROVED' }[] = [];
   const bindings: { id: string; driverId: string; vehicleId: string; activeDriverId: string; activeVehicleId: string }[] = [];
   const locations: { driverId: string; lat: number; lng: number; accuracyM: number; sampledAt: Date; receivedAt: Date; gpsSession: string; sequence: number }[] = [];
   for (let i = 0; i < count; i++) {
     const uid = randomUUID(), did = randomUUID(), vid = randomUUID();
     users.push({ id: uid, login: `load-${i}-${uid.slice(0, 8)}`, role: 'DRIVER', passwordHash: 'loadtest-nohash', active: true, displayName: `LoadDriver${i}` });
     vehicles.push({ id: vid, plate: `LT-${i}-${vid.slice(0, 4)}`, make: 'Test', model: 'Car', color: 'Black', vClass: 'COMFORT', seats: 4, active: true });
-    drivers.push({ id: did, userId: uid, publicName: `LoadDriver${i}`, phone: `+357999${String(i).padStart(5, '0')}`, active: true, onDuty: true, available: true });
+    drivers.push({ id: did, userId: uid, publicName: `LoadDriver${i}`, phone: `+357999${String(i).padStart(5, '0')}`, active: true, onDuty: true, available: true, eligibility: 'APPROVED' }); // Task 015: only eligible drivers work
     bindings.push({ id: randomUUID(), driverId: did, vehicleId: vid, activeDriverId: did, activeVehicleId: vid });
     locations.push({ driverId: did, lat: BASE.lat + jitter(0.04), lng: BASE.lng + jitter(0.04), accuracyM: 8, sampledAt: now, receivedAt: now, gpsSession: `load-${i}`, sequence: 1 });
   }
