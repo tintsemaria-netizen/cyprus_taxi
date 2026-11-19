@@ -9,6 +9,7 @@ import { publicMapConfig } from '@/lib/config';
 import { api } from '@/lib/api-client';
 import type { Selected } from './PlacesInput';
 import { useT, translate } from '@/i18n/I18nProvider';
+import { currentTheme } from '@/lib/theme';
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
 // ~1e-6° ≈ 0.11 m. Below this the centre is treated as unchanged, so resize/zoom
@@ -20,11 +21,12 @@ const REVERSE_TIMEOUT_MS = 8000;
 const LOAD_TIMEOUT_MS = 15000;
 
 function demoStyle(): maplibregl.StyleSpecification {
+  const light = currentTheme() === 'light';
   return {
     version: 8,
-    sources: { osm: { type: 'raster', tiles: [publicMapConfig.tiles], tileSize: 256, attribution: publicMapConfig.attribution } },
+    sources: { osm: { type: 'raster', tiles: [light ? publicMapConfig.tilesLight : publicMapConfig.tiles], tileSize: 256, attribution: publicMapConfig.attribution } },
     layers: [
-      { id: 'bg', type: 'background', paint: { 'background-color': '#0e1518' } },
+      { id: 'bg', type: 'background', paint: { 'background-color': light ? '#eef1f0' : '#0e1518' } },
       { id: 'osm', type: 'raster', source: 'osm', paint: { 'raster-opacity': 0.9 } },
     ],
   };

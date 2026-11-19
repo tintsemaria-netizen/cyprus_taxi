@@ -54,6 +54,7 @@ const common: Catalog<typeof en> = {
     iosNotify: 'Für Benachrichtigungen auf dem iPhone fügen Sie IL-Y zum Home-Bildschirm hinzu (Teilen → Zum Home-Bildschirm) und öffnen es von dort.',
   },
   samsungDark: { text: "Samsung Internet färbt diese App um (rote Tasten, dunklere Farben). Für die echten Farben: in Samsung Internet ≡ → Einstellungen → Labs → «Use website dark theme» einschalten. Oder IL-Y über Chrome installieren.", ok: "Verstanden" },
+  theme: { title: "App-Farbe", system: "Wie im System", light: "Hell", dark: "Dunkel", later: "Du kannst es später im Menü ändern." },
   rotate: {
     title: 'Halten Sie das Handy hochkant',
     body: 'IL-Y funktioniert im Hochformat. Halten Sie Ihr Handy senkrecht, um fortzufahren.',

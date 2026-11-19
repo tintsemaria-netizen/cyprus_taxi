@@ -54,6 +54,7 @@ const common: Catalog<typeof en> = {
     iosNotify: 'لتلقي الإشعارات على iPhone، أضف IL-Y إلى الشاشة الرئيسية (مشاركة ← إضافة إلى الشاشة الرئيسية) وافتحه من هناك.',
   },
   samsungDark: { text: "يغيّر Samsung Internet ألوان التطبيق (أزرار حمراء وألوان داكنة). لرؤية الألوان الحقيقية: في Samsung Internet افتح ≡ ← الإعدادات ← Labs ← فعّل «Use website dark theme». أو ثبّت IL-Y من Chrome.", ok: "حسنًا" },
+  theme: { title: "لون التطبيق", system: "مثل النظام", light: "فاتح", dark: "داكن", later: "يمكنك تغييره لاحقًا من القائمة." },
   rotate: {
     title: 'أمسك هاتفك بشكل عمودي',
     body: 'يعمل IL-Y في الوضع العمودي. أمسك هاتفك عموديًا للمتابعة.',

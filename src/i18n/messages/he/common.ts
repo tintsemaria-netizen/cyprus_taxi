@@ -54,6 +54,7 @@ const common: Catalog<typeof en> = {
     iosNotify: 'כדי לקבל התראות באייפון, הוסיפו את IL-Y למסך הבית (שיתוף ← הוסף למסך הבית) ופתחו משם.',
   },
   samsungDark: { text: "Samsung Internet משנה את צבעי האפליקציה (כפתורים אדומים, צבעים כהים). לצבעים האמיתיים: ב-Samsung Internet פתחו ≡ → הגדרות → Labs → הפעילו «Use website dark theme». או התקינו את IL-Y דרך Chrome.", ok: "הבנתי" },
+  theme: { title: "צבע האפליקציה", system: "כמו במערכת", light: "בהיר", dark: "כהה", later: "אפשר לשנות מאוחר יותר בתפריט." },
   rotate: {
     title: 'החזיקו את הטלפון לאורך',
     body: 'IL-Y עובדת במצב לאורך. החזיקו את הטלפון אנכית כדי להמשיך.',

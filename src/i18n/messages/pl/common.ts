@@ -54,6 +54,7 @@ const common: Catalog<typeof en> = {
     iosNotify: 'Aby otrzymywać powiadomienia na iPhonie, dodaj IL-Y do ekranu początkowego (Udostępnij → Do ekranu początkowego) i otwieraj stamtąd.',
   },
   samsungDark: { text: "Samsung Internet zmienia kolory aplikacji (czerwone przyciski, ciemniejsze kolory). Aby widzieć prawdziwe kolory: w Samsung Internet otwórz ≡ → Ustawienia → Labs → włącz «Use website dark theme». Albo zainstaluj IL-Y z Chrome.", ok: "Rozumiem" },
+  theme: { title: "Kolor aplikacji", system: "Jak w systemie", light: "Jasny", dark: "Ciemny", later: "Możesz to zmienić później w menu." },
   rotate: {
     title: 'Obróć telefon pionowo',
     body: 'IL-Y działa w trybie pionowym. Trzymaj telefon pionowo, aby kontynuować.',

@@ -6,6 +6,7 @@ import SwipeButton from '@/components/SwipeButton';
 import EdgeShine from '@/components/EdgeShine';
 import { StaffShell } from '@/components/staff/StaffShell';
 import { NotifyToggle } from '@/components/NotifyToggle';
+import { ThemePicker } from '@/components/ThemePicker';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
@@ -875,6 +876,11 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-edge pt-3">
           <span className="text-sm">{t('driver.profile.notifications')}</span>
           <NotifyToggle pushUrl="/driver/push" className="text-end" />
+        </div>
+        {/* App colour (2026-11-19): chosen at registration, changed here. */}
+        <div className="mt-3 border-t border-edge pt-3">
+          <div className="mb-2 text-sm">{t('common.theme.title')}</div>
+          <ThemePicker role="driver" />
         </div>
         {/* App language (2026-11-17): set by the phone's language; changed only here. */}
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-edge pt-3">

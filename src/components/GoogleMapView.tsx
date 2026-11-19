@@ -14,6 +14,7 @@ import { glidePath } from './routeGlide';
 import { smoothRoute } from './routeSmooth';
 import { compassEl, easeHeadingToNorth } from './mapCompass';
 import { useT } from '@/i18n/I18nProvider';
+import { currentTheme } from '@/lib/theme';
 
 interface Props {
   markers?: MapMarker[];
@@ -168,7 +169,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
           center: homeRef.current,
           zoom,
           mapId: MAP_ID || undefined,
-          colorScheme: (g.ColorScheme && g.ColorScheme.DARK) || 'DARK',
+          colorScheme: currentTheme() === 'light' ? ((g.ColorScheme && g.ColorScheme.LIGHT) || 'LIGHT') : ((g.ColorScheme && g.ColorScheme.DARK) || 'DARK'),
           disableDefaultUI: !interactive,
           clickableIcons: false,
           gestureHandling: interactive ? 'greedy' : 'none',
@@ -462,7 +463,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
 
   if (failed) {
     return (
-      <div className={`flex items-center justify-center bg-[#0e1518] text-muted ${className ?? ''}`}>
+      <div className={`flex items-center justify-center bg-page text-muted ${className ?? ''}`}>
         <div className="text-center p-6">
           <div className="text-sm font-medium text-ink">Map unavailable</div>
           <div className="mt-1 text-xs">Trip details and actions still work below.</div>

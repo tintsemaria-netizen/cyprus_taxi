@@ -1,5 +1,6 @@
 'use client';
 
+import { ThemePicker } from '@/components/ThemePicker';
 import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { useEffect, useState } from 'react';
 import { PlacesInput, Selected } from '@/components/booking/PlacesInput';
@@ -94,6 +95,10 @@ export default function Account() {
 
       <Category id="places" icon="📍" title={t('auth.places.title')} sub={t('auth.cat.placesSub')} open={openCat} onToggle={toggleCat}>
         <SavedPlaces />
+      </Category>
+
+      <Category id="theme" icon="🎨" title={t('common.theme.title')} open={openCat} onToggle={toggleCat}>
+        <ThemePicker role="passenger" />
       </Category>
 
       <Category id="notifications" icon="🔔" title={t('auth.cat.notifications')} open={openCat} onToggle={toggleCat}>

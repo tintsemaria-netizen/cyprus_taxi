@@ -9,6 +9,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { loadMaplibre } from '@/lib/maplibre';
 import { googleEnabled, loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { publicMapConfig } from '@/lib/config';
+import { currentTheme } from '@/lib/theme';
 
 export type Poly = [number, number][];
 export interface RefZone { id: string; name: string; polygon: Poly; color: string }
@@ -111,7 +112,7 @@ function LibreZoneMap({ center, airport, zones, editing, onChange, className }: 
       libRef.current = lib;
       const map = new lib.Map({
         container: ref.current, center: [center.lng, center.lat], zoom: 11.5, attributionControl: { compact: true },
-        style: { version: 8, sources: { osm: { type: 'raster', tiles: [publicMapConfig.tiles], tileSize: 256, attribution: publicMapConfig.attribution } },
+        style: { version: 8, sources: { osm: { type: 'raster', tiles: [currentTheme() === 'light' ? publicMapConfig.tilesLight : publicMapConfig.tiles], tileSize: 256, attribution: publicMapConfig.attribution } },
           layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#0e1416' } }, { id: 'osm', type: 'raster', source: 'osm', paint: { 'raster-opacity': 0.9, 'raster-brightness-max': 0.9 } }] },
       });
       map.addControl(new lib.NavigationControl({ showCompass: false }), 'top-right');

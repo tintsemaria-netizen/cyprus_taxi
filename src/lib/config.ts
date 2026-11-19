@@ -175,5 +175,10 @@ export const publicMapConfig = {
   tiles:
     process.env.NEXT_PUBLIC_MAP_TILES ||
     'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+  // Light theme (2026-11-19): Esri Light Gray Canvas, unless a provider URL is configured (then the same URL).
+  tilesLight:
+    process.env.NEXT_PUBLIC_MAP_TILES_LIGHT ||
+    process.env.NEXT_PUBLIC_MAP_TILES ||
+    'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
   attribution: process.env.NEXT_PUBLIC_MAP_ATTRIBUTION || 'Tiles © Esri · © OpenStreetMap contributors',
 };

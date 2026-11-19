@@ -54,6 +54,7 @@ const common: Catalog<typeof en> = {
     iosNotify: 'Pour recevoir les notifications sur iPhone, ajoutez IL-Y à l’écran d’accueil (Partager → Sur l’écran d’accueil) et ouvrez-le depuis là.',
   },
   samsungDark: { text: "Samsung Internet modifie les couleurs de l'app (boutons rouges, couleurs plus sombres). Pour les vraies couleurs : dans Samsung Internet, ouvrez ≡ → Paramètres → Labs → activez « Use website dark theme ». Ou installez IL-Y depuis Chrome.", ok: "Compris" },
+  theme: { title: "Couleur de l’application", system: "Comme le système", light: "Clair", dark: "Sombre", later: "Vous pourrez la changer plus tard dans le menu." },
   rotate: {
     title: 'Tenez votre téléphone à la verticale',
     body: 'IL-Y fonctionne en mode portrait. Tenez votre téléphone verticalement pour continuer.',

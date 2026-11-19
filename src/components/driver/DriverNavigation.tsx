@@ -274,7 +274,7 @@ export function DriverNavigation(props: {
       <div className="relative min-h-0 flex-1" data-nav-zoom={navZoom}>
         {/* Turn hint (2026-11-19): back, but quiet — a small dark see-through card in the top-left
             corner instead of the bright full-width bar. */}
-        <div className="pointer-events-auto absolute start-3 top-3 z-10 max-w-[70%] rounded-[14px] border border-white/[0.08] bg-[#10191C]/30 px-3 py-2 text-ink [text-shadow:0_1px_3px_rgba(0,0,0,.85)]" aria-live="polite" data-testid="nav-hint">
+        <div className="pointer-events-auto absolute start-3 top-3 z-10 max-w-[70%] rounded-[14px] border border-white/[0.08] bg-[#10191C]/30 px-3 py-2 text-ink [text-shadow:0_1px_3px_rgba(0,0,0,.85)] nav-hint-card" aria-live="polite" data-testid="nav-hint">
         {atStop && stop ? (
           <div><div className="text-[15px] font-bold">{t('driver.stop.atStop')}</div><div className="truncate text-[12px] text-muted">{stop.label}</div></div>
         ) : waitingAtPickup ? (

@@ -8,6 +8,7 @@ import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { api } from '@/lib/api-client';
 import type { Selected } from './PlacesInput';
 import { useT, translate } from '@/i18n/I18nProvider';
+import { currentTheme } from '@/lib/theme';
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
 const MOVE_TOLERANCE = 1e-6;      // ~0.11m — ignore resize/no-op idle events
@@ -123,7 +124,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
           center: start,
           zoom: initial ? 16 : fallback ? 14 : 11,
           mapId: MAP_ID || undefined,
-          colorScheme: (g.ColorScheme && g.ColorScheme.DARK) || 'DARK',
+          colorScheme: currentTheme() === 'light' ? ((g.ColorScheme && g.ColorScheme.LIGHT) || 'LIGHT') : ((g.ColorScheme && g.ColorScheme.DARK) || 'DARK'),
           disableDefaultUI: true,
           zoomControl: false, // pinch to zoom; no +/- (2026-11-17)
           gestureHandling: 'greedy',

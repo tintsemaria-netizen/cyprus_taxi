@@ -5,6 +5,7 @@ import { Logo } from '@/components/Brand';
 import { compressImageForUpload, UPLOAD_TARGET_BYTES } from '@/lib/image-compress';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import { ThemePicker } from '@/components/ThemePicker';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +53,13 @@ export default function Register() {
       </ol>
       {err && <p className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}
 
+      {step === 0 && (
+        <div className="card mb-4 p-4" data-testid="reg-theme">
+          <div className="mb-1 font-semibold">{t('common.theme.title')}</div>
+          <p className="mb-3 text-xs text-muted">{t('common.theme.later')}</p>
+          <ThemePicker role="driver" />
+        </div>
+      )}
       {step === 0 && <IdentityStep app={app} reload={load} />}
       {step === 1 && <DrivingStep app={app} reload={load} />}
       {step === 2 && <VehicleStep app={app} reload={load} />}

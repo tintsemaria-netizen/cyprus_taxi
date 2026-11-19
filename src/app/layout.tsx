@@ -7,6 +7,8 @@ import { PortraitLock } from '@/components/PortraitLock';
 import { IosViewportFix } from '@/components/IosViewportFix';
 import { SamsungDarkHint } from '@/components/SamsungDarkHint';
 import { ErrorFocus } from '@/components/ErrorFocus';
+import { ThemeSync } from '@/components/ThemeSync';
+import { THEME_SCRIPT } from '@/lib/theme-script';
 
 export const metadata: Metadata = {
   title: 'IL-Y — book a ride',
@@ -33,9 +35,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: '#10191C',
-  // The app is dark by design (2026-11-18): tell browsers so Samsung Internet's forced dark mode
-  // does not recolor it (it turned the orange «Уйти с линии» red with white text on a Z Fold 7).
-  colorScheme: 'dark',
+  // Both themes are designed (2026-11-19): declaring them stops Samsung Internet's forced dark mode
+  // from recolouring the app (it turned the orange «Уйти с линии» red on a Z Fold 7).
+  colorScheme: 'dark light',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
@@ -44,10 +46,11 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getRequestLocale();
   return (
-    <html lang={locale} dir={RTL_LOCALES.includes(locale) ? 'rtl' : 'ltr'}>
+    <html lang={locale} dir={RTL_LOCALES.includes(locale) ? 'rtl' : 'ltr'} data-theme="dark" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} /></head>
       <body className="min-h-full bg-page text-ink antialiased">
         <I18nProvider locale={locale}>{children}<PortraitLock /><IosViewportFix /><SamsungDarkHint />
-        <ErrorFocus /></I18nProvider>
+        <ErrorFocus /><ThemeSync /></I18nProvider>
       </body>
     </html>
   );

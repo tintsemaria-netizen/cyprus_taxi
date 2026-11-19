@@ -11,6 +11,7 @@ import { smoothRoute } from './routeSmooth';
 import { compassEl } from './mapCompass';
 import { useT } from '@/i18n/I18nProvider';
 import { fitKeyOf } from './mapFit';
+import { currentTheme } from '@/lib/theme';
 
 export interface MapMarker {
   id: string;
@@ -70,19 +71,20 @@ interface Props {
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
 
 function demoStyle(): maplibregl.StyleSpecification {
+  const light = currentTheme() === 'light';
   return {
     version: 8,
     sources: {
       osm: {
         type: 'raster',
-        tiles: [publicMapConfig.tiles],
+        tiles: [light ? publicMapConfig.tilesLight : publicMapConfig.tiles],
         tileSize: 256,
         attribution: publicMapConfig.attribution,
       },
     },
     layers: [
-      { id: 'bg', type: 'background', paint: { 'background-color': '#0e1416' } },
-      { id: 'osm', type: 'raster', source: 'osm', paint: { 'raster-opacity': 0.85, 'raster-saturation': -0.3, 'raster-brightness-max': 0.85 } },
+      { id: 'bg', type: 'background', paint: { 'background-color': light ? '#eef1f0' : '#0e1416' } },
+      { id: 'osm', type: 'raster', source: 'osm', paint: light ? { 'raster-opacity': 1 } : { 'raster-opacity': 0.85, 'raster-saturation': -0.3, 'raster-brightness-max': 0.85 } },
     ],
   };
 }
@@ -297,7 +299,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
 
   if (failed) {
     return (
-      <div className={`flex items-center justify-center bg-[#0e1416] text-muted ${className ?? ''}`}>
+      <div className={`flex items-center justify-center bg-page text-muted ${className ?? ''}`}>
         <div className="text-center p-6">
           <div className="text-sm font-medium text-ink">Map unavailable</div>
           <div className="mt-1 text-xs">Trip details and actions still work below.</div>

@@ -1,25 +1,31 @@
 import type { Config } from 'tailwindcss';
 
+const v = (name: string) => `rgb(var(--c-${name}) / <alpha-value>)`;
+
 const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
         // IL-Yas brand palette (Task 007): charcoal / surface / lime / off-white.
-        page: '#10191C',
-        panel: '#1D282D',
-        elevated: '#26333A',
-        edge: '#33424A',
+        // 2026-11-19: neutrals + status colours are CSS variables (globals.css) so <html data-theme="light">
+        // swaps the whole app to the light palette. Lime accent stays the same in both themes.
+        page: v('page'),
+        panel: v('panel'),
+        elevated: v('elevated'),
+        edge: v('edge'),
         // Input borders: ≥3:1 against elevated + panel (WCAG 1.4.11 non-text contrast).
-        'edge-strong': '#6B8089',
+        'edge-strong': v('edge-strong'),
         accent: '#C8FF46',
         'accent-dim': '#AEE23A',
-        ink: '#F4F7F5',
-        muted: '#9FB0B6',
-        danger: '#FF6B6B',
-        warn: '#FFC857',
-        ok: '#4ADE80',
+        ink: v('ink'),
+        muted: v('muted'),
+        danger: v('danger'),
+        warn: v('warn'),
+        ok: v('ok'),
       },
+      // Lime text is unreadable on white: text-accent uses a deeper green in the light theme.
+      textColor: { accent: v('accent-text') },
       borderRadius: {
         DEFAULT: '12px',
         lg: '16px',
