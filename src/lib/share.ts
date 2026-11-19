@@ -25,20 +25,6 @@ export function shareZone(p: LatLng): string | null {
   return SHARE_TOWNS.find((t) => haversineMeters(p, t) <= t.radiusM)?.key ?? null;
 }
 
-// One meeting point per airport for a pre-booked pair (operator, 2026-11-19): both passengers of a
-// pair leaving the same airport are picked up at the same spot and the same time, not at two
-// points of the terminal. Arrivals exit, taxi pick-up.
-export const AIRPORT_MEET = {
-  LCA: { lat: 34.8751, lng: 33.6249, label: 'Larnaca Airport (LCA) — Arrivals, taxi pick-up' },
-  PFO: { lat: 34.718, lng: 32.4857, label: 'Paphos Airport (PFO) — Arrivals, taxi pick-up' },
-} as const;
-
-/** The shared airport meeting point when both pickups are at the same airport; otherwise null. */
-export function sharedMeetPoint(a: LatLng, b: LatLng): { lat: number; lng: number; label: string } | null {
-  const x = airportAt(a.lat, a.lng);
-  return x && x === airportAt(b.lat, b.lng) ? AIRPORT_MEET[x] : null;
-}
-
 /** Ride-share is offered between two DIFFERENT places of the list above. */
 export function isShareRoute(pickup: LatLng, dropoff: LatLng): boolean {
   const a = shareZone(pickup);

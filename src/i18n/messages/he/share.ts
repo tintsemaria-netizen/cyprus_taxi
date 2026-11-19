@@ -29,7 +29,6 @@ const share: Catalog<typeof en> = {
     arriveAt: "תגיעו בסביבות {time}",
     departAt: "יציאה ב־{time} — המתנה {n} דק׳",
     pickupAt: "הרכב יאסוף אתכם בסביבות {time}",
-    meetAt: "📍 נקודת מפגש: {place}",
     approx: "בקירוב",
     hide: "הסתר",
     answer: "לענות",

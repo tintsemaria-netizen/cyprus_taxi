@@ -29,7 +29,6 @@ const share: Catalog<typeof en> = {
     arriveAt: "Φτάνετε ~{time}",
     departAt: "Αναχώρηση {time} — αναμονή {n} λεπ.",
     pickupAt: "Το αυτοκίνητο σας παίρνει ~{time}",
-    meetAt: "📍 Σημείο συνάντησης: {place}",
     approx: "κατά προσέγγιση",
     hide: "Απόκρυψη",
     answer: "Απάντηση",

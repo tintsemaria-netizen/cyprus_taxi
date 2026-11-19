@@ -1,5 +1,4 @@
 import { config } from '@/lib/config';
-import { sharedMeetPoint } from '@/lib/share';
 import { gpsMeterFor } from '@/server/gps-meter';
 import { passengerRatingSummary } from '@/server/trip-close';
 import { passengerLocationForDriver } from '@/server/passenger-location';
@@ -164,7 +163,7 @@ async function passengerShareView(booking: { id: string; shareOptIn: boolean }) 
     include: { host: true, guest: true },
   });
   const counts = (b: { passengerCount: number; childCount: number; luggageCount: number }) => ({ adults: b.passengerCount - b.childCount, children: b.childCount, luggage: b.luggageCount });
-  type Timing = { arriveAt: string | null; pickupAt: string | null; waitMin: number; approx: boolean; meetLabel: string | null };
+  type Timing = { arriveAt: string | null; pickupAt: string | null; waitMin: number; approx: boolean };
   let shareProposal = null as null | ({ groupId: string; mode: string; expiresAt: string; extraMin: number; fullFareCents: number; newFareCents: number; coRider: ReturnType<typeof counts> } & Timing);
   let shared = null as null | ({ status: string; discountPct: number; fullFareCents: number; fareCents: number; extraMin: number; coRider: ReturnType<typeof counts> } & Timing);
   for (const g of groups) {
@@ -184,11 +183,6 @@ async function passengerShareView(booking: { id: string; shareOptIn: boolean }) 
       pickupAt: pickup?.toISOString() ?? null,
       waitMin: pickup && booked ? Math.max(0, Math.round((pickup.getTime() - booked.getTime()) / 60_000)) : 0,
       approx: !g.roadRouted,
-      // A pre-booked pair at one airport: both meet at its one pickup point (2026-11-19).
-      meetLabel: g.mode === 'PREBOOK' ? (sharedMeetPoint(
-        { lat: g.host.shareOrigPickupLat ?? g.host.pickupLat, lng: g.host.shareOrigPickupLng ?? g.host.pickupLng },
-        { lat: g.guest.shareOrigPickupLat ?? g.guest.pickupLat, lng: g.guest.shareOrigPickupLng ?? g.guest.pickupLng },
-      )?.label ?? null) : null,
     };
     if (g.status === 'PROPOSED' && !myAnswer && g.expiresAt > new Date()) {
       shareProposal = {

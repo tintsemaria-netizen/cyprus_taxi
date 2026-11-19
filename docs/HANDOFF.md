@@ -2165,7 +2165,7 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
 - Do not publish secrets or the beta-access file to git.
 - Do not disturb other vhosts/containers (agora, winzilla/fugaso, casino, etc.).
 
-## 2026-11-19 — pair at one airport: one meeting point
+## 2026-11-19 — pair at one airport: one meeting point (REVERTED 19:10 — operator: do it later with the airport setup)
 - A pre-booked ride-share pair whose pickups are both at LCA (or both at PFO) is picked up at ONE point
   (`AIRPORT_MEET` in src/lib/share.ts: arrivals taxi pick-up) and at ONE time (the later passenger's; nobody is picked up earlier than booked).
 - On MATCHED both bookings get that pickup; their own point is kept in Booking.shareOrigPickup* and restored if the pair breaks

@@ -494,7 +494,8 @@ model Booking {
   shareFullPriceType String?
   shareWaitMin     Int? // pre-booking: how long this passenger can wait for the co-rider (their choice)
   shareOrigScheduledAt DateTime? // the booked pickup time, if a pre-booked pair moved it (restored on break-up)
-  // A pre-booked pair at one airport meets at its one pickup point; the passenger's own point is kept here (restored on break-up).
+  // Airport meeting point for pairs (on 2026-11-19 18:30–19:10, then postponed until airports are set up):
+  // the passenger's own pickup point, restored on break-up. Unused while the feature is off.
   shareOrigPickupLat   Float?
   shareOrigPickupLng   Float?
   shareOrigPickupLabel String?
