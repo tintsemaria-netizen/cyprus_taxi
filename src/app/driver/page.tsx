@@ -531,8 +531,8 @@ function HomeSection(props: {
                       <button type="button" className={`${tile} flex items-center justify-around`} onClick={() => go('analytics')} data-testid="earn-trips"
                         aria-label={`${t('driver.analytics.doneShort')} ${dash.today.completedTrips}, ${t('driver.analytics.notDone')} ${dash.today.canceledTrips ?? 0}`}>
                         {/* Side by side, no words (2026-11-20, operator): green ✓ done, red ✕ not done. */}
-                        <span className="flex items-baseline gap-1.5"><span className="text-[20px] font-bold text-[#34C759]">✓</span><span className="text-[22px] font-semibold tabular-nums" data-testid="earn-done-n">{dash.today.completedTrips}</span></span>
-                        <span className="flex items-baseline gap-1.5"><span className="text-[20px] font-bold text-danger">✕</span><span className="text-[22px] font-semibold tabular-nums" data-testid="earn-canceled-n">{dash.today.canceledTrips ?? 0}</span></span>
+                        <span className="flex items-baseline gap-1.5"><span className="text-[14px] font-bold text-[#34C759]">✓</span><span className="text-[22px] font-semibold tabular-nums" data-testid="earn-done-n">{dash.today.completedTrips}</span></span>
+                        <span className="flex items-baseline gap-1.5"><span className="text-[14px] font-bold text-danger">✕</span><span className="text-[22px] font-semibold tabular-nums" data-testid="earn-canceled-n">{dash.today.canceledTrips ?? 0}</span></span>
                       </button>
                       <button type="button" className={tile} onClick={() => setEarnView('time')} data-testid="earn-online">
                         <div className="text-[11px] text-muted">{t('driver.earnings.onlineTime')} ›</div>
@@ -921,17 +921,19 @@ function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string;
 
 // ---- «Время на линии» inside the today card (2026-11-20) ----
 function DutyPane({ onBack, onClose }: { onBack: () => void; onClose: () => void }) {
-  const { t, fmt } = useT();
+  const { t } = useT();
   const { dur } = useDriverFmt();
-  const [d, setD] = useState<{ onlineSec: number; onTripSec: number; freeSec: number; weekSec: number; sessions: { from: string; to: string | null; sec: number }[]; onlineNow: boolean } | null>(null);
+  type Duty = { onlineSec: number; onTripSec: number; km: number; weekSec: number; weekKm: number; week: { day: string; onlineSec: number; km: number }[]; onlineNow: boolean };
+  const [d, setD] = useState<Duty | null>(null);
   const [err, setErr] = useState(false);
   useEffect(() => {
     let alive = true;
-    const load = () => api<NonNullable<typeof d>>('/driver/duty').then((r) => { if (alive) { setD(r); setErr(false); } }).catch(() => { if (alive) setErr(true); });
+    const load = () => api<Duty>('/driver/duty').then((r) => { if (alive) { setD(r); setErr(false); } }).catch(() => { if (alive) setErr(true); });
     load();
-    const id = setInterval(load, 30_000); // the open shift keeps counting
+    const id = setInterval(load, 30_000); // an open shift keeps counting
     return () => { alive = false; clearInterval(id); };
   }, []);
+  const km = (n: number) => t('rides.detail.km', { km: n.toLocaleString(undefined, { maximumFractionDigits: 1 }) });
   return (
     <div data-testid="duty-pane">
       <div className="flex items-center justify-between">
@@ -945,30 +947,66 @@ function DutyPane({ onBack, onClose }: { onBack: () => void; onClose: () => void
           <div className="mt-3 grid grid-cols-2 gap-2">
             <div className="rounded-[12px] border border-edge bg-elevated px-3 py-2">
               <div className="text-[11px] text-muted">🚕 {t('driver.home.timeOnTrips')}</div>
-              <div className="text-lg font-semibold">{dur(d.onTripSec)}</div>
+              <div className="whitespace-nowrap text-lg font-semibold">{dur(d.onTripSec)}</div>
             </div>
-            <div className="rounded-[12px] border border-edge bg-elevated px-3 py-2">
-              <div className="text-[11px] text-muted">⏳ {t('driver.home.timeFree')}</div>
-              <div className="text-lg font-semibold">{dur(d.freeSec)}</div>
+            {/* Km on orders today (2026-11-20, operator): to the client + A → B, by GPS. */}
+            <div className="rounded-[12px] border border-edge bg-elevated px-3 py-2" data-testid="duty-km">
+              <div className="text-[11px] text-muted">🛣️ {t('driver.home.timeKm')}</div>
+              <div className="whitespace-nowrap text-lg font-semibold">{km(d.km)}</div>
             </div>
           </div>
-          <p className="label mt-3">{t('driver.home.timeSessions')}</p>
-          {d.sessions.length === 0 ? <p className="mt-1 text-sm text-muted">{t('driver.home.timeNone')}</p> : (
-            <ul className="mt-1 divide-y divide-edge rounded-[12px] border border-edge bg-elevated text-sm" data-testid="duty-sessions">
-              {d.sessions.map((s) => (
-                <li key={s.from} className="flex items-center justify-between px-3 py-2">
-                  <span className="tabular-nums">{fmt.time(s.from)} – {s.to ? fmt.time(s.to) : <span className="text-accent">{t('driver.home.timeNow')}</span>}</span>
-                  <span className="text-muted">{dur(s.sec)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="mt-3 flex items-center justify-between rounded-[12px] border border-edge px-3 py-2 text-sm">
+          <WeekCandles week={d.week} />
+          <div className="mt-2 flex items-center justify-between gap-2 rounded-[12px] border border-edge px-3 py-2 text-sm">
             <span className="text-muted">{t('driver.home.timeWeek')}</span>
-            <span className="shrink-0 whitespace-nowrap font-semibold">{dur(d.weekSec)}</span>
+            <span className="shrink-0 whitespace-nowrap font-semibold"><span className="text-accent">{dur(d.weekSec)}</span> · <span className="text-danger">{km(d.weekKm)}</span></span>
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// Monday → Sunday like an exchange candle chart (2026-11-20, operator): per day a lime candle for the
+// time online and a red one beside it for the km on orders, each on its own scale. Today is marked.
+function WeekCandles({ week }: { week: { day: string; onlineSec: number; km: number }[] }) {
+  const { t, locale } = useT();
+  const W = 280, H = 132, top = 10, base = 108, gw = W / 7;
+  const maxH = Math.max(8 * 3600, ...week.map((d) => d.onlineSec));
+  const maxK = Math.max(50, ...week.map((d) => d.km));
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Nicosia', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const wd = (day: string) => new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' }).format(new Date(`${day}T12:00:00Z`));
+  const candle = (x: number, v: number, max: number, color: string, key: string) => {
+    const h = v > 0 ? Math.max(3, ((base - top) * v) / max) : 0;
+    const y = base - h;
+    return (
+      <g key={key}>
+        {h > 0 && <line x1={x + 4.5} x2={x + 4.5} y1={Math.max(top, y - 5)} y2={base} stroke={color} strokeWidth={1} opacity={0.6} />}
+        <rect x={x} y={h > 0 ? y : base - 1} width={9} height={h > 0 ? h : 1} rx={2} fill={color} opacity={h > 0 ? 1 : 0.35} />
+      </g>
+    );
+  };
+  return (
+    <div className="mt-3 rounded-[12px] border border-edge bg-elevated px-2 pb-1 pt-2" data-testid="duty-candles">
+      <div className="flex items-center gap-3 px-1 text-[11px] text-muted">
+        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-[2px] bg-accent" />{t('driver.home.chartOnline')}</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-[2px] bg-danger" />{t('driver.home.chartKm')}</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="mt-1 w-full" role="img" aria-label={`${t('driver.home.chartOnline')} / ${t('driver.home.chartKm')}`}>
+        {[0.25, 0.5, 0.75].map((f) => <line key={f} x1={0} x2={W} y1={base - (base - top) * f} y2={base - (base - top) * f} stroke="currentColor" opacity={0.08} />)}
+        <line x1={0} x2={W} y1={base} y2={base} stroke="currentColor" opacity={0.25} />
+        {week.map((d, i) => {
+          const x0 = i * gw + gw / 2 - 10.5;
+          const isToday = d.day === today;
+          return (
+            <g key={d.day}>
+              {isToday && <rect x={i * gw + 2} y={top - 6} width={gw - 4} height={base - top + 22} rx={6} fill="currentColor" opacity={0.06} />}
+              {candle(x0, d.onlineSec, maxH, '#C8FF46', 'o')}
+              {candle(x0 + 12, d.km, maxK, 'rgb(var(--c-danger))', 'k')}
+              <text x={i * gw + gw / 2} y={H - 8} textAnchor="middle" fontSize={10} fill="currentColor" opacity={isToday ? 1 : 0.55} fontWeight={isToday ? 700 : 400}>{wd(d.day)}</text>
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }
