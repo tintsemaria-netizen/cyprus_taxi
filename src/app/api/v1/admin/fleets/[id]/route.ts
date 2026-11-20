@@ -21,7 +21,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   try { raw = await req.json(); } catch { return Errors.validation({ _: 'Invalid JSON body.' }); }
   const parsed = schema.safeParse(raw);
   if (!parsed.success) return Errors.validation({ _: 'Invalid fields.' });
-  const fleet = await prisma.fleet.findUnique({ where: { id } });
+  const fleet = await prisma.fleet.findUnique({ where: { id }, include: { owner: { select: { role: true } } } });
   if (!fleet) return Errors.notFound();
   let temporaryPassword: string | undefined;
   await prisma.$transaction(async (tx) => {
@@ -30,8 +30,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (typeof parsed.data.active === 'boolean') fd.active = parsed.data.active;
     if (Object.keys(fd).length) await tx.fleet.update({ where: { id }, data: fd });
     const ud: Record<string, unknown> = {};
-    if (typeof parsed.data.active === 'boolean') { ud.active = parsed.data.active; if (!parsed.data.active) ud.sessionVersion = { increment: 1 }; }
-    if (parsed.data.resetPassword) { temporaryPassword = generateToken(9); ud.passwordHash = await hashPassword(temporaryPassword); ud.sessionVersion = { increment: 1 }; }
+    // A driver who owns the fleet keeps driving: switching the fleet off only hides «Мой автопарк».
+    if (typeof parsed.data.active === 'boolean' && fleet.owner.role === 'FLEET_OWNER') { ud.active = parsed.data.active; if (!parsed.data.active) ud.sessionVersion = { increment: 1 }; }
+    if (parsed.data.resetPassword && fleet.owner.role === 'FLEET_OWNER') { temporaryPassword = generateToken(9); ud.passwordHash = await hashPassword(temporaryPassword); ud.sessionVersion = { increment: 1 }; }
     if (Object.keys(ud).length) await tx.staffUser.update({ where: { id: fleet.ownerId }, data: ud });
     await tx.auditEvent.create({ data: { actorId: ctx.user.id, actorRole: 'ADMIN', action: 'UPDATE_FLEET', target: id } });
   });

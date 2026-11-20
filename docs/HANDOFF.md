@@ -2299,3 +2299,9 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
   Shared: components/reports/DriversFigures.tsx (useDriverFigures, FiguresTotals, DriverFiguresLine), DriverReportScreen.tsx.
 - Test: tests/fleet-owner.db.test.ts. 325 passed. Preview screenshots 260–265 in /tmp/shots (local).
 - To deploy: merge `fleet-owner` → main; the migration must run (check the server's deploy runs `prisma migrate deploy`).
+- 2026-11-20 23:50 (owner: «владелец таксопарка тоже может работать в приложении»): a DRIVER can own a fleet with his
+  own login. Admin «Автопарки» → «Владелец: Новый логин / Водитель: …» (POST {name, driverId}; the driver is put into
+  his own fleet; no new password). requireFleetOwner accepts FLEET_OWNER or a DRIVER who owns an active fleet;
+  /auth/me returns `fleet`. Driver menu ☰ shows «Мой автопарк · <name> ›» → /fleet (back «‹» to /driver; the top bar
+  shows «Моя поездка | Мой автопарк»). Switching such a fleet off / «reset password» never touches his driver account.
+  Test added (driver-owner). 326 passed. Screens 270–272 in /tmp/shots.

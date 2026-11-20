@@ -239,6 +239,7 @@ const driver: Catalog<typeof en> = {
   },
   prebookFab: { single: "P", pair: "PS", singleAria: "Neue Vorbestellung", pairAria: "Neue geteilte Vorbestellung" },
   nav: {
+    myFleet: "Mein Fuhrpark",
     orders: "Aufträge",
     work: "Fahrten & Einnahmen",
     home: "Start",

@@ -239,6 +239,7 @@ const driver: Catalog<typeof en> = {
   },
   prebookFab: { single: "P", pair: "PS", singleAria: "הזמנה מראש חדשה", pairAria: "הזמנה מראש משותפת חדשה" },
   nav: {
+    myFleet: "צי הרכבים שלי",
     orders: "הזמנות",
     work: "נסיעות ורווחים",
     home: "בית",

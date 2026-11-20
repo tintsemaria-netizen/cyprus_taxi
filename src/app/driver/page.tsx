@@ -94,10 +94,10 @@ function useDriverFmt() {
 }
 
 export default function Page() {
-  return <StaffShell roles={['DRIVER']}>{() => <Driver />}</StaffShell>;
+  return <StaffShell roles={['DRIVER']}>{(me) => <Driver fleet={me.fleet ?? null} />}</StaffShell>;
 }
 
-function Driver() {
+function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   const { t, tError } = useT();
   // The service worker localises background offer banners; it reads the app language from here.
   const uiLocale = useLocale();
@@ -426,6 +426,14 @@ function Driver() {
                   {prebookCount > 0 && <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white">{prebookCount}</span>}
                 </span>
               </button>
+              {/* A driver who also owns a fleet (2026-11-20, operator): his fleet's reports, same login. */}
+              {fleet && (
+                <a href="/fleet" data-testid="drawer-fleet"
+                  className="mb-3 flex w-full items-center justify-between rounded-[12px] border border-edge bg-elevated px-4 py-3 text-start text-[16px] font-semibold">
+                  <span className="min-w-0 truncate">{t('driver.nav.myFleet')} <span className="text-sm font-normal text-muted">· {fleet.name}</span></span>
+                  <span className="text-muted">›</span>
+                </a>
+              )}
               <SubTabs value={profileView} onChange={setProfileView} items={[
                 { id: 'me', label: t('driver.nav.profile') },
                 { id: 'trips', label: t('driver.nav.trips') },

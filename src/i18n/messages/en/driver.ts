@@ -236,6 +236,7 @@ const driver = {
   },
   prebookFab: { single: "P", pair: "PS", singleAria: "New pre-booking", pairAria: "New shared pre-booking" },
   nav: {
+    myFleet: "My fleet",
     orders: 'Orders',
     work: 'Trips & earnings',
     home: 'Home',

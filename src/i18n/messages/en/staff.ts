@@ -117,7 +117,7 @@ const staff = {
   },
   fleets: {
     title: 'Fleets',
-    sub: 'A fleet owner only looks: his drivers\' reports (hours, km, done / not done, earnings) and his cars. Put drivers and cars into a fleet on the «Drivers» and «Vehicles» pages.',
+    sub: 'A fleet owner only looks: his drivers\' reports (hours, km, done / not done, earnings) and his cars. The owner can also be a driver: he keeps driving and gets «My fleet» in his menu. Put drivers and cars into a fleet on the «Drivers» and «Vehicles» pages.',
     name: 'Fleet name',
     login: 'owner login',
     displayName: 'Owner name',
@@ -125,6 +125,11 @@ const staff = {
     created: 'Fleet created. Owner «{login}», temporary password (shown once): {pw}',
     newPw: 'New temporary password for {login} (shown once): {pw}',
     counts: 'drivers: {d} · cars: {v}',
+    owner: 'Owner',
+    ownerNew: 'New owner login',
+    ownerDriver: 'Driver: {name}',
+    ownerIsDriver: 'also drives',
+    createdDriver: 'Fleet created. The owner is driver «{login}» — «My fleet» appears in his driver menu, same login.',
     empty: 'No fleets yet.',
   },
   fleet: {

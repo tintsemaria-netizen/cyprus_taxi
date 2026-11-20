@@ -112,3 +112,34 @@ describe('fleet owner', () => {
     expect([401, 403]).toContain((await fleetMe.GET()).status);
   });
 });
+
+describe('a driver who owns a fleet', () => {
+  it('keeps driving, sees his fleet with the same login; switching the fleet off does not log him out', async () => {
+    const andreasUser = await prisma.driver.findUnique({ where: { id: andreas.id }, select: { userId: true } });
+    await prisma.fleet.deleteMany({ where: { ownerId: andreasUser!.userId } }); // clean earlier runs
+    await as(adminLogin);
+    const c = await adminFleets.POST(req('/admin/fleets', { method: 'POST', body: { name: 'Andreas Taxi', driverId: andreas.id } }));
+    expect(c.status).toBe(201);
+    const f = await body(c);
+    expect(f.temporaryPassword).toBeUndefined();
+    expect((await prisma.driver.findUnique({ where: { id: andreas.id } }))?.fleetId).toBe(f.id);
+    // A second fleet for the same driver → conflict.
+    expect((await adminFleets.POST(req('/admin/fleets', { method: 'POST', body: { name: 'Again', driverId: andreas.id } }))).status).toBe(409);
+
+    await as(andreas.login);
+    expect((await body(await fleetMe.GET())).fleet.name).toBe('Andreas Taxi');
+    const ds = await body(await fleetDrivers.GET());
+    expect(ds.drivers.map((d: { id: string }) => d.id)).toEqual([andreas.id]);
+    expect((await fleetReport.GET(req(`/fleet/drivers/${maria.id}/report/duty`), P({ id: maria.id, part: 'duty' }))).status).toBe(404);
+
+    await as(adminLogin);
+    await adminFleet.PATCH(req(`/admin/fleets/${f.id}`, { method: 'PATCH', body: { active: false, resetPassword: true } }), P({ id: f.id }));
+    const u = (await prisma.staffUser.findUnique({ where: { id: andreasUser!.userId } }))!;
+    expect(u.active).toBe(true); // still drives
+    await as(andreas.login);
+    expect((await fleetMe.GET()).status).toBe(403); // fleet is off
+    // cleanup
+    await prisma.driver.update({ where: { id: andreas.id }, data: { fleetId: null } });
+    await prisma.fleet.delete({ where: { id: f.id } });
+  });
+});

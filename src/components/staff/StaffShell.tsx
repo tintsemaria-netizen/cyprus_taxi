@@ -13,6 +13,7 @@ export interface Me {
   role: 'ADMIN' | 'DISPATCHER' | 'DRIVER' | 'FLEET_OWNER';
   displayName: string;
   driverId: string | null;
+  fleet?: { id: string; name: string } | null; // a fleet this user owns (FLEET_OWNER, or a driver who owns one)
   mfa?: { eligible: boolean; enabled: boolean; setupRequired: boolean };
 }
 
@@ -61,7 +62,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
 
   const nav =
     me.role === 'DRIVER'
-      ? [{ href: '/driver', label: t('common.myTrip') }]
+      ? [{ href: '/driver', label: t('common.myTrip') }, ...(me.fleet ? [{ href: '/fleet', label: t('staff.nav.myFleet') }] : [])]
       : me.role === 'FLEET_OWNER'
       ? [{ href: '/fleet', label: t('staff.nav.myFleet') }, { href: '/staff/security', label: t('staff.nav.security') }]
       : [

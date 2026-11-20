@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { StaffShell } from '@/components/staff/StaffShell';
+import { StaffShell, type Me } from '@/components/staff/StaffShell';
+import { BackArrow } from '@/components/BackArrow';
 import { api } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { useDriverFigures, FiguresTotals, DriverFiguresLine } from '@/components/reports/DriversFigures';
@@ -15,11 +16,14 @@ interface DriverRow { id: string; login: string; publicName: string; phone: stri
 interface CarRow { id: string; plate: string; make: string; model: string; color: string; vClass: string; seats: number; active: boolean; driver: { id: string; publicName: string; onDuty: boolean } | null }
 
 export default function Page() {
-  return <StaffShell roles={['FLEET_OWNER']}>{() => <Fleet />}</StaffShell>;
+  return <StaffShell roles={['FLEET_OWNER', 'DRIVER']}>{(me) => <Fleet me={me} />}</StaffShell>;
 }
 
-function Fleet() {
+function Fleet({ me }: { me: Me }) {
   const { t } = useT();
+  // A driver who owns a fleet comes here from his menu: «‹» takes him back to the map.
+  const isDriver = me.role === 'DRIVER';
+  useEffect(() => { if (isDriver && !me.fleet) window.location.replace('/driver'); }, [isDriver, me.fleet]);
   const [name, setName] = useState('');
   const [drivers, setDrivers] = useState<DriverRow[] | null>(null);
   const [cars, setCars] = useState<CarRow[] | null>(null);
@@ -30,7 +34,10 @@ function Fleet() {
   }, []);
   return (
     <div className="mx-auto max-w-4xl p-4 sm:p-6" data-testid="fleet-home">
-      <h1 className="text-xl font-bold">{name || t('staff.fleet.title')}</h1>
+      <div className="flex items-center gap-1">
+        {isDriver && <BackArrow fallback="/driver" className="-ms-2" />}
+        <h1 className="min-w-0 truncate text-xl font-bold">{name || t('staff.fleet.title')}</h1>
+      </div>
       <div className="mt-4"><FiguresTotals figs={figs} /></div>
 
       <h2 className="mt-5 font-semibold">{t('staff.fleet.drivers')}</h2>
