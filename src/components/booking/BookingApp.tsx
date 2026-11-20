@@ -1,6 +1,7 @@
 'use client';
 
 import { PASSENGER_GUEST } from '@/lib/features';
+import { FixedTop } from '@/components/FixedTop';
 import { useKeyboardViewport } from '@/components/useKeyboardViewport';
 import { useHideClipped } from '@/components/useHideClipped';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -824,7 +825,7 @@ export default function BookingApp() {
   );
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-page" style={kbBox}>
       {resuming && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-page text-muted" data-testid="resuming-ride">{t('common.loading')}</div>}
       <NotifyPrompt pushUrl="/passenger/push" active />
       <input ref={proxyRef} aria-hidden tabIndex={-1} readOnly={false} className="pointer-events-none fixed start-0 top-0 h-px w-px opacity-0" style={{ fontSize: 16 }} />
@@ -861,9 +862,8 @@ export default function BookingApp() {
           </button>
         </div>
       )}
-      {/* sticky + opaque (2026-11-20): iOS 26 Safari / Home Screen apps dim (soft edge effect) the top of
-          anything under the status bar unless a pinned, opaque bar is there — it then tints the status bar with it. */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-edge bg-page px-4 py-2 sm:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
+      <FixedTop top={kbBox?.top}>
+      <header className="flex items-center justify-between border-b border-edge bg-page px-4 py-2 sm:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
         {/* Back arrow only where there is a step behind (2026-11-17): class choice → the form. */}
         <div className="flex items-center gap-1">
           {step === 'review' && <BackArrow className="-ms-2" onBack={() => setStep('form')} />}
@@ -891,6 +891,7 @@ export default function BookingApp() {
           )}
         </div>
       </header>
+      </FixedTop>
       <InstallPrompt app="passenger" className="z-20 mx-3 mt-2 sm:hidden" />
 
       <div className="relative flex-1">

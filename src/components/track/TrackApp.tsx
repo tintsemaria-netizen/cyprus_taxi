@@ -1,6 +1,7 @@
 'use client';
 
 import { useKeyboardViewport } from '@/components/useKeyboardViewport';
+import { FixedTop } from '@/components/FixedTop';
 import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
@@ -392,8 +393,8 @@ export default function TrackApp() {
   const SLOT = '\u0000';
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
-      <PassengerTopBar />
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-page" style={kbBox}>
+      <FixedTop top={kbBox?.top}><PassengerTopBar sticky={false} /></FixedTop>
 
       <div className="relative flex-1">
         <div className="absolute inset-0">
@@ -633,7 +634,7 @@ export default function TrackApp() {
 function Centered({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-[100dvh] flex-col bg-page">
-      <PassengerTopBar />
+      <FixedTop><PassengerTopBar sticky={false} /></FixedTop>
       <div className="flex flex-1 items-center justify-center px-4">{children}</div>
     </div>
   );
