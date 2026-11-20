@@ -15,7 +15,10 @@ export const metadata: Metadata = {
   description: 'Book and track a ride across Cyprus with IL-Y.',
   applicationName: 'IL-Y',
   manifest: '/manifest.webmanifest',
-  appleWebApp: { capable: true, title: 'IL-Y', statusBarStyle: 'black-translucent' },
+  // 'black', not 'black-translucent' (2026-11-20): iOS 27 Home Screen apps blur the top ~100 pt of a
+  // page drawn under the status bar, which smeared the logo and the avatar on an iPhone Air. With 'black'
+  // the app starts below the status bar, so nothing of ours is under it.
+  appleWebApp: { capable: true, title: 'IL-Y', statusBarStyle: 'black' },
   icons: {
     icon: [
       { url: '/icons/favicon.ico', sizes: 'any' },
