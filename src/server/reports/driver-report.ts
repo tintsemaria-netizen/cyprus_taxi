@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { apiOk, Errors } from '@/lib/http';
 import { earningsSummary, earningsDaily } from '@/server/driver/earnings';
 import { driverAnalytics, mondayOf } from '@/server/driver/analytics';
 import { dutyToday } from '@/server/driver/duty';
@@ -87,7 +88,28 @@ export async function driverFigures(driverIds: string[], now: Date = new Date())
   }));
 }
 
-/** The driver ids a staff user may report on. ADMIN: any driver. */
 export async function driverExists(driverId: string): Promise<boolean> {
   return !!(await prisma.driver.findUnique({ where: { id: driverId }, select: { id: true } }));
+}
+
+/** One driver's report part as an HTTP response — the caller has already checked it may see him. */
+export async function driverReportResponse(driverId: string, part: string, url: URL): Promise<Response> {
+  switch (part) {
+    case 'earnings': return apiOk(await reportEarnings(driverId, url));
+    case 'duty': return apiOk(await reportDuty(driverId));
+    case 'analytics': return apiOk(await reportAnalytics(driverId, url));
+    case 'export': {
+      const d = await prisma.driver.findUnique({ where: { id: driverId }, select: { user: { select: { login: true } } } });
+      return reportStatementCsv(driverId, url, d?.user.login ?? 'driver');
+    }
+    default: return Errors.notFound();
+  }
+}
+
+/** A driver's header (name, phone, status, car) for the per-driver report screens. */
+export async function driverHead(driverId: string) {
+  const d = await prisma.driver.findUnique({ where: { id: driverId }, include: { user: true, bindings: { where: { endedAt: null }, include: { vehicle: true } } } });
+  if (!d) return null;
+  const v = d.bindings[0]?.vehicle;
+  return { id: d.id, login: d.user.login, publicName: d.publicName, phone: d.phone, active: d.active && d.user.active, onDuty: d.onDuty, fleetId: d.fleetId, vehicle: v ? { plate: v.plate, label: `${v.make} ${v.model}` } : null };
 }

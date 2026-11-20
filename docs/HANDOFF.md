@@ -2282,3 +2282,20 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
   tap → /admin/drivers/[id] (back «‹»): the driver's own earnings / analytics / hours & km screens.
 - Test: tests/admin-driver-report.db.test.ts (same figures as the driver sees; 401/403/404). 323 passed.
 - NEXT: fleet owner role (FLEET_OWNER staff role + Fleet; drivers & vehicles belong to a fleet; owner sees only his).
+- DEPLOYED 2026-11-20 22:33 (main e20ad6e).
+
+## 2026-11-20 — Fleet owner role (branch `fleet-owner`, NOT deployed — owner: «сначала покажи»)
+- Decisions (owner): owner ONLY LOOKS; the ADMIN creates the owner and puts drivers / cars into his fleet; the owner's
+  share (percent / rent) — later.
+- Schema + migration 20261120200000_fleet_owner: Role.FLEET_OWNER; Fleet {name, ownerId @unique, active};
+  Driver.fleetId, Vehicle.fleetId (nullable, SET NULL). No fleet = works directly for IL-Y.
+- Server: src/server/fleet.ts (requireFleetOwner, fleetHasDriver — a driver of another fleet is 404).
+  /api/v1/fleet/{me,drivers,drivers/:id,drivers/:id/report/:part,vehicles} — the SAME report tool (driverReportResponse).
+  Admin: /api/v1/admin/fleets (GET, POST → one-time temp password), /admin/fleets/:id (name, active → logout, resetPassword);
+  PATCH admin drivers / vehicles accept fleetId. MFA: FLEET_OWNER is a privileged role (TOTP like admin / dispatcher).
+- UI: admin menu «Автопарки» (/admin/fleets); «Автопарк: …» select on «Водители» and «Автомобили» rows.
+  Owner: login → /fleet «Мой автопарк» (menu: Мой автопарк, Безопасность): today / week totals, his drivers with
+  figures → /fleet/drivers/[id] (back «‹», the driver's own earnings / analytics / hours & km), his cars.
+  Shared: components/reports/DriversFigures.tsx (useDriverFigures, FiguresTotals, DriverFiguresLine), DriverReportScreen.tsx.
+- Test: tests/fleet-owner.db.test.ts. 325 passed. Preview screenshots 260–265 in /tmp/shots (local).
+- To deploy: merge `fleet-owner` → main; the migration must run (check the server's deploy runs `prisma migrate deploy`).

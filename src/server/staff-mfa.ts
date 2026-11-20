@@ -9,7 +9,7 @@ import { verifyPassword } from '@/lib/auth';
 // Staff two-factor (TOTP) for privileged roles (2026-10-01 audit Stage 1.2).
 
 const LABEL = 'staff-totp-v1';
-export const MFA_ROLES = ['ADMIN', 'DISPATCHER'] as const;
+export const MFA_ROLES = ['ADMIN', 'DISPATCHER', 'FLEET_OWNER'] as const; // fleet owner sees drivers' figures (2026-11-20)
 
 export function isPrivileged(u: Pick<StaffUser, 'role'>): boolean {
   return (MFA_ROLES as readonly string[]).includes(u.role);

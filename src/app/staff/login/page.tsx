@@ -28,6 +28,7 @@ export default function StaffLogin() {
       const me = await api<{ role: string; mfaSetupRequired?: boolean }>('/auth/login', { method: 'POST', body: { login, password, ...(needCode ? { totp } : {}) } });
       if (me.role === 'DRIVER') router.push('/driver');
       else if (me.mfaSetupRequired) router.push('/staff/security');
+      else if (me.role === 'FLEET_OWNER') router.push('/fleet');
       else router.push('/dispatch');
     } catch (err) {
       if (err instanceof ApiRequestError && err.body.code === 'MFA_REQUIRED') { setNeedCode(true); setError(null); setBusy(false); return; }

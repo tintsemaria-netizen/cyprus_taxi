@@ -7,7 +7,7 @@ import { useT } from '@/i18n/I18nProvider';
 
 export const dynamic = 'force-dynamic';
 
-interface VehicleRow { id: string; plate: string; make: string; model: string; color: string; vClass: string; seats: number; active: boolean; boundDriver: string | null; }
+interface VehicleRow { id: string; plate: string; make: string; model: string; color: string; vClass: string; seats: number; active: boolean; boundDriver: string | null; fleetId: string | null; }
 
 export default function Page() {
   return <StaffShell roles={['ADMIN']}>{() => <Vehicles />}</StaffShell>;
@@ -24,6 +24,13 @@ function Vehicles() {
     setRows((await api<{ vehicles: VehicleRow[] }>('/admin/vehicles')).vehicles);
   }, []);
   useEffect(() => { load(); }, [load]);
+  // Put a car into a fleet (2026-11-20): its owner then sees it in «Мой автопарк».
+  const [fleets, setFleets] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => { api<{ fleets: { id: string; name: string }[] }>('/admin/fleets').then((r) => setFleets(r.fleets)).catch(() => {}); }, []);
+  async function setFleet(v: VehicleRow, fleetId: string) {
+    try { await api(`/admin/vehicles/${v.id}`, { method: 'PATCH', body: { fleetId: fleetId || null } }); await load(); }
+    catch (e) { if (e instanceof ApiRequestError) setMsg(e.body.message); }
+  }
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -74,6 +81,12 @@ function Vehicles() {
               <div className="text-xs text-muted">{v.vClass} · {t('staff.vehicles.seatsN', { n: v.seats })} · {v.boundDriver ? t('staff.vehicles.boundTo', { name: v.boundDriver }) : t('staff.vehicles.unbound')}</div>
             </div>
             <span className={`chip ${v.active ? '!text-accent' : '!text-danger'}`}>{v.active ? t('staff.active') : t('staff.inactive')}</span>
+            {fleets.length > 0 && (
+              <select className="field !min-h-0 !w-auto !py-1.5 text-xs" value={v.fleetId ?? ''} onChange={(e) => setFleet(v, e.target.value)} aria-label={t('staff.drivers.fleet')} data-testid={`vehicle-fleet-${v.plate}`}>
+                <option value="">{t('staff.drivers.noFleet')}</option>
+                {fleets.map((f) => <option key={f.id} value={f.id}>{t('staff.drivers.fleet')}: {f.name}</option>)}
+              </select>
+            )}
             <button className="btn-ghost !min-h-0 !py-1.5 text-xs" onClick={() => toggle(v)}>{v.active ? t('staff.deactivate') : t('staff.activate')}</button>
           </div>
         ))}

@@ -12,6 +12,7 @@ const schema = z.object({
   seats: z.number().int().min(1).max(16).optional(),
   vClass: z.enum(['COMFORT', 'XL']).optional(),
   active: z.boolean().optional(),
+  fleetId: z.string().min(1).max(64).nullable().optional(), // 2026-11-20
 });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -30,6 +31,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const vehicle = await prisma.vehicle.findUnique({ where: { id } });
   if (!vehicle) return Errors.notFound();
+  if (parsed.data.fleetId && !(await prisma.fleet.findUnique({ where: { id: parsed.data.fleetId }, select: { id: true } }))) return Errors.validation({ fleetId: 'Unknown fleet.' });
 
   // Deactivating a vehicle with an active assignment is blocked (must reassign first).
   // Lock + re-check inside a transaction so it can't race a concurrent assignment.

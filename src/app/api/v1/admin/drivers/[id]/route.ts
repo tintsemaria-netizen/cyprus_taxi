@@ -3,6 +3,7 @@ import { requireStaff, isStaffCtx, hashPassword } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { generateToken } from '@/lib/crypto';
 import { z } from 'zod';
+import { driverHead } from '@/server/reports/driver-report';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,7 @@ const schema = z.object({
   publicName: z.string().min(1).max(100).optional(),
   phone: z.string().min(5).max(20).optional(),
   resetPassword: z.boolean().optional(),
+  fleetId: z.string().min(1).max(64).nullable().optional(), // 2026-11-20: put into / take out of a fleet
 });
 
 // One driver's header for the admin's per-driver report screen (2026-11-20).
@@ -18,10 +20,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const ctx = await requireStaff(['ADMIN']);
   if (!isStaffCtx(ctx)) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();
   const { id } = await params;
-  const d = await prisma.driver.findUnique({ where: { id }, include: { user: true, bindings: { where: { endedAt: null }, include: { vehicle: true } } } });
-  if (!d) return Errors.notFound();
-  const v = d.bindings[0]?.vehicle;
-  return apiOk({ driver: { id: d.id, login: d.user.login, publicName: d.publicName, phone: d.phone, active: d.active && d.user.active, onDuty: d.onDuty, vehicle: v ? { plate: v.plate, label: `${v.make} ${v.model}` } : null } });
+  const driver = await driverHead(id);
+  return driver ? apiOk({ driver }) : Errors.notFound();
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -40,6 +40,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const driver = await prisma.driver.findUnique({ where: { id }, include: { user: true } });
   if (!driver) return Errors.notFound();
+  if (parsed.data.fleetId && !(await prisma.fleet.findUnique({ where: { id: parsed.data.fleetId }, select: { id: true } }))) return Errors.validation({ fleetId: 'Unknown fleet.' });
 
   let temporaryPassword: string | undefined;
   let blocked = false;
@@ -55,6 +56,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (parsed.data.publicName) driverData.publicName = parsed.data.publicName;
     if (parsed.data.phone) driverData.phone = parsed.data.phone;
     if (typeof parsed.data.active === 'boolean') driverData.active = parsed.data.active;
+    if (parsed.data.fleetId !== undefined) driverData.fleetId = parsed.data.fleetId;
     if (Object.keys(driverData).length) await tx.driver.update({ where: { id }, data: driverData });
 
     const userData: Record<string, unknown> = {};

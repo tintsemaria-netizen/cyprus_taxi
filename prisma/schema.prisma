@@ -18,6 +18,7 @@ enum Role {
   ADMIN
   DISPATCHER
   DRIVER
+  FLEET_OWNER // 2026-11-20: sees only his fleet's drivers & vehicles (read-only)
 }
 
 enum VehicleClass {
@@ -38,24 +39,41 @@ enum BookingStatus {
 }
 
 model StaffUser {
-  id             String   @id @default(uuid())
-  login          String   @unique
-  passwordHash   String
-  role           Role
-  active         Boolean  @default(true)
-  sessionVersion Int      @default(1)
-  displayName    String
+  id                String    @id @default(uuid())
+  login             String    @unique
+  passwordHash      String
+  role              Role
+  active            Boolean   @default(true)
+  sessionVersion    Int       @default(1)
+  displayName       String
   // TOTP two-factor (2026-10-01 audit Stage 1.2) for ADMIN/DISPATCHER. Secrets are AES-GCM
   // encrypted at rest. totpLastStep blocks replay of an already-used code.
   totpSecret        String?
   totpPendingSecret String?
   totpEnabledAt     DateTime?
   totpLastStep      Int?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   driver   Driver?
   sessions AuthSession[]
+  fleet    Fleet?
+}
+
+// A fleet owner's car park (2026-11-20, operator). The admin creates the owner and puts drivers
+// and vehicles into his fleet; the owner only looks (reports, list of cars). A driver / vehicle
+// without a fleet works directly for IL-Y. The owner's share (percent / rent) comes later.
+model Fleet {
+  id        String    @id @default(uuid())
+  name      String
+  owner     StaffUser @relation(fields: [ownerId], references: [id])
+  ownerId   String    @unique
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  drivers  Driver[]
+  vehicles Vehicle[]
 }
 
 model Driver {
@@ -71,24 +89,28 @@ model Driver {
   // APPROVED = passed admin KYC review; others block new work.
   eligibility   DriverEligibility @default(PENDING)
   applicationId String? // the approved DriverApplication that provisioned this driver
+  fleet         Fleet?            @relation(fields: [fleetId], references: [id], onDelete: SetNull)
+  fleetId       String?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
   // Aggregate passenger rating (Task 020). ratingTotal is the SUM of stars (integer, no float
   // drift); the displayed average is ratingTotal / ratingCount. Both are maintained in the same
   // transaction that writes a TripRating, so they are always consistent with the rating rows.
-  ratingTotal Int @default(0)
-  ratingCount Int @default(0)
+  ratingTotal   Int     @default(0)
+  ratingCount   Int     @default(0)
   // Driver takes co-riders on airport/intercity rides (Task 022). Off by default.
   acceptsShared Boolean @default(false)
 
-  bindings     DriverVehicleBinding[]
-  assignments  Assignment[]
-  offers       DriverOffer[]
-  location     LatestDriverLocation?
-  dutySessions DutySession[]
-  ratings      TripRating[]
+  bindings       DriverVehicleBinding[]
+  assignments    Assignment[]
+  offers         DriverOffer[]
+  location       LatestDriverLocation?
+  dutySessions   DutySession[]
+  ratings        TripRating[]
   preAssignments PreAssignment[]
+
+  @@index([fleetId])
 }
 
 // Driver on/off-duty sessions (Task 017). Server-timestamped so online-time totals are
@@ -419,11 +441,15 @@ model Vehicle {
   vClass    VehicleClass
   seats     Int
   active    Boolean      @default(true)
+  fleet     Fleet?       @relation(fields: [fleetId], references: [id], onDelete: SetNull)
+  fleetId   String?
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
   bindings    DriverVehicleBinding[]
   assignments Assignment[]
+
+  @@index([fleetId])
 }
 
 model DriverVehicleBinding {
@@ -444,77 +470,77 @@ model DriverVehicleBinding {
 }
 
 model Booking {
-  id             String        @id @default(uuid())
-  reference      String        @unique
-  pickupLat      Float
-  pickupLng      Float
-  pickupLabel    String
-  dropoffLat     Float
-  dropoffLng     Float
-  dropoffLabel   String
-  dropoffPostcode String? // 2026-11-19: area postcode for drivers (best effort)
-  passengerName  String
-  phone          String
-  note           String?
-  vClass         VehicleClass
-  passengerCount Int
-  luggageCount   Int       @default(0) // bags; asked on pre-bookings, shown to the driver
-  passengerRemindedAt DateTime? // pre-booking: "ride in ~1 hour" reminder queued
+  id                    String           @id @default(uuid())
+  reference             String           @unique
+  pickupLat             Float
+  pickupLng             Float
+  pickupLabel           String
+  dropoffLat            Float
+  dropoffLng            Float
+  dropoffLabel          String
+  dropoffPostcode       String? // 2026-11-19: area postcode for drivers (best effort)
+  passengerName         String
+  phone                 String
+  note                  String?
+  vClass                VehicleClass
+  passengerCount        Int
+  luggageCount          Int              @default(0) // bags; asked on pre-bookings, shown to the driver
+  passengerRemindedAt   DateTime? // pre-booking: "ride in ~1 hour" reminder queued
   // Opt-in live passenger position for the driver, before pickup only (2026-11-15).
   passengerLat          Float?
   passengerLng          Float?
   passengerLocAccuracyM Float?
   passengerLocAt        DateTime?
   // One optional intermediate stop (2026-11-15) and the paid waiting there.
-  stopLat           Float?
-  stopLng           Float?
-  stopLabel         String?
-  stopArrivedAt     DateTime?
-  stopWaitStartedAt DateTime?
-  stopDepartedAt    DateTime?
-  stopWaitCents     Int?
-  passengerRating   PassengerRating?
-  requestedAt    DateTime      @default(now())
-  scheduledAt    DateTime?
-  status         BookingStatus @default(REQUESTED)
-  revision       Int           @default(0)
-  quoteId        String? // fare quote applied at booking time (Task 012)
-  fareCents      Int? // snapshotted estimate total (cents)
-  priceType      String? // REGULATED_METER_ESTIMATE | REGULATED_FIXED | UPFRONT_DYNAMIC
-  fareBreakdown  String? // JSON snapshot of the quote breakdown
-  startCode      String? // 4-digit trip-start code (shown to passenger; driver enters it to start) — M3
-  arrivedAt      DateTime? // server time the driver marked ARRIVED at pickup — M3
-  passengerId    String? // owning passenger account (Task 014); null for legacy/anonymous
-  flightNumber   String? // optional, for airport pickups (shown to the driver; not live-tracked)
+  stopLat               Float?
+  stopLng               Float?
+  stopLabel             String?
+  stopArrivedAt         DateTime?
+  stopWaitStartedAt     DateTime?
+  stopDepartedAt        DateTime?
+  stopWaitCents         Int?
+  passengerRating       PassengerRating?
+  requestedAt           DateTime         @default(now())
+  scheduledAt           DateTime?
+  status                BookingStatus    @default(REQUESTED)
+  revision              Int              @default(0)
+  quoteId               String? // fare quote applied at booking time (Task 012)
+  fareCents             Int? // snapshotted estimate total (cents)
+  priceType             String? // REGULATED_METER_ESTIMATE | REGULATED_FIXED | UPFRONT_DYNAMIC
+  fareBreakdown         String? // JSON snapshot of the quote breakdown
+  startCode             String? // 4-digit trip-start code (shown to passenger; driver enters it to start) — M3
+  arrivedAt             DateTime? // server time the driver marked ARRIVED at pickup — M3
+  passengerId           String? // owning passenger account (Task 014); null for legacy/anonymous
+  flightNumber          String? // optional, for airport pickups (shown to the driver; not live-tracked)
   // Ride-share «Попутчик» (Task 022): airport/intercity only, opt-in at booking.
-  shareOptIn       Boolean @default(false)
-  shareMaxExtraMin Int? // the most extra minutes this passenger accepts for a co-rider
-  childCount       Int     @default(0) // of passengerCount; shown to co-riders/driver, never names
-  shareFullCents   Int? // the price before the shared discount (restored if the co-rider drops out)
-  shareFullPriceType String?
-  shareWaitMin     Int? // pre-booking: how long this passenger can wait for the co-rider (their choice)
-  shareOrigScheduledAt DateTime? // the booked pickup time, if a pre-booked pair moved it (restored on break-up)
+  shareOptIn            Boolean          @default(false)
+  shareMaxExtraMin      Int? // the most extra minutes this passenger accepts for a co-rider
+  childCount            Int              @default(0) // of passengerCount; shown to co-riders/driver, never names
+  shareFullCents        Int? // the price before the shared discount (restored if the co-rider drops out)
+  shareFullPriceType    String?
+  shareWaitMin          Int? // pre-booking: how long this passenger can wait for the co-rider (their choice)
+  shareOrigScheduledAt  DateTime? // the booked pickup time, if a pre-booked pair moved it (restored on break-up)
   // Airport meeting point for pairs (on 2026-11-19 18:30–19:10, then postponed until airports are set up):
   // the passenger's own pickup point, restored on break-up. Unused while the feature is off.
-  shareOrigPickupLat   Float?
-  shareOrigPickupLng   Float?
-  shareOrigPickupLabel String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  shareOrigPickupLat    Float?
+  shareOrigPickupLng    Float?
+  shareOrigPickupLabel  String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
-  assignments Assignment[]
-  events      BookingEvent[]
-  grants      TrackingGrant[]
-  dispatchJob DispatchJob?
-  offers      DriverOffer[]
-  waiting     WaitingSession?
-  fare        Fare?
-  messages    ChatMessage[]
-  settlements DriverSettlement[]
-  rating      TripRating?
+  assignments    Assignment[]
+  events         BookingEvent[]
+  grants         TrackingGrant[]
+  dispatchJob    DispatchJob?
+  offers         DriverOffer[]
+  waiting        WaitingSession?
+  fare           Fare?
+  messages       ChatMessage[]
+  settlements    DriverSettlement[]
+  rating         TripRating?
   preAssignments PreAssignment[]
-  shareAsHost  ShareGroup[] @relation("ShareHost")
-  shareAsGuest ShareGroup[] @relation("ShareGuest")
+  shareAsHost    ShareGroup[]       @relation("ShareHost")
+  shareAsGuest   ShareGroup[]       @relation("ShareGuest")
 
   @@index([status, createdAt])
   @@index([status, scheduledAt])
@@ -604,7 +630,7 @@ model Fare {
 // is priced REGULATED_FIXED at exactly this amount instead of the meter estimate.
 model FixedFareZone {
   id           String   @id @default(uuid())
-  airport      String   // AIRPORTS code: PFO | LCA
+  airport      String // AIRPORTS code: PFO | LCA
   name         String
   // [[lat, lng], …] closed implicitly; ≥ 3 points.
   polygon      Json
@@ -945,42 +971,42 @@ model OsmImport {
 //         → ENDED; or DECLINED / EXPIRED / CANCELED. active*BookingId nullable-unique = one live
 //         group per booking.
 model ShareGroup {
-  id               String    @id @default(uuid())
-  mode             String // LIVE | PREBOOK
-  status           String    @default("PROPOSED")
-  host             Booking   @relation("ShareHost", fields: [hostBookingId], references: [id], onDelete: Cascade)
-  hostBookingId    String
-  guest            Booking   @relation("ShareGuest", fields: [guestBookingId], references: [id], onDelete: Cascade)
-  guestBookingId   String
-  driverId         String? // LIVE: the host's driver
-  discountPct      Int
-  extraMinHost     Int // extra minutes for the host passenger
-  extraMinGuest    Int // extra minutes for the guest vs a direct ride
-  extraMinDriver   Int // extra minutes on the driver's whole remaining trip
-  hostFullCents    Int
-  guestFullCents   Int
-  hostCents        Int // after discount
-  guestCents       Int
-  plan             Json // ordered stops: [{ kind: 'pickup'|'dropoff', who: 'host'|'guest' }]
+  id                   String    @id @default(uuid())
+  mode                 String // LIVE | PREBOOK
+  status               String    @default("PROPOSED")
+  host                 Booking   @relation("ShareHost", fields: [hostBookingId], references: [id], onDelete: Cascade)
+  hostBookingId        String
+  guest                Booking   @relation("ShareGuest", fields: [guestBookingId], references: [id], onDelete: Cascade)
+  guestBookingId       String
+  driverId             String? // LIVE: the host's driver
+  discountPct          Int
+  extraMinHost         Int // extra minutes for the host passenger
+  extraMinGuest        Int // extra minutes for the guest vs a direct ride
+  extraMinDriver       Int // extra minutes on the driver's whole remaining trip
+  hostFullCents        Int
+  guestFullCents       Int
+  hostCents            Int // after discount
+  guestCents           Int
+  plan                 Json // ordered stops: [{ kind: 'pickup'|'dropoff', who: 'host'|'guest' }]
   // Minutes from the plan start (live: proposal time; pre-booking: startAt) to each passenger's
   // drop-off, the co-rider's pickup and the end of the trip — road time with traffic when Google is on.
-  arrivals         Json?
-  startAt          DateTime? // pre-booked pair: when the car leaves the first pickup
-  roadRouted       Boolean   @default(false)
-  hostAnswer       String? // YES | NO
-  guestAnswer      String?
-  driverAnswer     String?
-  expiresAt        DateTime
-  createdAt        DateTime  @default(now())
-  decidedAt        DateTime?
-  endedAt          DateTime?
-  endReason        String?
+  arrivals             Json?
+  startAt              DateTime? // pre-booked pair: when the car leaves the first pickup
+  roadRouted           Boolean   @default(false)
+  hostAnswer           String? // YES | NO
+  guestAnswer          String?
+  driverAnswer         String?
+  expiresAt            DateTime
+  createdAt            DateTime  @default(now())
+  decidedAt            DateTime?
+  endedAt              DateTime?
+  endReason            String?
   // Pre-booking no-show (driver waited, passenger never came): that passenger owes a part of their
   // shared price (card charge once card payments exist); the other passenger pays the full price.
-  noShowBookingId  String?
-  noShowFeeCents   Int?
-  activeHostBookingId  String? @unique
-  activeGuestBookingId String? @unique
+  noShowBookingId      String?
+  noShowFeeCents       Int?
+  activeHostBookingId  String?   @unique
+  activeGuestBookingId String?   @unique
 
   @@index([status, expiresAt])
   @@index([guestBookingId])

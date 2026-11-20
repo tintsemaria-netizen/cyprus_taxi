@@ -22,6 +22,7 @@ export async function GET() {
       active: d.active && d.user.active,
       onDuty: d.onDuty,
       available: d.available,
+      fleetId: d.fleetId,
       vehicle: d.bindings[0] ? { plate: d.bindings[0].vehicle.plate, label: `${d.bindings[0].vehicle.make} ${d.bindings[0].vehicle.model}` } : null,
     })),
   });

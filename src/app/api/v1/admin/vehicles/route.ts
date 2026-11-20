@@ -15,7 +15,7 @@ export async function GET() {
   return apiOk({
     vehicles: vehicles.map((v) => ({
       id: v.id, plate: v.plate, make: v.make, model: v.model, color: v.color,
-      vClass: v.vClass, seats: v.seats, active: v.active,
+      vClass: v.vClass, seats: v.seats, active: v.active, fleetId: v.fleetId,
       boundDriver: v.bindings[0] ? v.bindings[0].driver.publicName : null,
     })),
   });

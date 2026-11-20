@@ -1,7 +1,6 @@
-import { apiOk, Errors } from '@/lib/http';
+import { Errors } from '@/lib/http';
 import { requireStaff, isStaffCtx } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { reportAnalytics, reportDuty, reportEarnings, reportStatementCsv, driverExists } from '@/server/reports/driver-report';
+import { driverExists, driverReportResponse } from '@/server/reports/driver-report';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,15 +11,5 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!isStaffCtx(ctx)) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();
   const { id, part } = await params;
   if (!(await driverExists(id))) return Errors.notFound();
-  const url = new URL(req.url);
-  switch (part) {
-    case 'earnings': return apiOk(await reportEarnings(id, url));
-    case 'duty': return apiOk(await reportDuty(id));
-    case 'analytics': return apiOk(await reportAnalytics(id, url));
-    case 'export': {
-      const d = await prisma.driver.findUnique({ where: { id }, select: { user: { select: { login: true } } } });
-      return reportStatementCsv(id, url, d?.user.login ?? 'driver');
-    }
-    default: return Errors.notFound();
-  }
+  return driverReportResponse(id, part, new URL(req.url));
 }

@@ -10,7 +10,7 @@ import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 export interface Me {
   id: string;
-  role: 'ADMIN' | 'DISPATCHER' | 'DRIVER';
+  role: 'ADMIN' | 'DISPATCHER' | 'DRIVER' | 'FLEET_OWNER';
   displayName: string;
   driverId: string | null;
   mfa?: { eligible: boolean; enabled: boolean; setupRequired: boolean };
@@ -37,6 +37,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
         if (!roles.includes(m.role)) {
           setState('denied');
           if (m.role === 'DRIVER') router.replace('/driver');
+          else if (m.role === 'FLEET_OWNER') router.replace('/fleet');
           else router.replace('/dispatch');
           return;
         }
@@ -61,6 +62,8 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
   const nav =
     me.role === 'DRIVER'
       ? [{ href: '/driver', label: t('common.myTrip') }]
+      : me.role === 'FLEET_OWNER'
+      ? [{ href: '/fleet', label: t('staff.nav.myFleet') }, { href: '/staff/security', label: t('staff.nav.security') }]
       : [
           { href: '/dispatch', label: t('staff.nav.dispatch') },
           ...(me.role === 'ADMIN'
@@ -70,6 +73,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
                 { href: '/admin/applications', label: t('staff.nav.applications') },
                 { href: '/admin/passengers', label: t('staff.nav.passengers') },
                 { href: '/admin/drivers', label: t('staff.nav.drivers') },
+                { href: '/admin/fleets', label: t('staff.nav.fleets') },
                 { href: '/admin/vehicles', label: t('staff.nav.vehicles') },
                 { href: '/admin/fixed-prices', label: t('staff.nav.fixedPrices') },
                 { href: '/admin/settings', label: t('staff.nav.settings') },

@@ -95,5 +95,5 @@ function Security() {
 }
 
 export default function Page() {
-  return <StaffShell roles={['ADMIN', 'DISPATCHER']}>{() => <Security />}</StaffShell>;
+  return <StaffShell roles={['ADMIN', 'DISPATCHER', 'FLEET_OWNER']}>{() => <Security />}</StaffShell>;
 }
