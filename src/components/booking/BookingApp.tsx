@@ -940,7 +940,8 @@ export default function BookingApp() {
             >
               {/* Reset the route (2026-11-15): top-right corner, twice the old size. Also on the folded sheet
                   that shows the route (2026-11-17), so it never disappears while a route is set. */}
-              {step === 'form' && (!collapsed || peekRoute) && (addrOpen || dropoff || dropoffText || when === 'SCHEDULE') && (
+              {/* The pre-booking window's ✕ stays on the folded sheet too (2026-11-20). */}
+              {step === 'form' && (((!collapsed || peekRoute) && (addrOpen || dropoff || dropoffText)) || when === 'SCHEDULE') && (
                 <button type="button" aria-label={t('booking.form.resetRoute')} title={t('booking.form.resetRoute')} onClick={when === 'SCHEDULE' ? exitSchedule : resetRoute} data-testid="sheet-close"
                   className="absolute end-1.5 top-1.5 z-20 flex h-12 w-12 items-center justify-center rounded-full text-[36px] leading-none text-muted hover:bg-page/60 hover:text-ink">×</button>
               )}
