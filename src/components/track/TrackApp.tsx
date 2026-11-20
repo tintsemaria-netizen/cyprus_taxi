@@ -1,6 +1,8 @@
 'use client';
 
 import { useKeyboardViewport } from '@/components/useKeyboardViewport';
+import { useDeadReckoning } from '@/components/useDeadReckoning';
+import { DR } from '@/lib/nav';
 import { FixedTop } from '@/components/FixedTop';
 import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -329,6 +331,12 @@ export default function TrackApp() {
     }
   }
 
+  // The car keeps going along the route when its GPS goes quiet — the A6 tunnels (2026-11-20).
+  // Display only, marked «примерно»; the server and the ETA still use the last real position.
+  const drPath = useMemo(() => (routeLine.length > 1 ? routeLine.map(([ln, la]) => [la, ln] as [number, number]) : null), [routeLine]);
+  const drFix = !disconnected && view?.location && ['ASSIGNED', 'EN_ROUTE', 'IN_PROGRESS'].includes(view.status) ? view.location : null;
+  const dr = useDeadReckoning({ fix: drFix ? { lat: drFix.lat, lng: drFix.lng } : null, fixKey: drFix?.sampledAt ?? null, path: drPath, startMs: DR.passengerStartMs });
+
   if (phase === 'loading') {
     return <Centered><div className="animate-pulse text-muted">{t('track.loadingRide')}</div></Centered>;
   }
@@ -364,7 +372,8 @@ export default function TrackApp() {
   const terminal = view.status === 'COMPLETED' || view.status === 'CANCELED';
   // While disconnected we suppress the live vehicle position/ETA entirely — a stale
   // marker must never look current.
-  const liveLocation = disconnected ? null : view.location;
+  const realLocation = disconnected ? null : view.location;
+  const liveLocation = realLocation && dr.pos ? { ...realLocation, lat: dr.pos.lat, lng: dr.pos.lng } : realLocation;
   // Closing in on the drop-off (2026-11-17): within ~600 m the map zooms in gradually (16 → 17.5).
   // The whole route ahead stays in view (2026-11-18), on the way to the pickup and during the trip:
   // the line shrinks behind the car and the camera re-frames smoothly as it gets shorter.
@@ -379,7 +388,7 @@ export default function TrackApp() {
   // A pre-booking (2026-11-19) shows the whole route from afar too: both ends, framed together.
   if (onTrip || view.status === 'SEARCHING' || view.status === 'REQUESTED') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
   if (!onTrip) markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label, pulse: view.status === 'SEARCHING' });
-  if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: t('track.yourDriver'), stale: liveLocation.freshness === 'stale' });
+  if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: t('track.yourDriver'), stale: liveLocation.freshness === 'stale' || dr.estimated });
 
   const etaMinText = view.pickupEtaMin != null ? tp('common.minutes', view.pickupEtaMin) : null;
   const etaText = !disconnected && etaMinText ? (view.pickupEtaApprox ? t('track.etaApprox', { min: etaMinText }) : etaMinText) : null;
@@ -524,7 +533,8 @@ export default function TrackApp() {
                   <p className="mt-2 rounded-[10px] border border-[#FFC83D]/40 bg-[#FFC83D]/10 px-3 py-2 text-xs text-[#FFC83D]">{view.stop.waitStartedAt ? t('track.stopWaitingPaid') : t('track.atStop')}</p>
                 )}
 
-                {liveLocation && (
+                {liveLocation && dr.estimated && <p className="mt-2 text-xs text-warn" data-testid="gps-approx">📡 {t('track.gpsApprox')}</p>}
+                {liveLocation && !dr.estimated && (
                   <p className="mt-2 text-xs text-muted">
                     {t(liveLocation.poorAccuracy ? 'track.locationLineLowAcc' : 'track.locationLine', {
                       freshness: ['fresh', 'stale', 'disconnected'].includes(liveLocation.freshness) ? t(`track.freshness.${liveLocation.freshness}` as MsgKey) : liveLocation.freshness,

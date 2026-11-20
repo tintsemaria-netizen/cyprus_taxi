@@ -311,6 +311,8 @@ const driver = {
     recenter: 'Re-centre',
     details: 'Details',
     menu: 'Menu',
+    noGpsApprox: "No GPS · approximate",
+    noGps: "No GPS signal",
     hideDetails: 'Hide',
   },
   alerts: {

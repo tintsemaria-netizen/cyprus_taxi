@@ -42,6 +42,7 @@ const track = {
   locationLine: 'Location {freshness} · updated {time}',
   locationLineLowAcc: 'Location {freshness} · low accuracy · updated {time}',
   livePaused: 'Live position paused — reconnecting…',
+  gpsApprox: "No signal from the car · approximate position",
   etaUnavailable: 'ETA unavailable — waiting for the driver’s GPS.',
   shareTrip: '↗ Share trip',
   safety: '🛡 Safety',

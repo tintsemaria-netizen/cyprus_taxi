@@ -314,6 +314,8 @@ const driver: Catalog<typeof en> = {
     recenter: 'Επανακεντράρισμα',
     details: 'Λεπτομέρειες',
     menu: "Μενού",
+    noGpsApprox: "Χωρίς GPS · κατά προσέγγιση",
+    noGps: "Χωρίς σήμα GPS",
     hideDetails: 'Απόκρυψη',
   },
   alerts: {

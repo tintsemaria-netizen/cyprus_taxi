@@ -54,6 +54,7 @@ const track: Catalog<typeof en> = {
   locationLine: "الموقع {freshness} · تحديث {time}",
   locationLineLowAcc: "الموقع {freshness} · دقة منخفضة · تحديث {time}",
   livePaused: "الموقع المباشر متوقف مؤقتًا — جارٍ إعادة الاتصال…",
+  gpsApprox: "لا توجد إشارة من السيارة · موقع تقريبي",
   etaUnavailable: "وقت الوصول غير متاح — بانتظار GPS السائق.",
   shareTrip: "↗ مشاركة الرحلة",
   safety: "🛡 السلامة",

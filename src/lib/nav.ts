@@ -116,3 +116,48 @@ export function maneuverIcon(m: string): string {
     default: return '⬆';
   }
 }
+
+// ---- Keep moving without GPS (tunnels, 2026-11-20) ----
+// The only road tunnels in Cyprus are the twin ~950 m tunnels on the A6 Limassol–Paphos motorway
+// (limit 100 km/h, minimum 65): 34 s at 100 km/h, 53 s at 65 km/h. With the fix lost a little before
+// the portal and a few seconds to get it back after it, the gap is about 1.2 km and 40–75 s.
+// So the car is carried along the route for at most 1.5 km / 120 s after the last real fix.
+export const DR = {
+  startMs: 2500,       // driver phone: no new fix for this long → start estimating
+  passengerStartMs: 10_000, // passenger: positions come every ~5 s via the server
+  maxMs: 120_000,
+  maxM: 1500,
+  minKmh: 15,          // standing / crawling: do not move the car
+  maxOffRouteM: 40,    // only when the last fix was on the route
+  glideMs: 900,        // a returning fix glides in instead of jumping
+} as const;
+
+/** The point `alongM` metres from the start of the path, and the direction of travel there. */
+export function pointAlong(path: [number, number][], cum: number[], alongM: number): { point: LatLng; bearing: number } | null {
+  if (path.length < 2 || cum.length !== path.length) return null;
+  const total = cum[cum.length - 1];
+  const m = Math.max(0, Math.min(total, alongM));
+  let i = 0;
+  while (i < cum.length - 2 && cum[i + 1] < m) i++;
+  const segLen = cum[i + 1] - cum[i];
+  const t = segLen > 0 ? (m - cum[i]) / segLen : 0;
+  const a = { lat: path[i][0], lng: path[i][1] }, b = { lat: path[i + 1][0], lng: path[i + 1][1] };
+  return { point: { lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t }, bearing: bearingDeg(a, b) };
+}
+
+/**
+ * Where to draw the car `ageMs` after its last real fix, moving at `speedKmh` along the route from
+ * `fromAlongM`. Null = do not estimate (too soon, too slow, off the route). `capped` = the limit
+ * (1.5 km / 120 s / end of route) was reached: the car stops there and the app says «нет GPS».
+ */
+export function deadReckon(o: { path: [number, number][]; cum: number[]; fromAlongM: number; offRouteM: number; speedKmh: number | null; ageMs: number; startMs: number }):
+  { point: LatLng; bearing: number; capped: boolean } | null {
+  if (o.ageMs < o.startMs || o.speedKmh == null || o.speedKmh < DR.minKmh || o.offRouteM > DR.maxOffRouteM) return null;
+  const total = o.cum[o.cum.length - 1] ?? 0;
+  const t = Math.min(o.ageMs, DR.maxMs) / 1000;
+  const ahead = Math.min((o.speedKmh / 3.6) * t, DR.maxM, Math.max(0, total - o.fromAlongM));
+  const at = pointAlong(o.path, o.cum, o.fromAlongM + ahead);
+  if (!at) return null;
+  const capped = o.ageMs >= DR.maxMs || ahead >= DR.maxM - 1 || o.fromAlongM + ahead >= total - 1;
+  return { ...at, capped };
+}

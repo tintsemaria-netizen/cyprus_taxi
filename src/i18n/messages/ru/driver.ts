@@ -314,6 +314,8 @@ const driver: Catalog<typeof en> = {
     recenter: 'К моей позиции',
     details: 'Подробнее',
     menu: 'Меню',
+    noGpsApprox: "Нет GPS · примерно",
+    noGps: "Нет сигнала GPS",
     hideDetails: 'Скрыть',
   },
   alerts: {

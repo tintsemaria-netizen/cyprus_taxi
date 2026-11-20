@@ -339,6 +339,8 @@ const driver: Catalog<typeof en> = {
     recenter: "توسيط",
     details: "التفاصيل",
     menu: "القائمة",
+    noGpsApprox: "لا GPS · تقريبي",
+    noGps: "لا توجد إشارة GPS",
     hideDetails: "إخفاء",
   },
   alerts: {

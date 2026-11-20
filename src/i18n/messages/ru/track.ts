@@ -50,6 +50,7 @@ const track: Catalog<typeof en> = {
   locationLine: 'Местоположение {freshness} · обновлено в {time}',
   locationLineLowAcc: 'Местоположение {freshness} · низкая точность · обновлено в {time}',
   livePaused: 'Отслеживание приостановлено — переподключаемся…',
+  gpsApprox: "Нет связи с машиной · показываем примерно",
   etaUnavailable: 'Время подачи неизвестно — ждём GPS водителя.',
   shareTrip: '↗ Поделиться',
   safety: '🛡 Безопасность',

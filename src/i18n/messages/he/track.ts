@@ -54,6 +54,7 @@ const track: Catalog<typeof en> = {
   locationLine: "מיקום {freshness} · עודכן {time}",
   locationLineLowAcc: "מיקום {freshness} · דיוק נמוך · עודכן {time}",
   livePaused: "המיקום החי מושהה — מתחבר מחדש…",
+  gpsApprox: "אין אות מהרכב · מיקום משוער",
   etaUnavailable: "זמן ההגעה אינו זמין — ממתינים ל-GPS של הנהג.",
   shareTrip: "↗ שיתוף הנסיעה",
   safety: "🛡 בטיחות",

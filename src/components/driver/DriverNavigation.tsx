@@ -21,7 +21,8 @@ import EdgeShine from '@/components/EdgeShine';
 // round, bold, glint on the rim.
 const STAGE_BTN = 'relative mx-auto block h-[53px] w-[65%] rounded-full bg-accent text-[16px] font-bold text-[#0d1608] shadow-lg active:scale-[0.99]';
 import { useStreetName } from '@/components/useStreetName';
-import { bearingDeg, cumulative, distM, locate, maneuverIcon, nextStep, offsetPoint, promptBand, roundNavDistance, type LatLng, type NavStep } from '@/lib/nav';
+import { useDeadReckoning } from '@/components/useDeadReckoning';
+import { bearingDeg, cumulative, distM, DR, locate, maneuverIcon, nextStep, offsetPoint, promptBand, roundNavDistance, type LatLng, type NavStep } from '@/lib/nav';
 
 // Full-screen navigation for an accepted ride (replaces the tabbed driver UI while a trip is
 // active): heading-up map following the car, turn-by-turn banner with optional voice, rerouting,
@@ -125,7 +126,11 @@ export function DriverNavigation(props: {
   const cum = useMemo(() => (route ? cumulative(route.path) : []), [route]);
   const segRef = useRef(0);
   useEffect(() => { segRef.current = 0; }, [route]);
-  const progress = useMemo(() => (route && pos ? locate(route.path, cum, pos, segRef.current) : null), [route, cum, pos]);
+  // In a tunnel (no GPS) the car keeps going along the route for up to 1.5 km / 120 s (2026-11-20);
+  // `shown` is what is drawn and followed, `pos` stays the last REAL fix (arrival checks, reroutes).
+  const dr = useDeadReckoning({ fix: pos, fixKey: pos, path: route?.path ?? null, startMs: DR.startMs });
+  const shown = dr.pos;
+  const progress = useMemo(() => (route && shown ? locate(route.path, cum, shown, segRef.current) : null), [route, cum, shown]);
   useEffect(() => { if (progress) segRef.current = progress.seg; }, [progress]);
 
   // Driving vs standing still (arrow pulse): moved ≥ 10 m within the last 8 s of GPS samples.
@@ -219,7 +224,7 @@ export function DriverNavigation(props: {
 
   // ---- Map ----
   const heading = progress && progress.offRouteM < 30 ? progress.bearing : travelHeading ?? 0;
-  const camPoint = progress && progress.offRouteM < 30 ? progress.snapped : pos;
+  const camPoint = progress && progress.offRouteM < 30 ? progress.snapped : shown;
   // Aim the camera ~110 m ahead so the car sits in the lower part of the map and the road ahead shows.
   // The look-ahead grows with the zoom-out, so the car stays in the same spot on screen.
   const camCenter = camPoint ? offsetPoint(camPoint, heading, 110 * 2 ** (NAV_ZOOM_MAX - navZoom)) : null;
@@ -227,7 +232,7 @@ export function DriverNavigation(props: {
   const markers: MapMarker[] = [];
   // The own car points along the route/travel heading (same heading the camera uses).
   // On an order the own position is a navigation arrow (pulses while standing still).
-  if (pos) markers.push({ id: 'me', lat: pos.lat, lng: pos.lng, kind: 'vehicle', self: true, nav: true, moving, heading, label: t('driver.map.you') });
+  if (shown) markers.push({ id: 'me', lat: shown.lat, lng: shown.lng, kind: 'vehicle', self: true, nav: true, moving: moving || dr.estimated, heading, stale: dr.estimated, label: t('driver.map.you') });
   // Only the CURRENT target is on the map (2026-11-15): on the way to / waiting at the pickup the
   // driver sees just the pickup point — not the whole trip (the map would zoom out to fit it).
   if (leg === 'pickup') markers.push({ id: 'pk', lat: trip.pickup.lat, lng: trip.pickup.lng, kind: 'pickup', label: t('driver.map.pickup') });
@@ -341,9 +346,14 @@ export function DriverNavigation(props: {
       {/* ☰ right above the stage button (2026-11-18): rides up and down with the sheet. */}
       {/* The street the car is on (2026-11-17; 2026-11-19 moved down here, next to ☰, so it never covers
           the turn hint): the map labels only the main roads at this zoom. */}
-      {(canRelease || street) && (
+      {(canRelease || street || dr.estimated) && (
         <div className="pointer-events-none relative flex min-h-[44px] items-center justify-end px-3 pb-2">
-          {street && (
+          {/* No GPS (tunnel, 2026-11-20): the car is an estimate — say so instead of the street name. */}
+          {dr.estimated ? (
+            <div className="absolute inset-x-16 top-0 flex h-[44px] items-center justify-center" data-testid="no-gps-chip">
+              <span className="max-w-full truncate rounded-full border border-warn/50 bg-[#10191C]/90 px-3 py-1.5 text-[14px] font-semibold text-warn shadow">📡 {dr.capped ? t('driver.navigation.noGps') : t('driver.navigation.noGpsApprox')}</span>
+            </div>
+          ) : street && (
             <div className="absolute inset-x-16 top-0 flex h-[44px] items-center justify-center" data-testid="street-chip">
               <span className="max-w-full truncate rounded-full border border-white/15 bg-[#10191C]/90 px-3 py-1.5 text-[14px] font-semibold text-ink shadow">{street}</span>
             </div>

@@ -45,6 +45,7 @@ const track: Catalog<typeof en> = {
   locationLine: 'Θέση {freshness} · ενημέρωση {time}',
   locationLineLowAcc: 'Θέση {freshness} · χαμηλή ακρίβεια · ενημέρωση {time}',
   livePaused: 'Η ζωντανή θέση σε παύση — επανασύνδεση…',
+  gpsApprox: "Χωρίς σήμα από το όχημα · κατά προσέγγιση θέση",
   etaUnavailable: 'Ο χρόνος άφιξης δεν είναι διαθέσιμος — αναμονή για το GPS του οδηγού.',
   shareTrip: '↗ Κοινοποίηση',
   safety: '🛡 Ασφάλεια',

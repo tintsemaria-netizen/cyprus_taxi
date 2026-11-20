@@ -339,6 +339,8 @@ const driver: Catalog<typeof en> = {
     recenter: "Wyśrodkuj",
     details: "Szczegóły",
     menu: "Menu",
+    noGpsApprox: "Brak GPS · w przybliżeniu",
+    noGps: "Brak sygnału GPS",
     hideDetails: "Ukryj",
   },
   alerts: {
