@@ -2305,3 +2305,5 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
   /auth/me returns `fleet`. Driver menu ☰ shows «Мой автопарк · <name> ›» → /fleet (back «‹» to /driver; the top bar
   shows «Моя поездка | Мой автопарк»). Switching such a fleet off / «reset password» never touches his driver account.
   Test added (driver-owner). 326 passed. Screens 270–272 in /tmp/shots.
+- DEPLOYED 2026-11-21 00:18 (main c784022): /fleet, /admin/fleets live; anonymous /api/v1/fleet/* → 401; ready OK.
+  Not yet checked on live with a real login (no fleet created on production yet).
