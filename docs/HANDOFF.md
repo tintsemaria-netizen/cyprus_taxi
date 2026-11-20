@@ -2236,3 +2236,9 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
 - iPhone Air on iOS 27.2.1 blurred the logo/avatar under the translucent status bar (iPhone 12 Pro on iOS 18.6 did not).
   Fix: appleWebApp statusBarStyle 'black' (passenger + driver layouts) — the app starts below the status bar.
   Needs the Home Screen icon re-added to take effect. Earlier steps kept: top bars opaque, pinned (FixedTop on home/track).
+
+## 2026-11-20 — Pre-booking window
+- «Запланировать» opens its own window: heading + ✕ (exitSchedule: back to «now», clears time/route/note, folds the
+  sheet), date & time on top, the full From/To box (both rows, editor, swap, add stop), «Попутчик» switch (greyed with
+  the list of places until isShareRoute), driver note, contact. No «Куда едем?», tiles or recent trips there.
+  The review step no longer repeats «Попутчик» for a pre-booking.
