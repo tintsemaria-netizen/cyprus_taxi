@@ -5,6 +5,7 @@ const share: Catalog<typeof en> = {
   booking: {
     title: "Mitfahrer −{pct}%",
     hint: "Fährt ein Mitfahrer in Ihre Richtung mit, zahlen Sie {pct}% weniger. Sonst fahren Sie zum normalen Preis.",
+    routes: "Mitfahren gibt es nur zwischen den Flughäfen LCA und PFO, Larnaka, Nikosia, Paphos, Ayia Napa und Limassol.",
     adults: "Erwachsene",
     children: "Kinder",
     luggage: "Koffer",

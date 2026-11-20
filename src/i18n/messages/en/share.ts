@@ -3,6 +3,7 @@ const share = {
   booking: {
     title: 'Co-rider −{pct}%',
     hint: 'If a co-rider going your way joins, you pay {pct}% less. If nobody joins, you ride at the normal price.',
+    routes: "Ride-share works only between LCA and PFO airports, Larnaca, Nicosia, Paphos, Ayia Napa and Limassol.",
     adults: 'Adults',
     children: 'Children',
     luggage: 'Suitcases',

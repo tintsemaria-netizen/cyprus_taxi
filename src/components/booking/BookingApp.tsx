@@ -1145,6 +1145,13 @@ export default function BookingApp() {
                     {/* No «Сейчас / Запланировать» switch (2026-11-17): a ride is «now» unless the clock pill
                         in the address box is used; its panel has a way back to «now». */}
                     <div className="mt-3">
+                      {/* «Попутчик» in the pre-booking window (2026-11-20, operator): always shown there — greyed with
+                          the list of places until the route is one where ride-share works. */}
+                      {when === 'SCHEDULE' && cfg?.share && (
+                        <div className="-mt-4 mb-3">
+                          <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook disabled={!shareAllowed} />
+                        </div>
+                      )}
                       {when === 'SCHEDULE' && (
                         /* Pre-booking note: flight number, meeting point and bags are written here for the driver. */
                         <div className="rounded-[12px] border border-edge bg-elevated px-3 py-2.5">
@@ -1207,8 +1214,9 @@ export default function BookingApp() {
                       </div>
                     )}
                     {classPicker}
-                    {shareAllowed && cfg?.share && (
-                      <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook={when === 'SCHEDULE'} />
+                    {/* Pre-bookings set «Попутчик» in the pre-booking window itself (2026-11-20). */}
+                    {shareAllowed && cfg?.share && when !== 'SCHEDULE' && (
+                      <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} />
                     )}
                     {ambiguous ? (
                       <div className="mt-4 rounded-[12px] border border-warn/40 bg-warn/10 p-3">

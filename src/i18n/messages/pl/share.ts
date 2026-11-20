@@ -5,6 +5,7 @@ const share: Catalog<typeof en> = {
   booking: {
     title: "Współpasażer −{pct}%",
     hint: "Jeśli dołączy współpasażer jadący w Twoją stronę, zapłacisz o {pct}% mniej. Jeśli nie — jedziesz w normalnej cenie.",
+    routes: "Współprzejazd działa tylko między lotniskami LCA i PFO, Larnaką, Nikozją, Pafos, Ayia Napą i Limassolem.",
     adults: "Dorośli",
     children: "Dzieci",
     luggage: "Walizki",
