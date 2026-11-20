@@ -1003,7 +1003,6 @@ export default function BookingApp() {
                       <div data-testid="schedule-panel">
                         <h1 className="mb-3 pe-12 text-xl font-bold">🕒 {t('booking.form.schedule')}</h1>
                         <input type="datetime-local" data-testid="schedule-time" className={`field block w-full min-w-0 max-w-full appearance-none ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
-                        <p className="mt-1 text-xs text-muted">{withSlot(t('booking.form.timezoneNote'), 'tz', <strong>{cfg?.timezone ?? 'Europe/Nicosia'}</strong>)}</p>
                         {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
                         <div className="mb-3" />
                       </div>

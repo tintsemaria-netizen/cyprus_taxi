@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-20 — pre-booking panel: time-zone note removed (deployed)
+
+Operator: the note under the date in «Запланировать» (Europe/Nicosia / «we will pick a driver») is removed (`BookingApp.tsx`). Times are still Europe/Nicosia. The i18n key `booking.form.timezoneNote` is left in place.
+
 ## 2026-11-19 — Driver analytics + earnings chart fix (deployed)
 
 - ☰ → Заработок → tile «Выполнено заказов · Подробнее ›» opens `DriverAnalytics` (back arrow): День / Неделя (Mon–Sun), ‹ › or date picker (Cyprus days). Two tiles: «Выполнено» (count + earned, pending finals) and «Не выполнено» (driver-cancelled rides = REMATCH by this driver + offers REJECTED/EXPIRED, «могли заработать» = final or estimate). Tapping a tile opens its list (back arrow).
