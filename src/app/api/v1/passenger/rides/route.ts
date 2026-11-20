@@ -11,7 +11,9 @@ export async function GET() {
     where: { passengerId: p.id }, orderBy: { createdAt: 'desc' }, take: 50,
     select: { id: true, reference: true, status: true, createdAt: true, scheduledAt: true, pickupLabel: true, dropoffLabel: true, fareCents: true, priceType: true, rating: { select: { stars: true } }, fare: { select: { estimateCents: true, waitingCents: true, finalCents: true } } },
   });
-  const ACTIVE = ['REQUESTED', 'SEARCHING', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'NO_DRIVER'];
+  // NO_DRIVER is not «live» in the history (2026-11-20): it «did not take place» — no «Следить онлайн»
+  // that leads to «Искать снова» on an old route. The booking screen still offers a fresh retry.
+  const ACTIVE = ['REQUESTED', 'SEARCHING', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'];
   return apiOk({ rides: rows.map((b) => ({
     id: b.id, reference: b.reference, status: b.status, active: ACTIVE.includes(b.status),
     at: (b.scheduledAt ?? b.createdAt).toISOString(), pickup: b.pickupLabel, dropoff: b.dropoffLabel,

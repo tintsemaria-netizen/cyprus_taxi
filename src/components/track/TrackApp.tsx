@@ -386,7 +386,8 @@ export default function TrackApp() {
   const headline =
     (view.status === 'EN_ROUTE' || view.status === 'ASSIGNED') && view.vehicle
       ? (etaText ? t('track.meetDriverEta', { name: view.vehicle.driverName, eta: etaText }) : t('track.meetDriver', { name: view.vehicle.driverName }))
-      : statusLabel;
+      // An old order no driver was found for (2026-11-20): «Поездка не состоялась», no retry.
+      : view.status === 'NO_DRIVER' && !view.canRetry ? t('rides.detail.notHappened') : statusLabel;
   const vehicleDesc = view.vehicle ? `${view.vehicle.color} ${view.vehicle.make} ${view.vehicle.model}` : '';
   const SLOT = '\u0000';
 
@@ -480,7 +481,7 @@ export default function TrackApp() {
                 {view.shared && !terminal && <SharedBadge s={view.shared} to={view.dropoff.label} />}
                 {view.flightNumber && !terminal && <p className="mt-2 font-mono text-xs text-muted">✈ {t('track.prebook.flightRow', { flight: formatFlight(view.flightNumber) })}</p>}
                 {view.status === 'NO_DRIVER' && (
-                  <p className="mt-1 text-sm text-muted">{t('track.noDriverNote')}</p>
+                  <p className="mt-1 text-sm text-muted">{view.canRetry ? t('track.noDriverNote') : t('rides.detail.notHappenedNote')}</p>
                 )}
 
                 {view.vehicle ? (
@@ -517,7 +518,7 @@ export default function TrackApp() {
 
                 {/* Route (2026-11-15): the same dotted box as when ordering, with room between points;
                     a stop can be added/removed in the middle until the car reaches it. */}
-                <TrackRoute view={view} editable={!terminal && !view.stop?.arrivedAt} canAddStop={!view.shareOptIn && !view.shared} onChanged={load} />
+                <TrackRoute view={view} editable={!terminal && !view.stop?.arrivedAt && !(view.status === 'NO_DRIVER' && !view.canRetry)} canAddStop={!view.shareOptIn && !view.shared} onChanged={load} />
                 {view.stop?.arrivedAt && !view.stop.departedAt && (
                   <p className="mt-2 rounded-[10px] border border-[#FFC83D]/40 bg-[#FFC83D]/10 px-3 py-2 text-xs text-[#FFC83D]">{view.stop.waitStartedAt ? t('track.stopWaitingPaid') : t('track.atStop')}</p>
                 )}

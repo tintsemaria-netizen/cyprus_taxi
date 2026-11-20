@@ -1,159 +1,144 @@
 'use client';
 
-import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { use, useEffect, useState } from 'react';
+import { PassengerTopBar } from '@/components/PassengerTopBar';
+import AutoMapView, { type MapMarker } from '@/components/AutoMapView';
+import { RateTripModal } from '@/components/booking/RateTripModal';
 import { api, ApiRequestError } from '@/lib/api-client';
-import { useT, useLocale, I18nProvider } from '@/i18n/I18nProvider';
-import { LOCALES, LOCALE_NAMES, LOCALE_SHORT, type Locale } from '@/i18n/config';
-import { GoogleReviewCard } from '@/components/GoogleReviewCard';
+import { useT } from '@/i18n/I18nProvider';
+import type { MsgKey } from '@/i18n/I18nProvider';
 
 export const dynamic = 'force-dynamic';
 
-interface Line { label: string; cents: number }
-interface Receipt {
-  reference: string;
-  completedAt: string | null;
-  pickup: string;
-  dropoff: string;
-  stop?: string | null;
-  vClass: string;
-  passengerCount: number;
-  driver: { name: string; vehicle: string; plate: string } | null;
-  fare: {
-    priceType: string; currency: string; isUpfront: boolean;
-    estimateCents: number | null; waitingCents: number; finalCents: number | null; totalCents: number | null;
-    lines: Line[]; note: string; paymentMethod: string; paymentStatus: string;
+// A ride from «Мои поездки» (2026-11-20): map with the whole route, when, how it ended and — for a
+// completed ride — driver, car, distance, time on the way, total, rating and the «Чек» button.
+interface Pt { label: string; lat: number; lng: number }
+interface Ride {
+  id: string; reference: string; status: string; at: string;
+  pickup: Pt; stop: Pt | null; dropoff: Pt;
+  vClass: string; passengerCount: number; luggageCount: number;
+  completed: null | {
+    at: string | null; startedAt: string | null; driver: { name: string; vehicle: string; plate: string } | null;
+    totalCents: number | null; currency: string; paymentMethod: string; distanceKm: number | null; durationMin: number | null;
   };
   rating: { stars: number } | null;
-  email: { status: string; to: string; sentAt: string | null; canResend: boolean } | null;
-  canEmail: boolean;
 }
-
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { t } = useT();
-  const appLocale = useLocale();
-  // Receipt language: Russian for a Russian app, otherwise English; the passenger can pick another.
-  const [lang, setLangState] = useState<Locale>(appLocale === 'ru' ? 'ru' : 'en');
-  useEffect(() => { try { const v = localStorage.getItem('il-y-receipt-lang'); if (v && (LOCALES as readonly string[]).includes(v)) setLangState(v as Locale); } catch { /* storage off */ } }, []);
-  const setLang = (l: Locale) => { setLangState(l); try { localStorage.setItem('il-y-receipt-lang', l); } catch { /* ignore */ } };
-  const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const { t, tp, fmt } = useT();
+  const [ride, setRide] = useState<Ride | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [needLogin, setNeedLogin] = useState(false);
-  const [mailBusy, setMailBusy] = useState(false);
-  const [mailNote, setMailNote] = useState<string | null>(null);
-
-  async function sendMail() {
-    setMailBusy(true); setMailNote(null);
-    try {
-      await api(`/passenger/rides/${id}/receipt/email`, { method: 'POST' });
-      setMailNote(t('rides.receipt.emailRequested'));
-      setReceipt(await api<Receipt>(`/passenger/rides/${id}/receipt`));
-    } catch (e) {
-      setMailNote(e instanceof ApiRequestError && e.body.code === 'RESEND_LIMIT' ? t('rides.receipt.emailLimit') : e instanceof ApiRequestError ? e.body.message : t('rides.receipt.loadFailed'));
-    } finally { setMailBusy(false); }
-  }
+  const [route, setRoute] = useState<[number, number][]>([]);
+  const [rating, setRating] = useState(false);
 
   useEffect(() => {
     (async () => {
-      try { setReceipt(await api<Receipt>(`/passenger/rides/${id}/receipt`)); }
+      try { setRide(await api<Ride>(`/passenger/rides/${id}`)); }
       catch (e) {
-        if (e instanceof ApiRequestError) { setError(e.status === 401 ? t('rides.receipt.signInToView') : e.body.message); setNeedLogin(e.status === 401); }
-        else setError(t('rides.receipt.loadFailed'));
+        if (e instanceof ApiRequestError) { setNeedLogin(e.status === 401); setError(e.status === 401 ? t('rides.signInPrompt') : e.body.message); }
+        else setError(t('rides.loadError'));
       }
     })();
   }, [id, t]);
 
+  // The road route (pickup → stop → drop-off) for the map.
+  useEffect(() => {
+    if (!ride) return;
+    let alive = true;
+    api<{ available?: boolean; path?: [number, number][] }>('/routes/estimate', {
+      method: 'POST', body: { from: ride.pickup, to: ride.dropoff, ...(ride.stop ? { via: ride.stop } : {}) },
+    }).then((r) => { if (alive && r.available !== false && r.path) setRoute(r.path.map(([la, ln]) => [ln, la] as [number, number])); })
+      .catch(() => { /* markers only */ });
+    return () => { alive = false; };
+  }, [ride]);
+
+  const markers: MapMarker[] = ride ? [
+    { id: 'p', kind: 'pickup', lat: ride.pickup.lat, lng: ride.pickup.lng },
+    ...(ride.stop ? [{ id: 's', kind: 'stop' as const, lat: ride.stop.lat, lng: ride.stop.lng }] : []),
+    { id: 'd', kind: 'dropoff', lat: ride.dropoff.lat, lng: ride.dropoff.lng },
+  ] : [];
+
+  const statusText = (s: string) => s === 'NO_DRIVER' ? t('rides.detail.notHappened') : t(`common.status.${s}` as MsgKey);
+  const c = ride?.completed ?? null;
+  const stars = ride?.rating?.stars ?? null;
+
   return (
     <div>
-    <PassengerTopBar back={'/rides'} />
-    <div className="mx-auto max-w-lg p-4 sm:p-6">
+      <PassengerTopBar back="/rides" />
+      <div className="mx-auto max-w-lg p-4 sm:p-6">
+        {error ? (
+          <div className="card p-6 text-center text-sm text-muted">
+            {error}
+            {needLogin && <a href={`/login?next=${encodeURIComponent(`/rides/${id}`)}`} className="btn-primary mt-4 w-full">{t('auth.signIn')}</a>}
+          </div>
+        ) : !ride ? (
+          <p className="text-muted">{t('common.loading')}</p>
+        ) : (
+          <>
+            <div className="overflow-hidden rounded-[16px] border border-edge" data-testid="ride-map">
+              <AutoMapView markers={markers} route={route.length ? route : undefined} center={ride.pickup} zoom={12} fitRoute
+                interactive className="h-60 w-full" fitPadding={{ top: 40, right: 40, bottom: 40, left: 40 }} />
+            </div>
 
-      {error ? (
-        <div className="card p-6 text-center text-sm text-muted">
-          {error}
-          {needLogin && <a href={`/login?next=${encodeURIComponent(`/rides/${id}`)}`} className="btn-primary mt-4 w-full" data-testid="receipt-login">{t('auth.signIn')}</a>}
-        </div>
-      ) : !receipt ? (
-        <p className="text-muted">{t('common.loading')}</p>
-      ) : (
-        <I18nProvider locale={lang}>
-          <ReceiptCard receipt={receipt} lang={lang} onLang={setLang} sendMail={sendMail} mailBusy={mailBusy} mailNote={mailNote} />
-        </I18nProvider>
-      )}
-      {receipt && <div className="mt-4"><GoogleReviewCard compact /></div>}
-    </div>
+            <div className="card mt-3 p-4" data-testid="ride-detail">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h1 className="text-lg font-bold">{fmt.dateTime(ride.at)}</h1>
+                  <p className="text-xs text-muted">#{ride.reference}</p>
+                </div>
+                <span className="chip shrink-0">{statusText(ride.status)}</span>
+              </div>
+              {ride.status === 'NO_DRIVER' && <p className="mt-2 text-sm text-muted">{t('rides.detail.notHappenedNote')}</p>}
+
+              <div className="mt-3 space-y-1.5 text-sm">
+                <div className="flex gap-2"><span className="text-accent">●</span><span className="min-w-0">{ride.pickup.label}</span></div>
+                {ride.stop && <div className="flex gap-2"><span className="text-[#FFC83D]">◆</span><span className="min-w-0">{ride.stop.label}</span></div>}
+                <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0">{ride.dropoff.label}</span></div>
+              </div>
+
+              {c && (
+                <dl className="mt-4 divide-y divide-edge border-t border-edge text-sm">
+                  {c.driver && <Row k={t('rides.detail.driver')} v={c.driver.name} />}
+                  {c.driver && <Row k={t('rides.detail.car')} v={<>{c.driver.vehicle} · <span className="font-mono">{c.driver.plate}</span></>} />}
+                  <Row k={t('booking.review.class')} v={`${t(`common.vClass.${ride.vClass}` as MsgKey)} · ${tp('common.passengers', ride.passengerCount)}`} />
+                  {c.distanceKm != null && <Row k={t('rides.detail.distance')} v={t('rides.detail.km', { km: c.distanceKm.toLocaleString(undefined, { maximumFractionDigits: 1 }) })} />}
+                  {c.durationMin != null && <Row k={t('rides.detail.duration')} v={tp('common.minutes', c.durationMin)} />}
+                  <Row k={t('rides.detail.payment')} v={c.paymentMethod === 'CASH_TO_DRIVER' ? t('common.payment.CASH_TO_DRIVER') : c.paymentMethod} />
+                  <div className="flex items-baseline justify-between py-2.5">
+                    <dt className="font-semibold">{t('rides.receipt.total')}</dt>
+                    <dd className="text-lg font-bold tabular-nums">{c.totalCents != null ? fmt.money(c.totalCents, c.currency) : '—'}</dd>
+                  </div>
+                </dl>
+              )}
+
+              {ride.status === 'COMPLETED' && (
+                <div className="mt-2 flex items-center justify-between border-t border-edge pt-3 text-sm">
+                  <span className="text-muted">{t('rides.receipt.yourRating')}</span>
+                  {stars != null
+                    ? <span className="text-lg text-accent">{'★'.repeat(stars)}<span className="text-muted/40">{'★'.repeat(5 - stars)}</span></span>
+                    : <button type="button" className="text-accent hover:underline" onClick={() => setRating(true)}>{t('rides.rateTrip')}</button>}
+                </div>
+              )}
+            </div>
+
+            {ride.status === 'COMPLETED' && (
+              <a href={`/rides/${ride.id}/receipt`} className="btn-primary mt-3 w-full" data-testid="ride-receipt">🧾 {t('rides.detail.receipt')}</a>
+            )}
+          </>
+        )}
+      </div>
+      {rating && ride && <RateTripModal rideId={ride.id} onClose={() => setRating(false)} onDone={(s) => { setRide({ ...ride, rating: { stars: s } }); setRating(false); }} />}
     </div>
   );
 }
 
-const RECEIPT_ORDER: Locale[] = ['en', 'ru', ...LOCALES.filter((l) => l !== 'en' && l !== 'ru')];
-
-function ReceiptCard({ receipt, lang, onLang, sendMail, mailBusy, mailNote }: { receipt: Receipt; lang: Locale; onLang: (l: Locale) => void; sendMail: () => void; mailBusy: boolean; mailNote: string | null }) {
-  const { t, fmt } = useT();
-  const eur = (cents: number, ccy: string) => fmt.money(cents, ccy);
-  const f = receipt.fare;
+function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
-        <div className="card p-5">
-          <div className="flex items-center justify-between gap-2">
-            <h1 className="text-lg font-bold">{t('rides.receipt.title')}</h1>
-            {/* Receipts are in English or Russian; any other language on request (2026-11-17). */}
-            <select value={lang} onChange={(e) => onLang(e.target.value as Locale)} aria-label={t('common.language')} data-testid="receipt-lang"
-              className="min-h-[30px] rounded-[8px] border border-edge bg-elevated px-1.5 text-xs text-ink">
-              {RECEIPT_ORDER.map((l) => <option key={l} value={l}>{LOCALE_SHORT[l]} · {LOCALE_NAMES[l]}</option>)}
-            </select>
-          </div>
-          <p className="mt-0.5 text-xs text-muted">#{receipt.reference}</p>
-          <p className="mt-0.5 text-xs text-muted">
-            {receipt.completedAt ? fmt.dateTime(receipt.completedAt) : t('rides.receipt.completed')}
-          </p>
-
-          <div className="mt-4 space-y-1 text-sm">
-            <div className="flex gap-2"><span className="text-accent">●</span><span className="min-w-0">{receipt.pickup}</span></div>
-            {receipt.stop && <div className="flex gap-2"><span className="text-[#FFC83D]">◆</span><span className="min-w-0">{receipt.stop}</span></div>}
-            <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0">{receipt.dropoff}</span></div>
-          </div>
-
-
-          {f && (
-            <div className="mt-4 border-t border-edge pt-3">
-              {/* Receipt (2026-11-18): just the total (waiting included) — no class / passengers / driver / fare lines / meter note. */}
-              <div className="flex items-baseline justify-between">
-                <span className="font-semibold">{t('rides.receipt.total')}</span>
-                <span className="text-lg font-bold tabular-nums">
-                  {f.totalCents != null ? eur(f.totalCents, f.currency) : '—'}
-                </span>
-              </div>
-              {/* Payment method only (2026-11-18): no «Ожидает оплаты» — nothing marks cash as collected yet. */}
-              <div className="mt-3 text-xs text-muted">{f.paymentMethod === 'CASH_TO_DRIVER' ? t('common.payment.CASH_TO_DRIVER') : f.paymentMethod}</div>
-            </div>
-          )}
-
-          {/* E-mailed copy (2026-11-17). */}
-          {receipt.email && (
-            <div className="mt-4 border-t border-edge pt-3 text-sm" data-testid="receipt-email">
-              <div className={receipt.email.status === 'FAILED' ? 'text-danger' : 'text-muted'}>
-                {receipt.email.status === 'SENT' ? `✉️ ${t('rides.receipt.emailSentTo', { email: receipt.email.to })}` : receipt.email.status === 'FAILED' || receipt.email.status === 'SKIPPED' ? t('rides.receipt.emailFailed', { email: receipt.email.to }) : `✉️ ${t('rides.receipt.emailQueued', { email: receipt.email.to })}`}
-              </div>
-              {['SENT', 'FAILED', 'SKIPPED'].includes(receipt.email.status) && receipt.email.canResend && (
-                <button type="button" onClick={sendMail} disabled={mailBusy} className="btn-ghost mt-2 w-full" data-testid="receipt-email-send">{mailBusy ? t('common.loading') : t('rides.receipt.emailResend')}</button>
-              )}
-            </div>
-          )}
-          {!receipt.email && receipt.canEmail && (
-            <div className="mt-4 border-t border-edge pt-3">
-              <button type="button" onClick={sendMail} disabled={mailBusy} className="btn-ghost w-full" data-testid="receipt-email-send">✉️ {mailBusy ? t('common.loading') : t('rides.receipt.emailSend')}</button>
-            </div>
-          )}
-          {mailNote && <p className="mt-2 text-xs text-muted">{mailNote}</p>}
-
-          {receipt.rating && (
-            <div className="mt-4 border-t border-edge pt-3 text-sm">
-              <span className="text-muted">{t('rides.receipt.yourRating')} </span>
-              <span className="text-accent">{'★'.repeat(receipt.rating.stars)}<span className="text-muted/40">{'★'.repeat(5 - receipt.rating.stars)}</span></span>
-            </div>
-          )}
-        </div>
+    <div className="flex items-baseline justify-between gap-3 py-2.5">
+      <dt className="text-muted">{k}</dt>
+      <dd className="min-w-0 text-end">{v}</dd>
+    </div>
   );
 }

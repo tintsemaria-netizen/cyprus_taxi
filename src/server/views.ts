@@ -1,4 +1,5 @@
 import { config } from '@/lib/config';
+import { noDriverRetryable } from '@/lib/ride-outcome';
 import { gpsMeterFor } from '@/server/gps-meter';
 import { passengerRatingSummary } from '@/server/trip-close';
 import { passengerLocationForDriver } from '@/server/passenger-location';
@@ -150,7 +151,8 @@ export async function trackingView(bookingId: string) {
     pickupEtaApprox,
     fareCents: booking.fareCents ?? null,
     canCancel: PASSENGER_CANCELABLE.includes(booking.status),
-    canRetry: booking.status === 'NO_DRIVER',
+    // «Искать снова» only right after the search failed (2026-11-20), not on an old order.
+    canRetry: noDriverRetryable(booking.status, [...booking.events].reverse().find((e) => e.afterStatus === 'NO_DRIVER')?.createdAt ?? booking.updatedAt),
     timeline: booking.events.map((e) => ({ type: e.type, at: e.createdAt.toISOString(), status: e.afterStatus })),
   };
 }

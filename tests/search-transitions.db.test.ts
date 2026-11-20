@@ -87,6 +87,24 @@ describe('search transitions keep the worker able to progress every ride', () =>
     expect(await prisma.dispatchJob.findUnique({ where: { bookingId: b.id } })).not.toBeNull();
   });
 
+  it('passenger «search again» works right after NO_DRIVER, not on an old order (2026-11-20)', async () => {
+    const { researchBooking } = await import('@/server/dispatch/research');
+    const { NO_DRIVER_RETRY_MINUTES } = await import('@/lib/ride-outcome');
+    const { trackingView } = await import('@/server/views');
+    const b = await searchingBooking();
+    const nd = await changeStatus({ bookingId: b.id, to: 'NO_DRIVER', expectedRevision: b.revision, actor: 'STAFF', actorId: 's' });
+    expect(nd.ok).toBe(true);
+    expect((await trackingView(b.id))!.canRetry).toBe(true);
+    // The same failed order an hour later: «did not take place», no re-dispatch of the old route.
+    const ago = new Date(Date.now() - (NO_DRIVER_RETRY_MINUTES + 5) * 60_000);
+    await prisma.bookingEvent.updateMany({ where: { bookingId: b.id, afterStatus: 'NO_DRIVER' }, data: { createdAt: ago } });
+    expect((await trackingView(b.id))!.canRetry).toBe(false);
+    const old = await prisma.booking.findUniqueOrThrow({ where: { id: b.id } });
+    const r = await researchBooking(b.id, old.revision);
+    expect(r.ok).toBe(false);
+    expect((await prisma.booking.findUniqueOrThrow({ where: { id: b.id } })).status).toBe('NO_DRIVER');
+  });
+
   it('passenger cancel during SEARCHING withdraws the open offer and frees the driver', async () => {
     const b = await searchingBooking();
     const { offerId } = await openOffer(b.id);
