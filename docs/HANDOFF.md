@@ -2228,3 +2228,11 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
 - NO_DRIVER is not «active» in the history (no «Следить онлайн»); label «Поездка не состоялась».
   «Искать снова» only within 30 min of the NO_DRIVER event (src/lib/ride-outcome.ts) — view.canRetry and
   researchBooking both enforce it; the track page then says «Поездка не состоялась» with no retry / no route edit.
+
+## 2026-11-20 — Home quick picks as tiles; iOS 27 top blur
+- Home: no recent trips under «Куда едем?». Tiles: Home / Work (58 px, icon + label; dashed «＋» when unset), every
+  custom saved place as a 📍 tile (row scrolls sideways once there are custom places), and a smaller «Ещё» that is
+  always at the right end (outside the scrolling row).
+- iPhone Air on iOS 27.2.1 blurred the logo/avatar under the translucent status bar (iPhone 12 Pro on iOS 18.6 did not).
+  Fix: appleWebApp statusBarStyle 'black' (passenger + driver layouts) — the app starts below the status bar.
+  Needs the Home Screen icon re-added to take effect. Earlier steps kept: top bars opaque, pinned (FixedTop on home/track).
