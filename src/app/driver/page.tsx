@@ -1028,7 +1028,8 @@ function WeekCandles({ week, dur, km }: { week: { day: string; onlineSec: number
 // ---- Earnings ----
 function EarningsSection({ initialRange = 'week', openAnalytics }: { initialRange?: Range; openAnalytics?: boolean } = {}) {
   const { t, tp, tError } = useT();
-  const [analytics, setAnalytics] = useState(!!openAnalytics); // «Выполнено заказов» tile → analytics sub-screen (2026-11-19)
+  const [analytics, setAnalytics] = useState(!!openAnalytics);
+  const [duty, setDuty] = useState(false); // «Время на линии» tile → hours & km pane (2026-11-20) // «Выполнено заказов» tile → analytics sub-screen (2026-11-19)
   const { money, dur } = useDriverFmt();
   const [range, setRange] = useState<Range>(initialRange);
   const [data, setData] = useState<{ summary: { byCurrency: { currency: string; completedTrips: number; recordedEarningsCents: number; knownFinalTrips: number; pendingFinalTrips: number; collectedCents: number }[]; completedTrips: number; pendingFinalTrips: number; onlineSeconds: number }; daily: { day: string; recordedEarningsCents: number; completedTrips: number; currency: string }[] } | null>(null);
@@ -1043,6 +1044,8 @@ function EarningsSection({ initialRange = 'week', openAnalytics }: { initialRang
 
   const max = Math.max(1, ...(data?.daily.map((d) => d.recordedEarningsCents) ?? [0]));
   if (analytics) return <DriverAnalytics onBack={() => setAnalytics(false)} />;
+  // Hours & km in the earnings screen too (2026-11-20, operator): the same pane as on the map card.
+  if (duty) return <div className="card p-4" data-testid="earnings-duty"><DutyPane onBack={() => setDuty(false)} onClose={() => setDuty(false)} /></div>;
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-semibold">{t('driver.earnings.title')}</h1>
@@ -1058,7 +1061,9 @@ function EarningsSection({ initialRange = 'week', openAnalytics }: { initialRang
             <button type="button" onClick={() => setAnalytics(true)} data-testid="analytics-tile" className="relative rounded-[12px] text-start">
               <Figure label={t('driver.earnings.completedTrips')} value={String(data.summary.completedTrips)} sub={t('driver.analytics.tileHint') + ' ›'} />
             </button>
-            <Figure label={t('driver.earnings.onlineTime')} value={dur(data.summary.onlineSeconds)} sub={t(`driver.range.${range}`)} />
+            <button type="button" onClick={() => setDuty(true)} data-testid="earnings-online-tile" className="rounded-[12px] text-start">
+              <Figure label={t('driver.earnings.onlineTime')} value={dur(data.summary.onlineSeconds)} sub={`${t('driver.home.chartOnline')} · ${t('driver.home.chartKm')} ›`} />
+            </button>
           </div>
           {data.summary.byCurrency.length === 0 ? <p className="py-6 text-center text-sm text-muted">{t('driver.earnings.empty')}</p> : data.summary.byCurrency.map((c) => (
             <div key={c.currency} className="card p-4">

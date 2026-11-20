@@ -19,6 +19,11 @@ Confirmed beta target: https://cyprustaxi.ackedberryes.store on 92.39.53.229. Cl
 # Operator UI rules (from the operator, keep for every session)
 
 - Every new screen, tab or sub-screen that is not a main screen gets a back arrow «‹» at the top left (use `BackArrow`; driver sub-screens: the arrow in the top bar via the `il-y:driver-back-visible` event). When you add or change such a screen, put the arrow there and tell the operator that you did (or that it was already there).
+- Reports are shared tools (2026-11-20): whenever a report / figures screen is added or changed — hours online, km,
+  earnings (cash / card), done / not-done trips, analytics, candles — say where else the same tool is needed and offer
+  to add it there (driver earnings screen and today card, the admin's per-driver view, a future fleet-owner view).
+  Before deploying anything about completed / not-completed trips, list those other places and ask. Build the tool
+  once (shared server function + component), not one copy per role.
 
 # This is NOT the Next.js you know
 
