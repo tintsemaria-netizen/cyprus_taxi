@@ -2219,3 +2219,12 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
   account (billing on, new keys + Map ID + style, swap on the server). Owner asked about cost: style is free;
   Maps is pay-as-you-go with a monthly free cap.
 - Also still open: 2nd co-rider's stops on the driver's live navigation map; airport meeting point for pairs (with the airport setup).
+
+## 2026-11-20 — «Мои поездки»: ride page; old no-driver orders «did not take place»
+- A finished ride (completed / cancelled / no driver) opens /rides/[id]: map (pickup, stop, drop-off + road route),
+  date, #ref, route, and for a completed ride driver, car + plate, class, distance (GPS meter, else quote), time on the
+  way, payment, total, rating / «Оценить», button «🧾 Чек» → /rides/[id]/receipt (the receipt moved there).
+  API GET /api/v1/passenger/rides/[id]. Owner: no passenger count, no «не нашлось водителя» note.
+- NO_DRIVER is not «active» in the history (no «Следить онлайн»); label «Поездка не состоялась».
+  «Искать снова» only within 30 min of the NO_DRIVER event (src/lib/ride-outcome.ts) — view.canRetry and
+  researchBooking both enforce it; the track page then says «Поездка не состоялась» with no retry / no route edit.

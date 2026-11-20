@@ -90,7 +90,6 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 </div>
                 <span className="chip shrink-0">{statusText(ride.status)}</span>
               </div>
-              {ride.status === 'NO_DRIVER' && <p className="mt-2 text-sm text-muted">{t('rides.detail.notHappenedNote')}</p>}
 
               <div className="mt-3 space-y-1.5 text-sm">
                 <div className="flex gap-2"><span className="text-accent">●</span><span className="min-w-0">{ride.pickup.label}</span></div>
@@ -102,7 +101,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 <dl className="mt-4 divide-y divide-edge border-t border-edge text-sm">
                   {c.driver && <Row k={t('rides.detail.driver')} v={c.driver.name} />}
                   {c.driver && <Row k={t('rides.detail.car')} v={<>{c.driver.vehicle} · <span className="font-mono">{c.driver.plate}</span></>} />}
-                  <Row k={t('booking.review.class')} v={`${t(`common.vClass.${ride.vClass}` as MsgKey)} · ${tp('common.passengers', ride.passengerCount)}`} />
+                  <Row k={t('booking.review.class')} v={t(`common.vClass.${ride.vClass}` as MsgKey)} />
                   {c.distanceKm != null && <Row k={t('rides.detail.distance')} v={t('rides.detail.km', { km: c.distanceKm.toLocaleString(undefined, { maximumFractionDigits: 1 }) })} />}
                   {c.durationMin != null && <Row k={t('rides.detail.duration')} v={tp('common.minutes', c.durationMin)} />}
                   <Row k={t('rides.detail.payment')} v={c.paymentMethod === 'CASH_TO_DRIVER' ? t('common.payment.CASH_TO_DRIVER') : c.paymentMethod} />

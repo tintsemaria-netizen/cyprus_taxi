@@ -480,8 +480,8 @@ export default function TrackApp() {
                 )}
                 {view.shared && !terminal && <SharedBadge s={view.shared} to={view.dropoff.label} />}
                 {view.flightNumber && !terminal && <p className="mt-2 font-mono text-xs text-muted">✈ {t('track.prebook.flightRow', { flight: formatFlight(view.flightNumber) })}</p>}
-                {view.status === 'NO_DRIVER' && (
-                  <p className="mt-1 text-sm text-muted">{view.canRetry ? t('track.noDriverNote') : t('rides.detail.notHappenedNote')}</p>
+                {view.status === 'NO_DRIVER' && view.canRetry && (
+                  <p className="mt-1 text-sm text-muted">{t('track.noDriverNote')}</p>
                 )}
 
                 {view.vehicle ? (
