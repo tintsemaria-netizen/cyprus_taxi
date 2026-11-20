@@ -1,6 +1,7 @@
 'use client';
 
 import { DriverAnalytics } from '@/components/driver/DriverAnalytics';
+import { BackArrow } from '@/components/BackArrow';
 import { fareRangeText } from '@/lib/price-type';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import SwipeButton from '@/components/SwipeButton';
@@ -465,6 +466,7 @@ function HomeSection(props: {
   const { t, fmt } = useT();
   const { money, km, dur } = useDriverFmt();
   const [earnPop, setEarnPop] = useState(false); // today's earnings card under the pill (2026-11-20)
+  const [earnView, setEarnView] = useState<'main' | 'time'>('main'); // «Время на линии» opens inside the card
   const trip = data.trip;
   const blocker = dash?.alerts.find((a) => a.level === 'blocker');
 
@@ -488,7 +490,7 @@ function HomeSection(props: {
         <div className="flex w-full items-start justify-end gap-2">
         {/* Today's recorded earnings as a figure over the map; tap → today's card (2026-11-20). */}
         {dash && (
-          <button className={`${pill} shrink-0 px-3 py-1.5 text-end`} onClick={() => { if (!earnPop) props.refreshDash?.(); setEarnPop((v) => !v); }} aria-label={t('driver.home.earnedToday')} aria-expanded={earnPop} data-testid="earn-pill">
+          <button className={`${pill} shrink-0 px-3 py-1.5 text-end`} onClick={() => { if (!earnPop) { props.refreshDash?.(); setEarnView('main'); } setEarnPop((v) => !v); }} aria-label={t('driver.home.earnedToday')} aria-expanded={earnPop} data-testid="earn-pill">
             <span className="block text-base font-bold leading-tight text-accent">{dash.today.recordedEarnings.length ? dash.today.recordedEarnings.map((e) => money(e.cents, e.currency)).join(' + ') : money(0, 'EUR')}</span>
             <span className="block text-[10px] leading-tight text-muted">{t('driver.home.earnedToday')}</span>
           </button>
@@ -499,6 +501,7 @@ function HomeSection(props: {
           <>
             <div className="pointer-events-auto fixed inset-0" onClick={() => setEarnPop(false)} aria-hidden />
             <div className="pointer-events-auto relative ms-auto w-[min(290px,100%)] rounded-[16px] border border-edge bg-page/95 p-4 shadow-card backdrop-blur" data-testid="earn-pop" role="dialog" aria-label={t('driver.home.earnedToday')}>
+              {earnView === 'time' ? <DutyPane onBack={() => setEarnView('main')} onClose={() => setEarnPop(false)} /> : (<>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-muted">{t('driver.range.today')}</span>
                 <button type="button" onClick={() => setEarnPop(false)} aria-label={t('common.close')} className="-me-1 flex h-8 w-8 items-center justify-center rounded-full text-xl text-muted hover:text-ink">×</button>
@@ -525,19 +528,15 @@ function HomeSection(props: {
                     {/* Trips tile wider, time tile narrower (2026-11-20, operator); done AND cancelled shown
                         equally; a tap opens the analytics panel (Выполнено / Не выполнено), not the list. */}
                     <div className="grid grid-cols-[1.55fr_1fr] gap-2">
-                      <button type="button" className={tile} onClick={() => go('analytics')} data-testid="earn-trips">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span className="text-[12px] text-muted">✓ {t('driver.analytics.doneShort')}</span>
-                          <span className="text-lg font-semibold tabular-nums" data-testid="earn-done-n">{dash.today.completedTrips}</span>
-                        </div>
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span className="text-[12px] text-muted">✕ {t('driver.analytics.notDone')}</span>
-                          <span className="text-lg font-semibold tabular-nums" data-testid="earn-canceled-n">{dash.today.canceledTrips ?? 0}</span>
-                        </div>
+                      <button type="button" className={`${tile} flex items-center justify-around`} onClick={() => go('analytics')} data-testid="earn-trips"
+                        aria-label={`${t('driver.analytics.doneShort')} ${dash.today.completedTrips}, ${t('driver.analytics.notDone')} ${dash.today.canceledTrips ?? 0}`}>
+                        {/* Side by side, no words (2026-11-20, operator): green ✓ done, red ✕ not done. */}
+                        <span className="flex items-baseline gap-1.5"><span className="text-[20px] font-bold text-[#34C759]">✓</span><span className="text-[22px] font-semibold tabular-nums" data-testid="earn-done-n">{dash.today.completedTrips}</span></span>
+                        <span className="flex items-baseline gap-1.5"><span className="text-[20px] font-bold text-danger">✕</span><span className="text-[22px] font-semibold tabular-nums" data-testid="earn-canceled-n">{dash.today.canceledTrips ?? 0}</span></span>
                       </button>
-                      <button type="button" className={tile} onClick={() => go('summary')} data-testid="earn-online">
-                        <div className="text-[11px] text-muted">{t('driver.earnings.onlineTime')}</div>
-                        <div className="text-lg font-semibold">{dur(dash.today.onlineSeconds)}</div>
+                      <button type="button" className={tile} onClick={() => setEarnView('time')} data-testid="earn-online">
+                        <div className="text-[11px] text-muted">{t('driver.earnings.onlineTime')} ›</div>
+                        <div className="whitespace-nowrap text-[15px] font-semibold">{dur(dash.today.onlineSeconds)}</div>
                       </button>
                     </div>
                   </div>
@@ -545,6 +544,7 @@ function HomeSection(props: {
               })()}
               {dash.today.pendingFinalTrips > 0 && <p className="mt-2 text-xs text-muted">{t('driver.analytics.pending', { n: dash.today.pendingFinalTrips })}</p>}
               <button type="button" className="btn-primary mt-3 w-full" data-testid="earn-details" onClick={() => { setEarnPop(false); props.goEarnings('summary'); }}>{t('driver.analytics.tileHint')} ›</button>
+              </>)}
             </div>
           </>
         )}
@@ -915,6 +915,60 @@ function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string;
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ---- «Время на линии» inside the today card (2026-11-20) ----
+function DutyPane({ onBack, onClose }: { onBack: () => void; onClose: () => void }) {
+  const { t, fmt } = useT();
+  const { dur } = useDriverFmt();
+  const [d, setD] = useState<{ onlineSec: number; onTripSec: number; freeSec: number; weekSec: number; sessions: { from: string; to: string | null; sec: number }[]; onlineNow: boolean } | null>(null);
+  const [err, setErr] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    const load = () => api<NonNullable<typeof d>>('/driver/duty').then((r) => { if (alive) { setD(r); setErr(false); } }).catch(() => { if (alive) setErr(true); });
+    load();
+    const id = setInterval(load, 30_000); // the open shift keeps counting
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+  return (
+    <div data-testid="duty-pane">
+      <div className="flex items-center justify-between">
+        <BackArrow onBack={onBack} className="-ms-2" />
+        <span className="flex-1 text-sm font-semibold text-muted">{t('driver.earnings.onlineTime')}</span>
+        <button type="button" onClick={onClose} aria-label={t('common.close')} className="-me-1 flex h-8 w-8 items-center justify-center rounded-full text-xl text-muted hover:text-ink">×</button>
+      </div>
+      {!d ? <p className="py-4 text-sm text-muted">{err ? t('driver.detail.loadFailed') : t('common.loading')}</p> : (
+        <>
+          <div className="text-[28px] font-bold leading-tight text-accent">{dur(d.onlineSec)}</div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-[12px] border border-edge bg-elevated px-3 py-2">
+              <div className="text-[11px] text-muted">🚕 {t('driver.home.timeOnTrips')}</div>
+              <div className="text-lg font-semibold">{dur(d.onTripSec)}</div>
+            </div>
+            <div className="rounded-[12px] border border-edge bg-elevated px-3 py-2">
+              <div className="text-[11px] text-muted">⏳ {t('driver.home.timeFree')}</div>
+              <div className="text-lg font-semibold">{dur(d.freeSec)}</div>
+            </div>
+          </div>
+          <p className="label mt-3">{t('driver.home.timeSessions')}</p>
+          {d.sessions.length === 0 ? <p className="mt-1 text-sm text-muted">{t('driver.home.timeNone')}</p> : (
+            <ul className="mt-1 divide-y divide-edge rounded-[12px] border border-edge bg-elevated text-sm" data-testid="duty-sessions">
+              {d.sessions.map((s) => (
+                <li key={s.from} className="flex items-center justify-between px-3 py-2">
+                  <span className="tabular-nums">{fmt.time(s.from)} – {s.to ? fmt.time(s.to) : <span className="text-accent">{t('driver.home.timeNow')}</span>}</span>
+                  <span className="text-muted">{dur(s.sec)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="mt-3 flex items-center justify-between rounded-[12px] border border-edge px-3 py-2 text-sm">
+            <span className="text-muted">{t('driver.home.timeWeek')}</span>
+            <span className="shrink-0 whitespace-nowrap font-semibold">{dur(d.weekSec)}</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }
