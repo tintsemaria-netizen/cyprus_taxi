@@ -107,6 +107,7 @@ export default function BookingApp() {
   const [stopText, setStopText] = useState('');
   const [hasStop, setHasStop] = useState(false);
   const [addrOpen, setAddrOpen] = useState(false); // «Откуда» shown once «Куда» is touched
+  const addrOpenState = addrOpen;
   // Full-screen route editor (2026-11-15): tapping an address field opens it. A hidden proxy input
   // is focused synchronously inside the tap so iOS opens the keyboard and keeps it while focus
   // moves to the editor's field.
@@ -133,6 +134,12 @@ export default function BookingApp() {
   const rowEls = useRef<(HTMLDivElement | null)[]>([]);
   const [rowDrag, setRowDrag] = useState<{ index: number; startY: number; dy: number; mids: number[] } | null>(null);
   // × in the top-right corner: back to the initial state — only «Куда», pickup = auto location.
+  // Leave the pre-booking window (2026-11-20): the ✕ at its top-right — back to «now» and the start screen.
+  function exitSchedule() {
+    setWhen('NOW'); setScheduledAt(''); setScheduleOffsetMin(undefined); setAmbiguous(null); setNote('');
+    resetRoute();
+    if (isMobile) setCollapsed(true); // the small start sheet, as before «Запланировать»
+  }
   function resetRoute() {
     setDropoff(null); setDropoffText('');
     setStop(null); setStopText(''); setHasStop(false);
@@ -933,8 +940,8 @@ export default function BookingApp() {
             >
               {/* Reset the route (2026-11-15): top-right corner, twice the old size. Also on the folded sheet
                   that shows the route (2026-11-17), so it never disappears while a route is set. */}
-              {step === 'form' && (!collapsed || peekRoute) && (addrOpen || dropoff || dropoffText) && (
-                <button type="button" aria-label={t('booking.form.resetRoute')} title={t('booking.form.resetRoute')} onClick={resetRoute}
+              {step === 'form' && (!collapsed || peekRoute) && (addrOpen || dropoff || dropoffText || when === 'SCHEDULE') && (
+                <button type="button" aria-label={t('booking.form.resetRoute')} title={t('booking.form.resetRoute')} onClick={when === 'SCHEDULE' ? exitSchedule : resetRoute} data-testid="sheet-close"
                   className="absolute end-1.5 top-1.5 z-20 flex h-12 w-12 items-center justify-center rounded-full text-[36px] leading-none text-muted hover:bg-page/60 hover:text-ink">×</button>
               )}
               {isMobile ? (
@@ -989,8 +996,22 @@ export default function BookingApp() {
                     )}
                     {/* Start screen kept as compact as possible (2026-11-17) so more of the map shows. */}
                     {/* Start screen (2026-11-18): no eyebrow line, smaller title — a lower sheet, more map. */}
-                    {!peekRoute && addrOpen && <p className="label">{t('booking.form.eyebrow')}</p>}
-                    {!peekRoute && <h1 className={!addrOpen ? 'mb-2 text-lg font-bold leading-6' : 'mb-4 mt-1 text-2xl font-bold'}>{t('booking.form.title')}</h1>}
+                    {/* Pre-booking window (2026-11-20, operator): «Запланировать» heading, then the date & time on
+                        top, then the full «Откуда / Куда» box — no «Куда едем?», no tiles, no recent trips. */}
+                    {when === 'SCHEDULE' ? (
+                      <div data-testid="schedule-panel">
+                        <h1 className="mb-3 pe-12 text-xl font-bold">🕒 {t('booking.form.schedule')}</h1>
+                        <input type="datetime-local" data-testid="schedule-time" className={`field block w-full min-w-0 max-w-full appearance-none ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
+                        <p className="mt-1 text-xs text-muted">{withSlot(t('booking.form.timezoneNote'), 'tz', <strong>{cfg?.timezone ?? 'Europe/Nicosia'}</strong>)}</p>
+                        {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
+                        <div className="mb-3" />
+                      </div>
+                    ) : (
+                      <>
+                        {!peekRoute && addrOpen && <p className="label">{t('booking.form.eyebrow')}</p>}
+                        {!peekRoute && <h1 className={!addrOpen ? 'mb-2 text-lg font-bold leading-6' : 'mb-4 mt-1 text-2xl font-bold'}>{t('booking.form.title')}</h1>}
+                      </>
+                    )}
 
                     {flash && <p role="status" className="mb-3 rounded-[12px] border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">{flash}</p>}
                     {banner && <p className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{banner}</p>}
@@ -999,6 +1020,7 @@ export default function BookingApp() {
                         point (lime ring = from, amber square = stop, lime disc = to) joined by a line. Tapping a
                         row opens the route editor; «На карте» per row; ≡ drags a row to reorder the route. */}
                     {(() => {
+                      const addrOpen = addrOpenState || when === 'SCHEDULE'; // the pre-booking window always shows both rows
                       const shown: Slot[] = addrOpen ? slots : ['d'];
                       const rowErr = (s: Slot) => (s === 'p' ? errors.pickup : s === 'd' ? errors.dropoff : errors.stop);
                       const anyErr = shown.map(rowErr).filter(Boolean) as string[];
@@ -1038,17 +1060,13 @@ export default function BookingApp() {
                                   {i === 0 && !addrOpen && (
                                     <>
                                       <span aria-hidden className="h-7 w-px shrink-0 bg-white/15" />
-                                      <button type="button" data-testid="schedule-chip" role="switch" aria-checked={when === 'SCHEDULE'}
+                                      <button type="button" data-testid="schedule-chip"
                                         aria-label={t('booking.form.schedule')} title={t('booking.form.schedule')}
-                                        onClick={() => {
-                                          // A switch (2026-11-17): tap again to go back to «now».
-                                          if (when === 'SCHEDULE') { setWhen('NOW'); setScheduledAt(''); setScheduleOffsetMin(undefined); setAmbiguous(null); }
-                                          else { setWhen('SCHEDULE'); setCollapsed(false); }
-                                        }}
-                                        className={`flex h-8 shrink-0 items-center gap-1 rounded-full border px-2.5 text-[13px] font-medium transition-colors ${when === 'SCHEDULE' ? 'border-accent bg-accent text-[#0d1608]' : 'border-edge-strong text-ink hover:border-accent/60'}`}>
-                                        {/* The pill itself is the switch (2026-11-17): lime = on, outline = off. */}
+                                        // Opens the pre-booking window (2026-11-20); its ✕ brings the start screen back.
+                                        onClick={() => { setWhen('SCHEDULE'); setCollapsed(false); }}
+                                        className="flex h-8 shrink-0 items-center gap-1 rounded-full border border-edge-strong px-2.5 text-[13px] font-medium text-ink transition-colors hover:border-accent/60">
                                         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
-                                        {when === 'SCHEDULE' && scheduledAt ? scheduledAt.slice(11, 16) : t('booking.form.schedule')}
+                                        {t('booking.form.schedule')}
                                       </button>
                                     </>
                                   )}
@@ -1128,21 +1146,10 @@ export default function BookingApp() {
                         in the address box is used; its panel has a way back to «now». */}
                     <div className="mt-3">
                       {when === 'SCHEDULE' && (
-                        <div className="rounded-[12px] border border-accent/40 bg-accent/5 p-3">
-                          <div className="mb-2 flex items-center justify-between gap-2">
-                            <span className="text-sm font-semibold text-accent">🕒 {t('booking.form.schedule')}</span>
-                            {/* No «Ехать сейчас» here (2026-11-17): the «Запланировать» pill above switches it off. */}
-                          </div>
-                          <input type="datetime-local" className={`field block w-full min-w-0 max-w-full appearance-none ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
-                          <p className="mt-1 text-xs text-muted">{withSlot(t('booking.form.timezoneNote'), 'tz', <strong>{cfg?.timezone ?? 'Europe/Nicosia'}</strong>)}</p>
-                          {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
-                          {/* Pre-booking note: flight number, meeting point and bags are written here for the driver. */}
-                          <div className="mt-3 space-y-3 rounded-[12px] border border-edge bg-elevated px-3 py-2.5">
-                            <div>
-                              <label className="label" htmlFor="bk-note">{t('booking.options.noteLabel')}</label>
-                              <textarea id="bk-note" className="field mt-1 min-h-[44px]" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} rows={2} placeholder={t('booking.options.notePlaceholder')} />
-                            </div>
-                          </div>
+                        /* Pre-booking note: flight number, meeting point and bags are written here for the driver. */
+                        <div className="rounded-[12px] border border-edge bg-elevated px-3 py-2.5">
+                          <label className="label" htmlFor="bk-note">{t('booking.options.noteLabel')}</label>
+                          <textarea id="bk-note" className="field mt-1 min-h-[44px]" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} rows={2} placeholder={t('booking.options.notePlaceholder')} />
                         </div>
                       )}
                     </div>
