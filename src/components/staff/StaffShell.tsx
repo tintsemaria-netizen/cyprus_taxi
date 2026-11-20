@@ -80,7 +80,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
 
   return (
     <div className="flex min-h-[100dvh] flex-col">
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-edge bg-page/95 px-4 py-2.5 backdrop-blur" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.625rem)' }}>
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-edge bg-page px-4 py-2.5" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.625rem)' }}>
         <div className="flex min-w-0 items-center gap-4">
           {/* Driver sub-screens (pre-bookings, free orders, 2026-11-19): ‹ back to the map, left of the logo. */}
           {me.role === 'DRIVER' && driverBack && <BackArrow className="-ms-2 -me-3" onBack={() => window.dispatchEvent(new Event('il-y:driver-back'))} />}

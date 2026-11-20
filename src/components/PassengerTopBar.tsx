@@ -28,7 +28,7 @@ export function PassengerTopBar({ back = '/', sticky = true }: { back?: string |
   }
 
   return (
-    <header className={`${sticky ? 'sticky top-0' : ''} z-30 flex items-center justify-between gap-2 border-b border-edge bg-page/90 px-3 py-2 backdrop-blur sm:px-6`} style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
+    <header className={`${sticky ? 'sticky top-0' : ''} z-30 flex items-center justify-between gap-2 border-b border-edge bg-page px-3 py-2 sm:px-6`} style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
       <div className="flex min-w-0 items-center gap-1">
         {back !== false && (
           <a

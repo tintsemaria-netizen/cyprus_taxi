@@ -76,7 +76,7 @@ export default function SharePage() {
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
-      <header className="z-20 flex items-center justify-between border-b border-edge bg-page/90 px-4 py-3 backdrop-blur" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
+      <header className="z-20 flex items-center justify-between border-b border-edge bg-page px-4 py-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
         <Logo />
         <div className="flex items-center gap-2">
           <span className="hidden text-xs text-muted min-[400px]:inline">{t('track.share.headerTag')}</span>
