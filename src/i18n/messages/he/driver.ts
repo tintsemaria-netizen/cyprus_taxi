@@ -120,6 +120,7 @@ const driver: Catalog<typeof en> = {
     todayCash: "מזומן",
     todayCard: "כרטיס",
     todayCanceled: "בוטלו: {n}",
+    canceledShort: "בוטלו",
     gpsM: "מ׳",
     gpsWeak: "קליטה חלשה",
     gpsOn: "GPS פועל",

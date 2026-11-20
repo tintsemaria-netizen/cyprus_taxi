@@ -120,6 +120,7 @@ const driver: Catalog<typeof en> = {
     todayCash: "Μετρητά",
     todayCard: "Κάρτα",
     todayCanceled: "Ακυρώθηκαν: {n}",
+    canceledShort: "Ακυρώθηκαν",
     gpsM: 'μ',
     gpsWeak: 'αδύναμο σήμα',
     gpsOn: 'GPS ενεργό',

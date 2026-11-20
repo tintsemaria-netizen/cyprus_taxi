@@ -53,7 +53,8 @@ export async function driverDashboard(driver: DriverRow) {
 
   // Today's figures (Cyprus calendar day). Pending/blocked drivers still see zeros truthfully (no fake data).
   const today = await earningsSummary(driver.id, startOfNicosiaDay(now), now);
-  // Cancelled today (by the driver or the passenger / no-show) for the «today» card (2026-11-20).
+  // «Не выполнено» today for the «today» card — the SAME count as the analytics panel it opens
+  // (2026-11-20): rides the driver cancelled + offers he declined / let expire.
   const todayAn = await driverAnalytics(driver.id, nicosiaDayKey(now), 1);
   const latest = (await listDriverTrips(driver.id, { limit: 3 })).items;
   const activeAsg = await prisma.assignment.findFirst({ where: { activeDriverId: driver.id }, select: { activeBookingId: true } });
@@ -72,7 +73,7 @@ export async function driverDashboard(driver: DriverRow) {
       onlineSeconds: today.onlineSeconds,
       cash: today.byCurrency.map((c) => ({ currency: c.currency, cents: c.cashCents })),
       card: today.byCurrency.map((c) => ({ currency: c.currency, cents: c.cardCents })),
-      canceledTrips: todayAn.driverCanceled.count + todayAn.passengerCanceled.count,
+      canceledTrips: todayAn.driverCanceled.count + todayAn.missedOffers.count,
     },
     latestTrips: latest,
     alerts,

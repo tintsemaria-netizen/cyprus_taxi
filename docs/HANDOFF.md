@@ -2255,6 +2255,6 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
 ## 2026-11-20 — Driver earnings: from the map pill, not the menu
 - Menu ☰ tabs: Профиль | Поездки (no «Заработок»). The pill «… € заработано сегодня» opens a «Сегодня» card: total,
   4 tiles — 💶 cash | 💳 card (Fare.paymentMethod; card = any CARD_*, none at booking yet) / done + «Отменено: N»
-  (driver- or passenger-cancelled, from driverAnalytics) | time online — and «Подробнее ›». Done tile → analytics
-  straight on the «Выполнено» list; the others and «Подробнее» → full «Заработок» screen (tab 'earnings', back «‹»).
+  (= analytics: driver-cancelled + missed offers) | (narrower) time online — and «Подробнее ›». Trips tile → analytics
+  panel (Выполнено / Не выполнено tiles); the others and «Подробнее» → full «Заработок» screen (tab 'earnings', back «‹»).
   dashboard.today gained cash, card, canceledTrips.

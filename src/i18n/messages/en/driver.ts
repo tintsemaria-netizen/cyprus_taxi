@@ -117,6 +117,7 @@ const driver = {
     todayCash: "Cash",
     todayCard: "Card",
     todayCanceled: "Cancelled: {n}",
+    canceledShort: "Cancelled",
     gpsM: 'm',
     gpsWeak: 'weak signal',
     gpsOn: 'GPS on',
