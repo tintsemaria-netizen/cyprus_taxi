@@ -26,13 +26,15 @@ describe('dead reckoning through a tunnel (2026-11-20)', () => {
     expect(exit.capped).toBe(false);
   });
 
-  it('stops at 1.5 km / 120 s and does not move a standing or off-route car', () => {
+  it('stops at 90 s / 2 km and does not move a standing or off-route car', () => {
     const base = { path, cum, fromAlongM: 0, offRouteM: 3, startMs: DR.startMs };
-    const far = deadReckon({ ...base, speedKmh: 100, ageMs: 100_000 })!;
-    expect(Math.round(distM(start, far.point))).toBeLessThanOrEqual(1501);
+    const far = deadReckon({ ...base, speedKmh: 100, ageMs: 100_000 })!;   // 90 s at 100 km/h = 2.5 km → 2 km cap
+    expect(Math.round(distM(start, far.point))).toBeLessThanOrEqual(2001);
+    expect(Math.round(distM(start, far.point))).toBeGreaterThan(1990);
     expect(far.capped).toBe(true);
-    const slow = deadReckon({ ...base, speedKmh: 40, ageMs: 200_000 })!;  // 120 s cap at 40 km/h = 1333 m
-    expect(Math.round(distM(start, slow.point))).toBeLessThan(1340);
+    const slow = deadReckon({ ...base, speedKmh: 40, ageMs: 200_000 })!;  // 90 s cap at 40 km/h = 1000 m
+    expect(Math.round(distM(start, slow.point))).toBeGreaterThan(990);
+    expect(Math.round(distM(start, slow.point))).toBeLessThan(1010);
     expect(slow.capped).toBe(true);
     expect(deadReckon({ ...base, speedKmh: 5, ageMs: 20_000 })).toBeNull();
     expect(deadReckon({ ...base, speedKmh: 100, offRouteM: 120, ageMs: 20_000 })).toBeNull();

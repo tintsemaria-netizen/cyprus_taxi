@@ -121,12 +121,13 @@ export function maneuverIcon(m: string): string {
 // The only road tunnels in Cyprus are the twin ~950 m tunnels on the A6 Limassol–Paphos motorway
 // (limit 100 km/h, minimum 65): 34 s at 100 km/h, 53 s at 65 km/h. With the fix lost a little before
 // the portal and a few seconds to get it back after it, the gap is about 1.2 km and 40–75 s.
-// So the car is carried along the route for at most 1.5 km / 120 s after the last real fix.
+// So the car is carried along the route for at most 90 s / 2 km after the last real fix (operator,
+// 2026-11-20: 90 s as first proposed).
 export const DR = {
   startMs: 2500,       // driver phone: no new fix for this long → start estimating
   passengerStartMs: 10_000, // passenger: positions come every ~5 s via the server
-  maxMs: 120_000,
-  maxM: 1500,
+  maxMs: 90_000,
+  maxM: 2000,
   minKmh: 15,          // standing / crawling: do not move the car
   maxOffRouteM: 40,    // only when the last fix was on the route
   glideMs: 900,        // a returning fix glides in instead of jumping
@@ -148,7 +149,7 @@ export function pointAlong(path: [number, number][], cum: number[], alongM: numb
 /**
  * Where to draw the car `ageMs` after its last real fix, moving at `speedKmh` along the route from
  * `fromAlongM`. Null = do not estimate (too soon, too slow, off the route). `capped` = the limit
- * (1.5 km / 120 s / end of route) was reached: the car stops there and the app says «нет GPS».
+ * (90 s / 2 km / end of route) was reached: the car stops there and the app says «нет GPS».
  */
 export function deadReckon(o: { path: [number, number][]; cum: number[]; fromAlongM: number; offRouteM: number; speedKmh: number | null; ageMs: number; startMs: number }):
   { point: LatLng; bearing: number; capped: boolean } | null {

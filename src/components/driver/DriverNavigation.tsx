@@ -126,7 +126,7 @@ export function DriverNavigation(props: {
   const cum = useMemo(() => (route ? cumulative(route.path) : []), [route]);
   const segRef = useRef(0);
   useEffect(() => { segRef.current = 0; }, [route]);
-  // In a tunnel (no GPS) the car keeps going along the route for up to 1.5 km / 120 s (2026-11-20);
+  // In a tunnel (no GPS) the car keeps going along the route for up to 90 s / 2 km (2026-11-20);
   // `shown` is what is drawn and followed, `pos` stays the last REAL fix (arrival checks, reroutes).
   const dr = useDeadReckoning({ fix: pos, fixKey: pos, path: route?.path ?? null, startMs: DR.startMs });
   const shown = dr.pos;
