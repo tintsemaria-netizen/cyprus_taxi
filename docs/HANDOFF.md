@@ -2248,6 +2248,6 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
   tunnels in Cyprus): src/lib/nav.ts DR (start 2.5 s driver / 10 s passenger, max 90 s / 2 km, ≥ 15 km/h, on route),
   useDeadReckoning hook, driver nav chip «📡 Нет GPS · примерно» / «Нет сигнала GPS», passenger note «нет связи с
   машиной · примерно», faded car; a returning fix glides in. Display only — never sent to the server. 4 unit tests.
-  Waiting for the owner's «заливай».
+  DEPLOYED 2026-11-20 16:35.
 - PARKED (owner: «про GPS в целом отложи на потом»): GPS taximeter improvements — a gap is a straight line ×1.2
   (>30 s), no points = only flag-fall; ideas: gap by route length, «мало данных GPS» warning, «нет данных» instead of 3,80 €.
