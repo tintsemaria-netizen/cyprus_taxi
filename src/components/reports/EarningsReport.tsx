@@ -56,17 +56,24 @@ export function EarningsReport({ initialRange = 'week', openAnalytics, apiBase =
               <Figure label={t('driver.earnings.onlineTime')} value={dur(data.summary.onlineSeconds)} sub={`${t('driver.home.chartOnline')} · ${t('driver.home.chartKm')} ›`} />
             </button>
           </div>
+          {/* Cash / card tiles (2026-11-21, operator): always shown, like on the today card — 0 € too.
+              One pair per currency (normally just EUR); trips still waiting for a final fare aren't counted. */}
+          {(data.summary.byCurrency.length ? data.summary.byCurrency : [{ currency: 'EUR', cashCents: 0, cardCents: 0 }]).map((c) => (
+            <div key={`split-${c.currency}`} className="grid grid-cols-2 gap-2" data-testid="earn-split">
+              <div className="rounded-[12px] border border-edge bg-elevated p-3" data-testid="earn-split-cash">
+                <div className="text-[11px] text-muted">💶 {t('driver.home.todayCash')}</div>
+                <div className="text-lg font-semibold tabular-nums">{money(c.cashCents ?? 0, c.currency)}</div>
+              </div>
+              <div className="rounded-[12px] border border-edge bg-elevated p-3" data-testid="earn-split-card">
+                <div className="text-[11px] text-muted">💳 {t('driver.home.todayCard')}</div>
+                <div className="text-lg font-semibold tabular-nums">{money(c.cardCents ?? 0, c.currency)}</div>
+              </div>
+            </div>
+          ))}
           {data.summary.byCurrency.length === 0 ? <p className="py-6 text-center text-sm text-muted">{t('driver.earnings.empty')}</p> : data.summary.byCurrency.map((c) => (
             <div key={c.currency} className="card p-4">
               <div className="text-3xl font-semibold">{money(c.recordedEarningsCents, c.currency)}</div>
               <div className="text-xs text-muted">{t('driver.earnings.summary', { currency: c.currency, completed: c.completedTrips })}{c.pendingFinalTrips > 0 ? t('driver.earnings.pendingFinal', { count: c.pendingFinalTrips }) : ''}</div>
-              {/* Cash / card split (2026-11-20) — the same split as on the driver's today card. */}
-              {((c.cashCents ?? 0) > 0 || (c.cardCents ?? 0) > 0) && (
-                <div className="mt-2 grid grid-cols-2 gap-2 text-sm" data-testid="earn-split">
-                  <div className="rounded-[10px] border border-edge bg-elevated px-2.5 py-1.5"><div className="text-[11px] text-muted">💵 {t('driver.home.todayCash')}</div><div className="font-semibold">{money(c.cashCents ?? 0, c.currency)}</div></div>
-                  <div className="rounded-[10px] border border-edge bg-elevated px-2.5 py-1.5"><div className="text-[11px] text-muted">💳 {t('driver.home.todayCard')}</div><div className="font-semibold">{money(c.cardCents ?? 0, c.currency)}</div></div>
-                </div>
-              )}
               {c.collectedCents > 0 && <div className="mt-1 text-xs text-muted">{t('driver.earnings.collected', { amount: money(c.collectedCents, c.currency) })}</div>}
             </div>
           ))}
