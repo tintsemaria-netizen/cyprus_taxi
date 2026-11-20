@@ -117,6 +117,9 @@ const driver: Catalog<typeof en> = {
   },
   home: {
     earnedToday: 'заработано сегодня',
+    todayCash: "Наличные",
+    todayCard: "Картой",
+    todayCanceled: "Отменено: {n}",
     gpsM: 'м',
     gpsWeak: 'слабый сигнал',
     gpsOn: 'GPS включён',

@@ -117,6 +117,9 @@ const driver: Catalog<typeof en> = {
   },
   home: {
     earnedToday: "gagnés aujourd’hui",
+    todayCash: "Espèces",
+    todayCard: "Carte",
+    todayCanceled: "Annulées : {n}",
     gpsM: "m",
     gpsWeak: "signal faible",
     gpsOn: "GPS activé",

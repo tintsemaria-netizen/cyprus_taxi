@@ -117,6 +117,9 @@ const driver: Catalog<typeof en> = {
   },
   home: {
     earnedToday: "הרווחתם היום",
+    todayCash: "מזומן",
+    todayCard: "כרטיס",
+    todayCanceled: "בוטלו: {n}",
     gpsM: "מ׳",
     gpsWeak: "קליטה חלשה",
     gpsOn: "GPS פועל",

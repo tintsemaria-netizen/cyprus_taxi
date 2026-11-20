@@ -57,7 +57,7 @@ interface Dashboard {
   driver: { name: string; eligibility: string; canWork: boolean; rating: { average: number | null; count: number } };
   status: { onDuty: boolean; available: boolean; sharingSessionOpen: boolean; hasActiveTrip: boolean; activeBookingId: string | null };
   vehicle: { plate: string; vClass: string; seats: number; label: string } | null;
-  today: { recordedEarnings: { currency: string; cents: number }[]; pendingFinalTrips: number; completedTrips: number; onlineSeconds: number };
+  today: { recordedEarnings: { currency: string; cents: number }[]; pendingFinalTrips: number; completedTrips: number; onlineSeconds: number; cash?: { currency: string; cents: number }[]; card?: { currency: string; cents: number }[]; canceledTrips?: number };
   latestTrips: TripCard[];
   alerts: { level: string; code: string; message: string; action?: { label: string; href: string } }[];
   support: { operatorName: string | null; phone: string | null; email: string | null };
@@ -262,6 +262,7 @@ function Driver() {
 
   // Sub-views of the merged tabs.
   const [profileView, setProfileView] = useState<'me' | 'trips'>('me');
+  const [earnEntry, setEarnEntry] = useState<'summary' | 'done'>('summary'); // which part of «Заработок» to open (2026-11-20)
   const [prebookCount, setPrebookCount] = useState(0);
   const [prebookPair, setPrebookPair] = useState(false); // any open pre-booking is a ride-share pair
   const [prebookMine, setPrebookMine] = useState(0); // pre-bookings this driver has taken
@@ -392,7 +393,7 @@ function Driver() {
           data={data} dash={dash} gps={gps} pos={pos} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
           onDuty={setDuty} onStartGps={startGps} onStopGps={stopGps}
           onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => { setProfileView('trips'); setDrawer(true); }}
-          goEarnings={() => setTab('earnings')}
+          goEarnings={(to) => { setEarnEntry(to ?? 'summary'); setTab('earnings'); }}
         />
       )}
       {tab === 'free' && <FreeOrdersSection pos={pos} onDuty={!!data.onDuty} onTaken={async () => { setFreeCount(0); setTab('home'); await load(); await loadDash(); }} />}
@@ -400,7 +401,7 @@ function Driver() {
       {tab === 'prebook' && <ScheduledRides onCount={onPrebookCount} />}
       {/* «Заработок» (2026-11-20, operator): no longer a menu tab — the earnings pill on the map opens a small
           «today» card, its «Подробнее» opens this full screen (back arrow «‹» in the top bar, like other sub-screens). */}
-      {tab === 'earnings' && <div className="mx-auto max-w-lg px-4 pb-28 pt-3" data-testid="earnings-screen"><EarningsSection initialRange="today" /></div>}
+      {tab === 'earnings' && <div className="mx-auto max-w-lg px-4 pb-28 pt-3" data-testid="earnings-screen"><EarningsSection key={earnEntry} initialRange="today" openList={earnEntry === 'done' ? 'done' : undefined} /></div>}
       {/* Side menu (2026-11-18): ☰ top-right → slides in from the right like a new page, not the full width. */}
       <div className={`fixed inset-0 z-50 bg-black/55 transition-opacity duration-300 ${drawer ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
         onClick={() => setDrawer(false)} aria-hidden={!drawer} />
@@ -457,7 +458,7 @@ function HomeSection(props: {
   pos: { lat: number; lng: number } | null;
   offer: Offer | null; offerSecs: number; offerBusy: boolean;
   onDuty: (v: boolean) => void; onStartGps: () => void; onStopGps: () => void;
-  onAccept: (id: string) => void; onDecline: (id: string) => void; goTrips: () => void; goEarnings: () => void;
+  onAccept: (id: string) => void; onDecline: (id: string) => void; goTrips: () => void; goEarnings: (to?: 'summary' | 'done') => void;
 }) {
   const { data, dash, gps, offer, offerSecs, offerBusy } = props;
   const { t, fmt } = useT();
@@ -502,18 +503,36 @@ function HomeSection(props: {
                 <button type="button" onClick={() => setEarnPop(false)} aria-label={t('common.close')} className="-me-1 flex h-8 w-8 items-center justify-center rounded-full text-xl text-muted hover:text-ink">×</button>
               </div>
               <div className="text-[28px] font-bold leading-tight text-accent">{dash.today.recordedEarnings.length ? dash.today.recordedEarnings.map((e) => money(e.cents, e.currency)).join(' + ') : money(0, 'EUR')}</div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-[12px] border border-edge bg-elevated px-3 py-2">
-                  <div className="text-[11px] text-muted">{t('driver.earnings.completedTrips')}</div>
-                  <div className="text-lg font-semibold">{dash.today.completedTrips}</div>
-                </div>
-                <div className="rounded-[12px] border border-edge bg-elevated px-3 py-2">
-                  <div className="text-[11px] text-muted">{t('driver.earnings.onlineTime')}</div>
-                  <div className="text-lg font-semibold">{dur(dash.today.onlineSeconds)}</div>
-                </div>
-              </div>
+              {/* Four tiles (2026-11-20, operator): cash | card / done + cancelled | time online.
+                  Done/cancelled → the trips analytics straight on «Выполнено»; the others → the full screen. */}
+              {(() => {
+                const sum = (xs?: { currency: string; cents: number }[]) => (xs && xs.length ? xs.map((e) => money(e.cents, e.currency)).join(' + ') : money(0, 'EUR'));
+                const tile = 'rounded-[12px] border border-edge bg-elevated px-3 py-2 text-start active:bg-white/5';
+                const go = (to: 'summary' | 'done') => { setEarnPop(false); props.goEarnings(to); };
+                return (
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button type="button" className={tile} onClick={() => go('summary')} data-testid="earn-cash">
+                      <div className="text-[11px] text-muted">💶 {t('driver.home.todayCash')}</div>
+                      <div className="text-lg font-semibold tabular-nums">{sum(dash.today.cash)}</div>
+                    </button>
+                    <button type="button" className={tile} onClick={() => go('summary')} data-testid="earn-card">
+                      <div className="text-[11px] text-muted">💳 {t('driver.home.todayCard')}</div>
+                      <div className="text-lg font-semibold tabular-nums">{sum(dash.today.card)}</div>
+                    </button>
+                    <button type="button" className={tile} onClick={() => go('done')} data-testid="earn-trips">
+                      <div className="text-[11px] text-muted">{t('driver.earnings.completedTrips')}</div>
+                      <div className="text-lg font-semibold">{dash.today.completedTrips}</div>
+                      <div className="text-[11px] text-muted">{t('driver.home.todayCanceled', { n: dash.today.canceledTrips ?? 0 })}</div>
+                    </button>
+                    <button type="button" className={tile} onClick={() => go('summary')} data-testid="earn-online">
+                      <div className="text-[11px] text-muted">{t('driver.earnings.onlineTime')}</div>
+                      <div className="text-lg font-semibold">{dur(dash.today.onlineSeconds)}</div>
+                    </button>
+                  </div>
+                );
+              })()}
               {dash.today.pendingFinalTrips > 0 && <p className="mt-2 text-xs text-muted">{t('driver.analytics.pending', { n: dash.today.pendingFinalTrips })}</p>}
-              <button type="button" className="btn-primary mt-3 w-full" data-testid="earn-details" onClick={() => { setEarnPop(false); props.goEarnings(); }}>{t('driver.analytics.tileHint')} ›</button>
+              <button type="button" className="btn-primary mt-3 w-full" data-testid="earn-details" onClick={() => { setEarnPop(false); props.goEarnings('summary'); }}>{t('driver.analytics.tileHint')} ›</button>
             </div>
           </>
         )}
@@ -889,9 +908,9 @@ function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string;
 }
 
 // ---- Earnings ----
-function EarningsSection({ initialRange = 'week' }: { initialRange?: Range } = {}) {
+function EarningsSection({ initialRange = 'week', openList }: { initialRange?: Range; openList?: 'done' } = {}) {
   const { t, tp, tError } = useT();
-  const [analytics, setAnalytics] = useState(false); // «Выполнено заказов» tile → analytics sub-screen (2026-11-19)
+  const [analytics, setAnalytics] = useState(!!openList); // «Выполнено заказов» tile → analytics sub-screen (2026-11-19)
   const { money, dur } = useDriverFmt();
   const [range, setRange] = useState<Range>(initialRange);
   const [data, setData] = useState<{ summary: { byCurrency: { currency: string; completedTrips: number; recordedEarningsCents: number; knownFinalTrips: number; pendingFinalTrips: number; collectedCents: number }[]; completedTrips: number; pendingFinalTrips: number; onlineSeconds: number }; daily: { day: string; recordedEarningsCents: number; completedTrips: number; currency: string }[] } | null>(null);
@@ -905,7 +924,7 @@ function EarningsSection({ initialRange = 'week' }: { initialRange?: Range } = {
   useEffect(() => { load(); }, [load]);
 
   const max = Math.max(1, ...(data?.daily.map((d) => d.recordedEarningsCents) ?? [0]));
-  if (analytics) return <DriverAnalytics onBack={() => setAnalytics(false)} />;
+  if (analytics) return <DriverAnalytics onBack={() => setAnalytics(false)} initialList={openList} />;
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-semibold">{t('driver.earnings.title')}</h1>

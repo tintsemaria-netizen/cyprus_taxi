@@ -19,14 +19,14 @@ interface Data extends Day { from: string; to: string; days: Day[]; doneItems: I
 function shift(day: string, n: number) { const d = new Date(`${day}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
 function cyprusToday() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Nicosia' }).format(new Date()); }
 
-export function DriverAnalytics({ onBack }: { onBack: () => void }) {
+export function DriverAnalytics({ onBack, initialList }: { onBack: () => void; initialList?: 'done' | 'notDone' }) {
   const { t, tError, fmt } = useT();
   const locale = useLocale();
   const [period, setPeriod] = useState<'day' | 'week'>('day');
   const [day, setDay] = useState(cyprusToday);
   const [data, setData] = useState<Data | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [list, setList] = useState<'done' | 'notDone' | null>(null); // a tile opened as its own list (2026-11-19)
+  const [list, setList] = useState<'done' | 'notDone' | null>(initialList ?? null); // can open straight on a list (2026-11-20) // a tile opened as its own list (2026-11-19)
 
   const load = useCallback(async () => {
     setErr(null);

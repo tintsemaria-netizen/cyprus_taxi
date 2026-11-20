@@ -37,6 +37,8 @@ export interface CurrencyEarnings {
   knownFinalTrips: number;
   pendingFinalTrips: number;     // unknown metered amount
   collectedCents: number;        // where payment confirmed
+  cashCents: number;             // known finals paid in cash (Fare.paymentMethod CASH_*) — 2026-11-20
+  cardCents: number;             // known finals paid by card (any CARD_* method; none at booking yet)
 }
 
 export interface EarningsSummary {
@@ -50,7 +52,7 @@ export interface EarningsSummary {
 async function completedAssignments(driverId: string, from: Date, to: Date) {
   return prisma.assignment.findMany({
     where: { driverId, reason: 'completed', endedAt: { gte: from, lt: to } },
-    select: { bookingId: true, endedAt: true, booking: { select: { fare: { select: { finalCents: true, currency: true, paymentStatus: true } } } } },
+    select: { bookingId: true, endedAt: true, booking: { select: { fare: { select: { finalCents: true, currency: true, paymentStatus: true, paymentMethod: true } } } } },
   });
 }
 
@@ -61,12 +63,13 @@ export async function earningsSummary(driverId: string, from: Date, to: Date): P
   let pending = 0;
   for (const a of asgs) {
     const r = resolveFinal(a.booking.fare, settle.get(a.bookingId) ?? null);
-    const c = byCur.get(r.currency) ?? { currency: r.currency, completedTrips: 0, recordedEarningsCents: 0, knownFinalTrips: 0, pendingFinalTrips: 0, collectedCents: 0 };
+    const c = byCur.get(r.currency) ?? { currency: r.currency, completedTrips: 0, recordedEarningsCents: 0, knownFinalTrips: 0, pendingFinalTrips: 0, collectedCents: 0, cashCents: 0, cardCents: 0 };
     c.completedTrips += 1;
     if (r.finalCents != null) {
       c.knownFinalTrips += 1;
       c.recordedEarningsCents += r.finalCents;
       if (r.collected) c.collectedCents += r.finalCents;
+      if (/CARD/i.test(a.booking.fare?.paymentMethod ?? '')) c.cardCents += r.finalCents; else c.cashCents += r.finalCents;
     } else {
       c.pendingFinalTrips += 1;
       pending += 1;

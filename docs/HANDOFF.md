@@ -2251,3 +2251,10 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
   DEPLOYED 2026-11-20 16:35.
 - PARKED (owner: «про GPS в целом отложи на потом»): GPS taximeter improvements — a gap is a straight line ×1.2
   (>30 s), no points = only flag-fall; ideas: gap by route length, «мало данных GPS» warning, «нет данных» instead of 3,80 €.
+
+## 2026-11-20 — Driver earnings: from the map pill, not the menu
+- Menu ☰ tabs: Профиль | Поездки (no «Заработок»). The pill «… € заработано сегодня» opens a «Сегодня» card: total,
+  4 tiles — 💶 cash | 💳 card (Fare.paymentMethod; card = any CARD_*, none at booking yet) / done + «Отменено: N»
+  (driver- or passenger-cancelled, from driverAnalytics) | time online — and «Подробнее ›». Done tile → analytics
+  straight on the «Выполнено» list; the others and «Подробнее» → full «Заработок» screen (tab 'earnings', back «‹»).
+  dashboard.today gained cash, card, canceledTrips.
