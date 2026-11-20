@@ -1094,11 +1094,9 @@ export default function BookingApp() {
                                     </button>
                                   ) : (
                                     <button key={k} type="button" data-testid={`quick-${k}`} onClick={() => setSavedSheet({ type: 'set', kind: k === 'home' ? 'HOME' : 'WORK' })}
-                                      className={`${tile} relative border border-dashed border-edge text-muted hover:border-accent/60`}>
-                                      {/* Not saved yet: the same 🏠 / 💼 (2026-11-20, operator), with a small «＋» badge. */}
-                                      <span aria-hidden className="relative text-[18px] leading-none">{ic}
-                                        <span className="absolute -end-2.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[11px] font-bold leading-none text-[#0d1608]">+</span>
-                                      </span>
+                                      className={`${tile} border border-dashed border-edge text-muted hover:border-accent/60`}>
+                                      {/* Not saved yet: the same 🏠 / 💼 (2026-11-20, operator; no «+» badge), dashed frame. */}
+                                      <span aria-hidden className="text-[18px] leading-none">{ic}</span>
                                       <span className="max-w-full truncate">{t(`booking.form.${k}`)}</span>
                                     </button>
                                   )
