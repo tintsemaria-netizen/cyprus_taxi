@@ -2268,3 +2268,17 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
   the card (back «‹»): today online total, 🚕 on orders, 🛣️ km on orders today (assignment start → end = to the client +
   A→B, by GPS; no track → booked A→B), Mon–Sun candles (lime = online, red = km, own scales; tap a day → its hours · km),
   week totals. API GET /api/v1/driver/duty (src/server/driver/duty.ts dutyToday). Test: tests/duty-today.db.test.ts.
+- Earnings screen «Время на линии» tile («Онлайн · Км ›») opens the same pane. DEPLOYED 18:27.
+
+## 2026-11-20 — Driver reports are ONE shared tool; admin per-driver report
+- Server: src/server/reports/driver-report.ts — reportEarnings / reportDuty / reportAnalytics / reportStatementCsv /
+  driverFigures (today + week for a list of drivers). Routes only decide WHICH driver may be read:
+  driver: /api/v1/driver/{earnings,duty,analytics,earnings/export} (own); admin:
+  /api/v1/admin/drivers/:id/report/{earnings|duty|analytics|export}, /api/v1/admin/drivers/figures, GET /admin/drivers/:id.
+- Client: src/components/reports/ — EarningsReport (was EarningsSection in driver/page.tsx; now also 💵 cash / 💳 card
+  under each currency total), DutyPane + WeekCandles, format.tsx (useReportFmt, Figure). DriverAnalytics takes apiBase.
+  `apiBase` = '/driver' or '/admin/drivers/<id>/report' (fleet owner next: '/fleet/drivers/<id>/report').
+- Admin «Водители»: «Все водители сегодня / за неделю» cards; per row today hours · km · ✓ ✕ and week hours · km;
+  tap → /admin/drivers/[id] (back «‹»): the driver's own earnings / analytics / hours & km screens.
+- Test: tests/admin-driver-report.db.test.ts (same figures as the driver sees; 401/403/404). 323 passed.
+- NEXT: fleet owner role (FLEET_OWNER staff role + Fleet; drivers & vehicles belong to a fleet; owner sees only his).

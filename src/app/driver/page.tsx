@@ -1,7 +1,7 @@
 'use client';
 
-import { DriverAnalytics } from '@/components/driver/DriverAnalytics';
-import { BackArrow } from '@/components/BackArrow';
+import { DutyPane } from '@/components/reports/DutyPane';
+import { EarningsReport, type Range } from '@/components/reports/EarningsReport';
 import { fareRangeText } from '@/lib/price-type';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import SwipeButton from '@/components/SwipeButton';
@@ -403,7 +403,7 @@ function Driver() {
       {tab === 'prebook' && <ScheduledRides onCount={onPrebookCount} />}
       {/* «Заработок» (2026-11-20, operator): no longer a menu tab — the earnings pill on the map opens a small
           «today» card, its «Подробнее» opens this full screen (back arrow «‹» in the top bar, like other sub-screens). */}
-      {tab === 'earnings' && <div className="mx-auto max-w-lg px-4 pb-28 pt-3" data-testid="earnings-screen"><EarningsSection key={earnEntry} initialRange="today" openAnalytics={earnEntry === 'analytics'} /></div>}
+      {tab === 'earnings' && <div className="mx-auto max-w-lg px-4 pb-28 pt-3" data-testid="earnings-screen"><EarningsReport key={earnEntry} initialRange="today" openAnalytics={earnEntry === 'analytics'} /></div>}
       {/* Side menu (2026-11-18): ☰ top-right → slides in from the right like a new page, not the full width. */}
       <div className={`fixed inset-0 z-50 bg-black/55 transition-opacity duration-300 ${drawer ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
         onClick={() => setDrawer(false)} aria-hidden={!drawer} />
@@ -641,9 +641,6 @@ function HomeSection(props: {
   );
 }
 
-function Figure({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return <div className="rounded-[12px] border border-edge bg-elevated p-3 text-center"><div className="truncate text-lg font-semibold">{value}</div><div className="text-xs text-muted">{label}</div><div className="text-xs text-muted">{sub}</div></div>;
-}
 function TripRow({ t, onClick }: { t: TripCard; onClick?: () => void }) {
   const { fmt } = useT();
   const { money, statusLabel, fareLabel, paymentLabel } = useDriverFmt();
@@ -660,7 +657,6 @@ function TripRow({ t, onClick }: { t: TripCard; onClick?: () => void }) {
 }
 
 // ---- Trips ----
-type Range = 'today' | 'week' | 'month';
 // Segmented switch for the merged bottom tabs.
 function SubTabs<T extends string>({ value, onChange, items }: { value: T; onChange: (v: T) => void; items: { id: T; label: string; count?: number | null }[] }) {
   return (
@@ -915,179 +911,6 @@ function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string;
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-// ---- «Время на линии» inside the today card (2026-11-20) ----
-function DutyPane({ onBack, onClose }: { onBack: () => void; onClose: () => void }) {
-  const { t } = useT();
-  const { dur } = useDriverFmt();
-  type Duty = { onlineSec: number; onTripSec: number; km: number; weekSec: number; weekKm: number; week: { day: string; onlineSec: number; km: number }[]; onlineNow: boolean };
-  const [d, setD] = useState<Duty | null>(null);
-  const [err, setErr] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    const load = () => api<Duty>('/driver/duty').then((r) => { if (alive) { setD(r); setErr(false); } }).catch(() => { if (alive) setErr(true); });
-    load();
-    const id = setInterval(load, 30_000); // an open shift keeps counting
-    return () => { alive = false; clearInterval(id); };
-  }, []);
-  const km = (n: number) => t('rides.detail.km', { km: n.toLocaleString(undefined, { maximumFractionDigits: 1 }) });
-  return (
-    <div data-testid="duty-pane">
-      <div className="flex items-center justify-between">
-        <BackArrow onBack={onBack} className="-ms-2" />
-        <span className="flex-1 text-sm font-semibold text-muted">{t('driver.earnings.onlineTime')}</span>
-        <button type="button" onClick={onClose} aria-label={t('common.close')} className="-me-1 flex h-8 w-8 items-center justify-center rounded-full text-xl text-muted hover:text-ink">×</button>
-      </div>
-      {!d ? <p className="py-4 text-sm text-muted">{err ? t('driver.detail.loadFailed') : t('common.loading')}</p> : (
-        <>
-          <div className="text-[28px] font-bold leading-tight text-accent">{dur(d.onlineSec)}</div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <div className="rounded-[12px] border border-edge bg-elevated px-3 py-2">
-              <div className="text-[11px] text-muted">🚕 {t('driver.home.timeOnTrips')}</div>
-              <div className="whitespace-nowrap text-lg font-semibold">{dur(d.onTripSec)}</div>
-            </div>
-            {/* Km on orders today (2026-11-20, operator): to the client + A → B, by GPS. */}
-            <div className="rounded-[12px] border border-edge bg-elevated px-3 py-2" data-testid="duty-km">
-              <div className="text-[11px] text-muted">🛣️ {t('driver.home.timeKm')}</div>
-              <div className="whitespace-nowrap text-lg font-semibold">{km(d.km)}</div>
-            </div>
-          </div>
-          <WeekCandles week={d.week} dur={dur} km={km} />
-          <div className="mt-2 rounded-[12px] border border-edge px-3 py-2 text-sm">
-            <div className="text-[12px] text-muted">{t('driver.home.timeWeek')}</div>
-            <span className="whitespace-nowrap font-semibold"><span className="text-accent">{dur(d.weekSec)}</span> · <span className="text-danger">{km(d.weekKm)}</span></span>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// Monday → Sunday like an exchange candle chart (2026-11-20, operator): per day a lime candle for the
-// time online and a red one beside it for the km on orders, each on its own scale. Today is marked.
-function WeekCandles({ week, dur, km }: { week: { day: string; onlineSec: number; km: number }[]; dur: (s: number) => string; km: (n: number) => string }) {
-  const { t, locale } = useT();
-  const W = 280, H = 132, top = 10, base = 108, gw = W / 7;
-  const maxH = Math.max(8 * 3600, ...week.map((d) => d.onlineSec));
-  const maxK = Math.max(50, ...week.map((d) => d.km));
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Nicosia', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-  // Tap a day → its hours and km above the chart (2026-11-20, operator); today is picked at first.
-  const [sel, setSel] = useState<string>(() => (week.some((d) => d.day === today) ? today : week[0]?.day ?? ''));
-  const picked = week.find((d) => d.day === sel) ?? null;
-  const dayLabel = (day: string) => new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${day}T12:00:00Z`));
-  const wd = (day: string) => new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' }).format(new Date(`${day}T12:00:00Z`));
-  const candle = (x: number, v: number, max: number, color: string, key: string) => {
-    const h = v > 0 ? Math.max(3, ((base - top) * v) / max) : 0;
-    const y = base - h;
-    return (
-      <g key={key}>
-        {h > 0 && <line x1={x + 4.5} x2={x + 4.5} y1={Math.max(top, y - 5)} y2={base} stroke={color} strokeWidth={1} opacity={0.6} />}
-        <rect x={x} y={h > 0 ? y : base - 1} width={9} height={h > 0 ? h : 1} rx={2} fill={color} opacity={h > 0 ? 1 : 0.35} />
-      </g>
-    );
-  };
-  return (
-    <div className="mt-3 rounded-[12px] border border-edge bg-elevated px-2 pb-1 pt-2" data-testid="duty-candles">
-      {picked && (
-        <div className="mb-1.5 flex items-baseline justify-between gap-2 px-1" data-testid="candle-picked">
-          <span className="truncate text-[12px] font-semibold first-letter:uppercase">{dayLabel(picked.day)}</span>
-          <span className="shrink-0 whitespace-nowrap text-[13px] font-semibold"><span className="text-accent">{dur(picked.onlineSec)}</span> · <span className="text-danger">{km(picked.km)}</span></span>
-        </div>
-      )}
-      <div className="flex items-center gap-3 px-1 text-[11px] text-muted">
-        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-[2px] bg-accent" />{t('driver.home.chartOnline')}</span>
-        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-[2px] bg-danger" />{t('driver.home.chartKm')}</span>
-      </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="mt-1 w-full" role="img" aria-label={`${t('driver.home.chartOnline')} / ${t('driver.home.chartKm')}`}>
-        {[0.25, 0.5, 0.75].map((f) => <line key={f} x1={0} x2={W} y1={base - (base - top) * f} y2={base - (base - top) * f} stroke="currentColor" opacity={0.08} />)}
-        <line x1={0} x2={W} y1={base} y2={base} stroke="currentColor" opacity={0.25} />
-        {week.map((d, i) => {
-          const x0 = i * gw + gw / 2 - 10.5;
-          const isToday = d.day === today;
-          return (
-            <g key={d.day}>
-              {(d.day === sel || isToday) && <rect x={i * gw + 2} y={top - 6} width={gw - 4} height={base - top + 22} rx={6} fill={d.day === sel ? '#C8FF46' : 'currentColor'} opacity={d.day === sel ? 0.14 : 0.06} />}
-              {candle(x0, d.onlineSec, maxH, '#C8FF46', 'o')}
-              {candle(x0 + 12, d.km, maxK, 'rgb(var(--c-danger))', 'k')}
-              <text x={i * gw + gw / 2} y={H - 8} textAnchor="middle" fontSize={10} fill="currentColor" opacity={isToday || d.day === sel ? 1 : 0.55} fontWeight={isToday || d.day === sel ? 700 : 400}>{wd(d.day)}</text>
-              {/* The whole column is the tap target. */}
-              <rect x={i * gw} y={0} width={gw} height={H} fill="transparent" style={{ cursor: 'pointer' }} onClick={() => setSel(d.day)} data-testid={`candle-${d.day}`}>
-                <title>{`${wd(d.day)}: ${dur(d.onlineSec)} · ${km(d.km)}`}</title>
-              </rect>
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
-
-// ---- Earnings ----
-function EarningsSection({ initialRange = 'week', openAnalytics }: { initialRange?: Range; openAnalytics?: boolean } = {}) {
-  const { t, tp, tError } = useT();
-  const [analytics, setAnalytics] = useState(!!openAnalytics);
-  const [duty, setDuty] = useState(false); // «Время на линии» tile → hours & km pane (2026-11-20) // «Выполнено заказов» tile → analytics sub-screen (2026-11-19)
-  const { money, dur } = useDriverFmt();
-  const [range, setRange] = useState<Range>(initialRange);
-  const [data, setData] = useState<{ summary: { byCurrency: { currency: string; completedTrips: number; recordedEarningsCents: number; knownFinalTrips: number; pendingFinalTrips: number; collectedCents: number }[]; completedTrips: number; pendingFinalTrips: number; onlineSeconds: number }; daily: { day: string; recordedEarningsCents: number; completedTrips: number; currency: string }[] } | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true); setErr(null);
-    try { setData(await api(`/driver/earnings?range=${range}`)); } catch (e) { setErr(e ? tError(e) : t('driver.detail.loadFailed')); } finally { setLoading(false); }
-  }, [range, t, tError]);
-  useEffect(() => { load(); }, [load]);
-
-  const max = Math.max(1, ...(data?.daily.map((d) => d.recordedEarningsCents) ?? [0]));
-  if (analytics) return <DriverAnalytics onBack={() => setAnalytics(false)} />;
-  // Hours & km in the earnings screen too (2026-11-20, operator): the same pane as on the map card.
-  if (duty) return <div className="card p-4" data-testid="earnings-duty"><DutyPane onBack={() => setDuty(false)} onClose={() => setDuty(false)} /></div>;
-  return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-semibold">{t('driver.earnings.title')}</h1>
-      <div className="flex gap-1 rounded-[12px] border border-edge bg-elevated p-1">
-        {(['today', 'week', 'month'] as Range[]).map((r) => <button key={r} onClick={() => setRange(r)} className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium ${range === r ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>{t(`driver.range.${r}`)}</button>)}
-      </div>
-      {err && <div className="rounded-[12px] border border-danger/40 bg-danger/10 p-3 text-sm">{t('driver.earnings.loadFailed', { error: err })} <button className="underline" onClick={load}>{t('driver.trips.retry')}</button></div>}
-      {loading && !data && <p className="text-muted">{t('common.loading')}</p>}
-      {data && (
-        <>
-          {/* Work figures for the selected period (moved here from the Home tab). */}
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => setAnalytics(true)} data-testid="analytics-tile" className="relative rounded-[12px] text-start">
-              <Figure label={t('driver.earnings.completedTrips')} value={String(data.summary.completedTrips)} sub={t('driver.analytics.tileHint') + ' ›'} />
-            </button>
-            <button type="button" onClick={() => setDuty(true)} data-testid="earnings-online-tile" className="rounded-[12px] text-start">
-              <Figure label={t('driver.earnings.onlineTime')} value={dur(data.summary.onlineSeconds)} sub={`${t('driver.home.chartOnline')} · ${t('driver.home.chartKm')} ›`} />
-            </button>
-          </div>
-          {data.summary.byCurrency.length === 0 ? <p className="py-6 text-center text-sm text-muted">{t('driver.earnings.empty')}</p> : data.summary.byCurrency.map((c) => (
-            <div key={c.currency} className="card p-4">
-              <div className="text-3xl font-semibold">{money(c.recordedEarningsCents, c.currency)}</div>
-              <div className="text-xs text-muted">{t('driver.earnings.summary', { currency: c.currency, completed: c.completedTrips })}{c.pendingFinalTrips > 0 ? t('driver.earnings.pendingFinal', { count: c.pendingFinalTrips }) : ''}</div>
-              {c.collectedCents > 0 && <div className="mt-1 text-xs text-muted">{t('driver.earnings.collected', { amount: money(c.collectedCents, c.currency) })}</div>}
-            </div>
-          ))}
-          <p className="text-xs text-muted">{t('driver.earnings.note')}</p>
-
-          <div className="card p-4">
-            <div className="mb-2 font-medium">{t('driver.earnings.daily')}</div>
-            {data.daily.length === 0 ? <p className="text-sm text-muted">{t('driver.earnings.noData')}</p> : (
-              <>
-                <div className="flex items-end gap-1" style={{ height: 120 }} role="img" aria-label={t('driver.earnings.chartLabel')}>
-                  {data.daily.map((d) => <div key={d.day + d.currency} className="flex h-full min-w-[8px] flex-1 flex-col items-center justify-end" title={`${d.day}: ${money(d.recordedEarningsCents, d.currency)}`}><div className="w-full rounded-t bg-accent" style={{ height: `${(d.recordedEarningsCents / max) * 100}%` }} /></div>)}
-                </div>
-                <details className="mt-2 text-xs text-muted"><summary className="cursor-pointer">{t('driver.earnings.showList')}</summary><ul className="mt-1 space-y-0.5">{data.daily.map((d) => <li key={d.day + d.currency}>{d.day}: {money(d.recordedEarningsCents, d.currency)} · {tp('driver.earnings.trips', d.completedTrips)}</li>)}</ul></details>
-              </>
-            )}
-          </div>
-          <a href={`/api/v1/driver/earnings/export?range=${range}`} className="btn-ghost block w-full text-center">{t('driver.earnings.download')}</a>
-        </>
-      )}
     </div>
   );
 }

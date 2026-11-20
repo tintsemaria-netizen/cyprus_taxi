@@ -13,6 +13,17 @@ const schema = z.object({
   resetPassword: z.boolean().optional(),
 });
 
+// One driver's header for the admin's per-driver report screen (2026-11-20).
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const ctx = await requireStaff(['ADMIN']);
+  if (!isStaffCtx(ctx)) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();
+  const { id } = await params;
+  const d = await prisma.driver.findUnique({ where: { id }, include: { user: true, bindings: { where: { endedAt: null }, include: { vehicle: true } } } });
+  if (!d) return Errors.notFound();
+  const v = d.bindings[0]?.vehicle;
+  return apiOk({ driver: { id: d.id, login: d.user.login, publicName: d.publicName, phone: d.phone, active: d.active && d.user.active, onDuty: d.onDuty, vehicle: v ? { plate: v.plate, label: `${v.make} ${v.model}` } : null } });
+}
+
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireStaff(['ADMIN']);
   if (!isStaffCtx(ctx)) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();

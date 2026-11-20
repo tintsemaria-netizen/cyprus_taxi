@@ -19,7 +19,7 @@ interface Data extends Day { from: string; to: string; days: Day[]; doneItems: I
 function shift(day: string, n: number) { const d = new Date(`${day}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
 function cyprusToday() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Nicosia' }).format(new Date()); }
 
-export function DriverAnalytics({ onBack }: { onBack: () => void }) {
+export function DriverAnalytics({ onBack, apiBase = '/driver' }: { onBack: () => void; apiBase?: string }) {
   const { t, tError, fmt } = useT();
   const locale = useLocale();
   const [period, setPeriod] = useState<'day' | 'week'>('day');
@@ -30,8 +30,8 @@ export function DriverAnalytics({ onBack }: { onBack: () => void }) {
 
   const load = useCallback(async () => {
     setErr(null);
-    try { setData(await api<Data>(`/driver/analytics?period=${period}&day=${day}`)); } catch (e) { setErr(tError(e)); }
-  }, [period, day, tError]);
+    try { setData(await api<Data>(`${apiBase}/analytics?period=${period}&day=${day}`)); } catch (e) { setErr(tError(e)); }
+  }, [period, day, tError, apiBase]);
   useEffect(() => { load(); }, [load]);
 
   const tag = INTL_TAG[locale];

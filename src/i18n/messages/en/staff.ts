@@ -104,6 +104,13 @@ const staff = {
     bind: 'Bind vehicle…',
     resetPw: 'Reset password',
     empty: 'No drivers yet.',
+    report: 'Report',
+    today: 'Today',
+    week: 'Week',
+    fleetWeek: 'All drivers this week',
+    fleetToday: 'All drivers today',
+    notFound: 'Driver not found.',
+    onlineNow: 'online now',
   },
   vehicles: {
     title: 'Vehicles',

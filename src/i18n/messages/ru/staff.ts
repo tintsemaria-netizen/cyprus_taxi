@@ -106,6 +106,13 @@ const staff: Catalog<typeof en> = {
     bind: 'Привязать машину…',
     resetPw: 'Сбросить пароль',
     empty: 'Водителей пока нет.',
+    report: 'Отчёт',
+    today: 'Сегодня',
+    week: 'Неделя',
+    fleetWeek: 'Все водители за неделю',
+    fleetToday: 'Все водители сегодня',
+    notFound: 'Водитель не найден.',
+    onlineNow: 'сейчас на линии',
   },
   vehicles: {
     title: 'Автомобили',
