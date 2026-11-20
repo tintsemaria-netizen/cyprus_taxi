@@ -2262,3 +2262,9 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
   (= analytics: driver-cancelled + missed offers) | (narrower) time online — and «Подробнее ›». Trips tile → analytics
   panel (Выполнено / Не выполнено tiles); the others and «Подробнее» → full «Заработок» screen (tab 'earnings', back «‹»).
   dashboard.today gained cash, card, canceledTrips.
+
+## 2026-11-20 — Driver «Время на линии» pane
+- Today card: ✓ done / ✕ not done side by side (icons 30 % smaller, no words). «Время на линии ›» opens a pane inside
+  the card (back «‹»): today online total, 🚕 on orders, 🛣️ km on orders today (assignment start → end = to the client +
+  A→B, by GPS; no track → booked A→B), Mon–Sun candles (lime = online, red = km, own scales; tap a day → its hours · km),
+  week totals. API GET /api/v1/driver/duty (src/server/driver/duty.ts dutyToday). Test: tests/duty-today.db.test.ts.
