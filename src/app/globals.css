@@ -123,3 +123,7 @@ body {
    Maps are geography and never mirror (dir="ltr" on map containers). Typed text takes its own direction,
    so an English address in a Hebrew screen still reads correctly. */
 [dir='rtl'] :where(input, textarea) { unicode-bidi: plaintext; }
+
+/* A sideways-scrolling row without a visible scrollbar (home quick-pick tiles, 2026-11-20). */
+.no-scrollbar { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

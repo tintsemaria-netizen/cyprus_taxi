@@ -1074,49 +1074,46 @@ export default function BookingApp() {
                           )}
                           </div>
                           {anyErr.map((e) => <p key={e} className="mt-1 text-xs text-danger">{e}</p>)}
-                          {/* Quick picks under «Пункт назначения» (2026-11-17): saved Home / Work / School and the
-                              last three destinations — one tap sets the destination and goes on to the price.
-                              2026-11-19: the last TWO only, each cut at ~60 % of the width. */}
-                          {!addrOpen && passenger && !dropoff && (
-                            <div className="mt-1.5" data-testid="quick-picks">
-                              <div className="flex gap-2">
+                          {/* Quick picks under «Пункт назначения» (2026-11-17). 2026-11-20 (operator): no recent trips
+                              here; Home / Work as bigger tiles, then every other saved place as a tile of the same
+                              size (the row scrolls sideways when they do not fit), and a smaller «Ещё» that is
+                              always there at the end — it never scrolls away however many places are saved. */}
+                          {!addrOpen && passenger && !dropoff && (() => {
+                            const custom = places.custom ?? [];
+                            const fill = custom.length === 0; // only Home + Work: they share the row
+                            const tile = `flex h-[58px] select-none flex-col items-center justify-center gap-0.5 rounded-[14px] px-2 text-[13px] [-webkit-touch-callout:none] ${fill ? 'min-w-0 flex-1' : 'w-[96px] shrink-0'}`;
+                            return (
+                            <div className="mt-2 flex gap-2" data-testid="quick-picks">
+                              <div className="no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto">
                                 {([['home', '🏠', places.home], ['work', '💼', places.work]] as const).map(([k, ic, pl]) => (
                                   pl ? (
                                     <button key={k} type="button" data-testid={`quick-${k}`} title={`${pl.label} · ${t('booking.form.holdToEdit')}`} {...holdProps(k === 'home' ? 'HOME' : 'WORK')}
                                       onClick={() => { if (held.current) { held.current = false; return; } pickQuick(pl); }}
-                                      className="flex h-8 min-w-0 flex-1 select-none items-center justify-center gap-1 rounded-full border border-edge-strong px-2 text-[13px] text-ink [-webkit-touch-callout:none] hover:border-accent/60">
-                                      <span aria-hidden>{ic}</span><span className="truncate">{t(`booking.form.${k}`)}</span>
+                                      className={`${tile} border border-edge-strong bg-white/[0.04] text-ink hover:border-accent/60`}>
+                                      <span aria-hidden className="text-[18px] leading-none">{ic}</span><span className="max-w-full truncate">{t(`booking.form.${k}`)}</span>
                                     </button>
                                   ) : (
                                     <button key={k} type="button" data-testid={`quick-${k}`} onClick={() => setSavedSheet({ type: 'set', kind: k === 'home' ? 'HOME' : 'WORK' })}
-                                      className="flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-full border border-dashed border-edge px-2 text-[13px] text-muted hover:border-accent/60">
-                                      <span aria-hidden className="text-accent">＋</span><span className="truncate">{t(`booking.form.${k}`)}</span>
+                                      className={`${tile} border border-dashed border-edge text-muted hover:border-accent/60`}>
+                                      <span aria-hidden className="text-[18px] leading-none text-accent">＋</span><span className="max-w-full truncate">{t(`booking.form.${k}`)}</span>
                                     </button>
                                   )
                                 ))}
-                                {/* «Ещё» (2026-11-17): the full list — every saved place, recent trips and search. */}
-                                <button type="button" data-testid="quick-more" onClick={() => setSavedSheet({ type: 'list' })}
-                                  className="flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-full border border-edge-strong px-2 text-[13px] text-ink hover:border-accent/60">
-                                  <span aria-hidden className="text-muted">•••</span><span className="truncate">{t('booking.form.more')}</span>
-                                </button>
+                                {custom.map((c) => (
+                                  <button key={c.id} type="button" data-testid="quick-custom" title={c.label} onClick={() => pickQuick(c)}
+                                    className={`${tile} border border-edge-strong bg-white/[0.04] text-ink hover:border-accent/60`}>
+                                    <span aria-hidden className="text-[18px] leading-none">📍</span><span className="max-w-full truncate">{c.name}</span>
+                                  </button>
+                                ))}
                               </div>
-                              {destinations.length > 0 && (
-                                <ul className="mt-1">
-                                  {destinations.slice(0, 2).map((d, i) => (
-                                    <li key={`${d.label}-${i}`}>
-                                      <button type="button" data-testid="quick-recent" onClick={() => pickQuick(d)}
-                                        className={`flex h-9 w-full items-center gap-2.5 text-start ${i ? 'border-t border-white/[0.06]' : ''}`}>
-                                        <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-muted">
-                                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>
-                                        </span>
-                                        <span className="min-w-0 max-w-[60%] truncate text-[14px] text-ink">{d.label}</span>
-                                      </button>
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
+                              {/* «Ещё»: the full list — every saved place, add / edit, recent trips and search. */}
+                              <button type="button" data-testid="quick-more" onClick={() => setSavedSheet({ type: 'list' })}
+                                className="flex h-[58px] w-[58px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-[14px] border border-edge-strong text-[11px] text-ink hover:border-accent/60">
+                                <span aria-hidden className="text-[14px] leading-none text-muted">•••</span><span className="max-w-full truncate px-1">{t('booking.form.more')}</span>
+                              </button>
                             </div>
-                          )}
+                            );
+                          })()}
                           {addrOpen && !hasStop && (
                             <button type="button" className="chip mt-2 hover:border-accent/50" onClick={() => { setHasStop(true); openEditor('s'); }}>＋ {t('booking.form.addStop')}</button>
                           )}
