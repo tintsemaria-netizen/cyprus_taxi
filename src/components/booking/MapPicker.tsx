@@ -312,7 +312,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col bg-page" style={{ height: '100dvh' }}>
-      <div className="z-10 flex items-center gap-3 border-b border-edge bg-page px-4 py-3" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
+      <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-edge bg-page px-4 py-3" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
         <button className="btn-ghost !min-h-0 !py-1.5 text-sm" onClick={cancel} aria-label={t('common.back')}>{t('booking.picker.back')}</button>
         <h2 className="font-semibold">{label}</h2>
       </div>

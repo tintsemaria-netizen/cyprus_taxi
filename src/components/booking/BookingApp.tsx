@@ -861,7 +861,9 @@ export default function BookingApp() {
           </button>
         </div>
       )}
-      <header className="z-20 flex items-center justify-between border-b border-edge bg-page px-4 py-2 sm:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
+      {/* sticky + opaque (2026-11-20): iOS 26 Safari / Home Screen apps dim (soft edge effect) the top of
+          anything under the status bar unless a pinned, opaque bar is there — it then tints the status bar with it. */}
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-edge bg-page px-4 py-2 sm:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
         {/* Back arrow only where there is a step behind (2026-11-17): class choice → the form. */}
         <div className="flex items-center gap-1">
           {step === 'review' && <BackArrow className="-ms-2" onBack={() => setStep('form')} />}

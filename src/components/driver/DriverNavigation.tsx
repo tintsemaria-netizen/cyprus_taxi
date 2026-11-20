@@ -271,7 +271,7 @@ export function DriverNavigation(props: {
     <div className="fixed inset-0 z-50 flex flex-col bg-page" data-testid="driver-nav">
       {/* No manoeuvre banner and no notice strip on top (2026-11-19): the map uses the whole screen;
           turn-by-turn stays in the voice prompts. Only the status-bar safe area is kept. */}
-      <div className="shrink-0 bg-page" style={{ height: 'env(safe-area-inset-top)' }} />
+      <div className="sticky top-0 z-10 shrink-0 bg-page" style={{ height: 'env(safe-area-inset-top)' }} />
 
       {/* Map */}
       <div className="relative min-h-0 flex-1" data-nav-zoom={navZoom}>

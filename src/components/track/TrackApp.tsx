@@ -393,7 +393,7 @@ export default function TrackApp() {
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
-      <PassengerTopBar sticky={false} />
+      <PassengerTopBar />
 
       <div className="relative flex-1">
         <div className="absolute inset-0">
@@ -633,7 +633,7 @@ export default function TrackApp() {
 function Centered({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-[100dvh] flex-col bg-page">
-      <PassengerTopBar sticky={false} />
+      <PassengerTopBar />
       <div className="flex flex-1 items-center justify-center px-4">{children}</div>
     </div>
   );
