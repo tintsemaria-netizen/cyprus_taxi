@@ -57,3 +57,34 @@ export async function onlineSecondsInWindow(driverId: string, from: Date, to: Da
 export async function hasOpenSession(driverId: string): Promise<boolean> {
   return !!(await prisma.dutySession.findUnique({ where: { activeDriverId: driverId }, select: { id: true } }));
 }
+
+// «Время на линии» window (2026-11-20): today's online time, how much of it on orders, today's
+// sessions (on → off; an open one runs to now) and the week so far (Cyprus calendar, from Monday).
+export interface DutyToday {
+  onlineSec: number; onTripSec: number; freeSec: number; weekSec: number;
+  sessions: { from: string; to: string | null; sec: number }[];
+  onlineNow: boolean;
+}
+export async function dutyToday(driverId: string, dayStart: Date, weekStart: Date, now: Date = new Date()): Promise<DutyToday> {
+  const sessions = await prisma.dutySession.findMany({
+    where: { driverId, onlineAt: { lt: now }, OR: [{ offlineAt: null }, { offlineAt: { gt: dayStart } }] },
+    select: { onlineAt: true, offlineAt: true }, orderBy: { onlineAt: 'asc' },
+  });
+  const clip = (a: number, b: number) => Math.max(0, Math.min(b, now.getTime()) - Math.max(a, dayStart.getTime()));
+  const list = sessions.map((s) => {
+    const end = s.offlineAt?.getTime() ?? now.getTime();
+    return { from: new Date(Math.max(s.onlineAt.getTime(), dayStart.getTime())).toISOString(), to: s.offlineAt ? s.offlineAt.toISOString() : null, sec: Math.round(clip(s.onlineAt.getTime(), end) / 1000) };
+  }).filter((s) => s.sec > 0 || s.to === null);
+  const onlineSec = list.reduce((n, s) => n + s.sec, 0);
+  // On orders: from assignment to its end (or now), within today.
+  const asgs = await prisma.assignment.findMany({
+    where: { driverId, assignedAt: { lt: now }, OR: [{ endedAt: null }, { endedAt: { gt: dayStart } }] },
+    select: { assignedAt: true, endedAt: true },
+  });
+  const onTripSec = Math.min(onlineSec, Math.round(asgs.reduce((n, a) => n + clip(a.assignedAt.getTime(), a.endedAt?.getTime() ?? now.getTime()), 0) / 1000));
+  return {
+    onlineSec, onTripSec, freeSec: Math.max(0, onlineSec - onTripSec),
+    weekSec: await onlineSecondsInWindow(driverId, weekStart, now, now),
+    sessions: list, onlineNow: sessions.some((s) => !s.offlineAt),
+  };
+}
