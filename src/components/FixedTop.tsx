@@ -7,6 +7,8 @@ import { useLayoutEffect, useRef, useState } from 'react';
 // bar fixed to the top edge; a bar that is only sticky inside a fixed full-screen container does not
 // count, and iOS then lays its soft dimming over the logo and the avatar. `top` follows the
 // keyboard-shifted app box (useKeyboardViewport) so the bar stays where it was.
+// The colour must be on the FIXED element itself (bg-page here): iOS reads the background of the
+// pinned element, not of its children — a transparent pinned wrapper still gets the dimming.
 export function FixedTop({ top, z = 20, children }: { top?: string | number; z?: number; children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [h, setH] = useState(0);
@@ -22,7 +24,7 @@ export function FixedTop({ top, z = 20, children }: { top?: string | number; z?:
   return (
     <>
       <div aria-hidden className="shrink-0" style={{ height: h }} />
-      <div ref={ref} className="fixed inset-x-0" style={{ top: top ?? 0, zIndex: z }} data-testid="fixed-top">{children}</div>
+      <div ref={ref} className="fixed inset-x-0 bg-page" style={{ top: top ?? 0, zIndex: z }} data-testid="fixed-top">{children}</div>
     </>
   );
 }
