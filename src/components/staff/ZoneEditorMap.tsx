@@ -66,17 +66,20 @@ function GoogleZoneMap({ center, airport, zones, editing, onChange, className }:
     s.refs = zones.map((z) => new g.Polygon({ map, paths: z.polygon.map(([lat, lng]) => ({ lat, lng })), strokeColor: z.color, strokeWeight: 2, fillColor: z.color, fillOpacity: 0.12, clickable: false }));
     s.airport?.setMap?.(null);
     s.airport = new g.Circle({ map, center: airport, radius: 2500, strokeColor: '#ffffff', strokeOpacity: 0.6, strokeWeight: 1, fillOpacity: 0.05, clickable: false });
-    if (s.edit) { g.event.clearInstanceListeners(s.edit.getPath()); s.edit.setMap(null); s.edit = null; }
+    if (s.edit) { const ep = s.edit.getPath(); if (ep) g.event.clearInstanceListeners(ep); s.edit.setMap(null); s.edit = null; }
     if (editing) {
-      const poly = new g.Polygon({ map, paths: editing.map(([lat, lng]) => ({ lat, lng })), strokeColor: LIME, strokeWeight: 3, fillColor: LIME, fillOpacity: 0.2, editable: true, zIndex: 10 });
+      // paths as ONE explicit ring (2026-11-21 fix): with a flat empty array (a new zone, no corners yet)
+      // Google creates no ring, getPath() is undefined and «+ Новая зона» crashed the page.
+      const poly = new g.Polygon({ map, paths: [editing.map(([lat, lng]) => ({ lat, lng }))], strokeColor: LIME, strokeWeight: 3, fillColor: LIME, fillOpacity: 0.2, editable: true, zIndex: 10 });
       const sync = () => {
         const path = poly.getPath();
+        if (!path) return;
         const pts: Poly = [];
         for (let i = 0; i < path.getLength(); i++) { const p = path.getAt(i); pts.push([p.lat(), p.lng()]); }
         onChangeRef.current(pts);
       };
       const path = poly.getPath();
-      path.addListener('set_at', sync); path.addListener('insert_at', sync); path.addListener('remove_at', sync);
+      path?.addListener('set_at', sync); path?.addListener('insert_at', sync); path?.addListener('remove_at', sync);
       // A click on the polygon itself also adds a corner (else clicks inside would be swallowed).
       poly.addListener('click', (e: { latLng: { lat: () => number; lng: () => number }; vertex?: number }) => {
         if (e.vertex != null) return;

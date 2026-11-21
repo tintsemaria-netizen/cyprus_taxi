@@ -2313,3 +2313,7 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
   💶 cash | 💳 card, ✓ done ✕ not done (wide, → analytics) | time online (narrow, → hours & km).
   reportEarnings returns notDone (driverCanceled + missedOffers) for today / week (7 d) / month (30 d); driverAnalytics
   now takes 1–31 days. Shared: driver, admin per-driver, fleet owner. 326 tests passed.
+- 2026-11-21 04:30 FIX: admin «Фикс. цены» → «+ Новая зона» crashed the page on Google maps («This page couldn't
+  load»): a Polygon built from a flat EMPTY path has no ring → getPath() undefined → addListener threw. Now paths =
+  [ring]; getPath guarded. Reproduced locally with the real Google JS (key refuses localhost, so corner clicks are
+  verified on the live site only).
