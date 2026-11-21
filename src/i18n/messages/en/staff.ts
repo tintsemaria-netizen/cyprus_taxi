@@ -160,6 +160,7 @@ const staff = {
     xl: "XL, €",
     active: "Active",
     hint: "Tap the map to add the zone corners. Drag a corner to move it; drag the small middle dot of a side to add a corner.",
+    stepBack: "Step back",
     undo: "Undo last corner",
     clear: "Clear",
     save: "Save zone",

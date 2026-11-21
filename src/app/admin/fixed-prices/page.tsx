@@ -1,7 +1,7 @@
 'use client';
 
 // Admin «Фиксированные цены» (2026-11-17): draw airport fare zones on a map and set their prices.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamicImport from 'next/dynamic';
 import { StaffShell } from '@/components/staff/StaffShell';
 import { api, ApiRequestError } from '@/lib/api-client';
@@ -31,6 +31,28 @@ function FixedPrices() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // «↶ Шаг назад» on the map (2026-11-21, operator): every corner change (add, drag, insert, remove, clear) can be
+  // undone one step at a time. A continuous drag (many changes in a row) counts as ONE step.
+  const hist = useRef<Poly[]>([]);
+  const lastChange = useRef(0);
+  const [histLen, setHistLen] = useState(0);
+  const polyNow = useRef<Poly>([]);
+  useEffect(() => { polyNow.current = draft?.polygon ?? []; }, [draft]);
+  const setPoly = useCallback((next: Poly) => {
+    const now = Date.now();
+    if (now - lastChange.current > 600) { hist.current.push(polyNow.current); if (hist.current.length > 100) hist.current.shift(); }
+    lastChange.current = now;
+    polyNow.current = next;
+    setHistLen(hist.current.length);
+    setDraft((d) => (d ? { ...d, polygon: next } : d));
+  }, []);
+  const stepBack = () => {
+    const prev = hist.current.pop();
+    setHistLen(hist.current.length);
+    lastChange.current = 0;
+    if (prev) setDraft((d) => (d ? { ...d, polygon: prev } : d));
+  };
+  const resetHist = () => { hist.current = []; lastChange.current = 0; setHistLen(0); };
 
   const load = useCallback(async () => {
     const r = await api<{ airports: Airport[]; zones: Zone[] }>('/admin/fixed-zones');
@@ -47,8 +69,8 @@ function FixedPrices() {
   const euro = (c: number) => (c / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const cents = (s: string) => Math.round(Number(s.replace(',', '.')) * 100);
 
-  function startNew() { setMsg(null); setDraft({ id: null, name: '', comfort: '35', xl: '50', active: true, polygon: [] }); }
-  function startEdit(z: Zone) { setMsg(null); setDraft({ id: z.id, name: z.name, comfort: euro(z.comfortCents), xl: euro(z.xlCents), active: z.active, polygon: z.polygon }); }
+  function startNew() { setMsg(null); resetHist(); setDraft({ id: null, name: '', comfort: '35', xl: '50', active: true, polygon: [] }); }
+  function startEdit(z: Zone) { setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, comfort: euro(z.comfortCents), xl: euro(z.xlCents), active: z.active, polygon: z.polygon }); }
 
   async function save() {
     if (!draft) return;
@@ -95,8 +117,16 @@ function FixedPrices() {
       <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="relative h-[62vh] min-h-[380px] overflow-hidden rounded-[14px] border border-edge">
           <ZoneEditorMap center={center} airport={ap} zones={refZones} editing={draft ? draft.polygon : null}
-            onChange={(p) => setDraft((d) => (d ? { ...d, polygon: p } : d))} className="h-full w-full" />
-          {draft && <div className="pointer-events-none absolute inset-x-3 top-3 rounded-[10px] bg-page/90 px-3 py-2 text-xs text-ink">{t('staff.fixed.hint')}</div>}
+            onChange={setPoly} className="h-full w-full" />
+          {draft && (
+            <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start gap-2">
+              <button type="button" onClick={stepBack} disabled={histLen === 0} data-testid="zone-step-back" aria-label={t('staff.fixed.stepBack')}
+                className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-[10px] bg-accent px-3 py-2 text-sm font-semibold text-[#0b0f10] shadow-lg disabled:bg-page/90 disabled:text-muted">
+                <span className="text-lg leading-none">↶</span>{t('staff.fixed.stepBack')}
+              </button>
+              <div className="min-w-0 flex-1 rounded-[10px] bg-page/90 px-3 py-2 text-xs text-ink">{t('staff.fixed.hint')}</div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-3">
@@ -116,8 +146,8 @@ function FixedPrices() {
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />{t('staff.fixed.active')}</label>
               <div className="text-xs text-muted">{t('staff.fixed.points', { n: draft.polygon.length })}</div>
               <div className="flex gap-2">
-                <button type="button" className="btn-ghost !min-h-[40px] flex-1 !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => setDraft({ ...draft, polygon: draft.polygon.slice(0, -1) })} data-testid="zone-undo">{t('staff.fixed.undo')}</button>
-                <button type="button" className="btn-ghost !min-h-[40px] !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => setDraft({ ...draft, polygon: [] })}>{t('staff.fixed.clear')}</button>
+                <button type="button" className="btn-ghost !min-h-[40px] flex-1 !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => { lastChange.current = 0; setPoly(draft.polygon.slice(0, -1)); }} data-testid="zone-undo">{t('staff.fixed.undo')}</button>
+                <button type="button" className="btn-ghost !min-h-[40px] !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => { lastChange.current = 0; setPoly([]); }}>{t('staff.fixed.clear')}</button>
               </div>
               <div className="flex gap-2">
                 <button type="button" className="btn-ghost !min-h-[44px] !py-2 text-sm" onClick={() => setDraft(null)}>{t('staff.fixed.cancel')}</button>

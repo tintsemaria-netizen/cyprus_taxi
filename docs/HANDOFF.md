@@ -2322,3 +2322,6 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
   src/proxy.ts: CF-Visitor {"scheme":"http"} + GET/HEAD → 308 to https (nginx always sends X-Forwarded-Proto https,
   so CF-Visitor is the only truth); https via Cloudflare gets HSTS 1 year. tests/https-redirect.test.ts. 328 passed.
   Also worth turning on in Cloudflare: SSL/TLS → Edge Certificates → «Always Use HTTPS».
+- 2026-11-21 12:20 DEPLOYED: «↶ Шаг назад» on the fixed-price zone map (top-left, beside the hint). Undoes one corner
+  change at a time — add, drag (a continuous drag = one step, 600 ms grouping), midpoint insert, «Убрать последний угол»,
+  «Очистить». History resets on new / edit zone. 328 tests passed; previewed on the MapLibre map (Google: live only).
