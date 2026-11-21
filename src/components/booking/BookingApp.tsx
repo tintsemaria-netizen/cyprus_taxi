@@ -1289,6 +1289,9 @@ export default function BookingApp() {
 
       {showLogin && (
         <PassengerLoginModal
+          // Signing in with Google leaves the page: keep the route + class so the form comes back filled (the same
+          // hand-over «Заказать ещё раз» uses).
+          onBeforeLeave={() => { try { if (pickup && dropoff) sessionStorage.setItem('il-y-repeat', JSON.stringify({ p: pickup, d: dropoff, s: hasStop ? stop : null, c: vClass })); } catch { /* storage blocked */ } }}
           onClose={() => { setShowLogin(false); pendingSubmitActive.current = false; pendingReview.current = false; }}
           onDone={(p) => {
             setShowLogin(false);

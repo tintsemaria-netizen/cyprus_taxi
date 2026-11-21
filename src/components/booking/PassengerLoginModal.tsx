@@ -5,10 +5,11 @@ import { useEffect, useRef, useState } from 'react';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { PasswordInput } from '@/components/PasswordInput';
+import { ContinueWith } from '@/components/auth/ContinueWith';
 
 // Task 014: mandatory passenger sign-in before requesting a ride. Email + password is the default
 // (it works without SMS); the phone-code tab is used when SMS verification is available.
-export function PassengerLoginModal({ onDone, onClose }: { onDone: (p: { phone: string | null; name?: string }) => void; onClose: () => void }) {
+export function PassengerLoginModal({ onDone, onClose, onBeforeLeave }: { onDone: (p: { phone: string | null; name?: string }) => void; onClose: () => void; onBeforeLeave?: () => void }) {
   const [mode, setMode] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -62,6 +63,8 @@ export function PassengerLoginModal({ onDone, onClose }: { onDone: (p: { phone: 
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="plm-title" className="card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
         <h2 id="plm-title" className="text-lg font-bold">{t('auth.modal.title')}</h2>
         <p className="mt-1 text-sm text-muted">{t('auth.modal.subtitle')}</p>
+        {/* «Продолжить с Google» here too (2026-11-22): the route is kept and comes back after Google. */}
+        <ContinueWith next="/" onBeforeLeave={onBeforeLeave} />
 
         {PASSENGER_SMS && <div className="mt-4 flex gap-1 rounded-[12px] border border-edge bg-elevated p-1" role="tablist" aria-label={t('auth.modal.methodLabel')}>
           {(['email', 'phone'] as const).map((m) => (

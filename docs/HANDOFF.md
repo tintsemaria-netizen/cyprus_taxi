@@ -2438,3 +2438,9 @@ GOOGLE-VERIFIED e-mail, else created. Routes /api/v1/passenger/oauth/google (sta
 Redirect URIs to register: https://il-y.taxi/… and https://cyprustaxi.ackedberryes.store/api/v1/passenger/oauth/google/callback.
 Local end-to-end with a stand-in Google (GOOGLE_OAUTH_TOKEN_URL_DEV, ignored in production): signed in as the test
 person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345 tests passed. NEXT: Apple, then SMS.
+- 2026-11-22 01:20: also in the booking login modal (PassengerLoginModal → ContinueWith with onBeforeLeave): before going
+  to Google the route + class are put into sessionStorage «il-y-repeat» (the «Заказать ещё раз» hand-over), so the form
+  comes back filled. Checked locally with a stand-in Google and a forced LOGIN_REQUIRED (guest booking is on, so the modal
+  only shows when the server asks). Drivers / staff entrances have no Google on purpose. 345 tests passed.
+  NOTE for the owner: the booking form still REQUIRES «Телефон для водителя» although the owner said drivers talk to
+  passengers in the in-app chat — proposed removing it; not changed yet.
