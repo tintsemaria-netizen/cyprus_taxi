@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-21 — passenger position refreshed when the app returns (deployed)
+
+**Problem:** an installed PWA is resumed rather than reloaded, so the home screen kept the pickup from the last visit (80 km away).
+
+**Fix** in `BookingApp.tsx`: on `visibilitychange` after more than 60 s hidden (or on `pageshow` from the back/forward cache), the position is detected again with `maximumAge: 0`. The auto-set pickup moves only if the passenger has not touched it and has no destination yet.
+
+**Checked:** Chromium simulation (airport → Limassol). Not checked on an iPhone.
+
 ## 2026-11-21 — share board «Табло попутчиков» (deployed)
 
 The operator asked to deploy it to try it out.
