@@ -39,6 +39,11 @@ const auth = {
     profile: 'Profile settings',
     help: 'Help & privacy',
   },
+  oauth: {
+    google: "Continue with Google",
+    or: "or",
+    failed: "Could not sign in with Google. Try again or use your e-mail.",
+  },
   login: {
     driverLink: "Are you a driver? Driver sign-in",
     subtitle: 'Use your email and password.',

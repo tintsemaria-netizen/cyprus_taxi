@@ -19,6 +19,9 @@ x-app-env: &app-env
   APP_RELEASE: ${APP_RELEASE:-unknown}
   # Server-only Google key for Geocoding + Routes (never exposed to the browser).
   GOOGLE_MAPS_SERVER_API_KEY: ${GOOGLE_MAPS_SERVER_API_KEY:-}
+  # «Продолжить с Google» for passengers (2026-11-22): Google Cloud → Google Auth Platform → Clients (Web).
+  GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+  GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
   # E-mailed trip receipts (Resend). Without the key receipts stay in the app only.
   RESEND_API_KEY: ${RESEND_API_KEY:-}
   EMAIL_FROM: ${EMAIL_FROM:-}

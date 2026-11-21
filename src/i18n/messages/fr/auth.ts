@@ -42,6 +42,11 @@ const auth: Catalog<typeof en> = {
     profile: "Paramètres du profil",
     help: "Aide et confidentialité",
   },
+  oauth: {
+    google: "Continuer avec Google",
+    or: "ou",
+    failed: "Connexion avec Google impossible. Réessayez ou utilisez votre e-mail.",
+  },
   login: {
     driverLink: "Vous êtes chauffeur ? Connexion chauffeurs",
     subtitle: "Utilisez votre e-mail et votre mot de passe.",

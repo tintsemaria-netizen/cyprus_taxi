@@ -382,6 +382,10 @@ model Passenger {
   // accounts have none). No KYC for passengers.
   email           String?   @unique
   passwordHash    String?
+  // «Продолжить с Google / Apple» (2026-11-22): the provider's PERMANENT account id (OIDC «sub»). It never changes,
+  // even when Apple hides the real e-mail — so a blocked passenger is recognised by it and cannot sign up again.
+  googleSub       String?   @unique
+  appleSub        String?   @unique
   // Last UI language seen when booking (2026-11-17) — used for e-mailed receipts.
   locale          String?
   createdAt       DateTime  @default(now())

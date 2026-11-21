@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Brand';
 import { BackArrow } from '@/components/BackArrow';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import { ContinueWith } from '@/components/auth/ContinueWith';
 import { PasswordInput } from '@/components/PasswordInput';
 
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,8 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { t } = useT();
+  // Back from Google with a problem (cancelled, expired…): say so instead of a silent page.
+  useEffect(() => { if (new URLSearchParams(window.location.search).get('oauth') === 'failed') setError(t('auth.oauth.failed')); }, [t]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,6 +46,7 @@ export default function Login() {
           <div className="flex items-center justify-between gap-2"><div className="-ms-2 flex items-center gap-1"><BackArrow /><a href="/" className="inline-block"><Logo /></a></div></div>
           <h1 className="mt-6 text-xl font-bold">{t('auth.signIn')}</h1>
           <p className="mt-1 text-sm text-muted">{t('auth.login.subtitle')}</p>
+          <ContinueWith next="/" />
           {error && <p className="mt-4 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
           <div className="mt-4 space-y-3">
             <div>

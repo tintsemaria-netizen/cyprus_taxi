@@ -171,6 +171,8 @@ export const config = {
   currency: 'EUR',
   // Server-only Google Maps key (Geocoding + Routes). Never exposed to the client.
   googleServerKey: () => process.env.GOOGLE_MAPS_SERVER_API_KEY || '',
+  // «Продолжить с Google» for passengers (2026-11-22). Off until both are set (Google Cloud → OAuth client, Web).
+  googleOAuth: () => ({ clientId: process.env.GOOGLE_OAUTH_CLIENT_ID || '', clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || '' }),
 } as const;
 
 // Public Google Maps config (safe for the browser bundle). When a browser key is

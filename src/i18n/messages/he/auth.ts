@@ -42,6 +42,11 @@ const auth: Catalog<typeof en> = {
     profile: "הגדרות פרופיל",
     help: "עזרה ופרטיות",
   },
+  oauth: {
+    google: "המשך עם Google",
+    or: "או",
+    failed: "ההתחברות עם Google נכשלה. נסו שוב או התחברו עם דוא״ל.",
+  },
   login: {
     driverLink: "אתם נהגים? כניסה לנהגים",
     subtitle: "התחברו עם אימייל וסיסמה.",
