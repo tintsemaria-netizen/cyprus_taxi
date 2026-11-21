@@ -1,5 +1,22 @@
 # Session handoff
 
+## 2026-11-21 — share board «Табло попутчиков» (deployed)
+
+The operator asked to deploy it to try it out.
+- **Page:** `/share-board`, back arrow in the top bar. Linked from «Мои предзаказы».
+- **Code:** server `src/server/share-board.ts`; API `/api/v1/passenger/share-board`.
+- **What is listed:** unpaired co-rider pre-bookings on the same corridor (same pickup zone → same drop-off zone, same class, fits in the car).
+- **«Поехать вместе»:** calls `proposePrebook(…, { byBookingId })` at the OTHER passenger's time. The proposer is already «yes» and only the other passenger gets the push. The existing answer flow on /prebookings handles the reply.
+- **Limits:**
+  - a ride is listed until 10 h before pickup (`SHARE_BOARD_HIDE_HOURS`);
+  - the proposer moves at most 180 min (`SHARE_BOARD_MAX_SHIFT_MIN`);
+  - the area shown is the town/postcode only;
+  - a pair declined once cannot be proposed again;
+  - 10 proposals per hour per passenger.
+- **Open:**
+  - no push when a new matching ride appears on the board;
+  - no menu entry besides /prebookings.
+
 ## 2026-11-21 — ride-share flexibility (deployed)
 
 The booking form's «Насколько вы гибки?» has three choices: Точно (on time, detour ≤10), Немного (±15 min, ≤15, default) and Очень (±45 min, ≤30).
