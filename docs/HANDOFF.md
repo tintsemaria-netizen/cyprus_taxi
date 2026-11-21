@@ -2350,3 +2350,10 @@ Local check: centre 25 € / пояс 2 35 € / пояс 3 45 € / beyond → 
   (migration 20261121150000_fixed_zone_postcodes; empty polygon). findFixedFare: postcode zones FIRST (address postcode via
   lookupPostcode — own address base → Google → Photon, cached), then drawn zones (smallest wins). Local quote to Peyia
   → «PFO ↔ Пейя» 45 € via the real postcode lookup. 330 tests passed. Screens 370–373.
+- 2026-11-21 16:30 (branch `fixed-bands`, NOT deployed): neighbours FOLLOW instead of an error — pulling a belt's outer
+  edge into the zone inside shrinks that zone there (~60 m gap); pulling a zone out over its belt widens the belt there
+  (src/lib/zone-shapes.ts shrinkInto / growAround, tests/zone-neighbours.test.ts). Derived from the edited polygon + the
+  neighbours as they were → «↶ Шаг назад» restores both; on save the moved neighbours are PUT too. The old messages stay
+  only as a fallback. Postcode zones drawn on the map in pink: outline (convex hull, outliers dropped) of our OsmPlace
+  addresses with that postcode — src/server/postcode-area.ts, GET /api/v1/admin/fixed-zones/postcode-areas?codes=…
+  (6 h cache); codes with no addresses are named under the zone. 331 tests passed. Screens 380–382.

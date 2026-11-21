@@ -7,7 +7,7 @@ import { StaffShell } from '@/components/staff/StaffShell';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { Poly, RefZone } from '@/components/staff/ZoneEditorMap';
-import { centroid, nextBelt, polygonArea, polygonInside } from '@/lib/zone-shapes';
+import { centroid, growAround, nextBelt, polygonArea, polygonInside, shrinkInto } from '@/lib/zone-shapes';
 
 const ZoneEditorMap = dynamicImport(() => import('@/components/staff/ZoneEditorMap'), { ssr: false });
 
@@ -20,6 +20,7 @@ interface Airport { code: string; lat: number; lng: number }
 interface Draft { id: string | null; name: string; comfort: string; xl: string; active: boolean; polygon: Poly; codes: string | null; inner: Zone[]; outer: Zone[] }
 
 const COLORS = ['#4C9AFF', '#FFC83D', '#FF7A59', '#B07CFF', '#3DD9C1', '#FF5C93'];
+const parseCodes = (v: string) => v.split(/[\s,;]+/).map((c) => c.trim()).filter(Boolean);
 const AIRPORT_NAMES: Record<string, string> = { PFO: 'Paphos (PFO)', LCA: 'Larnaca (LCA)' };
 
 export default function Page() {
@@ -91,11 +92,45 @@ function FixedPrices() {
     const around = all.filter((o) => polygonInside(poly, o.polygon));
     return around.filter((o) => !around.some((q) => q.id !== o.id && polygonInside(q.polygon, o.polygon)));
   };
-  const refZones: RefZone[] = others.map((z) => {
-    const holes = holesOf(z, others);
-    return { id: z.id, name: z.name, polygon: z.polygon, holes, color: z.active ? COLORS[mine.indexOf(z) % COLORS.length] : '#8A969A',
-      label: `${z.name} · ${euroS(z.comfortCents)} €`, labelAt: labelAt(z.polygon, holes.length > 0) };
+  // Neighbours follow the zone being edited (2026-11-21, operator): the belt pulled into the zone inside → that zone
+  // shrinks a little there; a zone pulled out over its belt → the belt widens there. Derived only from the edited
+  // polygon and the neighbours as they were, so «↶ Шаг назад» brings the neighbours back too.
+  const adjusted = useMemo(() => {
+    const m = new Map<string, Poly>();
+    if (!draft || draft.codes != null || draft.polygon.length < 3) return m;
+    for (const z of draft.inner) { const q = shrinkInto(z.polygon, draft.polygon); if (q !== z.polygon) m.set(z.id, q); }
+    for (const z of draft.outer) { const q = growAround(z.polygon, draft.polygon); if (q !== z.polygon) m.set(z.id, q); }
+    return m;
+  }, [draft]);
+  const othersNow = others.map((z) => (adjusted.has(z.id) ? { ...z, polygon: adjusted.get(z.id)! } : z));
+  const refZones: RefZone[] = othersNow.map((z) => {
+    const holes = holesOf(z, othersNow);
+    return { id: z.id, name: z.name, polygon: z.polygon, holes, color: z.active ? COLORS[mine.findIndex((o) => o.id === z.id) % COLORS.length] : '#8A969A',
+      strong: adjusted.has(z.id), label: `${z.name} · ${euroS(z.comfortCents)} €`, labelAt: labelAt(z.polygon, holes.length > 0) };
   });
+  // Postcode zones on the map (2026-11-21): the outline of our addresses with that postcode, in pink.
+  const [areas, setAreas] = useState<Record<string, Poly | null>>({});
+  const draftCodes = draft?.codes != null ? parseCodes(draft.codes).filter((c) => /^\d{4,5}$/.test(c)) : [];
+  const wantCodes = [...new Set([...byCode.flatMap((z) => z.postcodes), ...draftCodes])].filter((c) => !(c in areas)).sort().join(',');
+  useEffect(() => {
+    if (!wantCodes) return;
+    const id = setTimeout(() => {
+      api<{ areas: Record<string, Poly | null> }>(`/admin/fixed-zones/postcode-areas?codes=${wantCodes}`).then((r) => setAreas((a) => ({ ...a, ...r.areas }))).catch(() => {});
+    }, 400);
+    return () => clearTimeout(id);
+  }, [wantCodes]);
+  const PINK = '#F472D0';
+  for (const z of byCode) {
+    if (z.id === draft?.id) continue;
+    for (const c of z.postcodes) {
+      const a = areas[c];
+      if (a && a.length >= 3) refZones.push({ id: `${z.id}-${c}`, name: z.name, polygon: a, color: z.active ? PINK : '#8A969A', label: `📮 ${c} · ${euroS(z.comfortCents)} €`, labelAt: centroid(a) });
+    }
+  }
+  for (const c of draftCodes) {
+    const a = areas[c];
+    if (a && a.length >= 3) refZones.push({ id: `draft-${c}`, name: c, polygon: a, color: PINK, strong: true, label: `📮 ${c} · ${draft?.comfort ?? ''} €`, labelAt: centroid(a) });
+  }
   // Show all zones of this airport (and the one being drawn) when switching airport or starting a zone.
   const fitMode = `${code}|${draft ? (draft.id ?? 'new') : ''}|${mine.length}`;
   const fit = useMemo<[number, number, number, number]>(() => {
@@ -126,7 +161,7 @@ function FixedPrices() {
     setDraft({ id: z.id, name: z.name, comfort: euro(z.comfortCents), xl: euro(z.xlCents), active: z.active, polygon: isCode ? [] : z.polygon,
       codes: isCode ? z.postcodes.join(', ') : null, inner: isCode ? [] : directInner(z.polygon, rest), outer: isCode ? [] : directOuter(z.polygon, rest) });
   }
-  const parseCodes = (v: string) => v.split(/[\s,;]+/).map((c) => c.trim()).filter(Boolean);
+
 
   async function save() {
     if (!draft) return;
@@ -136,9 +171,9 @@ function FixedPrices() {
     } else {
       if (draft.polygon.length < 3) { setMsg(t('staff.fixed.needPoints')); return; }
       // A belt keeps its neighbours: the zone inside must stay inside, and it must stay inside the belt around it.
-      const cut = draft.inner.find((o) => !polygonInside(o.polygon, draft.polygon));
+      const cut = draft.inner.find((o) => !polygonInside(adjusted.get(o.id) ?? o.polygon, draft.polygon));
       if (cut) { setMsg(t('staff.fixed.beltCutsInner', { name: cut.name })); return; }
-      const out = draft.outer.find((o) => !polygonInside(draft.polygon, o.polygon));
+      const out = draft.outer.find((o) => !polygonInside(draft.polygon, adjusted.get(o.id) ?? o.polygon));
       if (out) { setMsg(t('staff.fixed.zoneLeavesOuter', { name: out.name })); return; }
     }
     const c = cents(draft.comfort), x = cents(draft.xl);
@@ -149,6 +184,11 @@ function FixedPrices() {
         ...(codes ? { postcodes: codes } : { polygon: draft.polygon, postcodes: [] }) };
       if (draft.id) await api(`/admin/fixed-zones/${draft.id}`, { method: 'PUT', body });
       else await api('/admin/fixed-zones', { method: 'POST', body });
+      // The neighbours that moved with it (pulled in / pushed out) are saved too.
+      for (const z of [...draft.inner, ...draft.outer]) {
+        const q = adjusted.get(z.id);
+        if (q) await api(`/admin/fixed-zones/${z.id}`, { method: 'PUT', body: { airport: z.airport, name: z.name, polygon: q, postcodes: [], comfortCents: z.comfortCents, xlCents: z.xlCents, active: z.active } });
+      }
       setDraft(null); setMsg(t('staff.fixed.saved'));
       await load();
     } catch (e) { setMsg(e instanceof ApiRequestError ? e.body.message : String(e)); }
@@ -189,7 +229,7 @@ function FixedPrices() {
 
       <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="relative h-[62vh] min-h-[380px] overflow-hidden rounded-[14px] border border-edge">
-          <ZoneEditorMap center={center} airport={ap} zones={refZones} editing={draft && draft.codes == null ? draft.polygon : null} editingHoles={draft?.inner.map((o) => o.polygon)}
+          <ZoneEditorMap center={center} airport={ap} zones={refZones} editing={draft && draft.codes == null ? draft.polygon : null} editingHoles={draft?.inner.map((o) => adjusted.get(o.id) ?? o.polygon)}
             onChange={setPoly} fit={fit} className="h-full w-full" />
           {draft && draft.codes == null && (
             <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start gap-2">
@@ -249,6 +289,9 @@ function FixedPrices() {
                 {!z.active && <span className="text-xs text-muted">{t('staff.fixed.off')}</span>}
               </div>
               <div className="mt-1 text-sm tabular-nums">Comfort {euro(z.comfortCents)} € · XL {euro(z.xlCents)} €</div>
+              {z.polygon.length < 3 && z.postcodes.some((c) => areas[c] === null) && (
+                <div className="mt-1 text-xs text-muted">{t('staff.fixed.codesNoArea', { codes: z.postcodes.filter((c) => areas[c] === null).join(', ') })}</div>
+              )}
               <div className="mt-2 flex gap-2 text-sm">
                 <button type="button" className="text-accent" onClick={() => startEdit(z)}>{t('staff.fixed.edit')}</button>
                 <button type="button" className="text-muted" onClick={() => toggle(z)}>{z.active ? t('staff.deactivate') : t('staff.activate')}</button>
