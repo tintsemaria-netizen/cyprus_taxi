@@ -2357,3 +2357,4 @@ Local check: centre 25 € / пояс 2 35 € / пояс 3 45 € / beyond → 
   only as a fallback. Postcode zones drawn on the map in pink: outline (convex hull, outliers dropped) of our OsmPlace
   addresses with that postcode — src/server/postcode-area.ts, GET /api/v1/admin/fixed-zones/postcode-areas?codes=…
   (6 h cache); codes with no addresses are named under the zone. 331 tests passed. Screens 380–382.
+- 2026-11-21 15:46 DEPLOYED (main b135c07): belts, neighbours follow, postcode prices + outlines, smallest zone wins. Live: postcode-areas 401 anonymous, belt UI in chunks, ready OK, a public PFO quote still answers.
