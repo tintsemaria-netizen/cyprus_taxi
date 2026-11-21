@@ -6,7 +6,7 @@ import { api } from '@/lib/api-client';
 import { BackArrow } from '@/components/BackArrow';
 import { DriverAnalytics } from '@/components/driver/DriverAnalytics';
 import { DutyPane } from './DutyPane';
-import { useReportFmt, Figure } from './format';
+import { useReportFmt } from './format';
 
 // Shared report tool (2026-11-20): earnings + done / not-done + hours & km for one driver.
 // The driver opens his own (apiBase '/driver'); the admin any driver's ('/admin/drivers/<id>/report').
@@ -20,7 +20,7 @@ export function EarningsReport({ initialRange = 'week', openAnalytics, apiBase =
   const [duty, setDuty] = useState(false); // «Время на линии» tile → hours & km pane (2026-11-20) // «Выполнено заказов» tile → analytics sub-screen (2026-11-19)
   const { money, dur } = useReportFmt();
   const [range, setRange] = useState<Range>(initialRange);
-  const [data, setData] = useState<{ summary: { byCurrency: { currency: string; completedTrips: number; recordedEarningsCents: number; knownFinalTrips: number; pendingFinalTrips: number; collectedCents: number; cashCents?: number; cardCents?: number }[]; completedTrips: number; pendingFinalTrips: number; onlineSeconds: number }; daily: { day: string; recordedEarningsCents: number; completedTrips: number; currency: string }[] } | null>(null);
+  const [data, setData] = useState<{ summary: { byCurrency: { currency: string; completedTrips: number; recordedEarningsCents: number; knownFinalTrips: number; pendingFinalTrips: number; collectedCents: number; cashCents?: number; cardCents?: number }[]; completedTrips: number; pendingFinalTrips: number; onlineSeconds: number }; daily: { day: string; recordedEarningsCents: number; completedTrips: number; currency: string }[]; notDone?: number | null } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -47,36 +47,41 @@ export function EarningsReport({ initialRange = 'week', openAnalytics, apiBase =
       {loading && !data && <p className="text-muted">{t('common.loading')}</p>}
       {data && (
         <>
-          {/* Work figures for the selected period (moved here from the Home tab). */}
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => setAnalytics(true)} data-testid="analytics-tile" className="relative rounded-[12px] text-start">
-              <Figure label={t('driver.earnings.completedTrips')} value={String(data.summary.completedTrips)} sub={t('driver.analytics.tileHint') + ' ›'} />
-            </button>
-            <button type="button" onClick={() => setDuty(true)} data-testid="earnings-online-tile" className="rounded-[12px] text-start">
-              <Figure label={t('driver.earnings.onlineTime')} value={dur(data.summary.onlineSeconds)} sub={`${t('driver.home.chartOnline')} · ${t('driver.home.chartKm')} ›`} />
-            </button>
-          </div>
-          {/* Cash / card tiles (2026-11-21, operator): always shown, like on the today card — 0 € too.
-              One pair per currency (normally just EUR); trips still waiting for a final fare aren't counted. */}
+          {/* Same order as the today card on the map (2026-11-21, operator): the sum on top, then
+              💶 cash | 💳 card, then ✓ done ✕ not done (wide) | time online (narrow). */}
+          {data.summary.byCurrency.length === 0 ? (
+            <div className="card p-4"><div className="text-3xl font-bold text-accent">{money(0, 'EUR')}</div><div className="text-xs text-muted">{t('driver.earnings.empty')}</div></div>
+          ) : data.summary.byCurrency.map((c) => (
+            <div key={c.currency} className="card p-4">
+              <div className="text-3xl font-bold text-accent">{money(c.recordedEarningsCents, c.currency)}</div>
+              <div className="text-xs text-muted">{t('driver.earnings.summary', { currency: c.currency, completed: c.completedTrips })}{c.pendingFinalTrips > 0 ? t('driver.earnings.pendingFinal', { count: c.pendingFinalTrips }) : ''}</div>
+              {c.collectedCents > 0 && <div className="mt-1 text-xs text-muted">{t('driver.earnings.collected', { amount: money(c.collectedCents, c.currency) })}</div>}
+            </div>
+          ))}
           {(data.summary.byCurrency.length ? data.summary.byCurrency : [{ currency: 'EUR', cashCents: 0, cardCents: 0 }]).map((c) => (
             <div key={`split-${c.currency}`} className="grid grid-cols-2 gap-2" data-testid="earn-split">
-              <div className="rounded-[12px] border border-edge bg-elevated p-3" data-testid="earn-split-cash">
+              <div className="rounded-[12px] border border-edge bg-elevated px-3 py-2" data-testid="earn-split-cash">
                 <div className="text-[11px] text-muted">💶 {t('driver.home.todayCash')}</div>
                 <div className="text-lg font-semibold tabular-nums">{money(c.cashCents ?? 0, c.currency)}</div>
               </div>
-              <div className="rounded-[12px] border border-edge bg-elevated p-3" data-testid="earn-split-card">
+              <div className="rounded-[12px] border border-edge bg-elevated px-3 py-2" data-testid="earn-split-card">
                 <div className="text-[11px] text-muted">💳 {t('driver.home.todayCard')}</div>
                 <div className="text-lg font-semibold tabular-nums">{money(c.cardCents ?? 0, c.currency)}</div>
               </div>
             </div>
           ))}
-          {data.summary.byCurrency.length === 0 ? <p className="py-6 text-center text-sm text-muted">{t('driver.earnings.empty')}</p> : data.summary.byCurrency.map((c) => (
-            <div key={c.currency} className="card p-4">
-              <div className="text-3xl font-semibold">{money(c.recordedEarningsCents, c.currency)}</div>
-              <div className="text-xs text-muted">{t('driver.earnings.summary', { currency: c.currency, completed: c.completedTrips })}{c.pendingFinalTrips > 0 ? t('driver.earnings.pendingFinal', { count: c.pendingFinalTrips }) : ''}</div>
-              {c.collectedCents > 0 && <div className="mt-1 text-xs text-muted">{t('driver.earnings.collected', { amount: money(c.collectedCents, c.currency) })}</div>}
-            </div>
-          ))}
+          <div className="grid grid-cols-[1.55fr_1fr] gap-2">
+            <button type="button" onClick={() => setAnalytics(true)} data-testid="analytics-tile"
+              className="flex items-center justify-around rounded-[12px] border border-edge bg-elevated px-3 py-2 active:bg-white/5"
+              aria-label={`${t('driver.analytics.doneShort')} ${data.summary.completedTrips}, ${t('driver.analytics.notDone')} ${data.notDone ?? 0}`}>
+              <span className="flex items-baseline gap-1.5"><span className="text-[14px] font-bold text-[#34C759]">✓</span><span className="text-[22px] font-semibold tabular-nums">{data.summary.completedTrips}</span></span>
+              {data.notDone != null && <span className="flex items-baseline gap-1.5"><span className="text-[14px] font-bold text-danger">✕</span><span className="text-[22px] font-semibold tabular-nums">{data.notDone}</span></span>}
+            </button>
+            <button type="button" onClick={() => setDuty(true)} data-testid="earnings-online-tile" className="rounded-[12px] border border-edge bg-elevated px-3 py-2 text-start active:bg-white/5">
+              <div className="text-[11px] text-muted">{t('driver.earnings.onlineTime')} ›</div>
+              <div className="whitespace-nowrap text-[15px] font-semibold">{dur(data.summary.onlineSeconds)}</div>
+            </button>
+          </div>
           <p className="text-xs text-muted">{t('driver.earnings.note')}</p>
 
           <div className="card p-4">

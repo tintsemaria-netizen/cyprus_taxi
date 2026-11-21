@@ -31,8 +31,9 @@ export function mondayOf(day: string): string {
   return addDays(day, wd === 0 ? -6 : 1 - wd);
 }
 
-export async function driverAnalytics(driverId: string, fromDay: string, days: 1 | 7): Promise<DriverAnalytics> {
+export async function driverAnalytics(driverId: string, fromDay: string, days: number): Promise<DriverAnalytics> {
   if (!DAY_RE.test(fromDay)) throw new Error('bad day');
+  days = Math.max(1, Math.min(31, Math.floor(days))); // day, week, or the earnings screen's 30-day month
   const toDay = addDays(fromDay, days);
   const from = nicosiaMidnightUtc(fromDay), to = nicosiaMidnightUtc(toDay);
   const byDay = new Map<string, AnalyticsDay>();

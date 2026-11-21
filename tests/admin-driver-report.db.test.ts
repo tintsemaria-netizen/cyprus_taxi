@@ -55,6 +55,8 @@ describe('admin per-driver report', () => {
     expect(an.completed).toEqual(mine.an.completed);
     expect(an.missedOffers).toEqual(mine.an.missedOffers);
     expect(earn.summary.byCurrency).toEqual(mine.earn.summary.byCurrency);
+    expect(typeof earn.notDone).toBe('number');
+    expect(earn.notDone).toBe(mine.earn.notDone);
     const csv = await report.GET(req(`/admin/drivers/${driverId}/report/export?range=week`), p(driverId, 'export'));
     expect(csv.headers.get('content-type')).toContain('text/csv');
     const head = await body(await one.GET(req(`/admin/drivers/${driverId}`), { params: Promise.resolve({ id: driverId }) }));

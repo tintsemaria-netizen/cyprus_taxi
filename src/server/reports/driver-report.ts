@@ -14,8 +14,13 @@ import { nicosiaDayKey, nicosiaMidnightUtc, startOfNicosiaDay } from '@/lib/time
 /** Earnings for today / week / month (or a custom window): summary + per-day bars. */
 export async function reportEarnings(driverId: string, url: URL) {
   const w = driverWindow(url.searchParams.get('range'), url.searchParams.get('from'), url.searchParams.get('to'));
-  const [summary, daily] = await Promise.all([earningsSummary(driverId, w.from, w.to), earningsDaily(driverId, w.from, w.to)]);
-  return { range: w.range, summary, daily };
+  // Not done (driver-cancelled + missed offers) for the ✓ / ✕ tile, as on the today card (2026-11-21).
+  const days = w.range === 'week' ? 7 : w.range === 'month' ? 30 : w.range === 'today' ? 1 : 0;
+  const [summary, daily, an] = await Promise.all([
+    earningsSummary(driverId, w.from, w.to), earningsDaily(driverId, w.from, w.to),
+    days ? driverAnalytics(driverId, nicosiaDayKey(w.from), days) : Promise.resolve(null),
+  ]);
+  return { range: w.range, summary, daily, notDone: an ? an.driverCanceled.count + an.missedOffers.count : null };
 }
 
 /** Hours online, on orders and km — today and Monday → Sunday of this week. */
