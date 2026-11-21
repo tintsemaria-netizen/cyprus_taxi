@@ -12,7 +12,7 @@ const share: Catalog<typeof en> = {
     flexTime: '±{n} min',
     flexDetour: 'détour ≤{n} min',
     title: "Covoyageur −{pct}%",
-    hint: "Si un covoyageur allant dans votre direction se joint, vous payez {pct}% de moins. Sinon, vous voyagez au prix normal.",
+    hint: '−{pct}% s’applique seulement si un covoyageur est trouvé.',
     routes: "Le covoiturage fonctionne seulement entre les aéroports LCA et PFO, Larnaca, Nicosie, Paphos, Ayia Napa et Limassol.",
     adults: "Adultes",
     children: "Enfants",

@@ -10,7 +10,7 @@ const share = {
     flexTime: '±{n} min',
     flexDetour: 'detour ≤{n} min',
     title: 'Co-rider −{pct}%',
-    hint: 'If a co-rider going your way joins, you pay {pct}% less. If nobody joins, you ride at the normal price.',
+    hint: '−{pct}% applies only if a co-rider is found.',
     routes: "Ride-share works only between LCA and PFO airports, Larnaca, Nicosia, Paphos, Ayia Napa and Limassol.",
     adults: 'Adults',
     children: 'Children',

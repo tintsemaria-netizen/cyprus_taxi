@@ -12,7 +12,7 @@ const share: Catalog<typeof en> = {
     flexTime: '±{n} Min.',
     flexDetour: 'Umweg ≤{n} Min.',
     title: "Mitfahrer −{pct}%",
-    hint: "Fährt ein Mitfahrer in Ihre Richtung mit, zahlen Sie {pct}% weniger. Sonst fahren Sie zum normalen Preis.",
+    hint: '−{pct}% gilt nur, wenn ein Mitfahrer gefunden wird.',
     routes: "Mitfahren gibt es nur zwischen den Flughäfen LCA und PFO, Larnaka, Nikosia, Paphos, Ayia Napa und Limassol.",
     adults: "Erwachsene",
     children: "Kinder",

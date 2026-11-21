@@ -12,7 +12,7 @@ const share: Catalog<typeof en> = {
     flexTime: '±{n} min',
     flexDetour: 'objazd do {n} min',
     title: "Współpasażer −{pct}%",
-    hint: "Jeśli dołączy współpasażer jadący w Twoją stronę, zapłacisz o {pct}% mniej. Jeśli nie — jedziesz w normalnej cenie.",
+    hint: '−{pct}% włączy się tylko, gdy znajdzie się współpasażer.',
     routes: "Współprzejazd działa tylko między lotniskami LCA i PFO, Larnaką, Nikozją, Pafos, Ayia Napą i Limassolem.",
     adults: "Dorośli",
     children: "Dzieci",
