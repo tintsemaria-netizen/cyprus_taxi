@@ -2309,3 +2309,7 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
   Not yet checked on live with a real login (no fleet created on production yet).
 - 2026-11-21 02:51 DEPLOYED (main 86b771d): earnings screen (shared EarningsReport — driver, admin, fleet owner)
   always shows 💶 Наличные / 💳 Картой tiles under the top tiles, 0 € included. 326 tests passed.
+- 2026-11-21 03:55 DEPLOYED (main b919875): earnings screen in the today card's order — sum (accent) on top,
+  💶 cash | 💳 card, ✓ done ✕ not done (wide, → analytics) | time online (narrow, → hours & km).
+  reportEarnings returns notDone (driverCanceled + missedOffers) for today / week (7 d) / month (30 d); driverAnalytics
+  now takes 1–31 days. Shared: driver, admin per-driver, fleet owner. 326 tests passed.
