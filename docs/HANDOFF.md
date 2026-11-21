@@ -1,5 +1,14 @@
 # Session handoff
 
+## 2026-11-21 — ride-share flexibility (deployed)
+
+The booking form's «Насколько вы гибки?» has three choices: Точно (on time, detour ≤10), Немного (±15 min, ≤15, default) and Очень (±45 min, ≤30).
+- Pre-booked pairs can now move the pickup **earlier** as well as later, within each passenger's window.
+  - Server: `Booking.shareEarlyMin` (additive migration `20261121010000_share_early`) and `prebookTiming(…, hostEarly, guestEarly)`.
+  - Passenger proposal: «Выезд в … — на N мин раньше».
+- Tests: `share-timing.test.ts` and ride-share «earlier» pairing. Full suite green (334).
+- Idea parked by the operator: a public share board where passengers pick each other. A mock-up was shown; not built.
+
 ## 2026-11-20 — pre-booking panel: time-zone note removed (deployed)
 
 Operator: the note under the date in «Запланировать» (Europe/Nicosia / «we will pick a driver») is removed (`BookingApp.tsx`). Times are still Europe/Nicosia. The i18n key `booking.form.timezoneNote` is left in place.
