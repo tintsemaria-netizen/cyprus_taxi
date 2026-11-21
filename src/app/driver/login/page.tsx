@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Brand';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
@@ -25,6 +25,9 @@ export default function DriverLogin() {
   const [dev, setDev] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Already signed in as a driver (the «IL-Y Driver» icon opens here): straight to work.
+  useEffect(() => { api<{ role: string }>('/auth/me').then((m) => { if (m.role === 'DRIVER') router.replace('/driver'); }).catch(() => {}); }, [router]);
 
   async function requestCode() {
     setBusy(true); setErr(null);

@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   // page drawn under the status bar, which smeared the logo and the avatar on an iPhone Air. With 'black'
   // the app starts below the status bar, so nothing of ours is under it.
   appleWebApp: { capable: true, title: 'IL-Y Driver', statusBarStyle: 'black' },
+  // Own icon with a «DRIVER» band (2026-11-21), so it is told apart from the passenger «IL-Y» on the home screen.
+  icons: { icon: [{ url: '/icons/driver-192.png', sizes: '192x192', type: 'image/png' }], apple: [{ url: '/icons/driver-apple-touch-icon.png', sizes: '180x180' }] },
 };
 
 export default function DriverLayout({ children }: { children: React.ReactNode }) {

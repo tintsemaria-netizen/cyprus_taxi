@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Brand';
 import { api, ApiRequestError } from '@/lib/api-client';
@@ -19,6 +19,16 @@ export default function StaffLogin() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { t, tError } = useT();
+
+  // Already signed in (e.g. the home-screen icon was added on this page): go straight on (2026-11-21).
+  useEffect(() => {
+    api<{ role: string; mfa?: { setupRequired?: boolean } }>('/auth/me').then((m) => {
+      if (m.mfa?.setupRequired) router.replace('/staff/security');
+      else if (m.role === 'DRIVER') router.replace('/driver');
+      else if (m.role === 'FLEET_OWNER') router.replace('/fleet');
+      else router.replace('/dispatch');
+    }).catch(() => {});
+  }, [router]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

@@ -2366,3 +2366,8 @@ IL-Y»: card «Я уже водитель» (phone + SMS code, or «Войти �
 to their side) + card «Хочу стать водителем» → /driver/register; /staff/login = staff only («Администратор, диспетчер,
 владелец автопарка»), the driver block that confused the owner is gone. StaffShell: signed-out driver pages → /driver/login,
 driver logout → /driver/login. Texts in 8 languages. 331 tests passed. Screens 400–403.
+- 2026-11-21 19:00 (same branch `entrances`): three home-screen apps — «IL-Y» (passenger, /), «IL-Y Driver» (now its own
+  icon with a DRIVER band), «IL-Y Admin» (new: public/manifest-staff.webmanifest, start_url /staff; layouts with the staff
+  manifest + apple icon on /staff, /admin, /dispatch, /fleet). /staff routes by role (signed out → /staff/login).
+  /staff/login and /driver/login skip ahead when already signed in (iOS saves the current page as the icon's start).
+  Icons: public/icons/{driver,admin}-{192,512,maskable-512,apple-touch-icon}.png. 331 tests passed.
