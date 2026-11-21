@@ -7,6 +7,7 @@ import { RateTripModal } from '@/components/booking/RateTripModal';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { MsgKey } from '@/i18n/I18nProvider';
+import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +27,7 @@ interface Ride {
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const [reloadN, setReloadN] = useState(0);
   const { t, tp, fmt } = useT();
   const [ride, setRide] = useState<Ride | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +43,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         else setError(t('rides.loadError'));
       }
     })();
-  }, [id, t]);
+  }, [id, t, reloadN]);
+  useRefreshOnReturn(() => setReloadN((n) => n + 1)); // e.g. the driver's final amount arrived meanwhile
 
   // The road route (pickup → stop → drop-off) for the map.
   useEffect(() => {

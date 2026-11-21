@@ -6,6 +6,7 @@ import { api, ApiRequestError } from '@/lib/api-client';
 import { useT, useLocale, I18nProvider } from '@/i18n/I18nProvider';
 import { LOCALES, LOCALE_NAMES, LOCALE_SHORT, type Locale } from '@/i18n/config';
 import { GoogleReviewCard } from '@/components/GoogleReviewCard';
+import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +33,7 @@ interface Receipt {
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const [reloadN, setReloadN] = useState(0);
   const { t } = useT();
   const appLocale = useLocale();
   // Receipt language: Russian for a Russian app, otherwise English; the passenger can pick another.
@@ -63,7 +65,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         else setError(t('rides.receipt.loadFailed'));
       }
     })();
-  }, [id, t]);
+  }, [id, t, reloadN]);
+  useRefreshOnReturn(() => setReloadN((n) => n + 1)); // e.g. the driver's final amount arrived meanwhile
 
   return (
     <div>

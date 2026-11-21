@@ -7,6 +7,7 @@ import { PassengerLoginModal } from '@/components/booking/PassengerLoginModal';
 import { useSilentPush } from '@/components/NotifyPrompt';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,7 @@ export default function Page() {
     }
   }, []);
   useEffect(() => { load(); const iv = setInterval(load, 60_000); return () => clearInterval(iv); }, [load]);
+  useRefreshOnReturn(load); // resumed app: fresh data at once (2026-11-22)
 
   async function open(id: string) {
     try {

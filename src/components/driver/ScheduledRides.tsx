@@ -8,6 +8,7 @@ import { formatFlight } from '@/lib/flight';
 import { useT } from '@/i18n/I18nProvider';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import AutoMapView, { type MapMarker } from '@/components/AutoMapView';
+import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
 // Driver pre-booking board (scheduled rides). Server: src/server/dispatch/preassign.ts.
 interface Item {
@@ -56,6 +57,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
     catch (e) { setErr(e ? tError(e) : t('driver.scheduled.loadFailed')); }
   }, [t, tError, onCount]);
   useEffect(() => { load(); const iv = setInterval(load, 60_000); return () => clearInterval(iv); }, [load]);
+  useRefreshOnReturn(load); // resumed app: fresh data at once (2026-11-22)
 
   async function take(i: Item) {
     setBusy(i.bookingId); setMsg(null); setErr(null);

@@ -7,6 +7,7 @@ import { PassengerLoginModal } from '@/components/booking/PassengerLoginModal';
 import { RateTripModal } from '@/components/booking/RateTripModal';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +32,7 @@ export default function Page() {
     }
   }, []);
   useEffect(() => { load(); }, [load]);
+  useRefreshOnReturn(load); // resumed app: fresh data at once (2026-11-22)
 
   async function openTracking(id: string) {
     try {

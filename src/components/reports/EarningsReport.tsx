@@ -7,6 +7,7 @@ import { BackArrow } from '@/components/BackArrow';
 import { DriverAnalytics } from '@/components/driver/DriverAnalytics';
 import { DutyPane } from './DutyPane';
 import { useReportFmt } from './format';
+import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
 // Shared report tool (2026-11-20): earnings + done / not-done + hours & km for one driver.
 // The driver opens his own (apiBase '/driver'); the admin any driver's ('/admin/drivers/<id>/report').
@@ -29,6 +30,7 @@ export function EarningsReport({ initialRange = 'week', openAnalytics, apiBase =
     try { setData(await api(`${apiBase}/earnings?range=${range}`)); } catch (e) { setErr(e ? tError(e) : t('driver.detail.loadFailed')); } finally { setLoading(false); }
   }, [range, t, tError, apiBase]);
   useEffect(() => { load(); }, [load]);
+  useRefreshOnReturn(load); // resumed app: fresh data at once (2026-11-22)
 
   const max = Math.max(1, ...(data?.daily.map((d) => d.recordedEarningsCents) ?? [0]));
   if (analytics) return <DriverAnalytics apiBase={apiBase} onBack={() => setAnalytics(false)} />;

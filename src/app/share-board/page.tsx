@@ -5,6 +5,7 @@ import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { PassengerLoginModal } from '@/components/booking/PassengerLoginModal';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +34,7 @@ export default function Page() {
     catch (e) { if (e instanceof ApiRequestError && e.status === 401) setNeedLogin(true); }
   }, []);
   useEffect(() => { load(); const iv = setInterval(load, 30_000); return () => clearInterval(iv); }, [load]);
+  useRefreshOnReturn(load); // resumed app: fresh data at once (2026-11-22)
 
   const zone = (k: string) => t(`share.zones.${k}` as 'share.zones.LCA');
   const people = (r: Ride) => [t('share.who.adults', { n: r.adults }), r.children ? t('share.who.children', { n: r.children }) : null, t('share.who.luggage', { n: r.bags })].filter(Boolean).join(' · ');

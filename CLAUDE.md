@@ -25,6 +25,12 @@ Confirmed beta target: https://cyprustaxi.ackedberryes.store on 92.39.53.229. Cl
   Before deploying anything about completed / not-completed trips, list those other places and ask. Build the tool
   once (shared server function + component), not one copy per role.
 
+- Check everywhere (2026-11-22): the project is large. When you fix a problem or change behaviour, search the whole
+  codebase for the same pattern — passenger, driver, admin, fleet, share, pre-booking, server and worker — and fix or
+  list every other place it occurs. Tell the operator where you checked and what else you found.
+- Resumed apps (2026-11-22): installed phone apps are resumed, not reloaded. A screen that loads data or the position
+  once must refresh when it comes back (`useRefreshOnReturn` from `src/components/useRefreshOnReturn.ts`).
+
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.

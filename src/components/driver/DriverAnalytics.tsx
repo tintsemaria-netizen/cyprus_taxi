@@ -5,6 +5,7 @@ import { useT, useLocale } from '@/i18n/I18nProvider';
 import { INTL_TAG } from '@/i18n/config';
 import { api } from '@/lib/api-client';
 import { BackArrow } from '@/components/BackArrow';
+import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
 // Driver analytics (2026-11-19, operator): opened from the «Выполнено заказов» tile. One Cyprus day
 // (any day, ‹ › to step) or a Monday–Sunday week. Two tiles side by side — «Выполнено» (done +
@@ -33,6 +34,7 @@ export function DriverAnalytics({ onBack, apiBase = '/driver' }: { onBack: () =>
     try { setData(await api<Data>(`${apiBase}/analytics?period=${period}&day=${day}`)); } catch (e) { setErr(tError(e)); }
   }, [period, day, tError, apiBase]);
   useEffect(() => { load(); }, [load]);
+  useRefreshOnReturn(load); // resumed app: fresh data at once (2026-11-22)
 
   const tag = INTL_TAG[locale];
   const dayName = (d: string, opts: Intl.DateTimeFormatOptions) => new Date(`${d}T12:00:00Z`).toLocaleDateString(tag, { ...opts, timeZone: 'UTC' });

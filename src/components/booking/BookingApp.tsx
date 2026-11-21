@@ -24,6 +24,7 @@ import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
 import { NotifyPrompt } from '@/components/NotifyPrompt';
 import { ShareBookingOptions, type ShareOpts } from '@/components/share/ShareBookingOptions';
 import { isShareRoute } from '@/lib/share';
+import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
 interface PublicConfig {
   demoMode: boolean;
@@ -289,17 +290,7 @@ export default function BookingApp() {
   const dropoffRef = useRef<Selected | null>(dropoff); dropoffRef.current = dropoff;
   const autoPickupRef = useRef(autoPickup); autoPickupRef.current = autoPickup;
   const [locateTick, setLocateTick] = useState(0);
-  useEffect(() => {
-    let hiddenAt = 0;
-    const onVis = () => {
-      if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
-      if (hiddenAt && Date.now() - hiddenAt > 60_000) setLocateTick((n) => n + 1);
-    };
-    const onShow = (e: PageTransitionEvent) => { if (e.persisted) setLocateTick((n) => n + 1); };
-    document.addEventListener('visibilitychange', onVis);
-    window.addEventListener('pageshow', onShow);
-    return () => { document.removeEventListener('visibilitychange', onVis); window.removeEventListener('pageshow', onShow); };
-  }, []);
+  useRefreshOnReturn(() => setLocateTick((n) => n + 1), 60_000);
   useEffect(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) return;
     let cancelled = false;

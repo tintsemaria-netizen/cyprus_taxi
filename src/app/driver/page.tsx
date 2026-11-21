@@ -291,7 +291,10 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
       } catch { /* transient */ }
     };
     poll(); const iv = setInterval(poll, 30_000);
-    return () => { alive = false; clearInterval(iv); };
+    // Resumed app (2026-11-22): the badge is fresh at once, not after the frozen 30 s timer.
+    const onVis = () => { if (document.visibilityState === 'visible') void poll(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => { alive = false; clearInterval(iv); document.removeEventListener('visibilitychange', onVis); };
   }, [tab]); // re-checked at once when the driver comes back to the map
 
   // Reopened app (2026-11-17): the current ride is back on screen from the server; switch the GPS
