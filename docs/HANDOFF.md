@@ -2358,3 +2358,11 @@ Local check: centre 25 € / пояс 2 35 € / пояс 3 45 € / beyond → 
   addresses with that postcode — src/server/postcode-area.ts, GET /api/v1/admin/fixed-zones/postcode-areas?codes=…
   (6 h cache); codes with no addresses are named under the zone. 331 tests passed. Screens 380–382.
 - 2026-11-21 15:46 DEPLOYED (main b135c07): belts, neighbours follow, postcode prices + outlines, smallest zone wins. Live: postcode-areas 401 anonymous, belt UI in chunks, ready OK, a public PFO quote still answers.
+
+## 2026-11-21 — Three separate entrances (branch `entrances`, NOT deployed — «собери и покажи»)
+Decision (owner): passenger app, driver app («IL-Y Driver», own home-screen manifest already existed), staff in the
+browser. Web now: /login = passenger only (email + «Создать аккаунт»; small «Вы водитель? ›»); /driver/login = «Водитель
+IL-Y»: card «Я уже водитель» (phone + SMS code, or «Войти логином и паролем» → /auth/login, staff typed here are routed
+to their side) + card «Хочу стать водителем» → /driver/register; /staff/login = staff only («Администратор, диспетчер,
+владелец автопарка»), the driver block that confused the owner is gone. StaffShell: signed-out driver pages → /driver/login,
+driver logout → /driver/login. Texts in 8 languages. 331 tests passed. Screens 400–403.

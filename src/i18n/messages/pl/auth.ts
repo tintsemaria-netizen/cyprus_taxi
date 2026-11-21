@@ -43,6 +43,7 @@ const auth: Catalog<typeof en> = {
     help: "Pomoc i prywatność",
   },
   login: {
+    driverLink: "Jesteś kierowcą? Logowanie dla kierowców",
     subtitle: "Użyj e-maila i hasła.",
     staffSignIn: "Logowanie dla personelu",
   },
@@ -105,6 +106,8 @@ const auth: Catalog<typeof en> = {
     saveSchool: "Zapisz Szkołę",
   },
   staff: {
+    driverLink: "Jesteś kierowcą? Logowanie dla kierowców",
+    staffSub2: "Administrator, dyspozytor, właściciel floty.",
     title: "Logowanie",
     drivers: "Kierowcy",
     driverSignIn: "Logowanie kierowcy",

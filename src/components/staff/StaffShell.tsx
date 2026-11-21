@@ -47,13 +47,13 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
         setMe(m);
         setState('ok');
       })
-      .catch(() => router.replace('/staff/login'));
+      .catch(() => router.replace(roles.length === 1 && roles[0] === 'DRIVER' ? '/driver/login' : '/staff/login'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function logout() {
     await api('/auth/logout', { method: 'POST' }).catch(() => {});
-    router.replace('/staff/login');
+    router.replace(me?.role === 'DRIVER' ? '/driver/login' : '/staff/login');
   }
 
   if (state !== 'ok' || !me) {

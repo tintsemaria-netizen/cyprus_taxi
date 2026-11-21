@@ -43,6 +43,7 @@ const auth: Catalog<typeof en> = {
     help: "المساعدة والخصوصية",
   },
   login: {
+    driverLink: "هل أنت سائق؟ دخول السائقين",
     subtitle: "استخدم بريدك الإلكتروني وكلمة المرور.",
     staffSignIn: "دخول الموظفين",
   },
@@ -105,6 +106,8 @@ const auth: Catalog<typeof en> = {
     saveSchool: "حفظ المدرسة",
   },
   staff: {
+    driverLink: "هل أنت سائق؟ دخول السائقين",
+    staffSub2: "المدير، المُرسِل، مالك الأسطول.",
     title: "تسجيل الدخول",
     drivers: "السائقون",
     driverSignIn: "دخول السائقين",

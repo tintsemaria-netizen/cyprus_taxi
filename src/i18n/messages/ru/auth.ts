@@ -43,6 +43,7 @@ const auth: Catalog<typeof en> = {
     help: 'Помощь и конфиденциальность',
   },
   login: {
+    driverLink: "Вы водитель? Вход для водителей",
     subtitle: 'Войдите по эл. почте и паролю.',
     staffSignIn: 'Вход для персонала',
   },
@@ -92,6 +93,8 @@ const auth: Catalog<typeof en> = {
     saveSchool: "Сохранить школу",
   },
   staff: {
+    driverLink: "Вы водитель? Вход для водителей",
+    staffSub2: "Администратор, диспетчер, владелец автопарка.",
     title: 'Вход',
     drivers: 'Водители',
     driverSignIn: 'Вход для водителей',

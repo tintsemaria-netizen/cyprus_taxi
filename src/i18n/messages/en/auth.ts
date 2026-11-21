@@ -40,6 +40,7 @@ const auth = {
     help: 'Help & privacy',
   },
   login: {
+    driverLink: "Are you a driver? Driver sign-in",
     subtitle: 'Use your email and password.',
     staffSignIn: 'Staff sign in',
   },
@@ -89,6 +90,8 @@ const auth = {
     saveSchool: "Save School",
   },
   staff: {
+    driverLink: "Are you a driver? Driver sign-in",
+    staffSub2: "Admin, dispatcher, fleet owner.",
     title: 'Login',
     drivers: 'Drivers',
     driverSignIn: 'Driver sign in',
