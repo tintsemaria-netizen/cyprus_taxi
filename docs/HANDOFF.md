@@ -1,5 +1,25 @@
 # Session handoff
 
+## 2026-11-22 — refresh when a resumed app returns, applied everywhere (deployed)
+
+New `src/components/useRefreshOnReturn.ts`. It fires on `visibilitychange` after N seconds hidden, and on `pageshow` from the back/forward cache.
+
+**Used on:**
+- the passenger home position (60 s);
+- /rides, /rides/[id] and the receipt;
+- /prebookings and /share-board;
+- the driver's EarningsReport, DriverAnalytics and ScheduledRides;
+- the driver's pre-booking badge poll.
+
+**Already OK:**
+- TrackApp: reloads on visibility, every 5 s.
+- DriverHomeMap: reloads on visibility.
+- useLiveLocation: restarts its watch.
+- The driver's GPS: a fresh fix via keep-alive; it never resends an old fix.
+- Driver current-trip: polled every 2 s.
+
+**New rules in CLAUDE.md:** check the whole project for the same pattern, and handle resumed apps.
+
 ## 2026-11-21 — passenger position refreshed when the app returns (deployed)
 
 **Problem:** an installed PWA is resumed rather than reloaded, so the home screen kept the pickup from the last visit (80 km away).
