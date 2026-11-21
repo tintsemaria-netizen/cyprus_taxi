@@ -3,7 +3,8 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   booking: {
-    flex: 'Насколько вы гибки?',
+    name: 'Попутчик',
+    flex: 'Насколько ваше время гибкое?',
     flex_exact: 'Точно',
     flex_some: 'Немного',
     flex_very: 'Очень',

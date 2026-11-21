@@ -1,7 +1,8 @@
 // Ride-share «Попутчик» (Task 022): airport/intercity, at most two bookings in one car.
 const share = {
   booking: {
-    flex: 'How flexible are you?',
+    name: 'Co-rider',
+    flex: 'How flexible is your time?',
     flex_exact: 'Exact',
     flex_some: 'A little',
     flex_very: 'Very',

@@ -27,8 +27,12 @@ export function ShareBookingOptions({ value, onChange, pct, maxPeople, prebook, 
     <div className={`mt-4 rounded-[14px] border px-3 py-3 transition ${on ? 'border-accent bg-accent/10' : 'border-edge bg-elevated'} ${disabled ? 'opacity-60' : ''}`} data-testid="share-options">
       <label className={`flex items-center gap-3 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
         <span className="min-w-0 flex-1">
-          <span className="block font-semibold">{t('share.booking.title', { pct })}</span>
-          <span className="block text-xs text-muted">{disabled ? t('share.booking.routes') : t('share.booking.hint', { pct })}</span>
+          {/* 2026-11-22 (operator): the discount must be noticed — a lime badge + a highlighted note. */}
+          <span className="flex items-center gap-2 font-semibold">
+            {t('share.booking.name')}
+            <span className="rounded-full bg-accent px-2 py-0.5 text-sm font-bold text-black">−{pct}%</span>
+          </span>
+          {disabled && <span className="block text-xs text-muted">{t('share.booking.routes')}</span>}
         </span>
         <input type="checkbox" role="switch" aria-checked={on} checked={on} disabled={disabled} onChange={(e) => set({ on: e.target.checked })}
           className="peer sr-only" />
@@ -36,6 +40,11 @@ export function ShareBookingOptions({ value, onChange, pct, maxPeople, prebook, 
           <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? 'start-[22px]' : 'start-0.5'}`} />
         </span>
       </label>
+      {!disabled && (
+        <p className="mt-2 flex items-start gap-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium leading-snug text-ink" data-testid="share-hint">
+          <span aria-hidden>💰</span><span>{t('share.booking.hint', { pct })}</span>
+        </p>
+      )}
       {on && (
         <div className="mt-3 space-y-2 border-t border-edge pt-3">
           <Stepper label={t('share.booking.adults')} n={value.adults} min={1} max={maxPeople - value.children} onChange={(adults) => set({ adults })} />
