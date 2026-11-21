@@ -3,14 +3,13 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   booking: {
-    shift: 'Wann könnten Sie für einen Mitfahrer losfahren?',
-    earlier: 'Früher',
-    later: 'Später',
-    earlierBy: 'bis {n} Min. früher',
-    laterBy: 'bis {n} Min. später',
-    exact: 'Nur genau zur Zeit',
-    window: 'Abfahrt zwischen {from} und {to}',
-    windowMin: '{e} Min. früher – {l} Min. später',
+    flex: 'Wie flexibel sind Sie?',
+    flex_exact: 'Genau',
+    flex_some: 'Etwas',
+    flex_very: 'Sehr',
+    flexOnTime: 'pünktlich',
+    flexTime: '±{n} Min.',
+    flexDetour: 'Umweg ≤{n} Min.',
     title: "Mitfahrer −{pct}%",
     hint: "Fährt ein Mitfahrer in Ihre Richtung mit, zahlen Sie {pct}% weniger. Sonst fahren Sie zum normalen Preis.",
     routes: "Mitfahren gibt es nur zwischen den Flughäfen LCA und PFO, Larnaka, Nikosia, Paphos, Ayia Napa und Limassol.",

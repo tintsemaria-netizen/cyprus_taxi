@@ -3,14 +3,13 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   booking: {
-    shift: 'Quand pourriez-vous partir pour un covoyageur ?',
-    earlier: 'Plus tôt',
-    later: 'Plus tard',
-    earlierBy: 'jusqu’à {n} min plus tôt',
-    laterBy: 'jusqu’à {n} min plus tard',
-    exact: 'Seulement à l’heure exacte',
-    window: 'Départ entre {from} et {to}',
-    windowMin: '{e} min plus tôt – {l} min plus tard',
+    flex: 'Quelle est votre flexibilité ?',
+    flex_exact: 'Précis',
+    flex_some: 'Un peu',
+    flex_very: 'Très',
+    flexOnTime: 'à l’heure',
+    flexTime: '±{n} min',
+    flexDetour: 'détour ≤{n} min',
     title: "Covoyageur −{pct}%",
     hint: "Si un covoyageur allant dans votre direction se joint, vous payez {pct}% de moins. Sinon, vous voyagez au prix normal.",
     routes: "Le covoiturage fonctionne seulement entre les aéroports LCA et PFO, Larnaca, Nicosie, Paphos, Ayia Napa et Limassol.",

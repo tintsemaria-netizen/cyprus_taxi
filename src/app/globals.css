@@ -128,9 +128,3 @@ body {
 .no-scrollbar { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
-/* Ride-share time line (2026-11-21): two half-width range inputs on one track, 0 in the middle. */
-.ily-half { -webkit-appearance: none; appearance: none; background: transparent; width: 50%; height: 36px; margin: 0; touch-action: none; }
-.ily-half::-webkit-slider-runnable-track { height: 36px; background: transparent; }
-.ily-half::-moz-range-track { background: transparent; }
-.ily-half::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: 5px; border-radius: 9999px; background: #C8FF46; border: 3px solid rgb(var(--c-page)); box-shadow: 0 1px 4px rgb(0 0 0 / 0.35); }
-.ily-half::-moz-range-thumb { width: 20px; height: 20px; border-radius: 9999px; background: #C8FF46; border: 3px solid rgb(var(--c-page)); }

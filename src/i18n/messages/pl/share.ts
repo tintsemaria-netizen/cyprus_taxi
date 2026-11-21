@@ -3,14 +3,13 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   booking: {
-    shift: 'Kiedy możesz wyjechać dla współpasażera?',
-    earlier: 'Wcześniej',
-    later: 'Później',
-    earlierBy: 'do {n} min wcześniej',
-    laterBy: 'do {n} min później',
-    exact: 'Tylko o dokładnej godzinie',
-    window: 'Wyjazd między {from} a {to}',
-    windowMin: '{e} min wcześniej – {l} min później',
+    flex: 'Jak bardzo jesteś elastyczny?',
+    flex_exact: 'Dokładnie',
+    flex_some: 'Trochę',
+    flex_very: 'Bardzo',
+    flexOnTime: 'punktualnie',
+    flexTime: '±{n} min',
+    flexDetour: 'objazd do {n} min',
     title: "Współpasażer −{pct}%",
     hint: "Jeśli dołączy współpasażer jadący w Twoją stronę, zapłacisz o {pct}% mniej. Jeśli nie — jedziesz w normalnej cenie.",
     routes: "Współprzejazd działa tylko między lotniskami LCA i PFO, Larnaką, Nikozją, Pafos, Ayia Napą i Limassolem.",

@@ -62,7 +62,7 @@ export default function BookingApp() {
   const [scheduleOffsetMin, setScheduleOffsetMin] = useState<number | undefined>(undefined);
   const [ambiguous, setAmbiguous] = useState<string[] | null>(null);
   const [vClass, setVClass] = useState<'COMFORT' | 'XL'>('COMFORT');
-  const [shareOpts, setShareOpts] = useState<ShareOpts>({ on: false, adults: 1, children: 0, bags: 1, maxExtra: 15, wait: 15 });
+  const [shareOpts, setShareOpts] = useState<ShareOpts>({ on: false, adults: 1, children: 0, bags: 1, maxExtra: 15, wait: 15, early: 15 });
   const [pax, setPax] = useState(1);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -1149,7 +1149,7 @@ export default function BookingApp() {
                           the list of places until the route is one where ride-share works. */}
                       {when === 'SCHEDULE' && cfg?.share && (
                         <div className="-mt-4 mb-3">
-                          <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook disabled={!shareAllowed} baseHm={scheduledAt.slice(11, 16)} />
+                          <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook disabled={!shareAllowed} />
                         </div>
                       )}
                       {when === 'SCHEDULE' && (
