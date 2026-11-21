@@ -2397,3 +2397,4 @@ driver logout → /driver/login. Texts in 8 languages. 331 tests passed. Screens
   manifest + apple icon on /staff, /admin, /dispatch, /fleet). /staff routes by role (signed out → /staff/login).
   /staff/login and /driver/login skip ahead when already signed in (iOS saves the current page as the icon's start).
   Icons: public/icons/{driver,admin}-{192,512,maskable-512,apple-touch-icon}.png. 331 tests passed.
+- 2026-11-21 21:42 DEPLOYED (merge 8d0e889 onto main with the parallel ride-share / share-board work; only HANDOFF overlapped, auto-merged; 341 tests passed on the merged code): separate entrances + IL-Y Admin / Driver icons. Live: /staff/login has the staff manifest, icons 200, ready OK.
