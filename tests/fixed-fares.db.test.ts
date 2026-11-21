@@ -69,6 +69,23 @@ describe('fixed airport fares', () => {
     expect(zoneSchema.safeParse({ airport: 'PFO', name: 'x', polygon: [[1, 1], [2, 2]], comfortCents: 2000, xlCents: 3000 }).success).toBe(false);
   });
 
+  it('by postcode: the address postcode in the list wins over drawn zones; other postcodes fall back to the zones', async () => {
+    await prisma.fixedFareZone.deleteMany({});
+    const square: [number, number][] = [[34.70, 32.40], [34.70, 32.52], [34.90, 32.52], [34.90, 32.40]];
+    await prisma.fixedFareZone.create({ data: zoneData({ airport: 'PFO', name: 'Big', polygon: square, comfortCents: 3000, xlCents: 4000 }) });
+    await prisma.fixedFareZone.create({ data: zoneData({ airport: 'PFO', name: 'Peyia 8560', postcodes: ['8560', '8560', '8561'], comfortCents: 4500, xlCents: 6500 }) });
+    invalidateFixedFareCache();
+    const peyia = { lat: 34.885, lng: 32.40 }, town = { lat: 34.77, lng: 32.43 };
+    const codes = (p: { lat: number }) => Promise.resolve(p.lat > 34.88 ? '8560' : '8010');
+    expect((await findFixedFare(PFO, peyia, 'XL', null, codes))?.cents).toBe(6500);
+    expect((await findFixedFare(peyia, PFO, 'COMFORT', null, codes))?.zoneName).toBe('Peyia 8560'); // both ways
+    expect((await findFixedFare(PFO, town, 'COMFORT', null, codes))?.cents).toBe(3000);
+    expect((await findFixedFare(PFO, peyia, 'COMFORT', null, () => Promise.resolve(null)))?.cents).toBe(3000); // postcode unknown
+    expect((await prisma.fixedFareZone.findFirst({ where: { name: 'Peyia 8560' } }))?.postcodes).toEqual(['8560', '8561']);
+    expect(zoneSchema.safeParse({ airport: 'PFO', name: 'x', postcodes: ['85A0'], comfortCents: 2000, xlCents: 3000 }).success).toBe(false);
+    expect(zoneSchema.safeParse({ airport: 'PFO', name: 'x', postcodes: ['8560'], comfortCents: 2000, xlCents: 3000 }).success).toBe(true);
+  });
+
   it('REGULATED_FIXED counts as a final price', () => {
     expect(isFixedPrice('REGULATED_FIXED')).toBe(true);
     expect(isFixedPrice('REGULATED_METER_ESTIMATE')).toBe(false);

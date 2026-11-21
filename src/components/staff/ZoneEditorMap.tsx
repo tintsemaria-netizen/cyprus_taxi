@@ -30,6 +30,8 @@ interface Props {
   onChange: (p: Poly) => void;
   /** A click on the map when no polygon is being drawn (e.g. «the ring's edge goes through here»). */
   onPick?: (lat: number, lng: number) => void;
+  /** Zones inside the one being drawn: shown cut out, so a belt looks like a band from its inner zone outwards. */
+  editingHoles?: Poly[];
   /** Show this box ([south, west, north, east]); re-fitted whenever its value changes. */
   fit?: [number, number, number, number] | null;
   className?: string;
@@ -42,7 +44,7 @@ export default function ZoneEditorMap(props: Props) {
 }
 
 // ---------- Google ----------
-function GoogleZoneMap({ center, airport, zones, editing, onChange, onPick, fit, className }: Props) {
+function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange, onPick, fit, className }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const st = useRef<{ g: any; map: any; edit: any; refs: any[]; airport: any; labels: any[] } | null>(null);
@@ -90,7 +92,7 @@ function GoogleZoneMap({ center, airport, zones, editing, onChange, onPick, fit,
     if (editing) {
       // paths as ONE explicit ring (2026-11-21 fix): with a flat empty array (a new zone, no corners yet)
       // Google creates no ring, getPath() is undefined and «+ Новая зона» crashed the page.
-      const poly = new g.Polygon({ map, paths: [editing.map(([lat, lng]) => ({ lat, lng }))], strokeColor: LIME, strokeWeight: 3, fillColor: LIME, fillOpacity: 0.2, editable: true, zIndex: 10 });
+      const poly = new g.Polygon({ map, paths: [editing.map(([lat, lng]) => ({ lat, lng }))], strokeColor: LIME, strokeWeight: 3, fillColor: LIME, fillOpacity: editingHoles?.length ? 0.08 : 0.2, editable: true, zIndex: 10 });
       const sync = () => {
         const path = poly.getPath();
         if (!path) return;
@@ -123,7 +125,7 @@ function GoogleZoneMap({ center, airport, zones, editing, onChange, onPick, fit,
 }
 
 // ---------- MapLibre ----------
-function LibreZoneMap({ center, airport, zones, editing, onChange, onPick, fit, className }: Props) {
+function LibreZoneMap({ center, airport, zones, editing, editingHoles, onChange, onPick, fit, className }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const libRef = useRef<typeof maplibregl | null>(null);
@@ -180,7 +182,7 @@ function LibreZoneMap({ center, airport, zones, editing, onChange, onPick, fit, 
     const feats = [
       { type: 'Feature', properties: { color: '#ffffff', op: 0.05, w: 1 }, geometry: { type: 'Polygon', coordinates: [circle(airport, 2500)] } },
       ...zones.filter((z) => z.polygon.length >= 3).map((z) => ({ type: 'Feature', properties: { color: z.color, op: z.strong ? 0.2 : 0.08, w: z.strong ? 3 : 2 }, geometry: { type: 'Polygon', coordinates: [ring(z.polygon), ...(z.holes ?? []).map((h) => ring(h.slice().reverse()))] } })),
-      ...(editing && editing.length >= 2 ? [{ type: 'Feature', properties: { color: LIME, op: editing.length >= 3 ? 0.2 : 0, w: 3 }, geometry: { type: 'Polygon', coordinates: [ring(editing)] } }] : []),
+      ...(editing && editing.length >= 2 ? [{ type: 'Feature', properties: { color: LIME, op: editing.length >= 3 ? 0.2 : 0, w: 3 }, geometry: { type: 'Polygon', coordinates: [ring(editing), ...(editing.length >= 3 ? (editingHoles ?? []).map((h) => ring(h.slice().reverse())) : [])] } }] : []),
     ];
     (map.getSource('zones') as maplibregl.GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: feats } as never);
     labelMarkers.current.forEach((m) => m.remove());

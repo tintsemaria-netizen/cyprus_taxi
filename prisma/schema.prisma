@@ -634,6 +634,9 @@ model FixedFareZone {
   name         String
   // [[lat, lng], …] closed implicitly; ≥ 3 points.
   polygon      Json
+  // 2026-11-21 (operator): fixed price by POSTCODE — the address's 4-digit Cyprus postcode is in this list (e.g. 8560).
+  // A postcode zone has an empty polygon and wins over drawn zones.
+  postcodes    String[] @default([])
   comfortCents Int
   xlCents      Int
   active       Boolean  @default(true)

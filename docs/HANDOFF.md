@@ -2343,3 +2343,10 @@ nextBelt) — so it starts exactly where the previous ends; drag the corners to 
 «Пояс N», price prefilled +10 € / +15 €. Smallest zone wins (unchanged from fixed-rings), so inside the belt the inner
 zone keeps its price. Map: belts drawn as bands (inner zones cut out), price pills, map fits all zones.
 Local check: centre 25 € / пояс 2 35 € / пояс 3 45 € / beyond → meter. 329 tests passed. Screens 360–364.
+- 2026-11-21 15:50 (branch `fixed-bands`, still NOT deployed — «покажи»): (1) a belt is bounded by its neighbours —
+  editing a belt shows «Внутренняя граница — это «Центр»…» and draws the belt as a band; save is refused if the belt cuts
+  into the zone inside it, or if a zone leaves the belt around it (page-side, polygonInside). The inner edge is not stored:
+  it IS the inner zone (smallest wins), so editing the centre moves it. (2) «+ По индексу»: FixedFareZone.postcodes
+  (migration 20261121150000_fixed_zone_postcodes; empty polygon). findFixedFare: postcode zones FIRST (address postcode via
+  lookupPostcode — own address base → Google → Photon, cached), then drawn zones (smallest wins). Local quote to Peyia
+  → «PFO ↔ Пейя» 45 € via the real postcode lookup. 330 tests passed. Screens 370–373.
