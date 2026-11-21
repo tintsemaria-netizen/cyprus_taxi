@@ -12,7 +12,7 @@ import { publicMapConfig } from '@/lib/config';
 import { currentTheme } from '@/lib/theme';
 
 export type Poly = [number, number][];
-export interface RefZone { id: string; name: string; polygon: Poly; color: string; label?: string; labelAt?: [number, number]; strong?: boolean }
+export interface RefZone { id: string; name: string; polygon: Poly; color: string; label?: string; labelAt?: [number, number]; strong?: boolean; holes?: Poly[] }
 
 // Price label on the map (2026-11-21): a small pill in the zone's colour.
 function pillSvg(text: string, color: string): { url: string; w: number; h: number } {
@@ -77,7 +77,7 @@ function GoogleZoneMap({ center, airport, zones, editing, onChange, onPick, fit,
     if (!s) return;
     const { g, map } = s;
     s.refs.forEach((p) => p.setMap(null));
-    s.refs = zones.map((z) => new g.Polygon({ map, paths: z.polygon.map(([lat, lng]) => ({ lat, lng })), strokeColor: z.color, strokeWeight: z.strong ? 3 : 2, fillColor: z.color, fillOpacity: z.strong ? 0.2 : 0.08, clickable: false, zIndex: z.strong ? 5 : 1 }));
+    s.refs = zones.map((z) => new g.Polygon({ map, paths: [z.polygon, ...(z.holes ?? []).map((h) => h.slice().reverse())].map((r) => r.map(([lat, lng]) => ({ lat, lng }))), strokeColor: z.color, strokeWeight: z.strong ? 3 : 2, fillColor: z.color, fillOpacity: z.strong ? 0.2 : 0.08, clickable: false, zIndex: z.strong ? 5 : 1 }));
     s.labels.forEach((m) => m.setMap(null));
     s.labels = zones.filter((z) => z.label && z.labelAt).map((z) => {
       const pill = pillSvg(z.label!, z.color);
@@ -179,7 +179,7 @@ function LibreZoneMap({ center, airport, zones, editing, onChange, onPick, fit, 
     if (!map || !lib || !ready.current) return;
     const feats = [
       { type: 'Feature', properties: { color: '#ffffff', op: 0.05, w: 1 }, geometry: { type: 'Polygon', coordinates: [circle(airport, 2500)] } },
-      ...zones.filter((z) => z.polygon.length >= 3).map((z) => ({ type: 'Feature', properties: { color: z.color, op: z.strong ? 0.2 : 0.08, w: z.strong ? 3 : 2 }, geometry: { type: 'Polygon', coordinates: [ring(z.polygon)] } })),
+      ...zones.filter((z) => z.polygon.length >= 3).map((z) => ({ type: 'Feature', properties: { color: z.color, op: z.strong ? 0.2 : 0.08, w: z.strong ? 3 : 2 }, geometry: { type: 'Polygon', coordinates: [ring(z.polygon), ...(z.holes ?? []).map((h) => ring(h.slice().reverse()))] } })),
       ...(editing && editing.length >= 2 ? [{ type: 'Feature', properties: { color: LIME, op: editing.length >= 3 ? 0.2 : 0, w: 3 }, geometry: { type: 'Polygon', coordinates: [ring(editing)] } }] : []),
     ];
     (map.getSource('zones') as maplibregl.GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: feats } as never);

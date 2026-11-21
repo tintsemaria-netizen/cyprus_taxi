@@ -12,12 +12,43 @@ export function polygonArea(p: [number, number][]): number {
   return Math.abs(a) / 2;
 }
 
-/** A circle of `radiusM` around a point as a 64-corner polygon (the stored shape of a price ring). */
-export function circlePolygon(c: { lat: number; lng: number }, radiusM: number, n = 64): [number, number][] {
-  const dLat = radiusM / 111_320;
-  const dLng = radiusM / (111_320 * Math.cos((c.lat * Math.PI) / 180));
-  return Array.from({ length: n }, (_, i) => {
-    const a = (i / n) * 2 * Math.PI;
-    return [Math.round((c.lat + dLat * Math.cos(a)) * 1e6) / 1e6, Math.round((c.lng + dLng * Math.sin(a)) * 1e6) / 1e6] as [number, number];
+/** Centre of a polygon's corners. */
+export function centroid(p: [number, number][]): [number, number] {
+  return [p.reduce((a, q) => a + q[0], 0) / p.length, p.reduce((a, q) => a + q[1], 0) / p.length];
+}
+
+/** True when every corner of `inner` lies inside `outer` (ray casting) — «this zone sits inside that one». */
+export function polygonInside(inner: [number, number][], outer: [number, number][]): boolean {
+  if (inner.length < 3 || outer.length < 3) return false;
+  const inPoly = ([y, x]: [number, number]) => {
+    let c = false;
+    for (let i = 0, j = outer.length - 1; i < outer.length; j = i++) {
+      const [yi, xi] = outer[i]; const [yj, xj] = outer[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
+    }
+    return c;
+  };
+  return inner.every(inPoly);
+}
+
+/**
+ * The next price belt (2026-11-21, operator: «следующие начинались там, где оканчивается предыдущая»):
+ * the previous zone's own corners, densified to ≥ 24, each pushed outwards from the centre by `pushM` metres.
+ * The admin then drags the outer edge where the next price should end; inside stays the previous zone (smallest wins).
+ */
+export function nextBelt(prev: [number, number][], pushM = 3000): [number, number][] {
+  let pts = prev.slice();
+  while (pts.length < 24) {
+    const out: [number, number][] = [];
+    pts.forEach((p, i) => { const q = pts[(i + 1) % pts.length]; out.push(p, [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]); });
+    pts = out;
+  }
+  const [cy, cx] = centroid(prev);
+  const k = Math.cos((cy * Math.PI) / 180);
+  return pts.map(([y, x]) => {
+    const dy = (y - cy) * 111_320, dx = (x - cx) * 111_320 * k;
+    const d = Math.hypot(dx, dy) || 1;
+    const f = (d + pushM) / d;
+    return [Math.round((cy + (dy * f) / 111_320) * 1e6) / 1e6, Math.round((cx + (dx * f) / (111_320 * k)) * 1e6) / 1e6] as [number, number];
   });
 }

@@ -6,8 +6,8 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { AIRPORTS, airportAt } from '@/lib/airports';
 import { pointInPolygon, type LatLng } from '@/lib/geo';
-import { circlePolygon, polygonArea } from '@/lib/zone-shapes';
-export { circlePolygon, polygonArea };
+import { polygonArea } from '@/lib/zone-shapes';
+export { polygonArea };
 
 export interface ZoneRow { id: string; airport: string; name: string; polygon: [number, number][]; comfortCents: number; xlCents: number; active: boolean }
 
@@ -57,23 +57,17 @@ export async function findFixedFare(pickup: LatLng, dropoff: LatLng, vClass: str
   return best;
 }
 
-/** Turns a valid payload into DB data: a ring (radiusM) gets its circle built around its airport. */
+/** Turns a valid payload into DB data. */
 export function zoneData(d: z.infer<typeof zoneSchema>) {
-  const ap = AIRPORTS.find((a) => a.code === d.airport)!;
-  const radiusM = d.radiusM ?? null;
-  return {
-    airport: d.airport, name: d.name, comfortCents: d.comfortCents, xlCents: d.xlCents, active: d.active ?? true,
-    radiusM, polygon: radiusM ? circlePolygon(ap, radiusM) : (d.polygon ?? []),
-  };
+  return { airport: d.airport, name: d.name, polygon: d.polygon, comfortCents: d.comfortCents, xlCents: d.xlCents, active: d.active ?? true };
 }
 
-/** Admin create/update payload: a drawn zone (polygon ≥ 3 corners) or a ring (radiusM, 0.5–80 km). */
+/** Admin create/update payload. */
 export const zoneSchema = z.object({
   airport: z.enum(AIRPORTS.map((a) => a.code) as [string, ...string[]]),
   name: z.string().trim().min(1).max(80),
-  polygon: z.array(z.tuple([z.number().min(-90).max(90), z.number().min(-180).max(180)])).min(3).max(200).optional(),
-  radiusM: z.number().int().min(500).max(80_000).nullable().optional(),
+  polygon: z.array(z.tuple([z.number().min(-90).max(90), z.number().min(-180).max(180)])).min(3).max(300),
   comfortCents: z.number().int().min(100).max(100_000),
   xlCents: z.number().int().min(100).max(100_000),
   active: z.boolean().optional(),
-}).refine((d) => !!d.radiusM || (d.polygon?.length ?? 0) >= 3, { message: 'A zone needs ≥ 3 corners or a ring radius.' });
+});

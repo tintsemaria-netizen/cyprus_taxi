@@ -2334,3 +2334,12 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
 - Admin «Фикс. цены»: «+ Круг от аэропорта» (radius field + slider 1–60 km, or tap the map = edge through that
   point), «+ Новая зона» (draw). Price pills on the map («до 12 км · 35 €», «Пейя · 45 €»); the map fits all rings.
   Shapes in the list: «◯ до N км» / «нарисована». 329 tests passed. Screens 350–353 in /tmp/shots (local).
+
+## 2026-11-21 13:40 — Rings dropped (owner: «лучше как было — много точек вручную»); price BELTS instead
+Branch `fixed-bands` (from `fixed-rings`; NOT deployed — owner: «покажи»). No circles, no radiusM column (that
+migration was never deployed and is removed). Zones are drawn by hand as before; new «+ Следующий пояс» builds the next
+zone from the OUTERMOST active zone: its own corners densified to ≥ 24 and pushed 3 km outwards (src/lib/zone-shapes.ts
+nextBelt) — so it starts exactly where the previous ends; drag the corners to where the next price should end. Name
+«Пояс N», price prefilled +10 € / +15 €. Smallest zone wins (unchanged from fixed-rings), so inside the belt the inner
+zone keeps its price. Map: belts drawn as bands (inner zones cut out), price pills, map fits all zones.
+Local check: centre 25 € / пояс 2 35 € / пояс 3 45 € / beyond → meter. 329 tests passed. Screens 360–364.

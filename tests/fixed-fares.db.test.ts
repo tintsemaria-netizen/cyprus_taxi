@@ -6,6 +6,7 @@ const dbName = (() => { try { return new URL(dbUrl).pathname.replace(/^\//, '').
 import { createQuote } from '@/server/quote';
 import { prisma } from '@/lib/db';
 import { findFixedFare, invalidateFixedFareCache, zoneData, zoneSchema } from '@/server/fixed-fares';
+import { nextBelt, polygonInside } from '@/lib/zone-shapes';
 import { isFixedPrice } from '@/lib/price-type';
 
 const PFO = { lat: 34.718, lng: 32.4857 };
@@ -53,23 +54,19 @@ describe('fixed airport fares', () => {
     expect((await findFixedFare(PFO, { lat: 34.78, lng: 32.45 }, 'COMFORT'))?.cents).toBe(3500);
   });
 
-  it('price rings around the airport: up to 5 km, 5–15 km, beyond → meter; a drawn district beats a ring', async () => {
+  it('price belts: the next zone starts where the previous ends; inside stays the previous price', async () => {
     await prisma.fixedFareZone.deleteMany({});
-    const ap = { lat: 34.718, lng: 32.4857 };
-    await prisma.fixedFareZone.create({ data: zoneData({ airport: 'PFO', name: '5 km', radiusM: 5000, comfortCents: 2000, xlCents: 3000 }) });
-    await prisma.fixedFareZone.create({ data: zoneData({ airport: 'PFO', name: '15 km', radiusM: 15000, comfortCents: 3500, xlCents: 5000 }) });
+    const inner: [number, number][] = [[34.70, 32.46], [34.70, 32.51], [34.74, 32.51], [34.74, 32.46]];
+    const belt = nextBelt(inner, 4000);
+    expect(belt.length).toBeGreaterThanOrEqual(24);
+    expect(polygonInside(inner, belt)).toBe(true);
+    await prisma.fixedFareZone.create({ data: zoneData({ airport: 'PFO', name: 'Centre', polygon: inner, comfortCents: 2500, xlCents: 3500 }) });
+    await prisma.fixedFareZone.create({ data: zoneData({ airport: 'PFO', name: 'Belt 2', polygon: belt, comfortCents: 3500, xlCents: 5000 }) });
     invalidateFixedFareCache();
-    const at = (km: number) => ({ lat: ap.lat + km / 111.32, lng: ap.lng }); // due north
-    expect((await findFixedFare(PFO, at(4), 'COMFORT'))?.cents).toBe(2000);
-    expect((await findFixedFare(PFO, at(10), 'XL'))?.cents).toBe(5000);
-    expect(await findFixedFare(PFO, at(20), 'COMFORT')).toBeNull();
-    expect((await findFixedFare(at(10), PFO, 'COMFORT'))?.cents).toBe(3500); // zone → airport too
-    const p = at(10);
-    await prisma.fixedFareZone.create({ data: { airport: 'PFO', name: 'Hills', polygon: [[p.lat - 0.01, p.lng - 0.01], [p.lat - 0.01, p.lng + 0.01], [p.lat + 0.01, p.lng + 0.01], [p.lat + 0.01, p.lng - 0.01]], comfortCents: 4000, xlCents: 5500 } });
-    invalidateFixedFareCache();
-    expect((await findFixedFare(PFO, p, 'COMFORT'))?.cents).toBe(4000);
-    expect(zoneSchema.safeParse({ airport: 'PFO', name: 'x', radiusM: 100, comfortCents: 2000, xlCents: 3000 }).success).toBe(false);
-    expect(zoneSchema.safeParse({ airport: 'PFO', name: 'x', comfortCents: 2000, xlCents: 3000 }).success).toBe(false);
+    expect((await findFixedFare(PFO, { lat: 34.72, lng: 32.48 }, 'COMFORT'))?.cents).toBe(2500); // inside the centre
+    expect((await findFixedFare(PFO, { lat: 34.755, lng: 32.48 }, 'COMFORT'))?.cents).toBe(3500); // in the belt
+    expect(await findFixedFare(PFO, { lat: 34.82, lng: 32.48 }, 'COMFORT')).toBeNull(); // beyond → meter
+    expect(zoneSchema.safeParse({ airport: 'PFO', name: 'x', polygon: [[1, 1], [2, 2]], comfortCents: 2000, xlCents: 3000 }).success).toBe(false);
   });
 
   it('REGULATED_FIXED counts as a final price', () => {
