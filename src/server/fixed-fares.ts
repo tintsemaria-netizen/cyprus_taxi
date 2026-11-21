@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { AIRPORTS, airportAt } from '@/lib/airports';
 import { pointInPolygon, type LatLng } from '@/lib/geo';
+import { circlePolygon, polygonArea } from '@/lib/zone-shapes';
+export { circlePolygon, polygonArea };
 
 export interface ZoneRow { id: string; airport: string; name: string; polygon: [number, number][]; comfortCents: number; xlCents: number; active: boolean }
 
@@ -41,22 +43,37 @@ export async function findFixedFare(pickup: LatLng, dropoff: LatLng, vClass: str
   if (fromAirport) cands.push({ airport: fromAirport, point: dropoff });
   if (toAirport) cands.push({ airport: toAirport, point: pickup });
   let best: FixedFareMatch | null = null;
+  let bestArea = Infinity;
   for (const c of cands) {
     for (const z of zones) {
       if (z.airport !== c.airport || !pointInPolygon(c.point, z.polygon.map(([lat, lng]) => ({ lat, lng })))) continue;
       const cents = vClass === 'XL' ? z.xlCents : z.comfortCents;
-      if (!best || cents < best.cents) best = { zoneId: z.id, zoneName: z.name, airport: z.airport, cents };
+      // Several zones / rings contain the point (2026-11-21): the SMALLEST one wins — the most precise area,
+      // e.g. a district drawn inside a ring, or the 5 km ring inside the 10 km ring.
+      const area = polygonArea(z.polygon);
+      if (!best || area < bestArea) { best = { zoneId: z.id, zoneName: z.name, airport: z.airport, cents }; bestArea = area; }
     }
   }
   return best;
 }
 
-/** Admin create/update payload. */
+/** Turns a valid payload into DB data: a ring (radiusM) gets its circle built around its airport. */
+export function zoneData(d: z.infer<typeof zoneSchema>) {
+  const ap = AIRPORTS.find((a) => a.code === d.airport)!;
+  const radiusM = d.radiusM ?? null;
+  return {
+    airport: d.airport, name: d.name, comfortCents: d.comfortCents, xlCents: d.xlCents, active: d.active ?? true,
+    radiusM, polygon: radiusM ? circlePolygon(ap, radiusM) : (d.polygon ?? []),
+  };
+}
+
+/** Admin create/update payload: a drawn zone (polygon ≥ 3 corners) or a ring (radiusM, 0.5–80 km). */
 export const zoneSchema = z.object({
   airport: z.enum(AIRPORTS.map((a) => a.code) as [string, ...string[]]),
   name: z.string().trim().min(1).max(80),
-  polygon: z.array(z.tuple([z.number().min(-90).max(90), z.number().min(-180).max(180)])).min(3).max(200),
+  polygon: z.array(z.tuple([z.number().min(-90).max(90), z.number().min(-180).max(180)])).min(3).max(200).optional(),
+  radiusM: z.number().int().min(500).max(80_000).nullable().optional(),
   comfortCents: z.number().int().min(100).max(100_000),
   xlCents: z.number().int().min(100).max(100_000),
   active: z.boolean().optional(),
-});
+}).refine((d) => !!d.radiusM || (d.polygon?.length ?? 0) >= 3, { message: 'A zone needs ≥ 3 corners or a ring radius.' });

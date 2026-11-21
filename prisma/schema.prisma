@@ -634,6 +634,9 @@ model FixedFareZone {
   name         String
   // [[lat, lng], …] closed implicitly; ≥ 3 points.
   polygon      Json
+  // 2026-11-21 (operator): a price RING — a circle of this radius around the airport. The polygon is then the
+  // circle (64 points), built by the server, so matching stays one point-in-polygon rule. null = a drawn zone.
+  radiusM      Int?
   comfortCents Int
   xlCents      Int
   active       Boolean  @default(true)

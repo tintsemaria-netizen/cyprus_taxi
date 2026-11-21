@@ -2325,3 +2325,12 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
 - 2026-11-21 12:20 DEPLOYED: «↶ Шаг назад» on the fixed-price zone map (top-left, beside the hint). Undoes one corner
   change at a time — add, drag (a continuous drag = one step, 600 ms grouping), midpoint insert, «Убрать последний угол»,
   «Очистить». History resets on new / edit zone. 328 tests passed; previewed on the MapLibre map (Google: live only).
+
+## 2026-11-21 — Price rings around airports (branch `fixed-rings`, NOT deployed — owner: «покажи»)
+- FixedFareZone.radiusM (migration 20261121120000_fixed_zone_ring). A ring = circle of radiusM around its airport; the
+  server builds the 64-corner polygon (src/lib/zone-shapes.ts circlePolygon), so matching is still point-in-polygon.
+- RULE CHANGE: when several zones / rings contain the address, the SMALLEST wins (was: the cheapest). So «до 5 км»
+  beats «до 12 км», and a drawn district (e.g. Пейя) beats the ring it sits in. tests/fixed-fares.db.test.ts updated.
+- Admin «Фикс. цены»: «+ Круг от аэропорта» (radius field + slider 1–60 km, or tap the map = edge through that
+  point), «+ Новая зона» (draw). Price pills on the map («до 12 км · 35 €», «Пейя · 45 €»); the map fits all rings.
+  Shapes in the list: «◯ до N км» / «нарисована». 329 tests passed. Screens 350–353 in /tmp/shots (local).
