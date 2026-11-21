@@ -281,15 +281,39 @@ export default function BookingApp() {
   // On first load, detect the passenger's position: centre the map on it and default the
   // pickup there (reverse-geocoded label). Never overwrite a pickup the passenger has
   // already started choosing — they can still change it via the map or the address box.
+  //
+  // 2026-11-21 (operator): an installed app on a phone is usually RESUMED, not reloaded — the old
+  // position stayed on the map after driving 80 km. So it is detected again whenever the app comes
+  // back to the screen after more than a minute away, and an auto-set pickup the passenger has not
+  // touched (no destination yet) moves to the new position.
+  const dropoffRef = useRef<Selected | null>(dropoff); dropoffRef.current = dropoff;
+  const autoPickupRef = useRef(autoPickup); autoPickupRef.current = autoPickup;
+  const [locateTick, setLocateTick] = useState(0);
+  useEffect(() => {
+    let hiddenAt = 0;
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+      if (hiddenAt && Date.now() - hiddenAt > 60_000) setLocateTick((n) => n + 1);
+    };
+    const onShow = (e: PageTransitionEvent) => { if (e.persisted) setLocateTick((n) => n + 1); };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('pageshow', onShow);
+    return () => { document.removeEventListener('visibilitychange', onVis); window.removeEventListener('pageshow', onShow); };
+  }, []);
   useEffect(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) return;
     let cancelled = false;
+    const again = locateTick > 0;
+    // The untouched auto pickup may be replaced; anything the passenger chose or typed is kept.
+    const untouched = () => !dropoffRef.current && autoPickupRef.current && !!autoPickupSaved.current
+      && pickupRef.current?.lat === autoPickupSaved.current.sel.lat && pickupRef.current?.lng === autoPickupSaved.current.sel.lng;
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         if (cancelled) return;
         const lat = pos.coords.latitude, lng = pos.coords.longitude;
         setMyLoc({ lat, lng });
-        if (pickupRef.current || pickupTextRef.current.trim() !== '') return; // passenger already acting
+        if (again && !untouched()) return;
+        if (!again && (pickupRef.current || pickupTextRef.current.trim() !== '')) return; // passenger already acting
         // The stored label travels with the booking to the driver → language-neutral English; the
         // passenger sees their own language in the field.
         let label: string | null = null;
@@ -297,18 +321,19 @@ export default function BookingApp() {
           const r = await api<{ place: { label: string } | null }>(`/places/reverse?lat=${lat}&lng=${lng}`, { timeoutMs: 6000 });
           if (r.place?.label) label = r.place.label;
         } catch { /* keep the generic label */ }
-        if (cancelled || pickupRef.current || pickupTextRef.current.trim() !== '') return; // re-check after await
+        if (cancelled || (again ? !untouched() : (pickupRef.current || pickupTextRef.current.trim() !== ''))) return; // re-check after await
         setPickup({ lat, lng, label: label ?? translate('en', 'booking.currentLocation') });
         setPickupText(label ?? t('booking.currentLocation'));
         setAutoPickup(true);
         autoPickupSaved.current = { sel: { lat, lng, label: label ?? translate('en', 'booking.currentLocation') }, text: label ?? t('booking.currentLocation') };
       },
       () => { /* denied / unavailable → keep the island view + manual selection */ },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+      // On return: a fresh fix (maximumAge 0) — a cached one is exactly the old place.
+      again ? { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } : { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
     );
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [locateTick]);
 
   // Keep the schedule minimum fresh (in Cyprus wall time) while scheduling is open.
   useEffect(() => {
