@@ -37,7 +37,19 @@ function originAllowed(req: NextRequest): boolean {
   return originHost === reqHost || (baseHost !== '' && originHost === baseHost);
 }
 
+// Plain-http visitors behind Cloudflare (2026-11-21): http://il-y.taxi served the app without redirecting, and the
+// browser then refused to keep the Secure login cookie — staff could not log in from a phone. Cloudflare tells the
+// visitor's real scheme in CF-Visitor (nginx always forwards X-Forwarded-Proto https), so send them to https.
+function cameOverPlainHttp(req: NextRequest): boolean {
+  const v = req.headers.get('cf-visitor');
+  return !!v && /"scheme"\s*:\s*"http"/.test(v);
+}
+
 export function proxy(req: NextRequest) {
+  if (cameOverPlainHttp(req) && (req.method === 'GET' || req.method === 'HEAD')) {
+    const host = req.headers.get('host') || req.nextUrl.host;
+    return NextResponse.redirect(`https://${host}${req.nextUrl.pathname}${req.nextUrl.search}`, 308);
+  }
   if (req.nextUrl.pathname.startsWith('/api/') && !originAllowed(req)) {
     return NextResponse.json(
       { error: { code: 'BAD_ORIGIN', message: 'Cross-origin request rejected.', fieldErrors: {}, requestId: '' } },
@@ -75,6 +87,8 @@ export function proxy(req: NextRequest) {
 
   res.headers.set('Content-Security-Policy', csp);
   res.headers.set('X-Content-Type-Options', 'nosniff');
+  // Browsers then go straight to https next time (only when Cloudflare confirms the visit was https).
+  if (/"scheme"\s*:\s*"https"/.test(req.headers.get('cf-visitor') || '')) res.headers.set('Strict-Transport-Security', 'max-age=31536000');
   res.headers.set('X-Frame-Options', 'DENY');
   // Tile providers may require a Referer. Send only the ORIGIN (never the path/query,
   // so tracking references and tokens never leak) on ordinary pages; keep strict

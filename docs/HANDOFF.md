@@ -2317,3 +2317,8 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
   load»): a Polygon built from a flat EMPTY path has no ring → getPath() undefined → addListener threw. Now paths =
   [ring]; getPath guarded. Reproduced locally with the real Google JS (key refuses localhost, so corner clicks are
   verified on the live site only).
+- 2026-11-21 11:15 FIX: owner could not log in to the admin from a phone at il-y.taxi — the phone was on
+  http://il-y.taxi (Cloudflare served plain http, no redirect) and the browser dropped the Secure login cookie.
+  src/proxy.ts: CF-Visitor {"scheme":"http"} + GET/HEAD → 308 to https (nginx always sends X-Forwarded-Proto https,
+  so CF-Visitor is the only truth); https via Cloudflare gets HSTS 1 year. tests/https-redirect.test.ts. 328 passed.
+  Also worth turning on in Cloudflare: SSL/TLS → Edge Certificates → «Always Use HTTPS».
