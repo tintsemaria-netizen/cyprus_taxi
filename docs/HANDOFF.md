@@ -2307,3 +2307,5 @@ key** to the beta hostname in the Google console. Physical-device GPS + load tes
   Test added (driver-owner). 326 passed. Screens 270–272 in /tmp/shots.
 - DEPLOYED 2026-11-21 00:18 (main c784022): /fleet, /admin/fleets live; anonymous /api/v1/fleet/* → 401; ready OK.
   Not yet checked on live with a real login (no fleet created on production yet).
+- 2026-11-21 02:51 DEPLOYED (main 86b771d): earnings screen (shared EarningsReport — driver, admin, fleet owner)
+  always shows 💶 Наличные / 💳 Картой tiles under the top tiles, 0 € included. 326 tests passed.
