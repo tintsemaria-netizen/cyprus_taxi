@@ -43,6 +43,7 @@ const auth: Catalog<typeof en> = {
     help: "Aide et confidentialité",
   },
   login: {
+    driverLink: "Vous êtes chauffeur ? Connexion chauffeurs",
     subtitle: "Utilisez votre e-mail et votre mot de passe.",
     staffSignIn: "Connexion du personnel",
   },
@@ -105,6 +106,8 @@ const auth: Catalog<typeof en> = {
     saveSchool: "Enregistrer École",
   },
   staff: {
+    driverLink: "Vous êtes chauffeur ? Connexion chauffeurs",
+    staffSub2: "Administrateur, répartiteur, propriétaire de flotte.",
     title: "Connexion",
     drivers: "Chauffeurs",
     driverSignIn: "Connexion chauffeur",

@@ -1,0 +1,32 @@
+{
+  "id": "/staff",
+  "name": "IL-Y Admin",
+  "short_name": "IL-Y Admin",
+  "description": "IL-Y for staff: admin, dispatch, fleet owners.",
+  "start_url": "/staff",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#10191C",
+  "theme_color": "#10191C",
+  "icons": [
+    {
+      "src": "/icons/admin-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/admin-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/admin-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Brand';
 import { api, ApiRequestError } from '@/lib/api-client';
@@ -19,6 +19,16 @@ export default function StaffLogin() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { t, tError } = useT();
+
+  // Already signed in (e.g. the home-screen icon was added on this page): go straight on (2026-11-21).
+  useEffect(() => {
+    api<{ role: string; mfa?: { setupRequired?: boolean } }>('/auth/me').then((m) => {
+      if (m.mfa?.setupRequired) router.replace('/staff/security');
+      else if (m.role === 'DRIVER') router.replace('/driver');
+      else if (m.role === 'FLEET_OWNER') router.replace('/fleet');
+      else router.replace('/dispatch');
+    }).catch(() => {});
+  }, [router]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,17 +54,9 @@ export default function StaffLogin() {
     <div className="flex min-h-[100dvh] items-center justify-center px-4">
       <form onSubmit={submit} className="card w-full max-w-sm p-6">
         <div className="flex items-center justify-between gap-2"><a href="/" className="inline-block"><Logo /></a><LanguageSwitcher /></div>
-        <h1 className="mt-6 text-xl font-bold">{t('auth.staff.title')}</h1>
-        {/* Driver entry points */}
-        <div className="mt-4 rounded-[12px] border border-edge bg-elevated p-3">
-          <div className="text-sm font-medium">{t('auth.staff.drivers')}</div>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <a href="/driver/login" className="btn-ghost !min-h-0 !py-2 text-sm">{t('auth.staff.driverSignIn')}</a>
-            <a href="/driver/register" className="btn-primary !min-h-0 !py-2 text-sm">{t('auth.staff.registerDriver')}</a>
-          </div>
-        </div>
-        <h2 className="mt-5 text-sm font-semibold text-muted">{t('auth.staff.staffAdmin')}</h2>
-        <p className="mt-1 text-xs text-muted">{t('auth.staff.staffSubtitle')}</p>
+        <h1 className="mt-6 text-xl font-bold">{t('auth.login.staffSignIn')}</h1>
+        {/* Staff only (2026-11-21, operator: «путаница»): drivers have their own entrance at /driver/login. */}
+        <p className="mt-1 text-sm text-muted">{t('auth.staff.staffSub2')}</p>
         {error && <p className="mt-4 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
         <div className="mt-4 space-y-3">
           <div>
@@ -74,7 +76,7 @@ export default function StaffLogin() {
           )}
         </div>
         <button className="btn-primary mt-5 w-full" disabled={busy || !login || !password || (needCode && totp.length !== 6)}>{busy ? t('auth.signingIn') : t('auth.signIn')}</button>
-        <a href="/" className="mt-4 block text-center text-sm text-muted hover:text-ink">{t('auth.backToBooking')}</a>
+        <a href="/driver/login" className="mt-4 block text-center text-sm text-muted hover:text-ink" data-testid="to-driver-login">{t('auth.staff.driverLink')} ›</a>
       </form>
     </div>
   );

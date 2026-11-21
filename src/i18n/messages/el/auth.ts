@@ -43,6 +43,7 @@ const auth: Catalog<typeof en> = {
     help: 'Βοήθεια και απόρρητο',
   },
   login: {
+    driverLink: "Είστε οδηγός; Σύνδεση οδηγών",
     subtitle: 'Συνδεθείτε με το email και τον κωδικό σας.',
     staffSignIn: 'Σύνδεση προσωπικού',
   },
@@ -92,6 +93,8 @@ const auth: Catalog<typeof en> = {
     saveSchool: "Αποθήκευση σχολείου",
   },
   staff: {
+    driverLink: "Είστε οδηγός; Σύνδεση οδηγών",
+    staffSub2: "Διαχειριστής, διεκπεραιωτής, ιδιοκτήτης στόλου.",
     title: 'Σύνδεση',
     drivers: 'Οδηγοί',
     driverSignIn: 'Σύνδεση οδηγού',

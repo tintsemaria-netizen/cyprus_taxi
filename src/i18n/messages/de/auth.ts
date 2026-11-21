@@ -43,6 +43,7 @@ const auth: Catalog<typeof en> = {
     help: "Hilfe & Datenschutz",
   },
   login: {
+    driverLink: "Sie sind Fahrer? Anmeldung für Fahrer",
     subtitle: "Mit E-Mail und Passwort anmelden.",
     staffSignIn: "Anmeldung für Mitarbeiter",
   },
@@ -105,6 +106,8 @@ const auth: Catalog<typeof en> = {
     saveSchool: "Schule speichern",
   },
   staff: {
+    driverLink: "Sie sind Fahrer? Anmeldung für Fahrer",
+    staffSub2: "Admin, Disponent, Flotteninhaber.",
     title: "Anmeldung",
     drivers: "Fahrer",
     driverSignIn: "Anmeldung für Fahrer",

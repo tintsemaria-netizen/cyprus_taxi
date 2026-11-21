@@ -58,12 +58,11 @@ export default function Login() {
 
           <div className="mt-5 border-t border-edge pt-4">
             <a href="/register" className="btn-ghost min-h-[44px] flex w-full items-center justify-center">{t('auth.createAccount')}</a>
-            <a href="/driver/register" className="mt-2 btn-ghost min-h-[44px] flex w-full items-center justify-center">{t('auth.becomeDriver')}</a>
           </div>
         </form>
         <div className="mt-3 flex justify-between px-1 text-xs text-muted">
           <a href="/" className="hover:text-ink">{t('auth.backToBooking')}</a>
-          <a href="/staff/login" className="hover:text-ink">{t('auth.login.staffSignIn')}</a>
+          <a href="/driver/login" className="hover:text-ink" data-testid="to-driver-login">{t('auth.login.driverLink')} ›</a>
         </div>
       </div>
     </div>

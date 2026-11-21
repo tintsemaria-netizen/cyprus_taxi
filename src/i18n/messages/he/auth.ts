@@ -43,6 +43,7 @@ const auth: Catalog<typeof en> = {
     help: "עזרה ופרטיות",
   },
   login: {
+    driverLink: "אתם נהגים? כניסה לנהגים",
     subtitle: "התחברו עם אימייל וסיסמה.",
     staffSignIn: "כניסת צוות",
   },
@@ -105,6 +106,8 @@ const auth: Catalog<typeof en> = {
     saveSchool: "שמירת בית הספר",
   },
   staff: {
+    driverLink: "אתם נהגים? כניסה לנהגים",
+    staffSub2: "מנהל, סדרן, בעל צי רכבים.",
     title: "כניסה",
     drivers: "נהגים",
     driverSignIn: "כניסת נהגים",
