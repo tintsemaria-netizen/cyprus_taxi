@@ -183,7 +183,8 @@ async function passengerShareView(booking: { id: string; shareOptIn: boolean }) 
     const timing: Timing = {
       arriveAt: at(isHost ? arr?.host : arr?.guest)?.toISOString() ?? null,
       pickupAt: pickup?.toISOString() ?? null,
-      waitMin: pickup && booked ? Math.max(0, Math.round((pickup.getTime() - booked.getTime()) / 60_000)) : 0,
+      // Signed (2026-11-21): negative = the car comes EARLIER than the time they booked.
+      waitMin: pickup && booked ? Math.round((pickup.getTime() - booked.getTime()) / 60_000) : 0,
       approx: !g.roadRouted,
     };
     if (g.status === 'PROPOSED' && !myAnswer && g.expiresAt > new Date()) {

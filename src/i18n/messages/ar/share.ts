@@ -3,6 +3,14 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   booking: {
+    shift: 'متى يمكنك الانطلاق من أجل رفيق رحلة؟',
+    earlier: 'أبكر',
+    later: 'أبطأ',
+    earlierBy: 'حتى {n} دقيقة أبكر',
+    laterBy: 'حتى {n} دقيقة لاحقاً',
+    exact: 'في الوقت المحدد فقط',
+    window: 'الانطلاق بين {from} و{to}',
+    windowMin: '{e} دقيقة أبكر – {l} دقيقة لاحقاً',
     title: "راكب مشارك −{pct}%",
     hint: "إذا انضم راكب يسير في اتجاهك، تدفع أقل بنسبة {pct}%. وإلا فتسافر بالسعر العادي.",
     routes: "مشاركة الرحلة متاحة فقط بين مطاري LCA وPFO ولارنكا ونيقوسيا وبافوس وآيا نابا وليماسول.",
@@ -21,6 +29,7 @@ const share: Catalog<typeof en> = {
     luggage: "حقائب: {n}",
   },
   proposal: {
+    departEarly: 'الانطلاق في {time} — أبكر بـ {n} دقيقة',
     title: "راكب مشارك في طريقك",
     titlePrebook: "راكب مشارك لحجزك المسبق",
     longer: "ستطول الرحلة نحو {n} د",

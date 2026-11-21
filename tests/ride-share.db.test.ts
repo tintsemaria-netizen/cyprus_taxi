@@ -245,10 +245,10 @@ describe('live ride-share', () => {
 });
 
 describe('pre-booked ride-share', () => {
-  async function scheduled(from: typeof lca, to: typeof lca, minutesAhead: number, o: Parameters<typeof booking>[2] & { wait?: number } = {}) {
+  async function scheduled(from: typeof lca, to: typeof lca, minutesAhead: number, o: Parameters<typeof booking>[2] & { wait?: number; early?: number } = {}) {
     const b = await booking(from, to, o);
     await prisma.dispatchJob.deleteMany({ where: { bookingId: b.id } });
-    return prisma.booking.update({ where: { id: b.id }, data: { status: 'REQUESTED', scheduledAt: new Date(Date.now() + minutesAhead * MIN), shareWaitMin: o.wait ?? 15 } });
+    return prisma.booking.update({ where: { id: b.id }, data: { status: 'REQUESTED', scheduledAt: new Date(Date.now() + minutesAhead * MIN), shareWaitMin: o.wait ?? 15, shareEarlyMin: o.early ?? 0 } });
   }
 
   it('pairs two pre-bookings, both passengers agree, one order for a co-rider driver, guest joins on conversion', async () => {
@@ -346,6 +346,15 @@ describe('pre-booked ride-share', () => {
     await scheduled(lca, marina, 180, { wait: 0 });
     await scheduled(lcaNear, limCentre, 200, { wait: 0 });
     expect(await matchPrebookings()).toBe(0);
+  });
+
+  it('2026-11-21: the later passenger agreed to leave earlier → the same two rides are paired, at the earlier time', async () => {
+    const a = await scheduled(lca, marina, 180, { wait: 0 });
+    const b = await scheduled(lcaNear, limCentre, 200, { wait: 0, early: 30 });
+    expect(await matchPrebookings()).toBe(1);
+    const g = (await prisma.shareGroup.findFirst({ where: { hostBookingId: a.id } }))!;
+    expect(g.guestBookingId).toBe(b.id);
+    expect(Math.abs(g.startAt!.getTime() - a.scheduledAt!.getTime())).toBeLessThan(MIN); // host on time
   });
 
   async function matchedPair() {

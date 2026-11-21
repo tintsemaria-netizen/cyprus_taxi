@@ -713,7 +713,7 @@ export default function BookingApp() {
         passengerName: name.trim() || passenger?.name || 'Passenger',
         phone: passenger?.phone || phone.trim(),
         note: effNote || undefined,
-        ...(shareOn ? { shareOptIn: true, shareMaxExtraMin: shareOpts.maxExtra, childCount: shareOpts.children, ...(when === 'SCHEDULE' ? { shareWaitMin: shareOpts.wait } : {}) } : {}),
+        ...(shareOn ? { shareOptIn: true, shareMaxExtraMin: shareOpts.maxExtra, childCount: shareOpts.children, ...(when === 'SCHEDULE' ? { shareWaitMin: shareOpts.wait, shareEarlyMin: shareOpts.early ?? 0 } : {}) } : {}),
       };
       const res = await api<{ tracking: { token: string } }>('/bookings', {
         method: 'POST',
@@ -1149,7 +1149,7 @@ export default function BookingApp() {
                           the list of places until the route is one where ride-share works. */}
                       {when === 'SCHEDULE' && cfg?.share && (
                         <div className="-mt-4 mb-3">
-                          <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook disabled={!shareAllowed} />
+                          <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook disabled={!shareAllowed} baseHm={scheduledAt.slice(11, 16)} />
                         </div>
                       )}
                       {when === 'SCHEDULE' && (

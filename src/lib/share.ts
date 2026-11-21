@@ -137,18 +137,25 @@ export function shareFits(
 }
 
 /**
- * Pre-booked pair timing: the car leaves the host's (earlier) pickup at `startAt`, never before the
- * co-rider can be there; each passenger waits at most the time they said they can wait.
- * Returns null when the waits do not fit.
+ * Pre-booked pair timing: the car leaves the host's (earlier) pickup at `startAt` and reaches the
+ * co-rider `legHpGpMin` later. Each passenger has a window around the time they booked: up to
+ * `…WaitMin` later and (2026-11-21) up to `…EarlyMin` earlier. The start is the one closest to
+ * «nobody moves earlier» that fits both windows. `hostWait` / `guestWait` are signed minutes
+ * (negative = earlier than booked). Returns null when the windows do not overlap.
  */
 export function prebookTiming(
   hostAt: Date, guestAt: Date, legHpGpMin: number, hostWaitMin: number, guestWaitMin: number,
+  hostEarlyMin = 0, guestEarlyMin = 0,
 ): { startAt: Date; hostWait: number; guestWait: number; guestPickupAt: Date } | null {
   const MIN = 60_000;
-  const start = Math.max(hostAt.getTime(), guestAt.getTime() - legHpGpMin * MIN);
+  const leg = legHpGpMin * MIN;
+  const lo = Math.max(hostAt.getTime() - hostEarlyMin * MIN, guestAt.getTime() - guestEarlyMin * MIN - leg);
+  const hi = Math.min(hostAt.getTime() + hostWaitMin * MIN, guestAt.getTime() + guestWaitMin * MIN - leg);
+  if (lo > hi) return null;
+  const want = Math.max(hostAt.getTime(), guestAt.getTime() - leg); // nobody earlier, if possible
+  const start = Math.min(Math.max(want, lo), hi);
   const hostWait = Math.round((start - hostAt.getTime()) / MIN);
-  const guestPickup = start + legHpGpMin * MIN;
+  const guestPickup = start + leg;
   const guestWait = Math.round((guestPickup - guestAt.getTime()) / MIN);
-  if (hostWait > hostWaitMin || guestWait > guestWaitMin || guestWait < 0) return null;
   return { startAt: new Date(start), hostWait, guestWait, guestPickupAt: new Date(guestPickup) };
 }

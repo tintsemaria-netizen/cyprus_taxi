@@ -21,7 +21,7 @@ function TimingLines({ s, isPrebook }: { s: ShareTiming; isPrebook: boolean }) {
     <>
       {isPrebook && s.pickupAt && (
         <p className="mt-1 text-sm font-medium">
-          {s.waitMin > 0 ? t('share.proposal.departAt', { time: when(s.pickupAt), n: s.waitMin }) : t('share.proposal.pickupAt', { time: when(s.pickupAt) })}
+          {s.waitMin > 0 ? t('share.proposal.departAt', { time: when(s.pickupAt), n: s.waitMin }) : s.waitMin < 0 ? t('share.proposal.departEarly', { time: when(s.pickupAt), n: -s.waitMin }) : t('share.proposal.pickupAt', { time: when(s.pickupAt) })}
         </p>
       )}
       {s.arriveAt && (

@@ -1,6 +1,14 @@
 // Ride-share «Попутчик» (Task 022): airport/intercity, at most two bookings in one car.
 const share = {
   booking: {
+    shift: 'When could you leave for a co-rider?',
+    earlier: 'Earlier',
+    later: 'Later',
+    earlierBy: 'up to {n} min earlier',
+    laterBy: 'up to {n} min later',
+    exact: 'Only at the exact time',
+    window: 'Car leaves between {from} and {to}',
+    windowMin: '{e} min earlier – {l} min later',
     title: 'Co-rider −{pct}%',
     hint: 'If a co-rider going your way joins, you pay {pct}% less. If nobody joins, you ride at the normal price.',
     routes: "Ride-share works only between LCA and PFO airports, Larnaca, Nicosia, Paphos, Ayia Napa and Limassol.",
@@ -19,6 +27,7 @@ const share = {
     luggage: '{n} suitcase(s)',
   },
   proposal: {
+    departEarly: 'Car leaves at {time} — {n} min earlier',
     title: 'A co-rider is going your way',
     titlePrebook: 'A co-rider for your pre-booking',
     longer: 'The ride takes ~{n} min longer',

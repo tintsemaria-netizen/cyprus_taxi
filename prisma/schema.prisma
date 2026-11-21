@@ -519,6 +519,7 @@ model Booking {
   shareFullCents        Int? // the price before the shared discount (restored if the co-rider drops out)
   shareFullPriceType    String?
   shareWaitMin          Int? // pre-booking: how long this passenger can wait for the co-rider (their choice)
+  shareEarlyMin         Int? // pre-booking: how much EARLIER this passenger can leave for a co-rider (2026-11-21)
   shareOrigScheduledAt  DateTime? // the booked pickup time, if a pre-booked pair moved it (restored on break-up)
   // Airport meeting point for pairs (on 2026-11-19 18:30–19:10, then postponed until airports are set up):
   // the passenger's own pickup point, restored on break-up. Unused while the feature is off.

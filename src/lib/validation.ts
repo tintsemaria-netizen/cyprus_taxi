@@ -51,6 +51,7 @@ const bookingFields = z.object({
   shareMaxExtraMin: z.number().int().min(5).max(60).optional(),
   // Pre-booking: how long the passenger can wait for the co-rider (e.g. sit at the airport a bit).
   shareWaitMin: z.number().int().min(0).max(180).optional(),
+  shareEarlyMin: z.number().int().min(0).max(180).optional(),
   childCount: z.number().int().min(0).max(5).optional(),
 });
 const atLeastOneAdult = (v: { childCount?: number; passengerCount: number }) => (v.childCount ?? 0) < v.passengerCount;

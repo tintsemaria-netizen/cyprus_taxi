@@ -33,7 +33,7 @@ type ShareBooking = {
   id: string; status: string; vClass: 'COMFORT' | 'XL'; shareOptIn: boolean; shareMaxExtraMin: number | null;
   fareCents: number | null; priceType: string | null; passengerCount: number; childCount: number; luggageCount: number;
   pickupLat: number; pickupLng: number; dropoffLat: number; dropoffLng: number; stopLat: number | null;
-  scheduledAt: Date | null; passengerId: string | null; shareWaitMin?: number | null;
+  scheduledAt: Date | null; passengerId: string | null; shareWaitMin?: number | null; shareEarlyMin?: number | null;
 };
 
 const pt = (lat: number, lng: number): LatLng => ({ lat, lng });
@@ -45,6 +45,7 @@ export function shareCapable(b: ShareBooking): boolean {
     && isShareRoute(pt(b.pickupLat, b.pickupLng), pt(b.dropoffLat, b.dropoffLng));
 }
 const waitMin = (b: { shareWaitMin?: number | null }) => b.shareWaitMin ?? S().defaultWaitMin;
+const earlyMin = (b: { shareEarlyMin?: number | null }) => b.shareEarlyMin ?? 0; // how much earlier they can leave
 
 // ---- Road time (Google Routes, traffic-aware) ----
 // Every plan is first run with the straight-line estimate to learn which legs it needs; those legs
@@ -402,11 +403,11 @@ export async function matchPrebookings(now: Date = new Date()): Promise<number> 
       if (h.passengerId && h.passengerId === g.passengerId) continue; // the same person's two rides
       // Sorted by time: once the gap is beyond what anyone could wait (plus driving to the
       // co-rider), later rides cannot fit either.
-      if (g.scheduledAt!.getTime() - h.scheduledAt!.getTime() > (waitMin(h) + 180) * MIN) break;
+      if (g.scheduledAt!.getTime() - h.scheduledAt!.getTime() > (waitMin(h) + earlyMin(g) + 180) * MIN) break;
       const seats = settings.classes.find((c) => c.key === h.vClass)?.maxPassengers ?? 4;
       if (!shareFits(h, g, seats, S().luggage[h.vClass])) continue;
       const pts = { Hp: pt(h.pickupLat, h.pickupLng), Hd: pt(h.dropoffLat, h.dropoffLng), Gp: pt(g.pickupLat, g.pickupLng), Gd: pt(g.dropoffLat, g.dropoffLng) };
-      const timing = prebookTiming(h.scheduledAt!, g.scheduledAt!, approxLegMin(pts.Hp, pts.Gp), waitMin(h) + 5, waitMin(g) + 5);
+      const timing = prebookTiming(h.scheduledAt!, g.scheduledAt!, approxLegMin(pts.Hp, pts.Gp), waitMin(h) + 5, waitMin(g) + 5, earlyMin(h) + 5, earlyMin(g) + 5);
       const plan = timing && bestPrebookPlan(pts, approxLegMin, { hostMaxExtra: maxExtra(h) + 5, guestMaxExtra: maxExtra(g) + 5 });
       if (timing && plan) pre.push({ g, plan, timing });
     }
@@ -416,7 +417,7 @@ export async function matchPrebookings(now: Date = new Date()): Promise<number> 
       const pts = { Hp: pt(h.pickupLat, h.pickupLng), Hd: pt(h.dropoffLat, h.dropoffLng), Gp: pt(c.g.pickupLat, c.g.pickupLng), Gd: pt(c.g.dropoffLat, c.g.dropoffLng) };
       // Road time with the traffic expected at the ride's own time.
       const { result, routed } = await planWithRoads((leg) => {
-        const timing = prebookTiming(h.scheduledAt!, c.g.scheduledAt!, leg(pts.Hp, pts.Gp), waitMin(h), waitMin(c.g));
+        const timing = prebookTiming(h.scheduledAt!, c.g.scheduledAt!, leg(pts.Hp, pts.Gp), waitMin(h), waitMin(c.g), earlyMin(h), earlyMin(c.g));
         const plan = timing && bestPrebookPlan(pts, leg, { hostMaxExtra: maxExtra(h), guestMaxExtra: maxExtra(c.g) });
         return timing && plan ? { timing, plan } : null;
       }, h.scheduledAt);

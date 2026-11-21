@@ -85,7 +85,7 @@ export async function createBooking(
       // Only when present, so hashes of requests without a flight number stay unchanged.
       ...(input.flightNumber ? { f: input.flightNumber } : {}),
       ...(input.stop ? { st: input.stop } : {}),
-      ...(input.shareOptIn ? { sh: [input.shareMaxExtraMin ?? null, input.childCount ?? 0, input.shareWaitMin ?? null] } : {}),
+      ...(input.shareOptIn ? { sh: [input.shareMaxExtraMin ?? null, input.childCount ?? 0, input.shareWaitMin ?? null, input.shareEarlyMin ?? 0] } : {}),
       ...(!input.shareOptIn && input.childCount ? { ch: input.childCount } : {}),
     }),
   );
@@ -162,7 +162,7 @@ export async function createBooking(
           passengerName: input.passengerName, phone: input.phone, note: input.note || null, flightNumber: input.flightNumber ?? null,
           vClass: input.vClass, passengerCount: input.passengerCount, luggageCount: input.luggageCount ?? 0, scheduledAt, status: initialStatus,
           childCount: input.childCount ?? 0,
-          ...(shareOptIn ? { shareOptIn: true, shareMaxExtraMin: input.shareMaxExtraMin ?? config.share.defaultMaxExtraMin, ...(scheduledAt ? { shareWaitMin: input.shareWaitMin ?? config.share.defaultWaitMin } : {}) } : {}),
+          ...(shareOptIn ? { shareOptIn: true, shareMaxExtraMin: input.shareMaxExtraMin ?? config.share.defaultMaxExtraMin, ...(scheduledAt ? { shareWaitMin: input.shareWaitMin ?? config.share.defaultWaitMin, shareEarlyMin: input.shareEarlyMin ?? 0 } : {}) } : {}),
           ...(passengerId ? { passengerId } : {}),
           ...(fare ? { quoteId: input.quoteId, fareCents: fare.fareCents, priceType: fare.priceType, fareBreakdown: fare.fareBreakdown } : {}),
         },

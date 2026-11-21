@@ -3,6 +3,14 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   booking: {
+    shift: 'מתי תוכלו לצאת בשביל שותף לנסיעה?',
+    earlier: 'מוקדם יותר',
+    later: 'מאוחר יותר',
+    earlierBy: 'עד {n} דק׳ מוקדם יותר',
+    laterBy: 'עד {n} דק׳ מאוחר יותר',
+    exact: 'רק בשעה המדויקת',
+    window: 'יציאה בין {from} ל-{to}',
+    windowMin: '{e} דק׳ מוקדם – {l} דק׳ מאוחר',
     title: "נוסע משותף −{pct}%",
     hint: "אם יצטרף נוסע שנוסע בכיוון שלכם, תשלמו {pct}% פחות. אם לא — תיסעו במחיר הרגיל.",
     routes: "נסיעה משותפת זמינה רק בין שדות התעופה LCA ו-PFO, לרנקה, ניקוסיה, פאפוס, איה נאפה ולימסול.",
@@ -21,6 +29,7 @@ const share: Catalog<typeof en> = {
     luggage: "מזוודות: {n}",
   },
   proposal: {
+    departEarly: 'יציאה ב-{time} — {n} דק׳ מוקדם יותר',
     title: "נמצא נוסע משותף בדרך שלכם",
     titlePrebook: "נמצא נוסע משותף להזמנה שלכם",
     longer: "הנסיעה תתארך בכ־{n} דק׳",
