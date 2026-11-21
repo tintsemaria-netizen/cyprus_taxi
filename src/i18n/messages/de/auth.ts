@@ -42,6 +42,11 @@ const auth: Catalog<typeof en> = {
     profile: "Profileinstellungen",
     help: "Hilfe & Datenschutz",
   },
+  oauth: {
+    google: "Weiter mit Google",
+    or: "oder",
+    failed: "Anmeldung mit Google fehlgeschlagen. Bitte erneut versuchen oder per E-Mail anmelden.",
+  },
   login: {
     driverLink: "Sie sind Fahrer? Anmeldung für Fahrer",
     subtitle: "Mit E-Mail und Passwort anmelden.",

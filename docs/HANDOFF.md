@@ -2426,3 +2426,15 @@ driver logout → /driver/login. Texts in 8 languages. 331 tests passed. Screens
   /staff/login and /driver/login skip ahead when already signed in (iOS saves the current page as the icon's start).
   Icons: public/icons/{driver,admin}-{192,512,maskable-512,apple-touch-icon}.png. 331 tests passed.
 - 2026-11-21 21:42 DEPLOYED (merge 8d0e889 onto main with the parallel ride-share / share-board work; only HANDOFF overlapped, auto-merged; 341 tests passed on the merged code): separate entrances + IL-Y Admin / Driver icons. Live: /staff/login has the staff manifest, icons 200, ready OK.
+
+## 2026-11-22 — «Продолжить с Google» for passengers (branch `google-signin`, NOT deployed)
+Owner's plan: Google → Apple → SMS (as an extra identity check), one by one. Done: Passenger.googleSub / appleSub
+(@unique, migration 20261122000000_passenger_oauth) — the provider's permanent id, for blocking «недружелюбный клиент».
+src/server/oauth-google.ts: OIDC code flow + PKCE + state + nonce; ID token from Google's token endpoint (server-to-server,
+client secret) checked for iss / aud / exp / nonce; passenger by googleSub, else linked to the account with that
+GOOGLE-VERIFIED e-mail, else created. Routes /api/v1/passenger/oauth/google (start, sets a 10-min httpOnly cookie),
+/callback (any problem → /login?oauth=failed), /providers. Button components/auth/ContinueWith.tsx on /login and
+/register, shown only when GOOGLE_OAUTH_CLIENT_ID + _SECRET are set (docker-compose passes them; .env.example lists them).
+Redirect URIs to register: https://il-y.taxi/… and https://cyprustaxi.ackedberryes.store/api/v1/passenger/oauth/google/callback.
+Local end-to-end with a stand-in Google (GOOGLE_OAUTH_TOKEN_URL_DEV, ignored in production): signed in as the test
+person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345 tests passed. NEXT: Apple, then SMS.

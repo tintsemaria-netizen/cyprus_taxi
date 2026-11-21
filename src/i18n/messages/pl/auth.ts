@@ -42,6 +42,11 @@ const auth: Catalog<typeof en> = {
     profile: "Ustawienia profilu",
     help: "Pomoc i prywatność",
   },
+  oauth: {
+    google: "Kontynuuj z Google",
+    or: "lub",
+    failed: "Nie udało się zalogować przez Google. Spróbuj ponownie lub użyj e-maila.",
+  },
   login: {
     driverLink: "Jesteś kierowcą? Logowanie dla kierowców",
     subtitle: "Użyj e-maila i hasła.",

@@ -7,6 +7,7 @@ import { Logo } from '@/components/Brand';
 import { BackArrow } from '@/components/BackArrow';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import { ContinueWith } from '@/components/auth/ContinueWith';
 import { PasswordInput } from '@/components/PasswordInput';
 
 export const dynamic = 'force-dynamic';
@@ -63,6 +64,7 @@ export default function Register() {
             <div className="flex items-center justify-between gap-2"><div className="-ms-2 flex items-center gap-1"><BackArrow /><a href="/" className="inline-block"><Logo /></a></div></div>
             <h1 className="mt-6 text-xl font-bold">{t('auth.register.title')}</h1>
             <p className="mt-1 text-sm text-muted">{t('auth.register.subtitle')}</p>
+            <ContinueWith next="/" />
             {error && <p className="mt-4 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
             <div className="mt-4 space-y-3">
               <div><label className="label" htmlFor="register-f1">{t('auth.name')}</label><input id="register-f1" className="field mt-1" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></div>

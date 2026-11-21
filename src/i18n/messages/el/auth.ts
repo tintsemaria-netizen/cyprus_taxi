@@ -42,6 +42,11 @@ const auth: Catalog<typeof en> = {
     profile: 'Ρυθμίσεις προφίλ',
     help: 'Βοήθεια και απόρρητο',
   },
+  oauth: {
+    google: "Συνέχεια με Google",
+    or: "ή",
+    failed: "Η σύνδεση με Google δεν ολοκληρώθηκε. Δοκιμάστε ξανά ή συνδεθείτε με e-mail.",
+  },
   login: {
     driverLink: "Είστε οδηγός; Σύνδεση οδηγών",
     subtitle: 'Συνδεθείτε με το email και τον κωδικό σας.',
