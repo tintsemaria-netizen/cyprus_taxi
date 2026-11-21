@@ -1,5 +1,21 @@
 # Session handoff
 
+## 2026-11-22 — ride-share option wording (deployed)
+
+**Change:**
+- «−30%» is now a lime badge.
+- The note «−30% включится, только когда найдётся попутчик» sits in a highlighted box.
+- The question is now «Насколько ваше время гибкое?».
+- All 8 languages.
+
+**Checked** locally: a live co-rider proposal to a passenger already in the car, and to the driver. Both in-app cards work.
+
+**Found, not fixed — operator to decide:** pushes other than offers and co-rider proposals reach phones in ENGLISH. `public/sw.js` translates only `offer` and `share-p-/share-d-`. Examples:
+- «Your driver has arrived»
+- «Co-rider joins / Your price is now €…»
+- «Shared ride confirmed»
+- «Co-rider left the trip»
+
 ## 2026-11-22 — refresh when a resumed app returns, applied everywhere (deployed)
 
 New `src/components/useRefreshOnReturn.ts`. It fires on `visibilitychange` after N seconds hidden, and on `pageshow` from the back/forward cache.
