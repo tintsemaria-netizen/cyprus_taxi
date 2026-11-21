@@ -56,7 +56,7 @@ const LEG_TTL_MS = 10 * MIN;
 const legCache = new Map<string, { min: number; at: number }>();
 const ck = (p: LatLng) => `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`;
 
-async function planWithRoads<T>(run: (leg: LegFn) => T, departure: Date | null): Promise<{ result: T; routed: boolean }> {
+export async function planWithRoads<T>(run: (leg: LegFn) => T, departure: Date | null): Promise<{ result: T; routed: boolean }> {
   if (!googleConfigured()) return { result: run(approxLegMin), routed: false };
   const pairs = new Map<string, [LatLng, LatLng]>();
   run((a, b) => { if (ck(a) !== ck(b)) pairs.set(`${ck(a)}>${ck(b)}`, [a, b]); return approxLegMin(a, b); });
@@ -198,7 +198,7 @@ function peopleText(b: { passengerCount: number; childCount: number; luggageCoun
 
 function groupData(
   mode: 'LIVE' | 'PREBOOK', h: ShareBooking & { fareCents: number | null }, g: ShareBooking, plan: SharePlan, expiresAt: Date,
-  extra: { driverId?: string; guestAnswer?: string; routed?: boolean; startAt?: Date },
+  extra: { driverId?: string; guestAnswer?: string; hostAnswer?: string; routed?: boolean; startAt?: Date },
 ): Prisma.ShareGroupUncheckedCreateInput {
   const pct = S().discountPct;
   return {
@@ -206,7 +206,7 @@ function groupData(
     extraMinHost: plan.extraHost, extraMinGuest: plan.extraGuest, extraMinDriver: plan.extraDriver,
     hostFullCents: h.fareCents!, guestFullCents: g.fareCents!, hostCents: sharedCents(h.fareCents!, pct), guestCents: sharedCents(g.fareCents!, pct),
     plan: plan.order.map((k) => STOP_OF[k]), arrivals: plan.arrive, roadRouted: !!extra.routed, startAt: extra.startAt ?? null,
-    guestAnswer: extra.guestAnswer ?? null, expiresAt,
+    guestAnswer: extra.guestAnswer ?? null, hostAnswer: extra.hostAnswer ?? null, expiresAt,
     activeHostBookingId: h.id, activeGuestBookingId: g.id,
   };
 }
@@ -430,26 +430,31 @@ export async function matchPrebookings(now: Date = new Date()): Promise<number> 
   return made;
 }
 
-async function proposePrebook(hostId: string, guestId: string, plan: SharePlan, startAt: Date, routed: boolean, now: Date): Promise<boolean> {
+/**
+ * `fromBoard` (share board, 2026-11-21): a passenger chose this co-rider himself — his own answer is
+ * already «yes» and only the other passenger is notified. Returns the proposal id, or null.
+ */
+export async function proposePrebook(hostId: string, guestId: string, plan: SharePlan, startAt: Date, routed: boolean, now: Date, fromBoard?: { byBookingId: string }): Promise<string | null> {
   // Both answer within prebookAnswerMin, and at the latest prebookAnswerBeforePickupMin before the car leaves.
   const expiresAt = new Date(Math.min(now.getTime() + S().prebookAnswerMin * MIN, startAt.getTime() - S().prebookAnswerBeforePickupMin * MIN));
-  if (expiresAt.getTime() - now.getTime() < 5 * MIN) return false;
+  if (expiresAt.getTime() - now.getTime() < 5 * MIN) return null;
   try {
     return await prisma.$transaction(async (tx) => {
       await lockBookings(tx, [hostId, guestId]);
       const [h, g] = await Promise.all([tx.booking.findUnique({ where: { id: hostId } }), tx.booking.findUnique({ where: { id: guestId } })]);
-      if (!h || !g || h.status !== 'REQUESTED' || g.status !== 'REQUESTED') return false;
-      if ((await activeGroupOf(tx, hostId)) || (await activeGroupOf(tx, guestId))) return false;
-      if (await tx.preAssignment.findFirst({ where: { activeBookingId: { in: [hostId, guestId] } } })) return false;
-      const group = await tx.shareGroup.create({ data: groupData('PREBOOK', h, g, plan, expiresAt, { routed, startAt }) });
+      if (!h || !g || h.status !== 'REQUESTED' || g.status !== 'REQUESTED') return null;
+      if ((await activeGroupOf(tx, hostId)) || (await activeGroupOf(tx, guestId))) return null;
+      if (await tx.preAssignment.findFirst({ where: { activeBookingId: { in: [hostId, guestId] } } })) return null;
+      const by = fromBoard?.byBookingId;
+      const group = await tx.shareGroup.create({ data: groupData('PREBOOK', h, g, plan, expiresAt, { routed, startAt, ...(by === hostId ? { hostAnswer: 'YES' } : by === guestId ? { guestAnswer: 'YES' } : {}) }) });
       await recordEvent(tx, { eventType: 'share.proposed', aggregateType: 'share', aggregateId: group.id, aggregateVersion: 1, correlationId: hostId, payload: { mode: 'PREBOOK', extraMinHost: plan.extraHost, extraMinGuest: plan.extraGuest } });
       // Opens that pre-booking (its page shows the proposal and the ride's details).
-      await enqueuePassenger(tx, hostId, 'A co-rider for your ride', proposalBody(g, plan.extraHost, h.fareCents! - group.hostCents), { tag: `share-p-${group.id}`, url: `/prebookings?open=${hostId}` });
-      await enqueuePassenger(tx, guestId, 'A co-rider for your ride', proposalBody(h, plan.extraGuest, g.fareCents! - group.guestCents), { tag: `share-p-${group.id}`, url: `/prebookings?open=${guestId}` });
-      return true;
+      if (by !== hostId) await enqueuePassenger(tx, hostId, 'A co-rider for your ride', proposalBody(g, plan.extraHost, h.fareCents! - group.hostCents), { tag: `share-p-${group.id}`, url: `/prebookings?open=${hostId}` });
+      if (by !== guestId) await enqueuePassenger(tx, guestId, 'A co-rider for your ride', proposalBody(h, plan.extraGuest, g.fareCents! - group.guestCents), { tag: `share-p-${group.id}`, url: `/prebookings?open=${guestId}` });
+      return group.id;
     });
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return false;
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return null;
     throw e;
   }
 }

@@ -79,6 +79,9 @@ export const config = {
     prebookAnswerBeforePickupMin: num('SHARE_PREBOOK_ANSWER_BEFORE_PICKUP_MIN', 60), // …and at the latest this long before pickup
     noShowFeeCents: num('SHARE_NO_SHOW_FEE_CENTS', 1000), // flat no-show fee on a pre-booked pair (€10; never above their price)
     defaultMaxExtraMin: num('SHARE_DEFAULT_MAX_EXTRA_MIN', 15),
+    // Share board (2026-11-21): unpaired co-rider pre-bookings are listed until this many hours before pickup.
+    boardHideHours: num('SHARE_BOARD_HIDE_HOURS', 10),
+    boardMaxShiftMin: num('SHARE_BOARD_MAX_SHIFT_MIN', 180), // the board never asks anyone to move more than this
     defaultWaitMin: num('SHARE_DEFAULT_WAIT_MIN', 15), // pre-booking: how long a passenger can wait for the co-rider
     // Pre-booked PAIRS only (operator, 2026-11-19; other pre-bookings keep the normal lead): an
     // unclaimed pair is offered to online co-rider drivers this long before pickup, and a pair's
