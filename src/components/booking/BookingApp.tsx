@@ -835,7 +835,7 @@ export default function BookingApp() {
   };
   const arriveCalc = (() => {
     const w = arriveWindow();
-    if (!arriveMode || !w || route?.min == null) return null;
+    if (!arriveMode || !w || w.width < 15 || w.width > 180 || route?.min == null) return null;
     const drive = Math.ceil(route.min) + ARRIVE_MARGIN_MIN;
     return { leaveFrom: wall(w.from - drive), leaveBy: wall(w.to - drive), drive };
   })();
@@ -858,18 +858,19 @@ export default function BookingApp() {
     if (shareArrive && !arriveMode) { setArriveMode(true); if (!arriveDay) setArriveDay((scheduledAt || scheduleMin).slice(0, 10)); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shareArrive]);
+  const arriveBadWidth = (() => { const w = arriveWindow(); return !!w && (w.width < 15 || w.width > 180); })();
   const arriveBox = (
     <div data-testid="arrive-window">
       <input type="date" className="field block w-full min-w-0 max-w-full appearance-none" value={arriveDay} min={scheduleMin.slice(0, 10)} onChange={(e) => setArriveDay(e.target.value)} aria-label={t('booking.arrive.day')} />
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <label className="block"><span className="label">{t('booking.arrive.from')}</span>
-          <input type="time" step={300} data-testid="arrive-from" className={`field mt-1 block w-full ${errors.scheduledAt ? 'border-danger' : ''}`} value={arriveFromT} onChange={(e) => setArriveFromT(e.target.value)} /></label>
-        <label className="block"><span className="label">{t('booking.arrive.to')}</span>
-          <input type="time" step={300} data-testid="arrive-to" className={`field mt-1 block w-full ${errors.scheduledAt ? 'border-danger' : ''}`} value={arriveToT} onChange={(e) => setArriveToT(e.target.value)} /></label>
+      {/* Two equal columns that never overflow (iPhone draws time inputs wider than the column), a grey «00:00»
+          until a time is chosen (2026-11-22, operator). */}
+      <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+        <TimeBox label={t('booking.arrive.from')} testid="arrive-from" value={arriveFromT} onChange={setArriveFromT} bad={!!errors.scheduledAt} />
+        <TimeBox label={t('booking.arrive.to')} testid="arrive-to" value={arriveToT} onChange={setArriveToT} bad={!!errors.scheduledAt} />
       </div>
-      <p className="mt-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium text-ink" data-testid="arrive-leave">
-        {arriveCalc
-          ? t('booking.arrive.leave', { from: arriveCalc.leaveFrom.slice(11), to: arriveCalc.leaveBy.slice(11), n: arriveCalc.drive })
+      <p className={`mt-2 rounded-[10px] border px-3 py-2 text-[13px] font-medium text-ink ${arriveBadWidth ? 'border-warn/50 bg-warn/15' : 'border-accent/50 bg-accent/15'}`} data-testid="arrive-leave">
+        {arriveBadWidth ? t('booking.arrive.badWidth') : arriveCalc
+          ? t('booking.arrive.leave', { from: fmt.clock(arriveCalc.leaveFrom.slice(11)), to: fmt.clock(arriveCalc.leaveBy.slice(11)), n: arriveCalc.drive })
           : arriveWindow() ? t('booking.arrive.needRoute') : t('booking.arrive.hint')}
       </p>
       {shareArrive && errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
@@ -1432,5 +1433,19 @@ function CarClassIcon({ kind, active }: { kind: 'sedan' | 'minibus'; active: boo
         <g key={x}><circle cx={x} cy="22.5" r="5.2" fill="#0F1517" /><circle cx={x} cy="22.5" r="2.2" fill="#8A9490" /></g>
       ))}
     </svg>
+  );
+}
+
+// Arrival-window time field (2026-11-22): fits its column on iPhone; a grey «00:00» until a time is chosen.
+function TimeBox({ label, testid, value, onChange, bad }: { label: string; testid: string; value: string; onChange: (v: string) => void; bad: boolean }) {
+  return (
+    <label className="block min-w-0">
+      <span className="label">{label}</span>
+      <span className="relative mt-1 block">
+        <input type="time" step={300} data-testid={testid} value={value} onChange={(e) => onChange(e.target.value)}
+          className={`peer field block w-full min-w-0 max-w-full appearance-none !min-h-[44px] !px-2 !py-2 text-center text-base ${!value ? 'text-transparent focus:text-ink' : ''} ${bad ? 'border-danger' : ''}`} />
+        {!value && <span aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center text-base text-muted/50 peer-focus:hidden" data-testid={`${testid}-empty`}>00:00</span>}
+      </span>
+    </label>
   );
 }

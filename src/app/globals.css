@@ -128,3 +128,7 @@ body {
 .no-scrollbar { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
+
+/* iPhone date / time fields (2026-11-22): never wider than their column, value centred. */
+input[type='time'], input[type='date'], input[type='datetime-local'] { min-width: 0; }
+input[type='time']::-webkit-date-and-time-value, input[type='date']::-webkit-date-and-time-value { text-align: center; min-width: 0; }

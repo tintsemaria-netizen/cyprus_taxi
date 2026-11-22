@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-22 (20:00) — Arrival-window fields fit on iPhone, grey «00:00», browser 12/24-hour clock — deployed
+
+- BookingApp `TimeBox`: two equal columns (minmax(0,1fr)), compact, grey «00:00» overlay until a time is chosen; window < 15 min or > 3 h → amber «Окно — от 15 минут до 3 часов» instead of a nonsense departure. globals.css: date/time inputs min-width 0 (iPhone overflow).
+- `useT().fmt.time/dateTime` now use the visitor's browser hour cycle (12 h / 24 h) via useSyncExternalStore (language default during hydration); new `fmt.clock('HH:MM')` for wall-clock strings (departure hint). Server-made texts (pushes, board labels) stay 24 h.
+- Verified in Playwright: en-US browser «11:06 AM до 12:06 PM», ru-RU «11:06 до 12:06». Full suite passed.
+
 ## 2026-11-22 (19:40) — Ride-share pre-booking: «Когда вам нужно быть на месте?» replaces the flexibility choice — deployed
 
 - Operator: «у клиента по заказу ПП нету раздела от и до, она всё ещё про гибкость». With «Попутчик» on in a pre-booking, the share box shows the arrival window (date, «Не раньше», «Не позже», «Выезд примерно с … до …») instead of «Насколько ваше время гибкое?»; the «Подача / Быть на месте» switch and the top inputs are hidden; booking is sent in arrival mode, shareMaxExtraMin = window width (10–60). Share for a ride NOW keeps the detour choice.

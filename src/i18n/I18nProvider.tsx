@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo } from 'react';
+import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
 import { ApiRequestError } from '@/lib/api-client';
 import { DEFAULT_LOCALE, INTL_TAG, LOCALE_COOKIE, Locale } from './config';
 import { MESSAGES, Messages } from './messages';
@@ -40,17 +40,35 @@ export function useLocale(): Locale {
   return useContext(Ctx);
 }
 
+// 12 / 24-hour clock as the visitor's own browser / phone shows it (2026-11-22, operator: «время как у каждого в
+// браузере, чтобы не было путаницы» — the time fields are drawn by the phone in its own format, so every time we
+// print must match). The server does not know it: during hydration the language default is used, then the browser's.
+let h12Cache: boolean | undefined;
+function browserHour12(): boolean | undefined {
+  if (h12Cache === undefined) {
+    try { const o = new Intl.DateTimeFormat(undefined, { hour: 'numeric' }).resolvedOptions(); h12Cache = o.hourCycle ? o.hourCycle === 'h12' || o.hourCycle === 'h11' : o.hour12; } catch { h12Cache = undefined; }
+  }
+  return h12Cache;
+}
+const noopSubscribe = () => () => {};
+function useBrowserHour12(): boolean | undefined {
+  return useSyncExternalStore(noopSubscribe, browserHour12, () => undefined);
+}
+
 export function useT() {
   const locale = useLocale();
   const t = useCallback((key: MsgKey, vars?: Vars) => translate(locale, key, vars), [locale]);
   const tp = useCallback((key: PluralKey, count: number, vars?: Vars) => translatePlural(locale, key, count, vars), [locale]);
+  const h12 = useBrowserHour12();
   const fmt = useMemo(() => ({
     // Always Cyprus time: pickups happen in Cyprus, whatever timezone the visitor's phone is set to.
-    dateTime: (d: string | Date) => new Date(d).toLocaleString(INTL_TAG[locale], { dateStyle: 'medium', timeStyle: 'short', timeZone: TZ }),
-    time: (d: string | Date) => new Date(d).toLocaleTimeString(INTL_TAG[locale], { hour: '2-digit', minute: '2-digit', timeZone: TZ }),
+    dateTime: (d: string | Date) => new Date(d).toLocaleString(INTL_TAG[locale], { dateStyle: 'medium', timeStyle: 'short', timeZone: TZ, ...(h12 === undefined ? {} : { hour12: h12 }) }),
+    time: (d: string | Date) => new Date(d).toLocaleTimeString(INTL_TAG[locale], { hour: '2-digit', minute: '2-digit', timeZone: TZ, ...(h12 === undefined ? {} : { hour12: h12 }) }),
+    /** A Cyprus wall-clock «HH:MM» (no date) in the visitor's 12 / 24-hour format. */
+    clock: (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return new Date(Date.UTC(2000, 0, 1, h, m)).toLocaleTimeString(INTL_TAG[locale], { hour: '2-digit', minute: '2-digit', timeZone: 'UTC', ...(h12 === undefined ? {} : { hour12: h12 }) }); },
     date: (d: string | Date) => new Date(d).toLocaleDateString(INTL_TAG[locale], { dateStyle: 'medium', timeZone: TZ }),
     money: (cents: number, currency = 'EUR') => new Intl.NumberFormat(INTL_TAG[locale], { style: 'currency', currency }).format(cents / 100),
-  }), [locale]);
+  }), [locale, h12]);
   // Localized message for a failed API call: a translated error code when we have one, otherwise
   // the server's (English) message, otherwise a generic network message.
   const tError = useCallback((e: unknown) => {
