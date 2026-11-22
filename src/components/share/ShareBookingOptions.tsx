@@ -18,7 +18,8 @@ export const SHARE_FLEX_DEFAULT = SHARE_FLEX[1];
 
 // `disabled` (2026-11-20): the pre-booking window shows the switch even before / off a ride-share route —
 // greyed, with the list of places where it works.
-export function ShareBookingOptions({ value, onChange, pct, maxPeople, prebook, disabled }: { value: ShareOpts; onChange: (v: ShareOpts) => void; pct: number; maxPeople: number; prebook?: boolean; disabled?: boolean }) {
+// `arrive` (2026-11-22, operator): in a pre-booking the «Быть на месте с … до …» window replaces the flexibility choice.
+export function ShareBookingOptions({ value, onChange, pct, maxPeople, prebook, disabled, arrive }: { value: ShareOpts; onChange: (v: ShareOpts) => void; pct: number; maxPeople: number; prebook?: boolean; disabled?: boolean; arrive?: React.ReactNode }) {
   const { t } = useT();
   const set = (p: Partial<ShareOpts>) => onChange({ ...value, ...p });
   const people = value.adults + value.children;
@@ -50,6 +51,7 @@ export function ShareBookingOptions({ value, onChange, pct, maxPeople, prebook, 
           <Stepper label={t('share.booking.adults')} n={value.adults} min={1} max={maxPeople - value.children} onChange={(adults) => set({ adults })} />
           <Stepper label={t('share.booking.children')} n={value.children} min={0} max={Math.max(0, maxPeople - value.adults)} onChange={(children) => set({ children })} />
           <Stepper label={t('share.booking.luggage')} n={value.bags} min={0} max={6} onChange={(bags) => set({ bags })} />
+          {arrive ? <div className="pt-1" data-testid="share-arrive"><p className="label mb-1">{t('share.booking.arriveTitle')}</p>{arrive}</div> : <>
           <p className="label pt-1">{t(prebook ? 'share.booking.flex' : 'share.booking.maxExtra')}</p>
           <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t(prebook ? 'share.booking.flex' : 'share.booking.maxExtra')} data-testid="share-flex">
             {SHARE_FLEX.map((f) => {
@@ -67,6 +69,7 @@ export function ShareBookingOptions({ value, onChange, pct, maxPeople, prebook, 
               );
             })}
           </div>
+          </>}
           {people > maxPeople && <p className="text-xs text-danger">{people}/{maxPeople}</p>}
         </div>
       )}

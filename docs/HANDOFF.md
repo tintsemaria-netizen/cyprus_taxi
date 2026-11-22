@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-22 (19:40) — Ride-share pre-booking: «Когда вам нужно быть на месте?» replaces the flexibility choice — deployed
+
+- Operator: «у клиента по заказу ПП нету раздела от и до, она всё ещё про гибкость». With «Попутчик» on in a pre-booking, the share box shows the arrival window (date, «Не раньше», «Не позже», «Выезд примерно с … до …») instead of «Насколько ваше время гибкое?»; the «Подача / Быть на месте» switch and the top inputs are hidden; booking is sent in arrival mode, shareMaxExtraMin = window width (10–60). Share for a ride NOW keeps the detour choice.
+- BookingApp: `shareArrive`, `arriveBox` (shared JSX), effect turning arrival mode on. ShareBookingOptions: `arrive` prop. i18n `share.booking.arriveTitle` (8 languages).
+- Full suite 357 passed; Playwright: share pre-booking POST 201 with arriveFrom/arriveBy; plain arrival pre-booking POST 201.
+
 ## 2026-11-22 (evening) — Town areas for the minimum + arrival window «Быть на месте с … до …» — deployed to main
 
 - Min-fare areas added for Limassol, Larnaca, Paphos, Ayia Napa/Protaras (migration `20261122030000_min_fare_more_towns`), SWITCHED OFF at €20/€20 until the operator prices and activates them. Admin list: Comfort/XL inputs + «Сохранить» per area; every area coloured on the map (off ones labelled «выкл»).

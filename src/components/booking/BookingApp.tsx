@@ -741,7 +741,7 @@ export default function BookingApp() {
         passengerName: name.trim() || passenger?.name || 'Passenger',
         phone: passenger?.phone || phone.trim(),
         note: effNote || undefined,
-        ...(shareOn ? { shareOptIn: true, shareMaxExtraMin: shareOpts.maxExtra, childCount: shareOpts.children, ...(when === 'SCHEDULE' ? { shareWaitMin: shareOpts.wait, shareEarlyMin: shareOpts.early ?? 0 } : {}) } : {}),
+        ...(shareOn ? { shareOptIn: true, shareMaxExtraMin: shareArrive && arriveWindow() ? Math.min(60, Math.max(10, arriveWindow()!.width)) : shareOpts.maxExtra, childCount: shareOpts.children, ...(when === 'SCHEDULE' ? { shareWaitMin: shareOpts.wait, shareEarlyMin: shareOpts.early ?? 0 } : {}) } : {}),
       };
       const res = await api<{ tracking: { token: string } }>('/bookings', {
         method: 'POST',
@@ -849,6 +849,32 @@ export default function BookingApp() {
     { key: 'COMFORT' as const, label: 'Comfort', maxPassengers: 4 },
     { key: 'XL' as const, label: 'XL', maxPassengers: 6 },
   ];
+
+  // «Быть на месте с … до …» inputs (2026-11-22). With «Попутчик» on in a pre-booking (operator: «у клиента по
+  // заказу ПП нету раздела от и до, всё ещё гибкость») they REPLACE the flexibility choice and sit in the
+  // ride-share box; otherwise they are the «Быть на месте» mode of the pre-booking panel.
+  const shareArrive = when === 'SCHEDULE' && !!cfg?.share && shareOpts.on && shareAllowed;
+  useEffect(() => {
+    if (shareArrive && !arriveMode) { setArriveMode(true); if (!arriveDay) setArriveDay((scheduledAt || scheduleMin).slice(0, 10)); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shareArrive]);
+  const arriveBox = (
+    <div data-testid="arrive-window">
+      <input type="date" className="field block w-full min-w-0 max-w-full appearance-none" value={arriveDay} min={scheduleMin.slice(0, 10)} onChange={(e) => setArriveDay(e.target.value)} aria-label={t('booking.arrive.day')} />
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <label className="block"><span className="label">{t('booking.arrive.from')}</span>
+          <input type="time" step={300} data-testid="arrive-from" className={`field mt-1 block w-full ${errors.scheduledAt ? 'border-danger' : ''}`} value={arriveFromT} onChange={(e) => setArriveFromT(e.target.value)} /></label>
+        <label className="block"><span className="label">{t('booking.arrive.to')}</span>
+          <input type="time" step={300} data-testid="arrive-to" className={`field mt-1 block w-full ${errors.scheduledAt ? 'border-danger' : ''}`} value={arriveToT} onChange={(e) => setArriveToT(e.target.value)} /></label>
+      </div>
+      <p className="mt-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium text-ink" data-testid="arrive-leave">
+        {arriveCalc
+          ? t('booking.arrive.leave', { from: arriveCalc.leaveFrom.slice(11), to: arriveCalc.leaveBy.slice(11), n: arriveCalc.drive })
+          : arriveWindow() ? t('booking.arrive.needRoute') : t('booking.arrive.hint')}
+      </p>
+      {shareArrive && errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
+    </div>
+  );
 
   // Car class choice (2026-11-15): moved from the address form to the final step before ordering.
   // Each class has its own picture (sedan / minibus) and «up to N people».
@@ -1056,7 +1082,7 @@ export default function BookingApp() {
                     {when === 'SCHEDULE' ? (
                       <div data-testid="schedule-panel">
                         <h1 className="mb-3 pe-12 text-xl font-bold">🕒 {t('booking.form.schedule')}</h1>
-                        <div className="mb-2 grid grid-cols-2 gap-1 rounded-[12px] border border-edge bg-page p-1" role="radiogroup" data-testid="schedule-mode">
+                        {!shareArrive && <div className="mb-2 grid grid-cols-2 gap-1 rounded-[12px] border border-edge bg-page p-1" role="radiogroup" data-testid="schedule-mode">
                           {([false, true] as const).map((m) => (
                             <button key={String(m)} type="button" role="radio" aria-checked={arriveMode === m}
                               onClick={() => { setArriveMode(m); if (m && !arriveDay) setArriveDay((scheduledAt || scheduleMin).slice(0, 10)); }}
@@ -1064,24 +1090,11 @@ export default function BookingApp() {
                               {m ? t('booking.arrive.modeArrive') : t('booking.arrive.modePickup')}
                             </button>
                           ))}
-                        </div>
-                        {!arriveMode ? (
+                        </div>}
+                        {shareArrive ? null : !arriveMode ? (
                           <input type="datetime-local" data-testid="schedule-time" className={`field block w-full min-w-0 max-w-full appearance-none ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
                         ) : (
-                          <div data-testid="arrive-window">
-                            <input type="date" className="field block w-full min-w-0 max-w-full appearance-none" value={arriveDay} min={scheduleMin.slice(0, 10)} onChange={(e) => setArriveDay(e.target.value)} aria-label={t('booking.arrive.day')} />
-                            <div className="mt-2 grid grid-cols-2 gap-2">
-                              <label className="block"><span className="label">{t('booking.arrive.from')}</span>
-                                <input type="time" step={300} data-testid="arrive-from" className={`field mt-1 block w-full ${errors.scheduledAt ? 'border-danger' : ''}`} value={arriveFromT} onChange={(e) => setArriveFromT(e.target.value)} /></label>
-                              <label className="block"><span className="label">{t('booking.arrive.to')}</span>
-                                <input type="time" step={300} data-testid="arrive-to" className={`field mt-1 block w-full ${errors.scheduledAt ? 'border-danger' : ''}`} value={arriveToT} onChange={(e) => setArriveToT(e.target.value)} /></label>
-                            </div>
-                            <p className="mt-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium text-ink" data-testid="arrive-leave">
-                              {arriveCalc
-                                ? t('booking.arrive.leave', { from: arriveCalc.leaveFrom.slice(11), to: arriveCalc.leaveBy.slice(11), n: arriveCalc.drive })
-                                : arriveWindow() ? t('booking.arrive.needRoute') : t('booking.arrive.hint')}
-                            </p>
-                          </div>
+                          arriveBox
                         )}
                         {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
                         <div className="mb-3" />
@@ -1229,7 +1242,7 @@ export default function BookingApp() {
                           the list of places until the route is one where ride-share works. */}
                       {when === 'SCHEDULE' && cfg?.share && (
                         <div className="-mt-4 mb-3">
-                          <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook={!arriveMode} disabled={!shareAllowed} />
+                          <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook arrive={arriveBox} disabled={!shareAllowed} />
                         </div>
                       )}
                       {when === 'SCHEDULE' && (

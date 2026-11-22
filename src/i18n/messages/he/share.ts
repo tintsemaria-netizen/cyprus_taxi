@@ -3,6 +3,7 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   booking: {
+    arriveTitle: 'מתי עליך להגיע?',
     name: 'נוסע משותף',
     flex: 'כמה גמיש הזמן שלכם?',
     flex_exact: 'בדיוק',
