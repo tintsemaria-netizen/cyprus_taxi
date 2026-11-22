@@ -5,7 +5,7 @@ import type * as maplibregl from 'maplibre-gl';
 import { loadMaplibre } from '@/lib/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { publicMapConfig } from '@/lib/config';
-import { vehicleMarkerEl, personMarkerEl, orientVehicle, pickupPinEl, navArrowEl } from './carMarker';
+import { vehicleMarkerEl, personMarkerEl, orientVehicle, pickupPinEl, navArrowEl, numberedStopEl } from './carMarker';
 import { useIdleReturn } from './useIdleReturn';
 import { smoothRoute } from './routeSmooth';
 import { compassEl } from './mapCompass';
@@ -34,6 +34,11 @@ export interface MapMarker {
   moving?: boolean;
   /** Pickup pin pulses (a driver is being searched). */
   pulse?: boolean;
+  /** Shown, but never framed by the auto-fit / keep-in-view camera (later stops of a shared ride). */
+  noFit?: boolean;
+  /** Numbered stop badge (ride-share pair, in trip order); `next` draws it larger. */
+  num?: number;
+  next?: boolean;
 }
 
 interface Props {
@@ -190,6 +195,8 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
           el = vehicleMarkerEl({ state: mk.self ? 'self' : mk.busy ? 'busy' : 'available', stale: mk.stale, title: mk.label || 'Your driver', tag: mk.tag });
           el.classList.add('ily-vehicle');
           if (mk.heading != null) orientVehicle(el, map.getBearing(), mk.heading);
+        } else if (mk.num != null && mk.kind !== 'vehicle' && mk.kind !== 'person') {
+          el = numberedStopEl({ num: mk.num, kind: mk.kind, next: mk.next, title: mk.label });
         } else if (mk.kind === 'person') {
           el = personMarkerEl({ title: mk.label, stale: mk.stale });
         } else if (mk.kind === 'pickup') {
@@ -219,17 +226,18 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       if (key === lastFit.current) return;
       lastFit.current = key;
       if (focus && focusZoomProp != null) return; // a focus point with its own zoom owns the camera (2026-11-17)
-      if (markers.length >= 2 || (markers.length === 1 && fitRoute && route && route.length > 1)) { // route + one point (2026-11-19)
+      const fm = markers.filter((m) => !m.noFit);
+      if (fm.length >= 2 || (fm.length === 1 && fitRoute && route && route.length > 1)) { // route + one point (2026-11-19)
         const b = new maplibre.LngLatBounds();
-        markers.forEach((m) => b.extend([m.lng, m.lat]));
+        fm.forEach((m) => b.extend([m.lng, m.lat]));
         if (fitRoute && route) route.forEach((p) => b.extend(p as [number, number]));
         // An earlier easeTo({padding}) leaves that padding on the map, and fitBounds adds its own on
         // top — together they no longer fit and MapLibre silently skips the fit (2026-11-17).
         map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
         map.fitBounds(b, { padding: fitPadding ?? 70, maxZoom: fitRoute ? 15 : 12, duration: 400 });
-      } else if (markers.length === 1 && !focus) {
+      } else if (fm.length === 1 && !focus) {
         // A focus point owns the camera when given (it runs first; this async fit must not undo it).
-        map.easeTo({ center: [markers[0].lng, markers[0].lat], zoom: 12, duration: 400, ...(fitPadding ? { padding: fitPadding } : {}) });
+        map.easeTo({ center: [fm[0].lng, fm[0].lat], zoom: 12, duration: 400, ...(fitPadding ? { padding: fitPadding } : {}) });
       }
     })();
     // Only a change in the padding VALUES re-fits (padKey), not a new object identity.

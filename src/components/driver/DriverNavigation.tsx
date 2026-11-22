@@ -1,6 +1,7 @@
 'use client';
 
 import { Postcode } from '@/components/driver/Postcode';
+import { coRiderNext, type PairStops } from '@/lib/pair-stops';
 import { navZoomTarget, nextNavZoom, smoothSpeed, NAV_ZOOM_MAX } from '@/lib/nav-zoom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
@@ -51,15 +52,25 @@ export function DriverNavigation(props: {
   trip: NavTrip; pos: LatLng | null; gps: { active: boolean; error: string | null }; nowMs: number;
   startCode: string; setStartCode: (v: string) => void; banner: string | null; onDismissBanner: () => void;
   onStartGps: () => void; onTripAction: (path: string, body: Record<string, unknown>, opts?: { stopGps?: boolean }) => void;
+  /** Ride-share pair: all stops in trip order (2026-11-22). */
+  pair?: PairStops | null;
+  /** Opens the co-rider's sheet (its arrive / picked up / drop-off actions). */
+  onOpenCoRider?: () => void;
 }) {
   const { trip, pos, gps, nowMs, startCode, setStartCode } = props;
   const { t, fmt, locale } = useT();
   // Legs: pickup → (stop, if any, until the driver continues from it) → destination.
   const stop = trip.stop ?? null;
-  const leg: 'pickup' | 'stop' | 'dropoff' = trip.status !== 'IN_PROGRESS' ? 'pickup' : stop && !stop.departedAt ? 'stop' : 'dropoff';
-  const target = leg === 'dropoff' ? trip.dropoff : leg === 'stop' ? stop! : trip.pickup;
+  // A pair (2026-11-22): when the co-rider's pickup / drop-off is next in the trip order, that is the
+  // leg — the route, the hint and the sheet point there; its actions stay in the co-rider's sheet.
+  const co = coRiderNext(props.pair);
+  const leg: 'pickup' | 'stop' | 'dropoff' | 'co' = co ? 'co' : trip.status !== 'IN_PROGRESS' ? 'pickup' : stop && !stop.departedAt ? 'stop' : 'dropoff';
+  const legKey = co ? `co${co.n}` : leg;
+  const target = co ? co : leg === 'dropoff' ? trip.dropoff : leg === 'stop' ? stop! : trip.pickup;
   const atStop = leg === 'stop' && !!stop?.arrivedAt; // standing at the stop (maybe paid waiting)
-  const waitingAtPickup = trip.status === 'ARRIVED' || atStop;
+  const coWaiting = co?.status === 'ARRIVED';
+  const waitingAtPickup = co ? coWaiting : trip.status === 'ARRIVED' || atStop;
+  const arrivedText = leg === 'pickup' || co?.kind === 'pickup' ? t('driver.navigation.arrivedPickup') : leg === 'stop' ? t('driver.navigation.arrivedStop') : t('driver.navigation.arrivedDestination');
 
   const [route, setRoute] = useState<NavRoute | null>(null);
   const [routeState, setRouteState] = useState<'loading' | 'ok' | 'unavailable'>('loading');
@@ -120,7 +131,7 @@ export function DriverNavigation(props: {
     if (hasPos) fetchRoute(true);
     const id = setInterval(() => fetchRoute(), REFRESH_MS); // traffic-aware ETA refresh
     return () => clearInterval(id);
-  }, [leg, waitingAtPickup, hasPos, fetchRoute]);
+  }, [legKey, waitingAtPickup, hasPos, fetchRoute]);
 
   // ---- Progress along the route ----
   const cum = useMemo(() => (route ? cumulative(route.path) : []), [route]);
@@ -213,12 +224,12 @@ export function DriverNavigation(props: {
   }, [upcoming?.index, upcoming && promptBand(upcoming.inM), route?.fetchedAt, say]);
   useEffect(() => {
     if (!atTarget) return;
-    const key = `arrive:${leg}`;
+    const key = `arrive:${legKey}`;
     if (spoken.current.has(key)) return;
     spoken.current.add(key);
-    say(leg === 'pickup' ? t('driver.navigation.arrivedPickup') : leg === 'stop' ? t('driver.navigation.arrivedStop') : t('driver.navigation.arrivedDestination'));
+    say(arrivedText);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [atTarget, leg, say]);
+  }, [atTarget, legKey, say]);
   useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);
 
 
@@ -235,9 +246,20 @@ export function DriverNavigation(props: {
   if (shown) markers.push({ id: 'me', lat: shown.lat, lng: shown.lng, kind: 'vehicle', self: true, nav: true, moving: moving || dr.estimated, heading, stale: dr.estimated, label: t('driver.map.you') });
   // Only the CURRENT target is on the map (2026-11-15): on the way to / waiting at the pickup the
   // driver sees just the pickup point — not the whole trip (the map would zoom out to fit it).
-  if (leg === 'pickup') markers.push({ id: 'pk', lat: trip.pickup.lat, lng: trip.pickup.lng, kind: 'pickup', label: t('driver.map.pickup') });
-  if (leg === 'stop' && stop) markers.push({ id: 'st', lat: stop.lat, lng: stop.lng, kind: 'stop', label: t('driver.map.stop') });
-  if (leg === 'dropoff') markers.push({ id: 'dp', lat: trip.dropoff.lat, lng: trip.dropoff.lng, kind: 'dropoff', label: t('driver.map.destination') });
+  // A pair (2026-11-22): every stop still ahead, numbered in trip order; only the next one is framed
+  // by the camera, the later ones are just drawn. (A primary intermediate stop keeps its own marker.)
+  const pairAhead = props.pair ? props.pair.stops.filter((s) => !s.done) : null;
+  if (pairAhead) {
+    for (const s of pairAhead) {
+      const isNext = props.pair!.next === s.n - 1;
+      markers.push({ id: `ps${s.n}${isNext ? 'n' : ''}`, lat: s.lat, lng: s.lng, kind: s.kind, num: s.n, next: isNext, noFit: !isNext || leg === 'stop', label: `${s.n}. ${s.name} — ${s.label}` });
+    }
+    if (leg === 'stop' && stop) markers.push({ id: 'st', lat: stop.lat, lng: stop.lng, kind: 'stop', label: t('driver.map.stop') });
+  } else {
+    if (leg === 'pickup') markers.push({ id: 'pk', lat: trip.pickup.lat, lng: trip.pickup.lng, kind: 'pickup', label: t('driver.map.pickup') });
+    if (leg === 'stop' && stop) markers.push({ id: 'st', lat: stop.lat, lng: stop.lng, kind: 'stop', label: t('driver.map.stop') });
+    if (leg === 'dropoff') markers.push({ id: 'dp', lat: trip.dropoff.lat, lng: trip.dropoff.lng, kind: 'dropoff', label: t('driver.map.destination') });
+  }
   const paxLoc = leg === 'pickup' ? trip.passengerLocation ?? null : null;
   if (paxLoc) markers.push({ id: 'pax', lat: paxLoc.lat, lng: paxLoc.lng, kind: 'person', label: trip.passengerName });
   const paxFromPickupM = paxLoc ? Math.round(metersBetween(paxLoc, trip.pickup)) : null;
@@ -286,9 +308,9 @@ export function DriverNavigation(props: {
         {atStop && stop ? (
           <div><div className="text-[18px] font-bold">{t('driver.stop.atStop')}</div><div className="truncate text-[14.5px] text-muted">{stop.label}</div></div>
         ) : waitingAtPickup ? (
-          <div><div className="text-[18px] font-bold">{t('driver.navigation.waitingFor', { name: trip.passengerName })}</div><div className="truncate text-[14.5px] text-muted">{trip.pickup.label}</div></div>
+          <div><div className="text-[18px] font-bold">{t('driver.navigation.waitingFor', { name: co ? co.name : trip.passengerName })}</div><div className="truncate text-[14.5px] text-muted">{co ? co.label : trip.pickup.label}</div></div>
         ) : atTarget ? (
-          <div><div className="text-[18px] font-bold">{leg === 'pickup' ? t('driver.navigation.arrivedPickup') : leg === 'stop' ? t('driver.navigation.arrivedStop') : t('driver.navigation.arrivedDestination')}</div><div className="truncate text-[14.5px] text-muted">{target.label}</div></div>
+          <div><div className="text-[18px] font-bold">{arrivedText}</div><div className="truncate text-[14.5px] text-muted">{target.label}</div></div>
         ) : !pos ? (
           <div className="text-[17px] font-semibold">{t('driver.navigation.needGps')}</div>
         ) : routeState === 'unavailable' ? (
@@ -366,6 +388,14 @@ export function DriverNavigation(props: {
       )}
       {/* Action bar: the one action for this stage — separate, above the info sheet, always visible. */}
       <div className="pointer-events-auto space-y-2 px-3 pb-2" data-testid="nav-actions">
+          {/* Pair (2026-11-22): the co-rider's stop is next — its action opens the co-rider's sheet
+              (arrive / picked up with the code / no-show / dropped off). */}
+          {co && (
+            <button className={STAGE_BTN} onClick={() => props.onOpenCoRider?.()} data-testid="nav-co-action"><EdgeShine />
+              👥 {co.kind === 'dropoff' ? t('share.driver.complete') : co.status === 'ARRIVED' ? t('share.driver.start') : t('share.driver.arrive')}
+            </button>
+          )}
+          {!co && <>
           {trip.status === 'ASSIGNED' && <button className={STAGE_BTN} onClick={() => props.onTripAction('status', { to: 'EN_ROUTE' })}><EdgeShine />{t('driver.trip.onTheWay')}</button>}
           {trip.status === 'EN_ROUTE' && <button className={STAGE_BTN} onClick={() => props.onTripAction('arrive', {})}><EdgeShine />{t('driver.trip.arrived')}</button>}
           {/* Start: one tap, or the passenger's 4-digit code when they switched one on (optional since 2026-11-16). */}
@@ -390,6 +420,7 @@ export function DriverNavigation(props: {
                 bgColor="#7A1E1E" className="bg-[#7A1E1E] text-white" knobClassName="text-white" />
             </div>
           )}
+          </>}
       </div>
       {/* Info sheet: collapses to the summary line (handle tap or swipe). */}
       <div className="pointer-events-auto rounded-t-[18px] border-t border-edge bg-elevated sm:rounded-[18px] sm:border shadow-[0_-6px_20px_rgba(0,0,0,0.35)]" ref={sheetDrag.panelRef} style={{ paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }} data-testid="nav-sheet">
@@ -427,9 +458,14 @@ export function DriverNavigation(props: {
             {paxFromPickupM <= 30 ? t('driver.navigation.paxAtPickup') : t('driver.navigation.paxFromPickup', { m: paxFromPickupM < 1000 ? `${paxFromPickupM} ${t('driver.home.gpsM')}` : `${(paxFromPickupM / 1000).toFixed(1)} km` })}
           </div>
         )}
+        {props.pair && props.pair.next != null && (
+          <div className="mt-1 text-sm font-semibold text-accent" data-testid="nav-pair-step">
+            {t('driver.navigation.pairStep', { n: props.pair.next + 1, total: props.pair.stops.length })} · {props.pair.stops[props.pair.next].kind === 'pickup' ? t('share.driver.pair.pickupWord') : t('share.driver.pair.dropoffWord')}
+          </div>
+        )}
         <div className="mt-2 flex items-center gap-2 text-lg">
-          <span className="font-medium">{trip.passengerName}</span>
-          {trip.passengerRating && trip.passengerRating.count > 0 && <span className="text-accent">★ {trip.passengerRating.average.toFixed(1)}</span>}
+          <span className="font-medium">{co ? `👥 ${co.name}` : trip.passengerName}</span>
+          {!co && trip.passengerRating && trip.passengerRating.count > 0 && <span className="text-accent">★ {trip.passengerRating.average.toFixed(1)}</span>}
           {/* Payment left of the class (2026-11-15): cash green, card red — only once the ride has started (2026-11-18). */}
           {trip.status === 'IN_PROGRESS' && <span className={`ms-auto rounded-md border px-2 py-0.5 text-sm font-bold ${trip.payment === 'CARD' ? 'border-danger/60 text-danger' : 'border-[#34C759]/60 text-[#34C759]'}`}>{trip.payment === 'CARD' ? 'card' : 'cash'}</span>}
           <span className={`text-muted ${trip.status === 'IN_PROGRESS' ? '' : 'ms-auto'}`}>{t(`common.vClass.${trip.vClass}` as MsgKey)}</span>

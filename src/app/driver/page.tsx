@@ -15,6 +15,8 @@ import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { ScheduledRides } from '@/components/driver/ScheduledRides';
 import { DriverNavigation, type NavTrip } from '@/components/driver/DriverNavigation';
+import type { PairStops } from '@/lib/pair-stops';
+import { OPEN_CO_RIDER } from '@/components/share/ShareDriver';
 import { filterFix, initialFilterState, accuracyLevel, type FilterState } from '@/lib/gpsFilter';
 import { DriverHomeMap } from '@/components/driver/DriverHomeMap';
 import { unlockOfferSound, playOfferChime, vibrateOffer, keepScreenOn } from '@/lib/driver-alerts';
@@ -42,6 +44,7 @@ interface CurrentTrip {
   onDuty: boolean; available: boolean; trip: Trip | null;
   // Ride-share «Попутчик» (Task 022)
   shareProposal?: DriverShareProposal | null; coRider?: CoRiderLeg | null; share?: ShareInfo | null;
+  pair?: PairStops | null;
   gpsMeter?: GpsMeterView | null; // GPS taximeter while on board (comparison, not charged)
 }
 interface Offer {
@@ -370,7 +373,8 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
     return (
       <>
         <DriverNavigation trip={trip} pos={pos} gps={gps} nowMs={nowMs} startCode={startCode} setStartCode={setStartCode}
-          banner={banner} onDismissBanner={() => setBanner(null)} onStartGps={startGps} onTripAction={tripAction} />
+          banner={banner} onDismissBanner={() => setBanner(null)} onStartGps={startGps} onTripAction={tripAction}
+          pair={data.pair ?? null} onOpenCoRider={() => window.dispatchEvent(new Event(OPEN_CO_RIDER))} />
         {/* Ride-share (Task 022): the second passenger's leg, and a co-rider proposal to decide on the spot. */}
         {trip.status === 'IN_PROGRESS' && data.gpsMeter && <GpsMeterCard m={data.gpsMeter} />}
         {data.coRider && <CoRiderLegPill leg={data.coRider} share={data.share ?? null} onChanged={() => { void load(); void loadDash(); }} onError={setBanner} />}

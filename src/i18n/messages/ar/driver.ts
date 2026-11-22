@@ -344,6 +344,7 @@ const driver: Catalog<typeof en> = {
     arriveAt: "الوصول {time}",
     arrivedPickup: "وصلت إلى نقطة الانطلاق",
     arrivedDestination: "وصلت إلى الوجهة",
+    pairStep: 'التوقف {n} من {total}',
     waitingFor: "بانتظار {name}",
     continueTo: "المتابعة إلى {place}",
     loading: "جارٍ إنشاء المسار…",

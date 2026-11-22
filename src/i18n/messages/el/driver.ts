@@ -318,6 +318,7 @@ const driver: Catalog<typeof en> = {
     arriveAt: 'άφιξη {time}',
     arrivedPickup: 'Φτάσατε στο σημείο παραλαβής',
     arrivedDestination: 'Φτάσατε στον προορισμό',
+    pairStep: 'Στάση {n} από {total}',
     waitingFor: 'Αναμονή για {name}',
     continueTo: 'Συνεχίστε προς {place}',
     loading: 'Δημιουργία διαδρομής…',

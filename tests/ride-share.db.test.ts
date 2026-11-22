@@ -13,6 +13,7 @@ import { scheduledBoard, claimScheduled, runPreassignments } from '@/server/disp
 import { driverCurrentTrip, trackingView } from '@/server/views';
 import { isShareRoute, sharedCents, bestSharePlan, approxLegMin } from '@/lib/share';
 import { createBookingSchema } from '@/lib/validation';
+import { coRiderNext } from '@/lib/pair-stops';
 
 // Ride-share «Попутчик» (Task 022).
 const MIN = 60_000;
@@ -183,6 +184,41 @@ describe('live ride-share', () => {
     expect((await prisma.driver.findUniqueOrThrow({ where: { id: d.driverId } })).available).toBe(true);
     expect((await prisma.shareGroup.findUniqueOrThrow({ where: { id: g.id } })).status).toBe('ENDED');
     expect((await prisma.fare.findUniqueOrThrow({ where: { bookingId: guest.id } })).finalCents).toBe(4200);
+  });
+
+  it('2026-11-22: the live navigation follows the pair\'s stop order — the co-rider\'s stop when it is next', async () => {
+    const d = await driver('Andreas');
+    const host = await hostOnTrip(d);
+    const guest = await booking(lcaNear, limCentre);
+    await tryLiveShare(guest.id);
+    const g = (await prisma.shareGroup.findFirst({ where: { guestBookingId: guest.id } }))!;
+    await answerShare(g.id, { kind: 'DRIVER', driverId: d.driverId }, true);
+    await answerShare(g.id, { kind: 'PASSENGER', bookingId: host.id }, true);
+
+    const plan = (await prisma.shareGroup.findUniqueOrThrow({ where: { id: g.id } })).plan as { kind: string; who: string }[];
+    let v = await driverCurrentTrip(d.driverId);
+    expect(v.pair?.stops.map((s) => `${s.kind}:${s.primary ? 'me' : 'co'}`)).toEqual(plan.map((p) => `${p.kind}:${p.who === 'host' ? 'me' : 'co'}`));
+    expect(v.pair?.stops.map((s) => s.n)).toEqual([1, 2, 3, 4]);
+    expect(v.pair?.next).toBe(0);
+
+    // Walk the plan: every step the next stop is the first one not done, and the co-rider's stop
+    // is reported (for the route) exactly when it is the next one.
+    for (let i = 0; i < plan.length; i++) {
+      v = await driverCurrentTrip(d.driverId);
+      const next = v.pair!.stops[v.pair!.next!];
+      expect(next.n).toBe(i + 1);
+      const co = coRiderNext(v.pair);
+      expect(co?.bookingId ?? null).toBe(next.primary ? null : guest.id);
+      const id = plan[i].who === 'host' ? host.id : guest.id;
+      if (plan[i].kind === 'pickup') {
+        expect((await arriveAtPickup(id, d.driverId, (await fresh(id)).revision)).ok).toBe(true);
+        expect((await driverCurrentTrip(d.driverId)).pair?.next).toBe(i); // waiting there: still this stop
+        expect((await startTrip(id, d.driverId, (await fresh(id)).revision, '')).ok).toBe(true);
+      } else {
+        expect((await completeTrip(id, d.driverId, (await fresh(id)).revision)).ok).toBe(true);
+      }
+    }
+    expect((await driverCurrentTrip(d.driverId)).trip).toBeNull();
   });
 
   it('a "no" or silence leaves everything as it was; the same car is not proposed again', async () => {
