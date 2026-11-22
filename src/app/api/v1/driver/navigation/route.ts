@@ -24,7 +24,8 @@ export async function POST(req: Request) {
   const heading = typeof body.heading === 'number' && Number.isFinite(body.heading) ? body.heading : null;
   const lang = isLocale(body.lang) ? body.lang : 'en';
 
-  const active = await prisma.assignment.findFirst({ where: { activeDriverId: ctx.driver.id }, include: { booking: true } });
+  const driverId = ctx.driver.id;
+  const active = await prisma.assignment.findFirst({ where: { activeDriverId: driverId }, include: { booking: true } });
   if (!active) return apiOk({ available: false, reason: 'NO_TRIP' });
   const b = active.booking;
   // With a stop (2026-11-15): pickup → stop (until the driver continues from it) → destination.
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
   const to = leg === 'dropoff' ? { lat: b.dropoffLat, lng: b.dropoffLng } : leg === 'stop' ? { lat: b.stopLat!, lng: b.stopLng! } : { lat: b.pickupLat, lng: b.pickupLng };
   // A ride-share pair (2026-11-22): when the co-rider's pickup / drop-off comes next in the trip
   // order, drive there first. The stop always comes from the pair the driver carries, never the client.
-  const co = coRiderNext(await pairStopsFor(ctx.driver.id, b.id));
+  const co = coRiderNext(await pairStopsFor(driverId, b.id));
   if (co) {
     const coBase = { bookingId: co.bookingId, status: co.status, leg: `co-${co.kind}`, target: { lat: co.lat, lng: co.lng } };
     if (co.status === 'ARRIVED') return apiOk({ ...coBase, available: false, reason: 'ARRIVED' });
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
     if (!googleConfigured()) return apiOk({ ...base, available: false, reason: 'NO_ROUTER' });
 
     // Rerouting is client-driven (off-route / periodic); bound it per driver.
-    const rl = await rateLimit('driver-nav', ctx.driver.id, 20, 60);
+    const rl = await rateLimit('driver-nav', driverId, 20, 60);
     if (!rl.ok) return Errors.throttled(rl.retryAfter);
     try {
       const r = await googleNavRoute({ ...from, heading }, to, lang, { timeoutMs: 8000 });

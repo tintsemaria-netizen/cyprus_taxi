@@ -1,6 +1,6 @@
 # Session handoff
 
-## 2026-11-22 — Ride-share pair: co-rider stops on the driver's live navigation (branch `pair-stops-nav`, NOT deployed)
+## 2026-11-22 — Ride-share pair: co-rider stops on the driver's live navigation (merged to main, deployed)
 
 - Operator: «начнем с остановки». Before: the live navigation only drove the primary trip; the co-rider's pickup / drop-off were reachable only through the «👥» pill → Google Maps (e.g. host on board → the app routed straight to the host's destination, skipping the co-rider's pickup).
 - Now: `src/lib/pair-stops.ts` (`pairStops`, `coRiderNext`) + `src/server/pair-route.ts` (`pairStopsFor`). `driverCurrentTrip` returns `pair: { stops[n, kind, primary, status, name, lat, lng, label, done], next }`.
@@ -9,6 +9,8 @@
 - Map: numbered stop badges (`MapMarker.num/next`, `numberedStopEl`) for every stop still ahead; only the next one is framed (`MapMarker.noFit` for the rest, both Google and MapLibre). The pre-booking pair map (ScheduledRides) now uses the same numbered badges.
 - Tests: tests/pair-stops.test.ts, ride-share.db «2026-11-22 … follows the pair's stop order». Full suite 356 passed / 1 skipped.
 - Local screenshots /tmp/shots/61-pair-*.png (local map has no tiles and no Google router, so the route line and badges are not visible locally).
+- PARKED (operator agreed, «потом вернёмся»): re-plan a pre-booked pair's stop order from the assigned car's position (its location or the end of its current ride), all orders incl. guest-first; only if each passenger stays inside their arrival window / extra-minute limit; price unchanged (SHARED_FIXED); among valid orders pick the least total car km incl. the empty run; once, when the driver is assigned, not later than ~20 min before the first pickup; push to anyone whose pickup time moved. Today `bestPrebookPlan` always starts at the host's pickup (host first). Note: another session reworked pre-booking timing into arrival windows (`arriveFrom/…`, 2026-11-22) — build on that.
+
 ## 2026-11-22 (20:00) — Arrival-window fields fit on iPhone, grey «00:00», browser 12/24-hour clock — deployed
 
 - BookingApp `TimeBox`: two equal columns (minmax(0,1fr)), compact, grey «00:00» overlay until a time is chosen; window < 15 min or > 3 h → amber «Окно — от 15 минут до 3 часов» instead of a nonsense departure. globals.css: date/time inputs min-width 0 (iPhone overflow).

@@ -195,7 +195,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
           el = vehicleMarkerEl({ state: mk.self ? 'self' : mk.busy ? 'busy' : 'available', stale: mk.stale, title: mk.label || 'Your driver', tag: mk.tag });
           el.classList.add('ily-vehicle');
           if (mk.heading != null) orientVehicle(el, map.getBearing(), mk.heading);
-        } else if (mk.num != null && mk.kind !== 'vehicle' && mk.kind !== 'person') {
+        } else if (mk.num != null && mk.kind !== 'person') {
           el = numberedStopEl({ num: mk.num, kind: mk.kind, next: mk.next, title: mk.label });
         } else if (mk.kind === 'person') {
           el = personMarkerEl({ title: mk.label, stale: mk.stale });

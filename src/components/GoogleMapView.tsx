@@ -102,7 +102,7 @@ function markerEl(mk: MapMarker): HTMLElement {
     el.classList.add('ily-vehicle');
     return centerOnPoint(el);
   }
-  if (mk.num != null && mk.kind !== 'vehicle' && mk.kind !== 'person') return centerOnPoint(numberedStopEl({ num: mk.num, kind: mk.kind, next: mk.next, title: mk.label }));
+  if (mk.num != null && mk.kind !== 'person') return centerOnPoint(numberedStopEl({ num: mk.num, kind: mk.kind, next: mk.next, title: mk.label }));
   if (mk.kind === 'person') return centerOnPoint(personMarkerEl({ title: mk.label, stale: mk.stale }));
   // Pin: the needle tip (element bottom) is the point — Google's default bottom anchor, no shift.
   if (mk.kind === 'pickup') { const el = pickupPinEl({ title: mk.label, stale: mk.stale, pulse: mk.pulse }); el.dataset.sig = mk.pulse ? 'pulse' : 'pin'; return el; }
