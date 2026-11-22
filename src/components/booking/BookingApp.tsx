@@ -899,7 +899,6 @@ export default function BookingApp() {
   const arriveBadWidth = (() => { const w = arriveWindow(); return !!w && (w.width < 15 || w.width > 180); })();
   const arriveBox = (
     <div data-testid="arrive-window">
-      {shareArrive && <p className="mb-2 text-xs text-muted" data-testid="share-min-note">{t('share.booking.minNote', { h: shareMinH })}</p>}
       {/* The hint sits ABOVE the date field until both times are set (2026-11-22, operator). */}
       {!arriveWindow() && <p className="mb-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium text-ink" data-testid="arrive-hint">{t('booking.arrive.hint')}</p>}
       <input type="date" className="field block w-full min-w-0 max-w-full appearance-none" value={arriveDay} min={scheduleMin.slice(0, 10)} onChange={(e) => setArriveDay(e.target.value)} aria-label={t('booking.arrive.day')} />
@@ -916,7 +915,7 @@ export default function BookingApp() {
             : t('booking.arrive.needRoute')}
         </p>
       )}
-      {shareArrive && errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
+      {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
     </div>
   );
 
@@ -1133,14 +1132,6 @@ export default function BookingApp() {
                             {pickup && dropoff && (shareZone(pickup) !== join.from || shareZone(dropoff) !== join.to) && <span className="mt-1 block font-semibold text-warn" data-testid="join-mismatch">{t('share.board.joinMismatch')}</span>}
                           </div>
                         )}
-                        {/* Without a co-rider the window is here; with one it sits in the «Попутчик» box (operator 2026-11-22). */}
-                        {!shareArrive && (
-                          <div data-testid="schedule-arrive">
-                            <p className="label mb-1">{t('share.booking.arriveTitle')}</p>
-                            {arriveBox}
-                          </div>
-                        )}
-                        {!shareArrive && errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
                         <div className="mb-3" />
                       </div>
                     ) : (
@@ -1286,8 +1277,15 @@ export default function BookingApp() {
                           the list of places until the route is one where ride-share works. */}
                       {when === 'SCHEDULE' && cfg?.share && (
                         <div className="-mt-4 mb-3">
-                          <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook arrive={arriveBox} disabled={!shareAllowed} />
+                          <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook arrive={shareOn ? <p className="text-xs text-muted" data-testid="share-min-note">{t('share.booking.minNote', { h: shareMinH })}</p> : undefined} disabled={!shareAllowed} />
                           {passenger && !passenger.guest && <a href="/share-board" className="mt-2 block text-center text-sm font-semibold text-accent" data-testid="open-board-link">👥 {t('share.board.open')} →</a>}
+                        </div>
+                      )}
+                      {/* «Когда вам нужно быть на месте?» under the «Попутчик» switch (2026-11-22, operator), with or without a co-rider. */}
+                      {when === 'SCHEDULE' && (
+                        <div className="mb-3 rounded-[12px] border border-edge bg-elevated px-3 py-2.5" data-testid="schedule-arrive">
+                          <p className="label mb-1">{t('share.booking.arriveTitle')}</p>
+                          {arriveBox}
                         </div>
                       )}
                       {when === 'SCHEDULE' && (
