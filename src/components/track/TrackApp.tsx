@@ -25,6 +25,7 @@ import { ShareProposalCard, SharedBadge, type ShareProposalView, type SharedView
 
 interface TrackView {
   flightNumber?: string | null;
+  arrive?: { from: string; by: string } | null;
   confirmedDriver?: null | { name: string; make: string; model: string; color: string; plate: string; rating: { average: number; count: number } | null };
   reference: string;
   myRating?: number | null;
@@ -489,6 +490,7 @@ export default function TrackApp() {
                   </div>
                 )}
                 {view.shared && !terminal && <SharedBadge s={view.shared} to={view.dropoff.label} />}
+                {view.arrive && !terminal && <p className="mt-2 text-xs font-semibold text-accent" data-testid="track-arrive">🏁 {t('rides.prebookings.arrive', { from: fmt.time(view.arrive.from), to: fmt.time(view.arrive.by) })}</p>}
                 {view.flightNumber && !terminal && <p className="mt-2 font-mono text-xs text-muted">✈ {t('track.prebook.flightRow', { flight: formatFlight(view.flightNumber) })}</p>}
                 {view.status === 'NO_DRIVER' && view.canRetry && (
                   <p className="mt-1 text-sm text-muted">{t('track.noDriverNote')}</p>

@@ -32,7 +32,7 @@ import { bearingDeg, cumulative, distM, DR, locate, maneuverIcon, nextStep, offs
 export interface NavTrip {
   bookingId: string; reference: string; status: string;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string; postcode?: string | null };
-  payment?: 'CASH' | 'CARD'; startCodeRequired?: boolean; passengerName: string; passengerRating?: { average: number; count: number } | null; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; luggageCount?: number; vClass: string;
+  payment?: 'CASH' | 'CARD'; startCodeRequired?: boolean; passengerName: string; passengerRating?: { average: number; count: number } | null; passengerPhone: string; note: string | null; flightNumber?: string | null; arrive?: { from: string; by: string } | null; passengerCount: number; luggageCount?: number; vClass: string;
   waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
   /** Passenger's live position, only if they chose to share it, only before pickup (2026-11-15). */
   passengerLocation?: { lat: number; lng: number; accuracyM: number; ageSec: number } | null;
@@ -440,6 +440,7 @@ export function DriverNavigation(props: {
 
         {/* No «Подробнее» section (2026-11-18). The passenger's comment and flight stay visible. */}
         {trip.note && <div className="mt-2 text-sm text-warn">{t('driver.trip.note', { note: trip.note })}</div>}
+        {trip.arrive && <div className="mt-1 text-sm font-semibold text-accent" data-testid="trip-arrive">🏁 {t('driver.scheduled.arrive', { from: fmt.time(trip.arrive.from), to: fmt.time(trip.arrive.by) })}</div>}
         {trip.flightNumber && <div className="mt-1 font-mono text-sm">✈ {t('driver.scheduled.flight', { flight: formatFlight(trip.flightNumber) })}</div>}
         </div>
       </div>

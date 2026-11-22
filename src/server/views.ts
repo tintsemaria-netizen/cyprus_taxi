@@ -139,6 +139,7 @@ export async function trackingView(bookingId: string) {
     dropoff: { lat: booking.dropoffLat, lng: booking.dropoffLng, label: booking.dropoffLabel, postcode: booking.dropoffPostcode ?? null },
     passengerName: booking.passengerName,
     flightNumber: booking.flightNumber,
+    arrive: booking.arriveFrom && booking.arriveBy ? { from: booking.arriveFrom.toISOString(), by: booking.arriveBy.toISOString() } : null, // «быть на месте с … до …»
     confirmedDriver,
     vClass: booking.vClass,
     passengerCount: booking.passengerCount,
@@ -331,6 +332,7 @@ export async function driverCurrentTrip(driverId: string) {
       startCodeRequired: !!b.startCode,
       note: b.note,
       flightNumber: b.flightNumber,
+      arrive: b.arriveFrom && b.arriveBy ? { from: b.arriveFrom.toISOString(), by: b.arriveBy.toISOString() } : null, // «быть на месте с … до …»
       passengerCount: b.passengerCount,
       luggageCount: b.luggageCount,
       childCount: b.childCount,

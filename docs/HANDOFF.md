@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-22 (evening) — Town areas for the minimum + arrival window «Быть на месте с … до …» — deployed to main
+
+- Min-fare areas added for Limassol, Larnaca, Paphos, Ayia Napa/Protaras (migration `20261122030000_min_fare_more_towns`), SWITCHED OFF at €20/€20 until the operator prices and activates them. Admin list: Comfort/XL inputs + «Сохранить» per area; every area coloured on the map (off ones labelled «выкл»).
+- Arrival window (branch `arrive-window`, rebased, migration renamed to `20261122040000_arrive_window` so it runs after the deployed ones): passenger «Быть на месте» mode, matching/board require both co-riders to arrive inside their windows, a live co-rider never makes a host late (`hostArrivesInTime`), window shown in «Мои предзаказы», driver pre-booking list/pair stops/card, dispatch/admin list + detail, driver current trip (DriverNavigation) and passenger tracking (TrackApp).
+- Full suite 357 passed; arrival booking smoke-tested in Playwright (POST 201).
+- Open: pushes still English; ShareDriver legs do not show the window yet.
+
 ## 2026-11-22 — Pre-booking minimum by AREA, edited in admin — deployed to main
 
 - Replaces the env/town-radius rule of the previous entry. Table `MinFareZone` (name, polygon, comfortCents, xlCents, active); migration `20261122020000_min_fare_zones` seeds «Район Никосии» (whole Nicosia district, approximate outline) at Comfort €20 / XL €20 — the operator sets XL in admin.
