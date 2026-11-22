@@ -1,6 +1,6 @@
 # Session handoff
 
-## 2026-11-23 — Driver: no «быть на месте», time between the pair's stops instead (branch `pair-legs`, NOT deployed — shown)
+## 2026-11-23 — Driver: no «быть на месте», time between the pair's stops instead (branch `pair-legs`, deployed 2026-11-23 — operator: «да, всё верно»)
 
 - Operator: «это ничего не нужно водителю, ему нужно только время в дороге 1→2, 2→3, 3→4».
 - Removed the arrival window from every DRIVER screen: DriverNavigation sheet, co-rider sheet (ShareDriver), pre-booking list / pair box / pair stops / detail (ScheduledRides ArriveLine removed). Passenger, share board, dispatch and admin keep it. Server fields for the driver (trip.arrive, hostArrive/guestArrive) are still sent but unused.
