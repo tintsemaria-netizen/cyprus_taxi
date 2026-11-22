@@ -107,6 +107,28 @@ describe('pre-booking minimum by area (2026-11-22)', () => {
   const nicA = { lat: 35.1667, lng: 33.3667, label: 'Eleftheria Sq.' };
   const nicB = { lat: 35.1700, lng: 33.3600, label: 'Nicosia centre' };
   const future = new Date(Date.now() + 2 * 86400_000).toISOString();
+  it('the minimum is fixed when booked: a later price change in admin applies to new bookings only (2026-11-23)', async () => {
+    const wall = new Date(Date.now() + 2 * 86400_000).toLocaleString('sv-SE', { timeZone: 'Asia/Nicosia' }).slice(0, 16).replace(' ', 'T');
+    const utc = (await import('@/lib/timezone')).nicosiaWallTimeToUtc(wall);
+    if (!utc.ok) throw new Error('tz');
+    const q = await createQuote({ pickup: nicA, dropoff: nicB, vClass: 'COMFORT', passengerCount: 1, scheduledAtUtc: utc.utc.toISOString() });
+    if (!q.ok) throw new Error('quote');
+    const r = await createBooking({ pickup: nicA, dropoff: nicB, when: 'SCHEDULE', scheduledAt: wall, vClass: 'COMFORT', passengerCount: 1, passengerName: 'Snap', phone: '+35799123456', quoteId: q.quote.quoteId } as CreateBookingInput, `snap-${RUN}`);
+    if (!r.ok) throw new Error(r.code);
+    const b1 = await prisma.booking.findUniqueOrThrow({ where: { reference: r.body.reference } });
+    expect(b1.fareMinCents).toBe(2000);
+    expect(b1.fareMinZone).toBe('Район Никосии');
+    // Admin changes the price to €5: the booking keeps €20, a new quote gets €5.
+    await prisma.minFareZone.updateMany({ data: { comfortCents: 500 } });
+    invalidateMinFareCache();
+    expect((await prisma.booking.findUniqueOrThrow({ where: { id: b1.id } })).fareMinCents).toBe(2000);
+    const q2 = await createQuote({ pickup: nicA, dropoff: nicB, vClass: 'COMFORT', passengerCount: 1, scheduledAtUtc: utc.utc.toISOString() });
+    if (!q2.ok) throw new Error('quote');
+    expect(q2.quote.minCents).toBe(500);
+    await prisma.minFareZone.updateMany({ data: { comfortCents: 2000 } });
+    invalidateMinFareCache();
+  });
+
   it('a short pre-booking inside Nicosia is priced €20 (line «prebookMin»); a ride now is not', async () => {
     const pre = await createQuote({ pickup: nicA, dropoff: nicB, vClass: 'COMFORT', passengerCount: 1, scheduledAtUtc: future });
     if (!pre.ok) throw new Error('quote');

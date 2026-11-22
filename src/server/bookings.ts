@@ -142,7 +142,7 @@ export async function createBooking(
 
   // 6b. Optional fare quote: validate ownership/expiry/payload and snapshot it onto the
   // booking (the client-supplied price is never trusted).
-  let fare: { fareCents: number; priceType: string; fareBreakdown: string } | null = null;
+  let fare: { fareCents: number; priceType: string; fareBreakdown: string; minCents: number | null; minZone: string | null } | null = null;
   if (input.quoteId) {
     const cq = await consumeQuote(input.quoteId, {
       pickup: input.pickup, dropoff: input.dropoff, stop: input.stop ?? null, vClass: input.vClass,
@@ -152,7 +152,7 @@ export async function createBooking(
     if (!cq.ok) {
       return fail(422, cq.code, cq.code === 'QUOTE_EXPIRED' ? 'The price estimate expired — refresh it.' : 'The price estimate no longer matches this trip — refresh it.');
     }
-    fare = { fareCents: cq.totalCents, priceType: cq.priceType, fareBreakdown: cq.breakdown };
+    fare = { fareCents: cq.totalCents, priceType: cq.priceType, fareBreakdown: cq.breakdown, minCents: cq.minCents, minZone: cq.minZone };
   }
 
   // 7. Atomically claim the key + create booking + event + tracking grant + store
@@ -181,7 +181,7 @@ export async function createBooking(
           childCount: input.childCount ?? 0,
           ...(shareOptIn ? { shareOptIn: true, shareMaxExtraMin: input.shareMaxExtraMin ?? config.share.defaultMaxExtraMin, ...(scheduledAt ? (arrive ? { shareWaitMin: 0, shareEarlyMin: Math.round((arrive.by.getTime() - arrive.from.getTime()) / 60_000) } : { shareWaitMin: input.shareWaitMin ?? config.share.defaultWaitMin, shareEarlyMin: input.shareEarlyMin ?? 0 }) : {}) } : {}),
           ...(passengerId ? { passengerId } : {}),
-          ...(fare ? { quoteId: input.quoteId, fareCents: fare.fareCents, priceType: fare.priceType, fareBreakdown: fare.fareBreakdown } : {}),
+          ...(fare ? { quoteId: input.quoteId, fareCents: fare.fareCents, priceType: fare.priceType, fareBreakdown: fare.fareBreakdown, fareMinCents: fare.minCents, fareMinZone: fare.minZone } : {}),
         },
       });
       await tx.bookingEvent.create({ data: { bookingId: b.id, type: 'CREATED', actorType: 'PASSENGER', afterStatus: initialStatus } });

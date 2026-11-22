@@ -514,6 +514,10 @@ model Booking {
   revision              Int              @default(0)
   quoteId               String? // fare quote applied at booking time (Task 012)
   fareCents             Int? // snapshotted estimate total (cents)
+  // Pre-booking minimum fixed AT BOOKING (operator 2026-11-23): a later price change in admin does not touch
+  // existing bookings — the passenger and the driver keep the minimum that was shown when it was booked.
+  fareMinCents          Int?
+  fareMinZone           String?
   priceType             String? // REGULATED_METER_ESTIMATE | REGULATED_FIXED | UPFRONT_DYNAMIC
   fareBreakdown         String? // JSON snapshot of the quote breakdown
   startCode             String? // 4-digit trip-start code (shown to passenger; driver enters it to start) — M3
@@ -886,6 +890,8 @@ model Quote {
   requestHash     String // hash of the normalized inputs; booking re-verifies
   pricingAt       DateTime? // the intended JOURNEY time priced (scheduled → future; else = createdAt)
   routeSource     String? // 'traffic' | 'approx' — provenance of distance/duration
+  minCents        Int? // pre-booking minimum of the area at quote time (2026-11-23), null = none
+  minZone         String?
   createdAt       DateTime     @default(now())
   expiresAt       DateTime
 

@@ -1,5 +1,3 @@
-import { bookingMin } from '@/lib/prebook-min';
-import { minZones } from '@/server/min-fares';
 import { prisma } from '@/lib/db';
 import { blockedPassengerIdsForDriver, isPairBlocked } from './blocked-pairs';
 import { Prisma } from '@prisma/client';
@@ -74,7 +72,6 @@ export async function listFreeOrders(driverId: string, now: Date = new Date()): 
   // Never show a passenger this driver is blocked with (1-star either way, blocked-pairs.ts).
   const blockedPax = await blockedPassengerIdsForDriver(driverId);
   if (blockedPax.size) jobs.splice(0, jobs.length, ...jobs.filter((j) => !j.booking.passengerId || !blockedPax.has(j.booking.passengerId)));
-  const mz = await minZones();
   const here = driver.location ? { lat: driver.location.lat, lng: driver.location.lng } : null;
   return jobs
     .map(({ booking: b, openedAt, deadlineAt }) => ({
@@ -91,7 +88,7 @@ export async function listFreeOrders(driverId: string, now: Date = new Date()): 
       scheduledAt: b.scheduledAt ? b.scheduledAt.toISOString() : null,
       fareCents: b.fareCents,
       priceType: b.priceType,
-      minCents: bookingMin(mz, b)?.cents ?? null, // pre-booking minimum by area (2026-11-22)
+      minCents: b.fareMinCents ?? null, // pre-booking minimum as fixed when booked (2026-11-23)
       currency: config.currency,
       waitingSince: openedAt!.toISOString(),
       expiresAt: deadlineAt.toISOString(),

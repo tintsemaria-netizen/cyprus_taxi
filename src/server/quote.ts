@@ -199,7 +199,7 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
       priceType, ruleVersion: est.ruleVersion, currency: est.currency,
       totalCents, rangeLowCents, rangeHighCents,
       breakdown: JSON.stringify(lines), requestHash, expiresAt,
-      pricingAt, routeSource,
+      pricingAt, routeSource, minCents, minZone,
     },
   });
 
@@ -220,12 +220,12 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
 
 // Validate a quote for a booking: exists, matches the payload, not expired.
 export async function consumeQuote(quoteId: string, input: QuoteInput): Promise<
-  | { ok: true; totalCents: number; priceType: string; breakdown: string }
+  | { ok: true; totalCents: number; priceType: string; breakdown: string; minCents: number | null; minZone: string | null }
   | { ok: false; code: string }
 > {
   const q = await prisma.quote.findUnique({ where: { id: quoteId } });
   if (!q) return { ok: false, code: 'QUOTE_NOT_FOUND' };
   if (q.expiresAt < new Date()) return { ok: false, code: 'QUOTE_EXPIRED' };
   if (q.requestHash !== quoteRequestHash(input)) return { ok: false, code: 'QUOTE_MISMATCH' };
-  return { ok: true, totalCents: q.totalCents, priceType: q.priceType, breakdown: q.breakdown };
+  return { ok: true, totalCents: q.totalCents, priceType: q.priceType, breakdown: q.breakdown, minCents: q.minCents ?? null, minZone: q.minZone ?? null };
 }
