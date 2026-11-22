@@ -1,6 +1,8 @@
 // Ride-share «Попутчик» (Task 022): airport/intercity, at most two bookings in one car.
 const share = {
   booking: {
+    stopBlocked: 'A stop cannot be added to a pre-booking with a co-rider.',
+    shareBlocked: 'A pre-booking with a co-rider does not work with a stop.',
     minNote: 'A co-rider can be found for rides booked at least {h} h ahead.',
     tooSoon: 'A ride with a co-rider can be booked at least {h} h ahead.',
     arriveTitle: 'When do you need to be there?',

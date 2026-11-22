@@ -529,6 +529,10 @@ export default function BookingApp() {
   // Ride-share «Попутчик» (Task 022): airport / intercity only, no intermediate stop. When it is on,
   // the real people / bags count matters (seats and boot are shared), so they are sent and priced.
   const shareAllowed = !!(cfg?.share && pickup && dropoff && !viaStop && isShareRoute(pickup, dropoff));
+  // Pre-booking: a co-rider and a stop exclude each other (operator 2026-11-23) — the other button shows a small red note.
+  const shareRouteOk = !!(cfg?.share && pickup && dropoff && isShareRoute(pickup, dropoff));
+  const [stopWarn, setStopWarn] = useState(false);
+  useEffect(() => { if (!stopWarn) return; const id = setTimeout(() => setStopWarn(false), 4000); return () => clearTimeout(id); }, [stopWarn]);
   const shareOn = shareAllowed && shareOpts.on;
   const effPax = shareOn ? shareOpts.adults + shareOpts.children : 1;
   const effBags = shareOn ? shareOpts.bags : 0;
@@ -973,7 +977,7 @@ export default function BookingApp() {
           work={places.work}
           school={places.school ?? null}
           custom={places.custom ?? []}
-          canAddStop={!hasStop}
+          canAddStop={!hasStop && !(when === 'SCHEDULE' && shareOn)}
           onText={(s, x) => { slotGet(s).setText(x); if (s === 'p' && autoPickup) setAutoPickup(false); }}
           onSelect={(s, sel) => { slotGet(s).setSel(sel); if (s === 'p') setAutoPickup(false); }}
           onAddStop={() => setHasStop(true)}
@@ -1263,8 +1267,9 @@ export default function BookingApp() {
                             );
                           })()}
                           {addrOpen && !hasStop && (
-                            <button type="button" className="chip mt-2 hover:border-accent/50" onClick={() => { setHasStop(true); openEditor('s'); }}>＋ {t('booking.form.addStop')}</button>
+                            <button type="button" className="chip mt-2 hover:border-accent/50" data-testid="add-stop" onClick={() => { if (when === 'SCHEDULE' && shareOn) { setStopWarn(true); return; } setHasStop(true); openEditor('s'); }}>＋ {t('booking.form.addStop')}</button>
                           )}
+                          {stopWarn && <p role="alert" className="mt-2 rounded-[10px] border border-danger/50 bg-danger/15 px-3 py-2 text-[13px] font-medium text-danger" data-testid="stop-blocked">{t('share.booking.stopBlocked')}</p>}
                         </div>
                       );
                     })()}
@@ -1277,7 +1282,7 @@ export default function BookingApp() {
                           the list of places until the route is one where ride-share works. */}
                       {when === 'SCHEDULE' && cfg?.share && (
                         <div className="-mt-4 mb-3">
-                          <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook arrive={shareOn ? <p className="text-xs text-muted" data-testid="share-min-note">{t('share.booking.minNote', { h: shareMinH })}</p> : undefined} disabled={!shareAllowed} />
+                          <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook blockMsg={viaStop && shareRouteOk ? t('share.booking.shareBlocked') : null} arrive={shareOn ? <p className="text-xs text-muted" data-testid="share-min-note">{t('share.booking.minNote', { h: shareMinH })}</p> : undefined} disabled={!shareAllowed && !(viaStop && shareRouteOk)} />
                         </div>
                       )}
                       {/* «Когда вам нужно быть на месте?» under the «Попутчик» switch (2026-11-22, operator), with or without a co-rider. */}

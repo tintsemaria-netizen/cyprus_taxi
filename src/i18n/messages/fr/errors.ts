@@ -43,6 +43,7 @@ const errors: Catalog<typeof en> = {
   BUSY: 'ce trajet a déjà une proposition',
   DRIVER_ACCOUNT: 'le tableau est réservé aux passagers',
   GONE: 'ce trajet n’est plus au tableau',
+  PREBOOK_STARTED: 'Le trajet réservé a commencé — l’arrêt ne peut plus être modifié.',
   QUOTE_EXPIRED: "L’estimation du prix a expiré. Veuillez vérifier la nouvelle estimation.",
   QUOTE_MISMATCH: "La course a changé depuis l’estimation. Veuillez vérifier la nouvelle estimation.",
   RATE_LIMITED: "Trop de tentatives. Patientez un instant et réessayez.",

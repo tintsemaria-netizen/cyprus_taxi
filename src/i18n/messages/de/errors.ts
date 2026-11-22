@@ -43,6 +43,7 @@ const errors: Catalog<typeof en> = {
   BUSY: 'für diese Fahrt gibt es schon einen Vorschlag',
   DRIVER_ACCOUNT: 'die Tafel ist für Fahrgäste',
   GONE: 'die Fahrt ist nicht mehr auf der Tafel',
+  PREBOOK_STARTED: 'Die vorbestellte Fahrt hat begonnen — der Zwischenstopp kann nicht mehr geändert werden.',
   QUOTE_EXPIRED: "Die Preisschätzung ist abgelaufen. Bitte prüfen Sie die neue Schätzung.",
   QUOTE_MISMATCH: "Die Fahrt hat sich seit der Schätzung geändert. Bitte prüfen Sie die neue Schätzung.",
   RATE_LIMITED: "Zu viele Versuche. Bitte warten Sie kurz und versuchen Sie es erneut.",

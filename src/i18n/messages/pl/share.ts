@@ -3,6 +3,8 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   booking: {
+    stopBlocked: 'Do rezerwacji ze współpasażerem nie można dodać przystanku.',
+    shareBlocked: 'Rezerwacja ze współpasażerem nie działa z przystankiem.',
     minNote: 'Współpasażera szukamy dla przejazdów zamówionych co najmniej {h} h wcześniej.',
     tooSoon: 'Przejazd ze współpasażerem trzeba zamówić co najmniej {h} h wcześniej.',
     arriveTitle: 'Kiedy musisz być na miejscu?',

@@ -35,6 +35,18 @@ async function ride() {
 }
 
 describe('passenger changes the stop on a live ride', () => {
+  it('a pre-booking: the stop can change before it starts, not once it has started (2026-11-23)', async () => {
+    const { bookingId } = await ride();
+    // Started pre-booking (EN_ROUTE with a booked time) → locked.
+    await prisma.booking.update({ where: { id: bookingId }, data: { scheduledAt: new Date(Date.now() + 20 * 60_000) } });
+    const r = await passengerSetStop(bookingId, mall);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.code).toBe('PREBOOK_STARTED');
+    // Not started yet (REQUESTED) → allowed.
+    await prisma.booking.update({ where: { id: bookingId }, data: { status: 'REQUESTED', scheduledAt: new Date(Date.now() + 86400_000) } });
+    expect((await passengerSetStop(bookingId, mall)).ok).toBe(true);
+  });
+
   it('adds a stop (re-quoted, driver notified), then removes it', async () => {
     const { bookingId } = await ride();
     const before = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });

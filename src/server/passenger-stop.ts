@@ -4,6 +4,7 @@ import { enqueueDriver } from '@/server/push';
 
 // Passenger adds / replaces / removes the ONE intermediate stop on a live ride (2026-11-15):
 // «забыли или планы поменялись». Allowed from search until the trip ends, as long as the car
+// (a PRE-BOOKING only until it starts, 2026-11-23; never with a co-rider)
 // has not reached the current stop yet. The meter estimate is re-quoted server-side for the new
 // route (the final fare is still the taximeter); the assigned driver is notified and their
 // navigation picks the stop up from the trip view.
@@ -17,6 +18,8 @@ export async function passengerSetStop(bookingId: string, stop: StopChange): Pro
   if (!b) return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Booking not found.' };
   if (!OPEN.includes(b.status)) return { ok: false, status: 409, code: 'BAD_STATE', message: 'The ride is over.' };
   if (b.stopArrivedAt) return { ok: false, status: 409, code: 'STOP_LOCKED', message: 'The car is already at (or past) the stop.' };
+  // A pre-booking that has started (operator 2026-11-23): the stop is set when booking (or before it starts), never during the ride.
+  if (b.scheduledAt && b.status !== 'REQUESTED') return { ok: false, status: 409, code: 'PREBOOK_STARTED', message: 'The pre-booked ride has started — the stop can no longer be changed.' };
   // Ride-share «Попутчик» (2026-11-19): a co-rider ride has no intermediate stop.
   if (stop && b.shareOptIn) return { ok: false, status: 409, code: 'SHARE_NO_STOP', message: 'A ride with a co-rider cannot have a stop.' };
   if (!stop && b.stopLat == null) return { ok: true, fareCents: b.fareCents ?? null };
@@ -43,6 +46,7 @@ export async function passengerSetStop(bookingId: string, stop: StopChange): Pro
     const cur = await tx.booking.findUnique({ where: { id: bookingId } });
     if (!cur || !OPEN.includes(cur.status)) return { ok: false as const, status: 409, code: 'BAD_STATE', message: 'The ride is over.' };
     if (cur.stopArrivedAt) return { ok: false as const, status: 409, code: 'STOP_LOCKED', message: 'The car is already at (or past) the stop.' };
+    if (cur.scheduledAt && cur.status !== 'REQUESTED') return { ok: false as const, status: 409, code: 'PREBOOK_STARTED', message: 'The pre-booked ride has started — the stop can no longer be changed.' };
     const u = await tx.booking.update({
       where: { id: bookingId },
       data: {

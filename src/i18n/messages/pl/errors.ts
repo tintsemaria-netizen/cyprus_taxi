@@ -43,6 +43,7 @@ const errors: Catalog<typeof en> = {
   BUSY: 'ten przejazd ma już propozycję',
   DRIVER_ACCOUNT: 'tablica jest dla pasażerów',
   GONE: 'tego przejazdu nie ma już na tablicy',
+  PREBOOK_STARTED: 'Zarezerwowany przejazd już się zaczął — przystanku nie można zmienić.',
   QUOTE_EXPIRED: "Wycena wygasła. Sprawdź nową wycenę.",
   QUOTE_MISMATCH: "Przejazd zmienił się od wyceny. Sprawdź nową wycenę.",
   RATE_LIMITED: "Za dużo prób. Poczekaj chwilę i spróbuj ponownie.",

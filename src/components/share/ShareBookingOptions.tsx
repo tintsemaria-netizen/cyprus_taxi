@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useT } from '@/i18n/I18nProvider';
 
 // Ride-share «Попутчик» at booking (Task 022): shown only for airport / intercity routes. The
@@ -19,11 +20,14 @@ export const SHARE_FLEX_DEFAULT = SHARE_FLEX[1];
 // `disabled` (2026-11-20): the pre-booking window shows the switch even before / off a ride-share route —
 // greyed, with the list of places where it works.
 // `arrive` (2026-11-22, operator): in a pre-booking the «Быть на месте с … до …» window replaces the flexibility choice.
-export function ShareBookingOptions({ value, onChange, pct, maxPeople, prebook, disabled, arrive }: { value: ShareOpts; onChange: (v: ShareOpts) => void; pct: number; maxPeople: number; prebook?: boolean; disabled?: boolean; arrive?: React.ReactNode }) {
+export function ShareBookingOptions({ value, onChange, pct, maxPeople, prebook, disabled, arrive, blockMsg }: { value: ShareOpts; onChange: (v: ShareOpts) => void; pct: number; maxPeople: number; prebook?: boolean; disabled?: boolean; arrive?: React.ReactNode; blockMsg?: string | null }) {
   const { t } = useT();
+  // `blockMsg` (2026-11-23): the switch stays off and a small red note says why (e.g. a stop was added).
+  const [warn, setWarn] = useState(false);
+  useEffect(() => { if (!warn) return; const id = setTimeout(() => setWarn(false), 4000); return () => clearTimeout(id); }, [warn]);
   const set = (p: Partial<ShareOpts>) => onChange({ ...value, ...p });
   const people = value.adults + value.children;
-  const on = value.on && !disabled;
+  const on = value.on && !disabled && !blockMsg;
   return (
     <div className={`mt-4 rounded-[14px] border px-3 py-3 transition ${on ? 'border-accent bg-accent/10' : 'border-edge bg-elevated'} ${disabled ? 'opacity-60' : ''}`} data-testid="share-options">
       <label className={`flex items-center gap-3 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
@@ -35,12 +39,13 @@ export function ShareBookingOptions({ value, onChange, pct, maxPeople, prebook, 
           </span>
           {disabled && <span className="block text-xs text-muted">{t('share.booking.routes')}</span>}
         </span>
-        <input type="checkbox" role="switch" aria-checked={on} checked={on} disabled={disabled} onChange={(e) => set({ on: e.target.checked })}
+        <input type="checkbox" role="switch" aria-checked={on} checked={on} disabled={disabled} onChange={(e) => { if (e.target.checked && blockMsg) { setWarn(true); return; } set({ on: e.target.checked }); }}
           className="peer sr-only" />
         <span aria-hidden className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? 'bg-accent' : 'bg-edge-strong'}`}>
           <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? 'start-[22px]' : 'start-0.5'}`} />
         </span>
       </label>
+      {warn && blockMsg && <p role="alert" className="mt-2 rounded-[10px] border border-danger/50 bg-danger/15 px-3 py-2 text-[13px] font-medium text-danger" data-testid="share-blocked">{blockMsg}</p>}
       {!disabled && (
         <p className="mt-2 flex items-start gap-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium leading-snug text-ink" data-testid="share-hint">
           <span aria-hidden>💰</span><span>{t('share.booking.hint', { pct })}</span>

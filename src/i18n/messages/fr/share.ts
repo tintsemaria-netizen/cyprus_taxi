@@ -3,6 +3,8 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   booking: {
+    stopBlocked: 'Impossible d’ajouter un arrêt à une réservation avec co-passager.',
+    shareBlocked: 'La réservation avec co-passager ne fonctionne pas avec un arrêt.',
     minNote: 'Nous cherchons un co-passager pour les trajets réservés au moins {h} h à l’avance.',
     tooSoon: 'Un trajet partagé doit être réservé au moins {h} h à l’avance.',
     arriveTitle: 'Quand devez-vous être sur place ?',

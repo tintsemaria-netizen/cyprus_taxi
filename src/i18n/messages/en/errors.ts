@@ -42,6 +42,7 @@ const errors = {
   BUSY: 'that ride already has a proposal',
   DRIVER_ACCOUNT: 'the board is for passengers',
   GONE: 'that ride is no longer on the board',
+  PREBOOK_STARTED: 'The pre-booked ride has started — the stop can no longer be changed.',
   QUOTE_EXPIRED: 'The price estimate expired. Please review the new estimate.',
   QUOTE_MISMATCH: 'The trip changed since the estimate. Please review the new estimate.',
   RATE_LIMITED: 'Too many attempts. Please wait a moment and try again.',

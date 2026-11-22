@@ -530,7 +530,7 @@ export default function TrackApp() {
 
                 {/* Route (2026-11-15): the same dotted box as when ordering, with room between points;
                     a stop can be added/removed in the middle until the car reaches it. */}
-                <TrackRoute view={view} editable={!terminal && !view.stop?.arrivedAt && !(view.status === 'NO_DRIVER' && !view.canRetry)} canAddStop={!view.shareOptIn && !view.shared} onChanged={load} />
+                <TrackRoute view={view} editable={!terminal && !view.stop?.arrivedAt && !(view.status === 'NO_DRIVER' && !view.canRetry) && !(view.scheduledAt && view.status !== 'REQUESTED')} canAddStop={!view.shareOptIn && !view.shared} onChanged={load} />
                 {view.stop?.arrivedAt && !view.stop.departedAt && (
                   <p className="mt-2 rounded-[10px] border border-[#FFC83D]/40 bg-[#FFC83D]/10 px-3 py-2 text-xs text-[#FFC83D]">{view.stop.waitStartedAt ? t('track.stopWaitingPaid') : t('track.atStop')}</p>
                 )}

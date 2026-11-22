@@ -3,6 +3,8 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   booking: {
+    stopBlocked: 'לא ניתן להוסיף עצירה להזמנה מראש עם שותף לנסיעה.',
+    shareBlocked: 'הזמנה מראש עם שותף לא עובדת עם עצירה.',
     minNote: 'שותף לנסיעה נמצא להזמנות של לפחות {h} שעות מראש.',
     tooSoon: 'נסיעה משותפת יש להזמין לפחות {h} שעות מראש.',
     arriveTitle: 'מתי עליך להגיע?',
