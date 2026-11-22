@@ -3,6 +3,8 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   booking: {
+    minNote: 'Mitfahrer suchen wir für Fahrten, die mindestens {h} Std. vorher gebucht sind.',
+    tooSoon: 'Eine Fahrt mit Mitfahrer muss mindestens {h} Std. vorher gebucht werden.',
     arriveTitle: 'Wann müssen Sie dort sein?',
     name: 'Mitfahrer',
     flex: 'Wie flexibel ist Ihre Zeit?',
@@ -126,6 +128,15 @@ const share: Catalog<typeof en> = {
     LIMASSOL: 'Limassol',
   },
   board: {
+    joinMismatch: 'Die Strecke muss gleich sein: Abholung und Ziel an diesen Orten.',
+    driverOnly: 'Die Mitfahrer-Tafel ist für Fahrgäste. Fahrer sehen Vorbestellungen in der Fahrer-App.',
+    noMineOpen: 'Wählen Sie unten eine Fahrt — oder buchen Sie Ihre eigene mit Mitfahrer.',
+    all: 'Alle Fahrten',
+    join: 'Mit diesem Mitfahrer fahren',
+    joining: 'Sie schließen sich einer Fahrt an: {from} → {to}, {when}. Geben Sie Ihre Adressen in diesen Orten an.',
+    joinSent: 'Vorschlag gesendet — er antwortet mit Ja oder Nein.',
+    joinFailed: 'Nicht gesendet ({reason}). Wir suchen automatisch weiter.',
+    cancelJoin: 'Nicht anschließen',
     title: 'Mitfahrer-Board',
     subtitle: 'Vorbestellungen mit Mitfahrer, die noch keinen Partner haben. Wählen Sie eine und fahren Sie zu deren Zeit gemeinsam — sie antworten ja oder nein. Bleiben bis {h} Std. vor Abholung; wir suchen auch automatisch weiter.',
     noMine: 'Für das Board bitte eine Fahrt (mehr als {h} Std. im Voraus) mit «Mitfahrer» vorbestellen.',

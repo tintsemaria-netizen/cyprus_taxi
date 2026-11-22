@@ -60,15 +60,43 @@ describe('share board', () => {
     expect(json).not.toMatch(/Secret Name|\+357|Eleftheria|Makariou/); // no names, phones or streets
   });
 
-  it('hides other corridors, rides inside the last 10 h, and shows nothing to someone with no ride listed', async () => {
+  it('hides other corridors and rides inside the last 4 h; the open board shows everyone else\'s rides to anyone', async () => {
     const a = await passenger(), b = await passenger(), c = await passenger(), d = await passenger();
-    await ride(a.id, lca, nic1, 24);
-    await ride(b.id, lca, lim, 24); // different destination
-    await ride(c.id, lcaNear, nic2, 5); // within 10 h
+    const ra = await ride(a.id, lca, nic1, 24);
+    const rb = await ride(b.id, lca, lim, 24); // different destination
+    await ride(c.id, lcaNear, nic2, 3); // within 4 h (settings.shareBoardHideMinutes)
     expect((await shareBoard(a.id)).others).toHaveLength(0);
+    // 2026-11-22 (operator): the board is open — a passenger with no ride of his own sees all listed rides.
     const none = await shareBoard(d.id);
     expect(none.mine).toHaveLength(0);
     expect(none.others).toHaveLength(0);
+    expect(none.all.map((r) => r.id).sort()).toEqual([ra.id, rb.id].sort());
+    expect(JSON.stringify(none)).not.toMatch(/Secret Name|\+357|Eleftheria|Makariou/);
+    expect((await shareBoard(a.id)).all.map((r) => r.id)).toEqual([rb.id]); // never my own ride
+  });
+
+  it('a driver (same phone as a driver account) gets no board and cannot propose', async () => {
+    const d = await prisma.driver.findFirstOrThrow({ where: { publicName: 'Andreas' } });
+    const asPax = await prisma.passenger.create({ data: { phone: d.phone, phoneVerifiedAt: new Date(), name: 'Driver as passenger' } }).catch(async () => prisma.passenger.findUniqueOrThrow({ where: { phone: d.phone } }));
+    const b = await passenger();
+    const rb = await ride(b.id, lca, nic1, 24);
+    const v = await shareBoard(asPax.id);
+    expect(v.driver).toBe(true);
+    expect(v.all).toHaveLength(0);
+    const mine = await ride(asPax.id, lcaNear, nic2, 25);
+    const r = await proposeFromBoard(asPax.id, mine.id, rb.id);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.code).toBe('DRIVER_ACCOUNT');
+  });
+
+  it('a pre-booking with a co-rider must be at least 3 h ahead (admin setting)', async () => {
+    const at = new Date(Date.now() + 2 * 3600_000).toLocaleString('sv-SE', { timeZone: 'Asia/Nicosia' }).slice(0, 16).replace(' ', 'T');
+    const input = createBookingSchema.parse({ pickup: lca, dropoff: nic1, when: 'SCHEDULE', scheduledAt: at, vClass: 'COMFORT', passengerCount: 1, luggageCount: 1, passengerName: 'X', phone: '+35799123456', shareOptIn: true });
+    const r = await createBooking(input, `sb-soon-${RUN}`);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.code).toBe('SHARE_TOO_SOON');
+    const plain = createBookingSchema.parse({ ...input, shareOptIn: false });
+    expect((await createBooking(plain, `sb-soon2-${RUN}`)).ok).toBe(true); // without a co-rider 2 h ahead is fine (≥ 1 h)
   });
 
   it('«ride together»: the other passenger answers yes → matched at THEIR time; the proposer moved', async () => {

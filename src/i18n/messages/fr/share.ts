@@ -3,6 +3,8 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   booking: {
+    minNote: 'Nous cherchons un co-passager pour les trajets réservés au moins {h} h à l’avance.',
+    tooSoon: 'Un trajet partagé doit être réservé au moins {h} h à l’avance.',
     arriveTitle: 'Quand devez-vous être sur place ?',
     name: 'Covoyageur',
     flex: 'Votre horaire est-il flexible ?',
@@ -126,6 +128,15 @@ const share: Catalog<typeof en> = {
     LIMASSOL: 'Limassol',
   },
   board: {
+    joinMismatch: 'Le trajet doit être le même : prise en charge et dépose dans ces lieux.',
+    driverOnly: 'Le tableau est réservé aux passagers. Les chauffeurs voient les réservations dans l’app chauffeur.',
+    noMineOpen: 'Choisissez un trajet ci-dessous — ou réservez le vôtre avec co-passager.',
+    all: 'Tous les trajets',
+    join: 'Voyager avec ce co-passager',
+    joining: 'Vous rejoignez un trajet : {from} → {to}, {when}. Indiquez vos adresses dans ces lieux.',
+    joinSent: 'Proposition envoyée — il répondra oui ou non.',
+    joinFailed: 'Non envoyé ({reason}). Nous continuons à chercher automatiquement.',
+    cancelJoin: 'Ne pas rejoindre',
     title: 'Tableau des covoyageurs',
     subtitle: 'Réservations avec covoyageur encore sans partenaire. Choisissez-en une et voyagez ensemble à leur heure — ils répondent oui ou non. Elles restent ici jusqu’à {h} h avant ; nous cherchons aussi automatiquement.',
     noMine: 'Pour utiliser le tableau, réservez une course (plus de {h} h à l’avance) avec «Covoyageur».',

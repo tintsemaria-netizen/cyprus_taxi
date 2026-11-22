@@ -14,6 +14,8 @@ interface Settings {
   googleReviewUrl: string | null;
   scheduleMinMinutes: number;
   scheduleMaxDays: number;
+  shareMinMinutes: number;
+  shareBoardHideMinutes: number;
   minStopDistanceMeters: number;
   serviceAreaPolygon: { lat: number; lng: number }[];
 }
@@ -45,6 +47,8 @@ function SettingsForm() {
           googleReviewUrl: s.googleReviewUrl?.trim() || null,
           scheduleMinMinutes: Number(s.scheduleMinMinutes),
           scheduleMaxDays: Number(s.scheduleMaxDays),
+          shareMinMinutes: Number(s.shareMinMinutes),
+          shareBoardHideMinutes: Number(s.shareBoardHideMinutes),
           minStopDistanceMeters: Number(s.minStopDistanceMeters),
         },
       });
@@ -70,6 +74,8 @@ function SettingsForm() {
         <Row label={t('staff.settings.googleReview')}><input className="field" value={s.googleReviewUrl ?? ''} onChange={(e) => setS({ ...s, googleReviewUrl: e.target.value })} placeholder={t('staff.settings.googleReviewPh')} /></Row>
         <div className="grid grid-cols-3 gap-3">
           <Row label={t('staff.settings.schedMin')}><input type="number" className="field" value={s.scheduleMinMinutes} onChange={(e) => setS({ ...s, scheduleMinMinutes: Number(e.target.value) })} /></Row>
+          <Row label={t('staff.settings.shareMin')}><input type="number" className="field" value={s.shareMinMinutes} onChange={(e) => setS({ ...s, shareMinMinutes: Number(e.target.value) })} data-testid="set-share-min" /></Row>
+          <Row label={t('staff.settings.boardHide')}><input type="number" className="field" value={s.shareBoardHideMinutes} onChange={(e) => setS({ ...s, shareBoardHideMinutes: Number(e.target.value) })} data-testid="set-board-hide" /></Row>
           <Row label={t('staff.settings.schedMax')}><input type="number" className="field" value={s.scheduleMaxDays} onChange={(e) => setS({ ...s, scheduleMaxDays: Number(e.target.value) })} /></Row>
           <Row label={t('staff.settings.minStop')}><input type="number" className="field" value={s.minStopDistanceMeters} onChange={(e) => setS({ ...s, minStopDistanceMeters: Number(e.target.value) })} /></Row>
         </div>

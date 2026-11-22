@@ -3,6 +3,8 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   booking: {
+    minNote: 'Współpasażera szukamy dla przejazdów zamówionych co najmniej {h} h wcześniej.',
+    tooSoon: 'Przejazd ze współpasażerem trzeba zamówić co najmniej {h} h wcześniej.',
     arriveTitle: 'Kiedy musisz być na miejscu?',
     name: 'Współpasażer',
     flex: 'Jak elastyczny jest Twój czas?',
@@ -126,6 +128,15 @@ const share: Catalog<typeof en> = {
     LIMASSOL: 'Limassol',
   },
   board: {
+    joinMismatch: 'Trasa musi być ta sama: odbiór i wysiadka w tych miejscach.',
+    driverOnly: 'Tablica jest dla pasażerów. Kierowcy widzą rezerwacje w aplikacji kierowcy.',
+    noMineOpen: 'Wybierz przejazd poniżej — albo zamów własny ze współpasażerem.',
+    all: 'Wszystkie przejazdy',
+    join: 'Jedź z tym współpasażerem',
+    joining: 'Dołączasz do przejazdu: {from} → {to}, {when}. Podaj swoje adresy w tych miejscach.',
+    joinSent: 'Propozycja wysłana — odpowie tak lub nie.',
+    joinFailed: 'Nie wysłano ({reason}). Szukamy dalej automatycznie.',
+    cancelJoin: 'Nie dołączaj',
     title: 'Tablica współpasażerów',
     subtitle: 'Rezerwacje ze współpasażerem bez pary. Wybierz jedną i jedźcie razem o ich godzinie — odpowiedzą tak lub nie. Wiszą tu do {h} h przed odbiorem; szukamy też automatycznie.',
     noMine: 'Aby korzystać z tablicy, zarezerwuj kurs (ponad {h} h wcześniej) z włączonym «Współpasażerem».',

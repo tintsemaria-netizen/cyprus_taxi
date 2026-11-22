@@ -8,6 +8,10 @@ export interface OperationalSettings {
   serviceAreaPolygon: LatLng[];
   scheduleMinMinutes: number;
   scheduleMaxDays: number;
+  /** Pre-booking WITH a co-rider: at least this many minutes ahead (operator 2026-11-22: 3 h). */
+  shareMinMinutes: number;
+  /** Share board: a ride leaves the board this many minutes before pickup (operator 2026-11-22: 4 h). */
+  shareBoardHideMinutes: number;
   minStopDistanceMeters: number;
   gpsFreshSeconds: number;
   gpsStaleSeconds: number;
@@ -23,6 +27,8 @@ const DEFAULTS: OperationalSettings = {
   serviceAreaPolygon: DEMO_CYPRUS_POLYGON,
   scheduleMinMinutes: config.schedule.minMinutes,
   scheduleMaxDays: config.schedule.maxDays,
+  shareMinMinutes: 180,
+  shareBoardHideMinutes: 240,
   minStopDistanceMeters: config.minStopDistanceMeters,
   gpsFreshSeconds: config.gps.freshSeconds,
   gpsStaleSeconds: config.gps.staleSeconds,
@@ -80,7 +86,7 @@ export async function getPublicConfig() {
     supportEmail: s.supportEmail,
     googleReviewUrl: reviewLink(s.googleReviewUrl),
     classes: s.classes,
-    schedule: { minMinutes: s.scheduleMinMinutes, maxDays: s.scheduleMaxDays },
+    schedule: { minMinutes: s.scheduleMinMinutes, maxDays: s.scheduleMaxDays, shareMinMinutes: s.shareMinMinutes },
     serviceAreaPolygon: s.serviceAreaPolygon,
     fareWording: 'Metered fare estimate — settled with the driver',
     // Ride-share «Попутчик» (Task 022): offered on airport / intercity routes only.

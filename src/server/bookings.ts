@@ -122,6 +122,11 @@ export async function createBooking(
     if (when.getTime() > now + maxMs) return fail(422, 'SCHEDULE_TOO_FAR', 'Scheduled time is too far ahead.', { scheduledAt: `At most ${settings.scheduleMaxDays} days ahead.` });
     scheduledAt = when;
   }
+  // Pre-booking WITH a co-rider (operator 2026-11-22): at least settings.shareMinMinutes ahead (3 h), so there is time
+  // to find the co-rider, wait for both answers and still give the pair to a driver.
+  if (scheduledAt && shareOptIn && scheduledAt.getTime() < Date.now() + settings.shareMinMinutes * 60_000) {
+    return fail(422, 'SHARE_TOO_SOON', `A ride with a co-rider must be booked at least ${Math.round(settings.shareMinMinutes / 60 * 10) / 10} h ahead.`, { shareOptIn: `At least ${settings.shareMinMinutes} minutes ahead.` });
+  }
   // «Быть на месте с … до …» (2026-11-22): the app sends the arrival window and a pickup time it
   // computed from the road time. The window is kept on the booking; the pickup must leave room to
   // arrive by the end of it, and a co-rider may move it EARLIER by up to the window's width only.

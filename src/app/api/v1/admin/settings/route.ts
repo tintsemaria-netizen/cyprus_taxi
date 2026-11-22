@@ -19,6 +19,8 @@ const patchSchema = z.object({
   googleReviewUrl: z.string().max(400).refine((v) => /^https:\/\//i.test(v) || /^[A-Za-z0-9_-]{10,}$/.test(v.trim()), 'Use a Google Place ID or an https link').nullable().optional(),
   scheduleMinMinutes: z.number().int().min(0).max(1440).optional(),
   scheduleMaxDays: z.number().int().min(1).max(365).optional(),
+  shareMinMinutes: z.number().int().min(0).max(2880).optional(),
+  shareBoardHideMinutes: z.number().int().min(0).max(2880).optional(),
   minStopDistanceMeters: z.number().int().min(0).max(100000).optional(),
   serviceAreaPolygon: z.array(z.object({ lat: z.number(), lng: z.number() })).min(3).optional(),
 });

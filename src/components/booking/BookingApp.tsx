@@ -23,14 +23,14 @@ import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
 import { NotifyPrompt } from '@/components/NotifyPrompt';
 import { ShareBookingOptions, type ShareOpts } from '@/components/share/ShareBookingOptions';
-import { isShareRoute } from '@/lib/share';
+import { isShareRoute, shareZone } from '@/lib/share';
 import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
 interface PublicConfig {
   demoMode: boolean;
   timezone: string;
   classes: { key: 'COMFORT' | 'XL'; label: string; maxPassengers: number }[];
-  schedule: { minMinutes: number; maxDays: number };
+  schedule: { minMinutes: number; maxDays: number; shareMinMinutes?: number };
   operatorName: string | null;
   share?: { discountPct: number; defaultMaxExtraMin: number; defaultWaitMin: number };
 }
@@ -59,6 +59,10 @@ export default function BookingApp() {
   const [dropoff, setDropoff] = useState<Selected | null>(null);
   const [dropoffText, setDropoffText] = useState('');
   const [when, setWhen] = useState<'NOW' | 'SCHEDULE'>('NOW');
+  // «Поехать с этим попутчиком» from the share board (2026-11-22): /?join=<rideId> opens the pre-booking with the
+  // co-rider switched on and that ride's day / arrival window; after my ride is booked the proposal goes to them.
+  const [join, setJoin] = useState<{ id: string; at: string; from: string; to: string; arrive: { from: string; by: string } | null } | null>(null);
+  const [joinResult, setJoinResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [scheduledAt, setScheduledAt] = useState('');
   // «Быть на месте с … до …» (2026-11-22, operator): the passenger gives an ARRIVAL window; the
   // pickup time is worked out from the road time (+ a margin for traffic) and shown to them.
@@ -143,6 +147,7 @@ export default function BookingApp() {
   // × in the top-right corner: back to the initial state — only «Куда», pickup = auto location.
   // Leave the pre-booking window (2026-11-20): the ✕ at its top-right — back to «now» and the start screen.
   function exitSchedule() {
+    setJoin(null);
     setWhen('NOW'); setScheduledAt(''); setScheduleOffsetMin(undefined); setAmbiguous(null); setNote('');
     resetRoute();
     if (isMobile) setCollapsed(true); // the small start sheet, as before «Запланировать»
@@ -671,6 +676,7 @@ export default function BookingApp() {
       else if (w.width < 15 || w.width > 180) e.scheduledAt = t('booking.arrive.badWidth');
       else if (route?.min == null) e.scheduledAt = t('booking.arrive.needRoute');
     } else if (when === 'SCHEDULE' && !scheduledAt) e.scheduledAt = t('booking.validation.scheduledAt');
+    if (!e.scheduledAt && shareTooSoon) e.scheduledAt = t('share.booking.tooSoon', { h: shareMinH });
     if (effPax < 1 || effPax > maxPax) e.pax = tp('booking.validation.paxRange', maxPax);
     setErrors(e);
     // Open a collapsed sheet so the highlighted field is reachable (ErrorFocus scrolls to it).
@@ -752,6 +758,14 @@ export default function BookingApp() {
       if (when === 'SCHEDULE') {
         // Pre-booking: confirm here instead of jumping to tracking, so another ride can be ordered.
         setDoneAt(scheduledAt); setStep('scheduled'); setSubmitting(false);
+        if (join && shareOn) {
+          const myId = (res as unknown as { bookingId?: string }).bookingId;
+          setJoinResult(null);
+          if (myId) api('/passenger/share-board', { method: 'POST', body: { myBookingId: myId, otherBookingId: join.id } })
+            .then(() => setJoinResult({ ok: true, text: t('share.board.joinSent') }))
+            .catch((e) => setJoinResult({ ok: false, text: t('share.board.joinFailed', { reason: e instanceof ApiRequestError ? tError(e) : t('common.networkError') }) }));
+          setJoin(null);
+        }
         return;
       }
       router.push('/track');
@@ -854,13 +868,35 @@ export default function BookingApp() {
   // заказу ПП нету раздела от и до, всё ещё гибкость») they REPLACE the flexibility choice and sit in the
   // ride-share box; otherwise they are the «Быть на месте» mode of the pre-booking panel.
   const shareArrive = when === 'SCHEDULE' && !!cfg?.share && shareOpts.on && shareAllowed;
+  // Co-rider pre-booking at least N h ahead (operator 2026-11-22: 3 h, admin «Настройки»).
+  const shareMinWall = nicosiaInputValue(new Date(Date.now() + (cfg?.schedule.shareMinMinutes ?? 180) * 60000));
+  const shareMinH = Math.round(((cfg?.schedule.shareMinMinutes ?? 180) / 60) * 10) / 10;
+  const shareTooSoon = when === 'SCHEDULE' && shareOn && !!scheduledAt && scheduledAt < shareMinWall;
   useEffect(() => {
     if (shareArrive && !arriveMode) { setArriveMode(true); if (!arriveDay) setArriveDay((scheduledAt || scheduleMin).slice(0, 10)); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shareArrive]);
+  useEffect(() => {
+    const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('join') : null;
+    if (!id || !cfg) return;
+    window.history.replaceState(null, '', window.location.pathname); // a reload does not join again
+    api<{ id: string; at: string; from: string; to: string; arrive: { from: string; by: string } | null }>(`/passenger/share-board?ride=${encodeURIComponent(id)}`)
+      .then((r) => {
+        setJoin(r);
+        setWhen('SCHEDULE'); setCollapsed(false);
+        setShareOpts((o) => ({ ...o, on: true }));
+        const wallOf = (iso: string) => nicosiaInputValue(new Date(iso));
+        setArriveMode(true);
+        if (r.arrive) { const f = wallOf(r.arrive.from), b = wallOf(r.arrive.by); setArriveDay(f.slice(0, 10)); setArriveFromT(f.slice(11, 16)); setArriveToT(b.slice(11, 16)); }
+        else setArriveDay(wallOf(r.at).slice(0, 10));
+      })
+      .catch(() => setFlash(t('share.board.joinFailed', { reason: t('errors.BOOKING_GONE') })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!cfg]);
   const arriveBadWidth = (() => { const w = arriveWindow(); return !!w && (w.width < 15 || w.width > 180); })();
   const arriveBox = (
     <div data-testid="arrive-window">
+      {shareArrive && <p className="mb-2 text-xs text-muted" data-testid="share-min-note">{t('share.booking.minNote', { h: shareMinH })}</p>}
       <input type="date" className="field block w-full min-w-0 max-w-full appearance-none" value={arriveDay} min={scheduleMin.slice(0, 10)} onChange={(e) => setArriveDay(e.target.value)} aria-label={t('booking.arrive.day')} />
       {/* Two equal columns that never overflow (iPhone draws time inputs wider than the column), a grey «00:00»
           until a time is chosen (2026-11-22, operator). */}
@@ -1083,6 +1119,13 @@ export default function BookingApp() {
                     {when === 'SCHEDULE' ? (
                       <div data-testid="schedule-panel">
                         <h1 className="mb-3 pe-12 text-xl font-bold">🕒 {t('booking.form.schedule')}</h1>
+                        {join && (
+                          <div className="mb-3 rounded-[12px] border border-accent/50 bg-accent/10 px-3 py-2 text-[13px] text-ink" data-testid="join-banner">
+                            👥 {t('share.board.joining', { from: t(`share.zones.${join.from}` as 'share.zones.LCA'), to: t(`share.zones.${join.to}` as 'share.zones.LCA'), when: join.arrive ? t('rides.prebookings.arrive', { from: fmt.time(join.arrive.from), to: fmt.time(join.arrive.by) }) : fmt.dateTime(join.at) })}
+                            <button type="button" className="ms-2 text-xs text-muted underline" onClick={() => setJoin(null)}>{t('share.board.cancelJoin')}</button>
+                            {pickup && dropoff && (shareZone(pickup) !== join.from || shareZone(dropoff) !== join.to) && <span className="mt-1 block font-semibold text-warn" data-testid="join-mismatch">{t('share.board.joinMismatch')}</span>}
+                          </div>
+                        )}
                         {!shareArrive && <div className="mb-2 grid grid-cols-2 gap-1 rounded-[12px] border border-edge bg-page p-1" role="radiogroup" data-testid="schedule-mode">
                           {([false, true] as const).map((m) => (
                             <button key={String(m)} type="button" role="radio" aria-checked={arriveMode === m}
@@ -1244,6 +1287,7 @@ export default function BookingApp() {
                       {when === 'SCHEDULE' && cfg?.share && (
                         <div className="-mt-4 mb-3">
                           <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook arrive={arriveBox} disabled={!shareAllowed} />
+                          {passenger && !passenger.guest && <a href="/share-board" className="mt-2 block text-center text-sm font-semibold text-accent" data-testid="open-board-link">👥 {t('share.board.open')} →</a>}
                         </div>
                       )}
                       {when === 'SCHEDULE' && (
@@ -1287,6 +1331,7 @@ export default function BookingApp() {
                       <h2 className="mt-3 text-xl font-bold">{t('booking.prebooked.title')}</h2>
                       <p className="mt-1 text-sm text-muted">{t('booking.prebooked.when', { when: (doneAt ?? '').replace('T', ' ') })}</p>
                       <p className="mt-2 text-sm text-muted">{t('booking.prebooked.body')}</p>
+                      {joinResult && <p role="status" data-testid="join-result" className={`mt-3 rounded-[12px] border px-3 py-2 text-sm ${joinResult.ok ? 'border-accent/40 bg-accent/10 text-accent' : 'border-warn/40 bg-warn/10 text-warn'}`}>{joinResult.text}</p>}
                       <div className="mt-5 space-y-2">
                         <button className="btn-primary w-full" onClick={orderAnother}>{t('booking.prebooked.another')}</button>
                         <div className="grid grid-cols-2 gap-2">

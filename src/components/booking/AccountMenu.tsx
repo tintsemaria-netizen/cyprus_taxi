@@ -99,6 +99,7 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
             <div className="my-1 border-t border-edge" />
             <MenuLink href="/rides" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.myRides')}</MenuLink>
             <MenuLink href="/prebookings" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('rides.prebookings.menu')}</MenuLink>
+            <MenuLink href="/share-board" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>👥 {t('share.board.open')}</MenuLink>
             <MenuLink href="/account#places" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.savedPlaces')}</MenuLink>
             <MenuLink href="/account" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.profile')}</MenuLink>
             <MenuLink href="/privacy" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.help')}</MenuLink>

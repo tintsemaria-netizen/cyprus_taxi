@@ -41,7 +41,7 @@ export const config = {
   trackingReceiptSecret: () => req('TRACKING_RECEIPT_SECRET'),
   databaseUrl: () => req('DATABASE_URL'),
   schedule: {
-    minMinutes: num('SCHEDULE_MIN_MINUTES', 30),
+    minMinutes: num('SCHEDULE_MIN_MINUTES', 60), // operator 2026-11-22: a pre-booking at least 1 h ahead
     maxDays: num('SCHEDULE_MAX_DAYS', 30),
   },
   gps: {

@@ -5,7 +5,7 @@
 // gets the usual co-rider proposal and answers yes / no. Automatic matching keeps running for
 // listed rides at the same time.
 //
-// Listed until SHARE_BOARD_HIDE_HOURS (10 h) before pickup; after that the ride stays a normal
+// Listed until settings.shareBoardHideMinutes (4 h) before pickup; every passenger sees all open rides (2026-11-22); after that the ride stays a normal
 // co-rider pre-booking (the system may still pair it) and goes at full price if nobody is found.
 // Privacy: no names, phones or exact addresses — only the district, time, people and bags.
 import { prisma } from '@/lib/db';
@@ -17,7 +17,8 @@ import { config } from '@/lib/config';
 
 const MIN = 60_000;
 const S = () => config.share;
-export const BOARD_HIDE_HOURS = config.share.boardHideHours;
+// Listed until settings.shareBoardHideMinutes before pickup (operator 2026-11-22: 4 h, admin «Настройки»).
+async function hideMinutes(): Promise<number> { return (await getSettings()).shareBoardHideMinutes; }
 
 const SEL = {
   id: true, passengerId: true, status: true, vClass: true, shareOptIn: true, shareMaxExtraMin: true, fareCents: true, priceType: true,
@@ -27,10 +28,11 @@ const SEL = {
 
 /** Open (listable) co-rider pre-bookings: no proposal or pair, no pre-accepted driver, far enough ahead. */
 async function openRides(now: Date, where: object = {}) {
+  const hideMin = await hideMinutes();
   const rows = await prisma.booking.findMany({
     where: {
       status: 'REQUESTED', shareOptIn: true, fareCents: { not: null }, stopLat: null,
-      scheduledAt: { gt: new Date(now.getTime() + BOARD_HIDE_HOURS * 3600_000) },
+      scheduledAt: { gt: new Date(now.getTime() + hideMin * MIN) },
       preAssignments: { none: { status: 'COMMITTED' } },
       shareAsHost: { none: { activeHostBookingId: { not: null } } }, shareAsGuest: { none: { activeGuestBookingId: { not: null } } },
       ...where,
@@ -47,10 +49,19 @@ const district = (label: string) => { const p = approxLabel(label).split(',').ma
 export interface BoardRide {
   id: string; mine: boolean; at: string; from: string; to: string; fromArea: string; toArea: string;
   adults: number; children: number; bags: number; early: number; wait: number;
+  vClass: string;
+  /** «Быть на месте с … до …» of that ride, if set. */
+  arrive: { from: string; by: string } | null;
   /** For another passenger's ride: the price of MY matching ride if we pair (and its full price). */
   myBookingId?: string; myFullCents?: number; mySharedCents?: number; myShiftMin?: number;
 }
-export interface BoardView { hideHours: number; mine: (BoardRide & { waiting: { until: string } | null })[]; others: BoardRide[] }
+export interface BoardView {
+  hideHours: number; mine: (BoardRide & { waiting: { until: string } | null })[]; others: BoardRide[];
+  /** Open board (2026-11-22, operator): every other open co-rider ride, also with no ride of my own — «Поехать с ним» books my own ride to join it. */
+  all: BoardRide[];
+  /** This account's phone belongs to a driver: the board is for passengers only. */
+  driver?: boolean;
+}
 
 function view(r: Ride, mine: boolean): BoardRide {
   const z = zones(r);
@@ -58,7 +69,8 @@ function view(r: Ride, mine: boolean): BoardRide {
     id: r.id, mine, at: r.scheduledAt!.toISOString(), from: z.from, to: z.to,
     fromArea: district(r.pickupLabel), toArea: district(r.dropoffLabel),
     adults: r.passengerCount - r.childCount, children: r.childCount, bags: r.luggageCount,
-    early: r.shareEarlyMin ?? 0, wait: r.shareWaitMin ?? 0,
+    early: r.shareEarlyMin ?? 0, wait: r.shareWaitMin ?? 0, vClass: r.vClass,
+    arrive: r.arriveFrom && r.arriveBy ? { from: r.arriveFrom.toISOString(), by: r.arriveBy.toISOString() } : null,
   };
 }
 
@@ -77,8 +89,23 @@ function pairAtTheirTime(me: Ride, them: Ride): { host: Ride; guest: Ride; start
   return { host, guest, startAt, plan, myShiftMin: Math.round((myPickup.getTime() - me.scheduledAt!.getTime()) / MIN) };
 }
 
+/** A driver (same phone as a driver account) does not use the passenger board (operator question 2026-11-22). */
+async function isDriverPassenger(passengerId: string): Promise<boolean> {
+  const p = await prisma.passenger.findUnique({ where: { id: passengerId }, select: { phone: true } });
+  if (!p?.phone) return false;
+  return !!(await prisma.driver.findFirst({ where: { phone: p.phone }, select: { id: true } }));
+}
+
+/** One open ride for the «Поехать с ним» booking form (no personal data). */
+export async function boardRide(id: string, now: Date = new Date()): Promise<BoardRide | null> {
+  const r = (await openRides(now, { id }))[0];
+  return r ? view(r, false) : null;
+}
+
 export async function shareBoard(passengerId: string, now: Date = new Date()): Promise<BoardView> {
   const settings = await getSettings();
+  const hideHours = Math.round((settings.shareBoardHideMinutes / 60) * 10) / 10;
+  if (await isDriverPassenger(passengerId)) return { hideHours, mine: [], others: [], all: [], driver: true };
   const mineAll = await prisma.booking.findMany({
     where: { passengerId, status: 'REQUESTED', shareOptIn: true, scheduledAt: { gt: now } }, orderBy: { scheduledAt: 'asc' }, select: SEL,
   });
@@ -112,7 +139,9 @@ export async function shareBoard(passengerId: string, now: Date = new Date()): P
       break;
     }
   }
-  return { hideHours: BOARD_HIDE_HOURS, mine, others };
+  const shown = new Set(others.map((o) => o.id));
+  const all = open.filter((o) => o.passengerId !== passengerId && !shown.has(o.id)).slice(0, 60).map((o) => view(o, false));
+  return { hideHours, mine, others, all };
 }
 
 export type BoardResult = { ok: true; proposalId: string } | { ok: false; status: number; code: string; message: string };
@@ -124,6 +153,7 @@ export async function proposeFromBoard(passengerId: string, myBookingId: string,
   const open = await openRides(now, { id: { in: [myBookingId, otherBookingId] } });
   const me = open.find((r) => r.id === myBookingId);
   const them = open.find((r) => r.id === otherBookingId);
+  if (await isDriverPassenger(passengerId)) return fail(403, 'DRIVER_ACCOUNT', 'The share board is for passengers.');
   if (!me || me.passengerId !== passengerId) return fail(404, 'NOT_FOUND', 'Your ride is no longer on the board.');
   if (!them || them.passengerId === passengerId) return fail(409, 'GONE', 'This ride is no longer on the board.');
   const mz = zones(me), oz = zones(them);

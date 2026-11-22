@@ -1,6 +1,8 @@
 // Ride-share «Попутчик» (Task 022): airport/intercity, at most two bookings in one car.
 const share = {
   booking: {
+    minNote: 'A co-rider can be found for rides booked at least {h} h ahead.',
+    tooSoon: 'A ride with a co-rider can be booked at least {h} h ahead.',
     arriveTitle: 'When do you need to be there?',
     name: 'Co-rider',
     flex: 'How flexible is your time?',
@@ -124,6 +126,15 @@ const share = {
     LIMASSOL: 'Limassol',
   },
   board: {
+    joinMismatch: 'Your route must go the same way: pickup and drop-off in these places.',
+    driverOnly: 'The share board is for passengers. Drivers see pre-bookings in the driver app.',
+    noMineOpen: 'Choose a ride below and go together — or book your own ride with a co-rider and it will appear here too.',
+    all: 'All rides on the board',
+    join: 'Ride with this co-rider',
+    joining: 'You are joining a ride: {from} → {to}, {when}. Enter your own addresses in these places.',
+    joinSent: 'Your proposal was sent to the co-rider — they will answer yes or no.',
+    joinFailed: 'Could not send it to that co-rider ({reason}). We keep looking for a co-rider automatically.',
+    cancelJoin: 'Don’t join',
     title: 'Share board',
     subtitle: 'Co-rider pre-bookings without a pair yet. Choose one and ride together at their time — they answer yes or no. Rides stay here until {h} h before pickup; we keep looking for a pair automatically too.',
     noMine: 'To use the board, pre-book a ride (more than {h} h ahead) with «Co-rider» switched on.',
