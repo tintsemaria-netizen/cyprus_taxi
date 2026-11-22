@@ -176,7 +176,7 @@ async function processJob(jobId: string): Promise<void> {
         const ub = await tx.booking.update({ where: { id: job.bookingId }, data: { status: 'NO_DRIVER', revision: { increment: 1 } } });
         await tx.bookingEvent.create({ data: { bookingId: job.bookingId, type: 'NO_DRIVER', actorType: 'SYSTEM', beforeStatus: 'SEARCHING', afterStatus: 'NO_DRIVER' } });
         await recordEvent(tx, { eventType: 'booking.no_driver', aggregateType: 'booking', aggregateId: job.bookingId, aggregateVersion: ub.revision, correlationId: job.bookingId, payload: { bookingId: job.bookingId, status: 'NO_DRIVER' } });
-        await enqueuePassenger(tx, job.bookingId, 'No driver available', 'We couldn’t find a driver right now. Tap to try again.');
+        await enqueuePassenger(tx, job.bookingId, 'No driver available', 'We couldn’t find a driver right now. Tap to try again.', { msg: { k: 'ride.noDriver' } });
         flagged = true;
       }
       await tx.dispatchJob.deleteMany({ where: { id: jobId } });

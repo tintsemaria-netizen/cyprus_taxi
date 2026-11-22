@@ -8,12 +8,12 @@ type Tx = Prisma.TransactionClient;
 
 // End the live commitment of a booking (if any). Used by driver release, passenger/staff cancel,
 // manual assignment and the worker. Notifies the driver unless they are the one releasing.
-export async function endPreAssignmentTx(tx: Tx, bookingId: string, status: 'RELEASED' | 'LAPSED' | 'CONVERTED', reason: string, opts: { notifyDriver?: string } = {}): Promise<{ driverId: string; pickupAt: Date } | null> {
+export async function endPreAssignmentTx(tx: Tx, bookingId: string, status: 'RELEASED' | 'LAPSED' | 'CONVERTED', reason: string, opts: { notifyDriver?: string; notifyDriverKey?: string } = {}): Promise<{ driverId: string; pickupAt: Date } | null> {
   const pa = await tx.preAssignment.findUnique({ where: { activeBookingId: bookingId } });
   if (!pa) return null;
   await tx.preAssignment.update({ where: { id: pa.id }, data: { status, endedAt: new Date(), endReason: reason, activeBookingId: null } });
   await recordEvent(tx, { eventType: `preassign.${status.toLowerCase()}`, aggregateType: 'preassign', aggregateId: pa.id, aggregateVersion: 2, correlationId: bookingId, payload: { bookingId, driverPseudo: driverPseudo(pa.driverId), reason } });
-  if (opts.notifyDriver) await enqueueDriver(tx, pa.driverId, 'Pre-booked ride update', opts.notifyDriver, { tag: `pre-${bookingId}` });
+  if (opts.notifyDriver) await enqueueDriver(tx, pa.driverId, 'Pre-booked ride update', opts.notifyDriver, { tag: `pre-${bookingId}`, msg: opts.notifyDriverKey ? { k: opts.notifyDriverKey } : undefined });
   return { driverId: pa.driverId, pickupAt: pa.pickupAt };
 }
 

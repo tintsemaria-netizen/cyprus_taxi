@@ -493,6 +493,7 @@ model Booking {
   passengerCount        Int
   luggageCount          Int              @default(0) // bags; asked on pre-bookings, shown to the driver
   passengerRemindedAt   DateTime? // pre-booking: "ride in ~1 hour" reminder queued
+  passengerRemind30At   DateTime? // second reminder, 30 min before (2026-11-22)
   // Opt-in live passenger position for the driver, before pickup only (2026-11-15).
   passengerLat          Float?
   passengerLng          Float?
@@ -931,6 +932,7 @@ model PreAssignment {
   status          String    @default("COMMITTED") // COMMITTED | CONVERTED | RELEASED | LAPSED
   committedAt     DateTime  @default(now())
   remindedAt      DateTime?
+  remind35At      DateTime? // second driver reminder, 35 min before (2026-11-22)
   endedAt         DateTime?
   endReason       String?
   activeBookingId String?   @unique

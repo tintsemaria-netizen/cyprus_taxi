@@ -99,7 +99,7 @@ describe('share board', () => {
     expect((await createBooking(plain, `sb-soon2-${RUN}`)).ok).toBe(true); // without a co-rider 2 h ahead is fine (≥ 1 h)
   });
 
-  it('«ride together»: the other passenger answers yes → matched at THEIR time; the proposer moved', async () => {
+  it('«ride together» (operator 2026-11-22: no question) → matched at once at THEIR time; the proposer moved; −30% for both', async () => {
     const a = await passenger(), b = await passenger();
     const ra = await ride(a.id, lca, nic1, 24);
     const rb = await ride(b.id, lcaNear, nic2, 26);
@@ -107,13 +107,11 @@ describe('share board', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const g = await prisma.shareGroup.findUniqueOrThrow({ where: { id: r.proposalId } });
-    expect(g.status).toBe('PROPOSED');
-    // Only the other passenger is notified; the proposer's answer is already «yes».
-    const pushes = await prisma.notificationOutbox.findMany({ where: { title: 'A co-rider for your ride' } });
-    expect(pushes).toHaveLength(1);
-    expect((await shareBoard(a.id)).mine[0].waiting).not.toBeNull();
-    const ans = await answerShare(g.id, { kind: 'PASSENGER', bookingId: rb.id }, true);
-    expect(ans.ok && ans.status).toBe('MATCHED');
+    expect(g.status).toBe('MATCHED');
+    // Nobody is asked; both hear «confirmed, −30%».
+    expect(await prisma.notificationOutbox.count({ where: { title: 'A co-rider for your ride' } })).toBe(0);
+    const conf = await prisma.notificationOutbox.findMany({ where: { audience: { in: [`PASSENGER:${ra.id}`, `PASSENGER:${rb.id}`] } } });
+    expect(conf.map((n) => (n.msg as { k: string }).k)).toEqual(['share.confirmed', 'share.confirmed']);
     const [fa, fb] = await Promise.all([prisma.booking.findUniqueOrThrow({ where: { id: ra.id } }), prisma.booking.findUniqueOrThrow({ where: { id: rb.id } })]);
     expect(fb.scheduledAt!.getTime()).toBe(rb.scheduledAt!.getTime()); // their time kept
     expect(fa.scheduledAt!.getTime()).toBeGreaterThan(ra.scheduledAt!.getTime()); // I moved later
@@ -121,16 +119,13 @@ describe('share board', () => {
     expect(fb.fareCents).toBe(4200);
   });
 
-  it('cannot use someone else’s ride as mine, nor propose again after a «no»', async () => {
+  it('cannot use someone else’s ride as mine, nor pair a ride that is already paired', async () => {
     const a = await passenger(), b = await passenger();
     const ra = await ride(a.id, lca, nic1, 24);
     const rb = await ride(b.id, lcaNear, nic2, 26);
     expect((await proposeFromBoard(a.id, rb.id, ra.id)).ok).toBe(false);
     const r = await proposeFromBoard(a.id, ra.id, rb.id);
     if (!r.ok) throw new Error('propose');
-    await answerShare(r.proposalId, { kind: 'PASSENGER', bookingId: rb.id }, false);
-    const again = await proposeFromBoard(a.id, ra.id, rb.id);
-    expect(again.ok).toBe(false);
-    if (!again.ok) expect(again.code).toBe('DECLINED_BEFORE');
+    expect((await proposeFromBoard(a.id, ra.id, rb.id)).ok).toBe(false);
   });
 });

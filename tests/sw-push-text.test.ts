@@ -33,7 +33,9 @@ describe('notification texts on the phone', () => {
     }
   });
   it('fills values and formats euro cents in the language', () => {
-    expect(msgText({ k: 'share.joinGuest', p: { nowC: 4200, wasC: 6000 } }, 'ru')?.body).toBe('Вы едете с попутчиком: 42,00 € вместо 60,00 €.');
+    expect(msgText({ k: 'share.joinGuest', p: { pct: 30 } }, 'ru')?.body).toBe('Вы едете с попутчиком: скидка −30%.');
+    expect(msgText({ k: 'ride.noShowFee', p: { feeC: 500 } }, 'ru')?.body).toContain('5,00\u00a0€');
+    expect(msgText({ k: 'pre.remind30', p: { timeT: '2026-11-23T07:30:00.000Z', place: 'LCA' } }, 'ru')?.body).toBe('Посадка в 09:30 — LCA.'); // Cyprus time
     expect(msgText({ k: 'share.assigned', p: { driver: 'Andreas' } }, 'en')?.body).toContain('Andreas is assigned');
     expect(msgText({ k: 'unknown.key' }, 'ru')).toBeNull(); // → the server's English text
   });

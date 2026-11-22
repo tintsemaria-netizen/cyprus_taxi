@@ -160,14 +160,34 @@ describe('conversion near pickup', () => {
     await promoteScheduled(new Date());
     expect((await prisma.booking.findUnique({ where: { id: b.id } }))!.status).toBe('SEARCHING');
     expect(await prisma.dispatchJob.findUnique({ where: { bookingId: b.id } })).not.toBeNull();
-    // Pre-booked ride: driver changes are not announced to the passenger (2026-11-19, operator).
-    expect(await prisma.notificationOutbox.count({ where: { audience: `PASSENGER:${b.id}`, title: 'Finding you a driver' } })).toBe(0);
+    // Operator 2026-11-22: the passenger IS told — «the driver did not get online in time, we assign another».
+    const n = await prisma.notificationOutbox.findMany({ where: { audience: `PASSENGER:${b.id}`, title: 'Finding you a driver' } });
+    expect(n.map((x) => (x.msg as { k: string }).k)).toEqual(['pre.lapsedLate']);
   });
 
   it('an offline driver at the cutoff lapses too', async () => {
     const { b } = await committed(config.dispatch.scheduleLeadMinutes - 1, false);
     expect((await runPreassignments(new Date())).lapsed).toBe(1);
     expect((await prisma.preAssignment.findFirst({ where: { bookingId: b.id } }))!.endReason).toBe('driver offline at conversion');
+  });
+
+  it('2026-11-22: an hour before «Скоро предзаказ», then a 5-minute countdown to going online (10:00 → 09:25…09:30)', async () => {
+    const { b } = await committed(P.remindMinutes - 5, false);
+    const all = async () => (await prisma.notificationOutbox.findMany({ where: { OR: [{ tag: `pre-${b.id}` }, { tag: `golive-${b.id}` }] }, orderBy: { createdAt: 'asc' } }))
+      .map((x) => { const m = x.msg as { k: string; p?: { left?: number } } | null; return m?.k === 'drv.goOnline' ? `go${m.p!.left}` : m?.k?.replace('Flight', '') ?? x.title; });
+    await runPreassignments(new Date());
+    expect(await all()).toEqual(['drv.preSoon']);
+    // 55 min ahead now: 20.5 min later it is 34.5 min before pickup → 5 min left to go online.
+    await runPreassignments(new Date(Date.now() + 20.5 * MIN));
+    await runPreassignments(new Date(Date.now() + 20.6 * MIN)); // same minute: no duplicate
+    await runPreassignments(new Date(Date.now() + 21.5 * MIN));
+    expect(await all()).toEqual(['drv.preSoon', 'go5', 'go4']);
+  });
+
+  it('2026-11-22: no countdown for a driver who is already online', async () => {
+    const { b } = await committed(33, true);
+    await runPreassignments(new Date());
+    expect(await prisma.notificationOutbox.count({ where: { tag: `golive-${b.id}` } })).toBe(0);
   });
 
   it('the driver reminder is sent exactly once', async () => {

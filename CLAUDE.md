@@ -28,6 +28,9 @@ Confirmed beta target: https://cyprustaxi.ackedberryes.store on 92.39.53.229. Cl
 - Check everywhere (2026-11-22): the project is large. When you fix a problem or change behaviour, search the whole
   codebase for the same pattern — passenger, driver, admin, fleet, share, pre-booking, server and worker — and fix or
   list every other place it occurs. Tell the operator where you checked and what else you found.
+- Language (2026-11-22): every person (passenger, driver, staff) first gets the phone's / browser's language; once
+  they choose a language it stays fixed for them. Screens, e-mails and push notifications all follow it — a new
+  notification gets a text key in `public/sw.js` MSG_TEXT (8 languages), never English-only text.
 - Resumed apps (2026-11-22): installed phone apps are resumed, not reloaded. A screen that loads data or the position
   once must refresh when it comes back (`useRefreshOnReturn` from `src/components/useRefreshOnReturn.ts`).
 

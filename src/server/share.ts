@@ -181,9 +181,9 @@ async function proposeLive(hostId: string, guestId: string, driverId: string, pl
       await tx.bookingEvent.create({ data: { bookingId: hostId, type: 'SHARE_PROPOSED', actorType: 'SYSTEM', reason: `co-rider ${g.reference}` } });
       await tx.bookingEvent.create({ data: { bookingId: guestId, type: 'SHARE_PROPOSED', actorType: 'SYSTEM', reason: `joins ${h.reference}` } });
       await recordEvent(tx, { eventType: 'share.proposed', aggregateType: 'share', aggregateId: group.id, aggregateVersion: 1, correlationId: guestId, payload: { mode: 'LIVE', driverPseudo: driverPseudo(driverId), extraMinHost: plan.extraHost, extraMinGuest: plan.extraGuest } });
-      const saving = (h.fareCents ?? 0) - group.hostCents;
-      await enqueuePassenger(tx, hostId, 'A co-rider wants to join', proposalBody(g, plan.extraHost, saving), { tag: `share-p-${group.id}`, url: '/track' });
-      await enqueueDriver(tx, driverId, 'Co-rider on your route', driverProposalBody(plan.extraDriver, group.hostCents + group.guestCents, h.fareCents ?? 0), { tag: `share-d-${group.id}` });
+      // No prices in notifications (operator, 2026-11-22): the passenger sees «−30 %», the driver «+N % earnings».
+      await enqueuePassenger(tx, hostId, 'A co-rider wants to join', proposalBody(g, plan.extraHost, group.discountPct), { tag: `share-p-${group.id}`, url: '/track' });
+      await enqueueDriver(tx, driverId, 'Co-rider on your route', driverProposalBody(plan.extraDriver, earningsUpPct(group.hostCents + group.guestCents, h.fareCents ?? 0)), { tag: `share-d-${group.id}` });
       return true;
     });
   } catch (e) {
@@ -194,11 +194,15 @@ async function proposeLive(hostId: string, guestId: string, driverId: string, pl
 
 // Proposal notifications (2026-11-19): shown on top of other apps / the lock screen and kept until
 // answered. public/sw.js parses these exact English formats to show them in the app's language.
-function proposalBody(other: { passengerCount: number; childCount: number; luggageCount: number }, extraMin: number, saveCents: number): string {
-  return `${peopleText(other)} · +${extraMin} min · €${(saveCents / 100).toFixed(2)} cheaper — tap to answer`;
+function proposalBody(other: { passengerCount: number; childCount: number; luggageCount: number }, extraMin: number, discountPct: number): string {
+  return `${peopleText(other)} · +${extraMin} min · −${discountPct}% — tap to answer`;
 }
-function driverProposalBody(extraMin: number, nowCents: number, wasCents: number): string {
-  return `+${extraMin} min · €${(nowCents / 100).toFixed(2)} instead of €${(wasCents / 100).toFixed(2)} — tap to answer`;
+function driverProposalBody(extraMin: number, upPct: number): string {
+  return `+${extraMin} min · +${upPct}% earnings — tap to answer`;
+}
+/** How much more the driver earns with the co-rider, in whole percent (€84 instead of €60 → 40). */
+export function earningsUpPct(nowCents: number, wasCents: number): number {
+  return wasCents > 0 ? Math.max(0, Math.round((nowCents / wasCents - 1) * 100)) : 0;
 }
 
 function peopleText(b: { passengerCount: number; childCount: number; luggageCount: number }): string {
@@ -328,8 +332,8 @@ async function finalizeLiveTx(tx: Tx, groupId: string): Promise<ShareResult> {
   await tx.bookingEvent.create({ data: { bookingId: host.id, type: 'SHARE_JOINED', actorType: 'SYSTEM', reason: `co-rider ${guest.reference}` } });
   await tx.shareGroup.update({ where: { id: g.id }, data: { status: 'ACCEPTED', decidedAt: new Date() } });
   await recordEvent(tx, { eventType: 'share.accepted', aggregateType: 'share', aggregateId: g.id, aggregateVersion: 2, correlationId: guest.id, payload: { mode: 'LIVE', driverPseudo: driverPseudo(hostAsg.driverId) } });
-  await enqueuePassenger(tx, guest.id, 'Driver assigned — shared ride', `You share the car with a co-rider: €${(g.guestCents / 100).toFixed(2)} instead of €${(g.guestFullCents / 100).toFixed(2)}.`, { msg: { k: 'share.joinGuest', p: { nowC: g.guestCents, wasC: g.guestFullCents } } });
-  await enqueuePassenger(tx, host.id, 'Co-rider joins', `Your price is now €${(g.hostCents / 100).toFixed(2)}.`, { msg: { k: 'share.joinHost', p: { nowC: g.hostCents } } });
+  await enqueuePassenger(tx, guest.id, 'Driver assigned — shared ride', `You share the car with a co-rider: −${g.discountPct}%.`, { msg: { k: 'share.joinGuest', p: { pct: g.discountPct } } });
+  await enqueuePassenger(tx, host.id, 'Co-rider joins', `Your ride is now −${g.discountPct}%.`, { msg: { k: 'share.joinHost', p: { pct: g.discountPct } } });
   return { ok: true, status: 'ACCEPTED' };
 }
 
@@ -357,8 +361,8 @@ async function finalizePrebookTx(tx: Tx, groupId: string): Promise<ShareResult> 
   await tx.shareGroup.update({ where: { id: g.id }, data: { status: 'MATCHED', decidedAt: new Date() } });
   for (const id of [h.id, gu.id]) await tx.bookingEvent.create({ data: { bookingId: id, type: 'SHARE_MATCHED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED' } });
   await recordEvent(tx, { eventType: 'share.matched', aggregateType: 'share', aggregateId: g.id, aggregateVersion: 2, correlationId: h.id, payload: { mode: 'PREBOOK' } });
-  await enqueuePassenger(tx, h.id, 'Shared ride confirmed', `Your price is now €${(g.hostCents / 100).toFixed(2)}.`, { msg: { k: 'share.confirmed', p: { nowC: g.hostCents } } });
-  await enqueuePassenger(tx, gu.id, 'Shared ride confirmed', `Your price is now €${(g.guestCents / 100).toFixed(2)}.`, { msg: { k: 'share.confirmed', p: { nowC: g.guestCents } } });
+  await enqueuePassenger(tx, h.id, 'Shared ride confirmed', `Your ride is now −${g.discountPct}%.`, { msg: { k: 'share.confirmed', p: { pct: g.discountPct } } });
+  await enqueuePassenger(tx, gu.id, 'Shared ride confirmed', `Your ride is now −${g.discountPct}%.`, { msg: { k: 'share.confirmed', p: { pct: g.discountPct } } });
   return { ok: true, status: 'MATCHED' };
 }
 
@@ -459,13 +463,13 @@ export async function proposePrebook(hostId: string, guestId: string, plan: Shar
       if (!h || !g || h.status !== 'REQUESTED' || g.status !== 'REQUESTED') return null;
       if ((await activeGroupOf(tx, hostId)) || (await activeGroupOf(tx, guestId))) return null;
       if (await tx.preAssignment.findFirst({ where: { activeBookingId: { in: [hostId, guestId] } } })) return null;
-      const by = fromBoard?.byBookingId;
-      const group = await tx.shareGroup.create({ data: groupData('PREBOOK', h, g, plan, expiresAt, { routed, startAt, ...(by === hostId ? { hostAnswer: 'YES' } : by === guestId ? { guestAnswer: 'YES' } : {}) }) });
-      await recordEvent(tx, { eventType: 'share.proposed', aggregateType: 'share', aggregateId: group.id, aggregateVersion: 1, correlationId: hostId, payload: { mode: 'PREBOOK', extraMinHost: plan.extraHost, extraMinGuest: plan.extraGuest } });
-      // Opens that pre-booking (its page shows the proposal and the ride's details).
-      if (by !== hostId) await enqueuePassenger(tx, hostId, 'A co-rider for your ride', proposalBody(g, plan.extraHost, h.fareCents! - group.hostCents), { tag: `share-p-${group.id}`, url: `/prebookings?open=${hostId}` });
-      if (by !== guestId) await enqueuePassenger(tx, guestId, 'A co-rider for your ride', proposalBody(h, plan.extraGuest, g.fareCents! - group.guestCents), { tag: `share-p-${group.id}`, url: `/prebookings?open=${guestId}` });
-      return group.id;
+      // No question for pre-bookings (operator, 2026-11-22): both passengers already chose «Попутчик»
+      // with their own arrival window, and the pair keeps both inside it — so the pair is confirmed
+      // at once and each hears only «confirmed, −30 %». Live rides still ask (the passenger in the car).
+      const group = await tx.shareGroup.create({ data: groupData('PREBOOK', h, g, plan, expiresAt, { routed, startAt, hostAnswer: 'YES', guestAnswer: 'YES' }) });
+      await recordEvent(tx, { eventType: 'share.proposed', aggregateType: 'share', aggregateId: group.id, aggregateVersion: 1, correlationId: hostId, payload: { mode: 'PREBOOK', extraMinHost: plan.extraHost, extraMinGuest: plan.extraGuest, by: fromBoard ? 'board' : 'auto' } });
+      const r = await finalizePrebookTx(tx, group.id);
+      return r.ok ? group.id : null;
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return null;
@@ -520,7 +524,7 @@ export async function leaveShareTx(tx: Tx, bookingId: string, reason: string, op
   await tx.shareGroup.update({ where: { id: g.id }, data: opts.noShowFeeCents != null ? { noShowBookingId: bookingId, noShowFeeCents: opts.noShowFeeCents } : {} });
   await closeGroupTx(tx, g.id, 'ENDED', reason);
   if (restored) await enqueuePassenger(tx, otherId, 'Your co-rider is not coming', 'You ride alone at the normal price — no discount.', { msg: { k: 'share.notComing' } });
-  if (g.driverId) await enqueueDriver(tx, g.driverId, 'Co-rider left the trip', 'One passenger left the shared ride. The other pays the full price.', { tag: `share-${g.id}`, msg: { k: 'share.driverLeft' } });
+  // No push to the driver (operator, 2026-11-22): the co-rider simply disappears from the trip screen.
 }
 
 /**

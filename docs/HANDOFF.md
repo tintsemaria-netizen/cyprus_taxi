@@ -1,5 +1,20 @@
 # Session handoff
 
+## 2026-11-22 (23:30) — Notification changes by the operator (branch `co-arrive`, deployed 2026-11-23 on «заливай»)
+
+Branch `co-arrive` also holds: co-rider arrival window in the co-rider sheet / navigation (item 12) and the language rule (I18nProvider saves the language for pushes on every page; rule in CLAUDE.md).
+- No prices in notifications: П1/П2/П3 «−30%» (`pct` = group.discountPct); proposal body «· −30% —»; driver proposal «+N% earnings» (`earningsUpPct`). sw.js regexes/texts updated (8 languages).
+- П7: pre-bookings are no longer asked — `proposePrebook` creates the group with both YES and runs `finalizePrebookTx` at once (auto pairing and the share board). Live rides still ask the passenger in the car. Board texts (joinSent/sent/subtitle, 8 languages) say «готово, −30%».
+- П12 = П11 (`ride.assigned`). П15 removed (was already suppressed for pre-bookings). П16: «К сожалению, водитель не успел выйти на линию вовремя…» (`pre.lapsedLate`; `pre.reassign` for other lapse reasons), now always sent (enqueuePassenger, not DriverNews).
+- П19: second passenger reminder 30 min before (`Booking.passengerRemind30At`). В8: second driver reminder 35 min before (`PreAssignment.remind35At`); migration `20261122070000_second_reminders`.
+- В8 (operator 23:49): instead of «через 35 минут» a countdown — from 35 to 30 min before pickup (30 = conversion, the driver must be online) one notification `drv.goOnline` «⏱ 5:00 … 1:00 — осталось до выхода на линию», replaced every minute (tag `golive-<booking>`, dedupe per minute, quiet after the first); not sent if the driver is already online.
+- REMIND THE OPERATOR (his request): a full second-by-second countdown in the notification becomes possible with the native Android app (notification chronometer / live countdown) — tell him when the native app work starts. Until then only the 5-minute version.
+- В3, В6, В7 removed. В4/В5: «Построен новый маршрут» / «Строим новый маршрут», no street; DriverNavigation legKey includes the stop position so a moved stop rebuilds the route too.
+- Every remaining push has a MSG_TEXT key (8 languages); `…T`/`…D` params are ISO times shown in Cyprus time in the person's language.
+- PARKED (operator): В9 «Pre-booked ride is now active» — «нужно много изменений», still English, untouched.
+- PARKED (operator): П6 «поездка с попутчиком не состоялась» (only when nobody takes the pair) — «есть вопросы и решения, потом»; П18 no-show (text and the fee amount) — «там есть о чём поговорить».
+- Tests: 371 passed / 1 skipped. Before/after images: /tmp/shots/notif-d-*.png.
+
 ## 2026-11-22 (22:30) — Co-rider notifications in the app's / phone's language (deployed)
 
 - NotificationOutbox.msg (JSONB, migration `20261122060000_push_msg`): text key + values next to the English title/body; carried through claim → payload (`PushMsg` in src/server/push.ts; `enqueuePassenger/enqueueDriver/enqueuePassengerDriverNews` accept `msg`).

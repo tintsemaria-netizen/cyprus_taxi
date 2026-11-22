@@ -79,6 +79,20 @@ describe('passenger pre-bookings', () => {
     expect(await q(cancelled.id)).toBe(0);
   });
 
+  it('2026-11-22: a second reminder 30 min before; a ride already inside 30 min gets only that one', async () => {
+    const p = await passenger();
+    const r50 = await prebook(p.id, 50);
+    const r20 = await prebook(p.id, 20);
+    await runPassengerReminders();
+    const keys = async (id: string) => (await prisma.notificationOutbox.findMany({ where: { audience: `PASSENGER:${id}` }, orderBy: { createdAt: 'asc' } })).map((x) => (x.msg as { k: string }).k);
+    expect(await keys(r50.id)).toEqual(['pre.remind60']);
+    expect(await keys(r20.id)).toEqual(['pre.remind30']);
+    // 25 minutes later the 10:00 ride is 25 min away → the second reminder, once.
+    await runPassengerReminders(new Date(Date.now() + 25 * 60_000));
+    await runPassengerReminders(new Date(Date.now() + 26 * 60_000));
+    expect(await keys(r50.id)).toEqual(['pre.remind60', 'pre.remind30']);
+  });
+
   it('a ride notification also reaches the owner\'s account devices', async () => {
     const p = await passenger();
     const b = await prebook(p.id, 200);

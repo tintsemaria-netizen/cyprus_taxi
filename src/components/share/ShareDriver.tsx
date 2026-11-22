@@ -17,6 +17,8 @@ export interface CoRiderLeg {
   passengerName: string; passengerPhone: string; passengerCount: number; childCount: number; luggageCount: number;
   fareCents: number | null; startCodeRequired: boolean; flightNumber: string | null; note: string | null; isHost: boolean;
   waiting: { arrivedAt: string; graceSeconds: number } | null;
+  /** «Быть на месте с … до …» of this passenger (2026-11-22). */
+  arrive?: { from: string; by: string } | null;
 }
 export interface ShareInfo { groupId: string; discountPct: number; totalCents: number; primaryIsHost: boolean }
 
@@ -144,6 +146,7 @@ export function CoRiderLegPill({ leg, share, onChanged, onError }: { leg: CoRide
                 {t('share.who.adults', { n: leg.passengerCount - leg.childCount })}{leg.childCount ? ` · ${t('share.who.children', { n: leg.childCount })}` : ''} · {t('share.who.luggage', { n: leg.luggageCount })}
                 {leg.fareCents != null && <> · <span className="font-semibold text-ink">{fmt.money(leg.fareCents)}</span></>}
               </div>
+              {leg.arrive && <div className="text-sm font-semibold text-accent" data-testid="co-arrive">🏁 {t('driver.scheduled.arrive', { from: fmt.time(leg.arrive.from), to: fmt.time(leg.arrive.by) })}</div>}
               {leg.flightNumber && <div className="font-mono text-xs text-muted">✈ {leg.flightNumber}</div>}
               {leg.note && <div className="text-xs text-warn">{leg.note}</div>}
               {share && <div className="pt-1 text-xs text-muted">{t('share.driver.total', { amount: fmt.money(share.totalCents) })}</div>}

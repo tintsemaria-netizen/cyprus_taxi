@@ -61,7 +61,7 @@ async function finalizeArrival(tx: Prisma.TransactionClient, bookingId: string, 
   const u = await tx.booking.update({ where: { id: bookingId }, data: { status: 'ARRIVED', arrivedAt: now, revision: { increment: 1 } } });
   await tx.bookingEvent.create({ data: { bookingId, type: 'ARRIVED', actorType: actor.type, actorId: actor.id, beforeStatus: 'EN_ROUTE', afterStatus: 'ARRIVED' } });
   await recordEvent(tx, { eventType: 'booking.arrived', aggregateType: 'booking', aggregateId: bookingId, aggregateVersion: u.revision, correlationId: bookingId, occurredAt: now, payload: { bookingId, status: 'ARRIVED', actorType: actor.type } });
-  await enqueuePassenger(tx, bookingId, 'Your driver has arrived', 'Your driver is waiting at the pickup point.');
+  await enqueuePassenger(tx, bookingId, 'Your driver has arrived', 'Your driver is waiting at the pickup point.', { msg: { k: 'ride.arrived' } });
   return ok(u.status, u.revision);
 }
 
@@ -235,7 +235,7 @@ export async function driverStopAction(bookingId: string, driverId: string, acti
     }
     const u = await tx.booking.update({ where: { id: bookingId }, data: { ...data, revision: { increment: 1 } } });
     await tx.bookingEvent.create({ data: { bookingId, type, actorType: 'DRIVER', actorId: driverId, beforeStatus: 'IN_PROGRESS', afterStatus: 'IN_PROGRESS' } });
-    if (action === 'arrived') await enqueuePassenger(tx, bookingId, 'Arrived at your stop', 'Your driver is at the stop. Tell them when you are ready to continue.');
+    if (action === 'arrived') await enqueuePassenger(tx, bookingId, 'Arrived at your stop', 'Your driver is at the stop. Tell them when you are ready to continue.', { msg: { k: 'ride.atStop' } });
     return ok(u.status, u.revision);
   });
 }
@@ -313,7 +313,7 @@ export async function rematchBooking(
   const ub = await tx.booking.update({ where: { id: bookingId }, data: { status: 'SEARCHING', arrivedAt: null, revision: { increment: 1 } } });
   await tx.bookingEvent.create({ data: { bookingId, type: 'REMATCH', actorType, actorId: actorType === 'DRIVER' ? excludeDriverId : undefined, afterStatus: 'SEARCHING', reason } });
   await recordEvent(tx, { eventType: 'booking.rematch', aggregateType: 'booking', aggregateId: bookingId, aggregateVersion: ub.revision, correlationId: bookingId, payload: { bookingId, status: 'SEARCHING', actorType, excludeDriverPseudo: driverPseudo(excludeDriverId), reason } });
-  await enqueuePassengerDriverNews(tx, bookingId, 'change', 'Finding you another driver', 'Your previous driver became unavailable — we’re matching you again.');
+  await enqueuePassengerDriverNews(tx, bookingId, 'change', 'Finding you another driver', 'Your previous driver became unavailable — we’re matching you again.', { k: 'ride.rematchUnavailable' });
 }
 
 // Driver cancels before pickup → automatic rematch (not a terminal cancel).
@@ -361,7 +361,7 @@ export async function driverShareNoShow(bookingId: string, driverId: string, exp
     const u = await tx.booking.update({ where: { id: bookingId }, data: { status: 'CANCELED', revision: { increment: 1 } } });
     await tx.bookingEvent.create({ data: { bookingId, type: 'NO_SHOW', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'ARRIVED', afterStatus: 'CANCELED', reason: fee != null ? `no-show fee ${fee} cents` : 'no-show' } });
     await recordEvent(tx, { eventType: 'booking.canceled', aggregateType: 'booking', aggregateId: bookingId, aggregateVersion: u.revision, correlationId: bookingId, payload: { bookingId, status: 'CANCELED', actorType: 'DRIVER', reason: 'no-show', noShowFeeCents: fee } });
-    await enqueuePassenger(tx, bookingId, 'Ride canceled — no-show', fee != null ? `The driver waited but you did not come. A no-show fee of €${(fee / 100).toFixed(2)} applies.` : 'The driver waited but you did not come.');
+    await enqueuePassenger(tx, bookingId, 'Ride canceled — no-show', fee != null ? `The driver waited but you did not come. A no-show fee of €${(fee / 100).toFixed(2)} applies.` : 'The driver waited but you did not come.', { msg: fee != null ? { k: 'ride.noShowFee', p: { feeC: fee } } : { k: 'ride.noShow' } });
     return ok(u.status, u.revision, { noShowFeeCents: fee });
   });
 }

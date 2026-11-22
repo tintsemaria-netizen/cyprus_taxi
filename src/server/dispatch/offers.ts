@@ -135,7 +135,7 @@ export async function acceptOffer(offerId: string, driverId: string): Promise<Of
         payload: { bookingId: booking.id, status: 'EN_ROUTE', actorType: 'DRIVER', reason: 'auto on accept' },
       });
       await tx.dispatchJob.deleteMany({ where: { bookingId: booking.id } });
-      await enqueuePassengerDriverNews(tx, booking.id, 'assigned', 'Driver assigned', 'A driver is on the way — track them live.');
+      await enqueuePassengerDriverNews(tx, booking.id, 'assigned', 'Driver assigned', 'A driver is on the way — track them live.', { k: 'ride.assigned' });
       // A pre-booked ride-share pair (Task 022): the co-rider joins the same car.
       await attachMatchedGuestTx(tx, booking.id);
       acceptedBookingId = booking.id;

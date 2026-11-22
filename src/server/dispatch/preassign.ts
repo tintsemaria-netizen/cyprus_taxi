@@ -7,7 +7,7 @@ import { config } from '@/lib/config';
 import { canWork } from '@/lib/eligibility-policy';
 import { isAirportPoint } from '@/lib/airports';
 import { createAssignment } from '@/server/assignments';
-import { enqueueDriver, enqueuePassengerDriverNews } from '@/server/push';
+import { enqueueDriver, enqueuePassenger, enqueuePassengerDriverNews } from '@/server/push';
 import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events';
 import { stopSearchTx } from './search';
 import { endPreAssignmentTx, protectedDriverIds } from './preassign-core';
@@ -182,7 +182,7 @@ export async function claimScheduled(driverId: string, bookingId: string, now: D
       const pa = await tx.preAssignment.create({ data: { bookingId, driverId, vehicleId: vehicle.id, pickupAt: b.scheduledAt, activeBookingId: bookingId } });
       await tx.bookingEvent.create({ data: { bookingId, type: 'PREASSIGNED', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED' } });
       await recordEvent(tx, { eventType: 'preassign.committed', aggregateType: 'preassign', aggregateId: pa.id, aggregateVersion: 1, correlationId: bookingId, payload: { bookingId, driverPseudo: driverPseudo(driverId), minutesAhead: Math.round((t - now.getTime()) / MIN) } });
-      await enqueuePassengerDriverNews(tx, bookingId, 'assigned', 'Driver confirmed', `${driver.publicName.split(' ')[0]} will pick you up ${timeLabel(b.scheduledAt)}.`);
+      await enqueuePassengerDriverNews(tx, bookingId, 'assigned', 'Driver confirmed', `${driver.publicName.split(' ')[0]} will pick you up ${timeLabel(b.scheduledAt)}.`, { k: 'pre.confirmed', p: { driver: driver.publicName.split(' ')[0], whenD: b.scheduledAt.toISOString() } });
       return { ok: true, status: 'COMMITTED' };
     });
   } catch (e) {
@@ -199,22 +199,40 @@ export async function releaseScheduled(driverId: string, bookingId: string, now:
     const late = pa.pickupAt.getTime() - now.getTime() < config.dispatch.preassign.lateReleaseMinutes * MIN;
     await endPreAssignmentTx(tx, bookingId, 'RELEASED', late ? 'driver released late' : 'driver released');
     await tx.bookingEvent.create({ data: { bookingId, type: 'PREASSIGN_RELEASED', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED', reason: late ? 'late release' : null } });
-    await enqueuePassengerDriverNews(tx, bookingId, 'change', 'Driver change', 'Your confirmed driver can no longer make it. We will find you another driver automatically before pickup.');
+    // No push to the passenger (operator, 2026-11-22): a new driver is found automatically before pickup.
     return { ok: true, status: late ? 'RELEASED_LATE' : 'RELEASED' };
   });
 }
 
 // ---- worker step (runs every dispatch tick, BEFORE scheduled promotion) ----
+const COUNTDOWN_MIN = 5; // the last minutes before the driver must be online (operator, 2026-11-22)
+
 export async function runPreassignments(now: Date = new Date()): Promise<{ reminded: number; converted: number; lapsed: number }> {
   const p = config.dispatch.preassign;
   let reminded = 0, converted = 0, lapsed = 0;
 
-  // 1) One reminder per commitment.
-  const due = await prisma.preAssignment.findMany({ where: { status: 'COMMITTED', remindedAt: null, pickupAt: { lte: new Date(now.getTime() + p.remindMinutes * MIN) } }, include: { booking: { select: { pickupLabel: true, flightNumber: true } } }, take: 50 });
-  for (const r of due) {
+  // 1) Driver reminders (operator, 2026-11-22):
+  //    a) about an hour before: «Скоро предзаказ» (once);
+  //    b) the last 5 minutes before the driver must be online (35 → 30 min before pickup, when the
+  //       ride converts): a countdown «⏱ 5:00 … 1:00 — осталось до выхода на линию», one notification
+  //       replaced every minute. Not sent to a driver who is already online.
+  const REMIND_AT = p.remindMinutes * MIN, GO_ONLINE_AT = p.convertMinutes * MIN;
+  const soon = await prisma.preAssignment.findMany({ where: { status: 'COMMITTED', remindedAt: null, pickupAt: { gt: new Date(now.getTime() + GO_ONLINE_AT + COUNTDOWN_MIN * MIN), lte: new Date(now.getTime() + REMIND_AT) } }, include: { booking: { select: { pickupLabel: true, flightNumber: true } } }, take: 50 });
+  for (const r of soon) {
     const upd = await prisma.preAssignment.updateMany({ where: { id: r.id, remindedAt: null, status: 'COMMITTED' }, data: { remindedAt: now } });
     if (upd.count !== 1) continue; // another worker reminded already (fencing)
-    await enqueueDriver(prisma, r.driverId, 'Upcoming pre-booked ride', `Pickup ${timeLabel(r.pickupAt)} at ${r.booking.pickupLabel}${r.booking.flightNumber ? ` · flight ${r.booking.flightNumber}` : ''}. Go online in time.`, { tag: `pre-${r.bookingId}` });
+    await enqueueDriver(prisma, r.driverId, 'Upcoming pre-booked ride', `Pickup ${timeLabel(r.pickupAt)} at ${r.booking.pickupLabel}${r.booking.flightNumber ? ` · flight ${r.booking.flightNumber}` : ''}. Go online in time.`,
+      { tag: `pre-${r.bookingId}`, msg: { k: r.booking.flightNumber ? 'drv.preSoonFlight' : 'drv.preSoon', p: { timeT: r.pickupAt.toISOString(), place: r.booking.pickupLabel, flight: r.booking.flightNumber ?? '' } } });
+    reminded++;
+  }
+  const cd = await prisma.preAssignment.findMany({ where: { status: 'COMMITTED', pickupAt: { gt: new Date(now.getTime() + GO_ONLINE_AT), lte: new Date(now.getTime() + GO_ONLINE_AT + COUNTDOWN_MIN * MIN) } }, include: { booking: { select: { pickupLabel: true } }, driver: { select: { onDuty: true } } }, take: 50 });
+  for (const r of cd) {
+    if (r.driver.onDuty) continue;
+    const left = Math.min(COUNTDOWN_MIN, Math.ceil((r.pickupAt.getTime() - GO_ONLINE_AT - now.getTime()) / MIN));
+    if (left < 1) continue;
+    await prisma.preAssignment.updateMany({ where: { id: r.id, remind35At: null }, data: { remind35At: now } });
+    // One per minute (dedupe), same tag → the phone replaces it: a 5-minute countdown.
+    await enqueueDriver(prisma, r.driverId, `⏱ ${left}:00`, 'left to go online', { tag: `golive-${r.bookingId}`, dedupeKey: `golive:${r.id}:${left}`, msg: { k: 'drv.goOnline', p: { left, timeT: r.pickupAt.toISOString(), place: r.booking.pickupLabel } } });
     reminded++;
   }
 
@@ -239,10 +257,11 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
       await endPreAssignmentTx(tx, bookingId, 'RELEASED', 'booking no longer awaiting a driver');
       return 'gone';
     }
-    const lapse = async (why: string, passengerMsg: string, driverMsg: string) => {
-      await endPreAssignmentTx(tx, bookingId, 'LAPSED', why, { notifyDriver: driverMsg });
+    const lapse = async (why: string, passengerMsg: string, driverMsg: string, keys: { pax: string; drv: string }) => {
+      await endPreAssignmentTx(tx, bookingId, 'LAPSED', why, { notifyDriver: driverMsg, notifyDriverKey: keys.drv });
       await tx.bookingEvent.create({ data: { bookingId, type: 'PREASSIGN_LAPSED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED', reason: why } });
-      await enqueuePassengerDriverNews(tx, bookingId, 'change', 'Finding you a driver', passengerMsg);
+      // Always told (operator, 2026-11-22), also on a pre-booking: «the driver did not make it, we assign another».
+      await enqueuePassenger(tx, bookingId, 'Finding you a driver', passengerMsg, { msg: { k: keys.pax } });
       return 'lapsed' as const;
     };
 
@@ -250,11 +269,11 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
     const vehicle = await tx.vehicle.findUnique({ where: { id: pa.vehicleId } });
     const binding = vehicle ? await tx.driverVehicleBinding.findFirst({ where: { driverId: pa.driverId, vehicleId: vehicle.id, endedAt: null } }) : null;
     if (!driver || !driver.active || !driver.user.active || !canWork(driver) || !vehicle || !vehicle.active || !binding || vehicle.vClass !== b.vClass || vehicle.seats < b.passengerCount) {
-      return lapse('driver or vehicle no longer eligible', 'Your confirmed driver is no longer available. We are finding you another driver automatically.', 'Your pre-booked ride was released: your account or vehicle is not eligible right now.');
+      return lapse('driver or vehicle no longer eligible', 'Your confirmed driver is no longer available. We are finding you another driver automatically.', 'Your pre-booked ride was released: your account or vehicle is not eligible right now.', { pax: 'pre.reassign', drv: 'drv.preReleasedIneligible' });
     }
     // Blocked since the claim (a 1-star rating either way): hand it to automatic search.
     if (await isPairBlocked(pa.driverId, b.passengerId, tx)) {
-      return lapse('pair blocked by a 1-star rating', 'We are finding you another driver automatically.', 'Your pre-booked ride was released.');
+      return lapse('pair blocked by a 1-star rating', 'We are finding you another driver automatically.', 'Your pre-booked ride was released.', { pax: 'pre.reassign', drv: 'drv.preReleased' });
     }
     const busy = !driver.onDuty
       || !!(await tx.assignment.findFirst({ where: { activeDriverId: pa.driverId }, select: { id: true } }))
@@ -266,8 +285,9 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
       const cutoff = isPair ? config.share.pairLapseMinutes : config.dispatch.scheduleLeadMinutes;
       if (pa.pickupAt.getTime() - now.getTime() > cutoff * MIN) return 'waiting';
       return lapse(driver.onDuty ? 'driver busy at conversion' : 'driver offline at conversion',
-        'Your confirmed driver could not make it in time. We are finding you another driver automatically.',
-        driver.onDuty ? 'Your pre-booked ride was handed to automatic dispatch because you were still on another trip.' : 'Your pre-booked ride was handed to automatic dispatch because you were offline.');
+        'Sorry, the driver did not get online in time. We are assigning you another driver now.',
+        driver.onDuty ? 'Your pre-booked ride was handed to automatic dispatch because you were still on another trip.' : 'Your pre-booked ride was handed to automatic dispatch because you were offline.',
+        { pax: 'pre.lapsedLate', drv: driver.onDuty ? 'drv.preLapsedBusy' : 'drv.preLapsedOffline' });
     }
 
     await createAssignment(tx, b, driver, vehicle, 'SYSTEM', 'pre-assignment conversion');
@@ -277,7 +297,7 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
     await recordEvent(tx, { eventType: 'booking.assigned', aggregateType: 'booking', aggregateId: bookingId, aggregateVersion: u.revision, correlationId: bookingId, payload: { ...bookingEventPayload({ ...b, status: 'ASSIGNED' }), driverPseudo: driverPseudo(pa.driverId), preassigned: true } });
     await endPreAssignmentTx(tx, bookingId, 'CONVERTED', 'converted to assignment');
     await attachMatchedGuestTx(tx, bookingId); // ride-share pair: the co-rider joins the same car
-    await enqueuePassengerDriverNews(tx, bookingId, 'assigned', 'Driver assigned', `${driver.publicName.split(' ')[0]} is assigned to your ride — track them live.`);
+    await enqueuePassengerDriverNews(tx, bookingId, 'assigned', 'Driver assigned', `${driver.publicName.split(' ')[0]} is assigned to your ride — track them live.`, { k: 'pre.assigned', p: { driver: driver.publicName.split(' ')[0] } });
     await enqueueDriver(tx, pa.driverId, 'Pre-booked ride is now active', `Pickup ${timeLabel(pa.pickupAt)} at ${b.pickupLabel}. Head to the pickup in time.`, { tag: `pre-${bookingId}` });
     return 'converted';
   });
