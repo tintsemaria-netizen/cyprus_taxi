@@ -3,6 +3,8 @@
 import { Postcode } from '@/components/driver/Postcode';
 import { coRiderNext, type PairStops } from '@/lib/pair-stops';
 import { PairLegs } from '@/components/share/PairLegs';
+import { BackArrow } from '@/components/BackArrow';
+import { ApiRequestError } from '@/lib/api-client';
 import { navZoomTarget, nextNavZoom, smoothSpeed, NAV_ZOOM_MAX } from '@/lib/nav-zoom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
@@ -59,7 +61,7 @@ export function DriverNavigation(props: {
   onOpenCoRider?: () => void;
 }) {
   const { trip, pos, gps, nowMs, startCode, setStartCode } = props;
-  const { t, fmt, locale } = useT();
+  const { t, fmt, locale, tError } = useT();
   // Legs: pickup → (stop, if any, until the driver continues from it) → destination.
   const stop = trip.stop ?? null;
   // A pair (2026-11-22): when the co-rider's pickup / drop-off is next in the trip order, that is the
@@ -83,6 +85,23 @@ export function DriverNavigation(props: {
   // Info panel open/collapsed (2026-11-15): tap the handle or swipe it up/down.
   const [panelOpen, setPanelOpen] = useState(trip.status !== 'IN_PROGRESS');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
+  // «Поделиться поездкой» (operator, 2026-11-23): if something feels wrong, the driver sends a
+  // read-only link (car, position, route) to someone he trusts; it ends with the trip.
+  const shareTrip = async () => {
+    setShareMsg(null);
+    try {
+      const r = await api<{ url: string }>('/driver/trip/share', { method: 'POST' });
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        try { await navigator.share({ title: t('driver.navigation.shareTitle'), text: t('driver.navigation.shareText'), url: r.url }); setMenuOpen(false); return; } catch { /* dismissed — copy instead */ }
+      }
+      await navigator.clipboard.writeText(r.url);
+      setShareMsg(t('driver.navigation.shareCopied'));
+    } catch (e) {
+      setShareMsg(e instanceof ApiRequestError ? tError(e) : t('driver.navigation.shareFailed'));
+    }
+  };
   const canRelease = ['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(trip.status);
   // Tablets/desktop (≥640px): the sheet becomes a left column, so the map fit pads the left side.
   const [wide, setWide] = useState(false);
@@ -382,14 +401,19 @@ export function DriverNavigation(props: {
               <span className="max-w-full truncate rounded-full border border-white/15 bg-[#10191C]/90 px-3 py-1.5 text-[14px] font-semibold text-ink shadow">{street}</span>
             </div>
           )}
-          {canRelease && <button type="button" onClick={() => setMenuOpen(true)} data-testid="nav-menu" aria-label={t('driver.navigation.menu')} title={t('driver.navigation.menu')}
-            className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-ink shadow-lg">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M5 7h14M5 12h14M5 17h14" /></svg>
-          </button>}
+          {/* The ☰ menu moved above the main button, bottom right (operator, 2026-11-23). */}
         </div>
       )}
       {/* Action bar: the one action for this stage — separate, above the info sheet, always visible. */}
-      <div className="pointer-events-auto space-y-2 px-3 pb-2" data-testid="nav-actions">
+      <div className="pointer-events-auto relative space-y-2 px-3 pb-2" style={sheetDrag.style} data-testid="nav-actions">
+          {/* ☰ above the main button, right corner (operator, 2026-11-23); it moves with the panel.
+              Absolutely placed so the map buttons above keep their room. */}
+          <button type="button" onClick={() => { setShareMsg(null); setMenuOpen(true); }} data-testid="nav-menu" aria-label={t('driver.navigation.menu')} title={t('driver.navigation.menu')}
+            className="absolute bottom-full end-3 mb-1 flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-page/90 text-ink shadow-lg">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M5 7h14M5 12h14M5 17h14" /></svg>
+            {/* A dot when the ride has a comment or a flight — they are only in this menu now. */}
+            {(trip.note || trip.flightNumber) && <span className="absolute -end-0.5 -top-0.5 h-3.5 w-3.5 rounded-full border-2 border-page bg-warn" data-testid="nav-menu-dot" />}
+          </button>
           {/* Pair (2026-11-22): the co-rider's stop is next — its action opens the co-rider's sheet
               (arrive / picked up with the code / no-show / dropped off). */}
           {co && (
@@ -476,11 +500,8 @@ export function DriverNavigation(props: {
         {stop && leg === 'pickup' && <div className="mt-1 text-sm"><span className="text-muted">{t('driver.stop.via')}</span> <span className="font-medium">{stop.label}</span></div>}
         {stopNode && <div className="mt-2 rounded-[12px] border border-edge bg-page p-3 text-sm">{stopNode}</div>}
 
-        {/* No «Подробнее» section (2026-11-18). The passenger's comment and flight stay visible. */}
-        {trip.note && <div className="mt-2 text-sm text-warn">{t('driver.trip.note', { note: trip.note })}</div>}
-        {/* No «быть на месте» for the driver (operator, 2026-11-23): he needs the time between the stops. */}
-        {props.pair && <PairLegs pair={props.pair} />}
-        {trip.flightNumber && <div className="mt-1 font-mono text-sm">✈ {t('driver.scheduled.flight', { flight: formatFlight(trip.flightNumber) })}</div>}
+        {/* Comment and flight are in ☰ (operator, 2026-11-23), not in the panel. */}
+        {/* The pair's stops with the time between them live in ☰ → «Подробности о заказе» (operator, 2026-11-23). */}
         </div>
       </div>
       </div>
@@ -496,8 +517,37 @@ export function DriverNavigation(props: {
       {menuOpen && (
         <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) setMenuOpen(false); }} data-testid="nav-menu-sheet">
           <div className="space-y-2 rounded-t-[18px] bg-elevated p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
-            <button className="relative mx-auto block h-[53px] w-[65%] min-w-[260px] rounded-full border border-danger/50 bg-page px-3 text-[15px] font-bold text-danger" onClick={() => { setMenuOpen(false); setAsk('release'); }}><EdgeShine />{t('driver.trip.release')}</button>
-            <button className="relative mx-auto block h-[53px] w-[65%] rounded-full border border-edge bg-page text-[16px] font-bold text-ink" onClick={() => setMenuOpen(false)}><EdgeShine />{t('common.cancel')}</button>
+            {(trip.note || trip.flightNumber) && (
+              <div className="mb-1 space-y-1 rounded-[12px] border border-edge bg-page p-3 text-sm" data-testid="nav-menu-info">
+                {trip.note && <div><span className="text-muted">{t('driver.navigation.comment')}: </span><span className="text-warn">{trip.note}</span></div>}
+                {trip.flightNumber && <div><span className="text-muted">{t('driver.navigation.flight')}: </span><span className="font-mono">✈ {formatFlight(trip.flightNumber)}</span></div>}
+              </div>
+            )}
+            <button className="relative mx-auto block h-[53px] w-[80%] rounded-full border border-edge bg-page text-[16px] font-bold text-ink" onClick={() => void shareTrip()} data-testid="nav-share"><EdgeShine />📤 {t('driver.navigation.shareTrip')}</button>
+            {shareMsg && <p className="text-center text-xs text-muted" data-testid="nav-share-msg">{shareMsg}</p>}
+            {/* Only for a ride-share pair (operator, 2026-11-23): an ordinary ride has nothing more to show. */}
+            {props.pair && <button className="relative mx-auto block h-[53px] w-[80%] rounded-full border border-edge bg-page text-[16px] font-bold text-ink" onClick={() => { setMenuOpen(false); setDetailsOpen(true); }} data-testid="nav-details"><EdgeShine />📋 {t('driver.navigation.orderDetails')}</button>}
+            {canRelease && <button className="relative mx-auto block h-[53px] w-[80%] min-w-[260px] rounded-full border border-danger/50 bg-page px-3 text-[15px] font-bold text-danger" onClick={() => { setMenuOpen(false); setAsk('release'); }}><EdgeShine />{t('driver.trip.release')}</button>}
+            {/* No «Отмена» (operator, 2026-11-23): tapping outside the menu closes it. */}
+          </div>
+        </div>
+      )}
+      {/* «Подробности о заказе» (operator, 2026-11-23): the stops in order with the time between them
+          (a ride-share pair) — moved here from the panel; a sub-screen, so it has the back arrow. */}
+      {detailsOpen && props.pair && (
+        <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) setDetailsOpen(false); }} data-testid="nav-details-sheet">
+          <div className="max-h-[80vh] overflow-y-auto rounded-t-[18px] bg-elevated p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+            <div className="flex items-center gap-2">
+              <BackArrow onBack={() => { setDetailsOpen(false); setMenuOpen(true); }} />
+              <div className="text-lg font-bold">{t('driver.navigation.orderDetails')}</div>
+            </div>
+            <PairLegs pair={props.pair!} />
+            {(trip.note || trip.flightNumber) && (
+              <div className="mt-2 space-y-1 text-sm">
+                {trip.note && <div><span className="text-muted">{t('driver.navigation.comment')}: </span><span className="text-warn">{trip.note}</span></div>}
+                {trip.flightNumber && <div><span className="text-muted">{t('driver.navigation.flight')}: </span><span className="font-mono">✈ {formatFlight(trip.flightNumber)}</span></div>}
+              </div>
+            )}
           </div>
         </div>
       )}

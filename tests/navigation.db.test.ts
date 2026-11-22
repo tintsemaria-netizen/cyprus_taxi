@@ -23,6 +23,8 @@ import { runOnce } from '@/server/dispatch/worker';
 import { acceptOffer, getDriverActiveOffer } from '@/server/dispatch/offers';
 import type { CreateBookingInput } from '@/lib/validation';
 import * as nav from '@/app/api/v1/driver/navigation/route';
+import * as tripShare from '@/app/api/v1/driver/trip/share/route';
+import { resolveShareToken } from '@/lib/tracking';
 
 const marina = { lat: 34.6706, lng: 33.0413, label: 'Limassol Marina' };
 const lca = { lat: 34.8751, lng: 33.6249, label: 'Larnaca Airport (LCA)' };
@@ -82,6 +84,24 @@ describe('driver navigation API', () => {
     expect((await post({ from: marina })).status).toBe(401);
     await asStaff('dispatcher');
     expect((await post({ from: marina })).status).toBe(403);
+  });
+
+  it('2026-11-23: «Поделиться поездкой» — only the driver\'s own active trip, a view-only link', async () => {
+    const share = () => tripShare.POST(new Request('http://localhost:3000/api/v1/driver/trip/share', { method: 'POST' }));
+    jar.clear();
+    expect((await share()).status).toBe(401);
+    await asStaff('dispatcher');
+    expect((await share()).status).toBe(403);
+    await asStaff('andreas');
+    expect((await share()).status).toBe(409); // no trip
+    const b = await assignedTrip();
+    await asStaff('andreas');
+    const res = await share();
+    expect(res.status).toBe(200);
+    const j = await res.json();
+    expect(j.url).toMatch(/\/share#t=/);
+    const token = j.url.split('#t=')[1];
+    expect(await resolveShareToken(token)).toBe(b.id);
   });
 
   it('no active trip → NO_TRIP, Google not called', async () => {
