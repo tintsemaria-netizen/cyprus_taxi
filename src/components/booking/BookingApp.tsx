@@ -60,6 +60,12 @@ export default function BookingApp() {
   const [dropoffText, setDropoffText] = useState('');
   const [when, setWhen] = useState<'NOW' | 'SCHEDULE'>('NOW');
   const [scheduledAt, setScheduledAt] = useState('');
+  // «Быть на месте с … до …» (2026-11-22, operator): the passenger gives an ARRIVAL window; the
+  // pickup time is worked out from the road time (+ a margin for traffic) and shown to them.
+  const [arriveMode, setArriveMode] = useState(false);
+  const [arriveDay, setArriveDay] = useState('');
+  const [arriveFromT, setArriveFromT] = useState('');
+  const [arriveToT, setArriveToT] = useState('');
   const [scheduleOffsetMin, setScheduleOffsetMin] = useState<number | undefined>(undefined);
   const [ambiguous, setAmbiguous] = useState<string[] | null>(null);
   const [vClass, setVClass] = useState<'COMFORT' | 'XL'>('COMFORT');
@@ -659,7 +665,12 @@ export default function BookingApp() {
     if (passenger && !passenger.guest && !name.trim()) e.name = t('booking.validation.name');
     // Email-only accounts have no verified phone: the contact number is entered per booking.
     if (passenger && !passenger.guest && !passenger.phone && !/^\+?[\d\s()-]{7,20}$/.test(phone.trim())) e.phone = t('booking.validation.phone');
-    if (when === 'SCHEDULE' && !scheduledAt) e.scheduledAt = t('booking.validation.scheduledAt');
+    if (when === 'SCHEDULE' && arriveMode) {
+      const w = arriveWindow();
+      if (!w) e.scheduledAt = t('booking.arrive.needTimes');
+      else if (w.width < 15 || w.width > 180) e.scheduledAt = t('booking.arrive.badWidth');
+      else if (route?.min == null) e.scheduledAt = t('booking.arrive.needRoute');
+    } else if (when === 'SCHEDULE' && !scheduledAt) e.scheduledAt = t('booking.validation.scheduledAt');
     if (effPax < 1 || effPax > maxPax) e.pax = tp('booking.validation.paxRange', maxPax);
     setErrors(e);
     // Open a collapsed sheet so the highlighted field is reachable (ErrorFocus scrolls to it).
@@ -721,6 +732,7 @@ export default function BookingApp() {
         when,
         // Send the raw wall-clock string; the server interprets it as Europe/Nicosia.
         scheduledAt: when === 'SCHEDULE' ? scheduledAt : undefined,
+        ...(when === 'SCHEDULE' && arriveMode && arriveDay && arriveFromT && arriveToT ? { arriveFrom: `${arriveDay}T${arriveFromT}`, arriveBy: `${arriveDay}T${arriveToT}` } : {}),
         scheduleOffsetMin: when === 'SCHEDULE' ? effOffset : undefined,
         vClass,
         passengerCount: effPax,
@@ -808,6 +820,30 @@ export default function BookingApp() {
     return nicosiaInputValue(new Date(Date.now() + (cfg?.schedule.minMinutes ?? 30) * 60000));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cfg, scheduleTick]);
+
+  // Arrival window → pickup times (Cyprus wall clock). Margin for traffic: 10 min.
+  const ARRIVE_MARGIN_MIN = 10;
+  function arriveWindow(): { from: number; to: number; width: number } | null {
+    const m1 = /^(\d{2}):(\d{2})$/.exec(arriveFromT), m2 = /^(\d{2}):(\d{2})$/.exec(arriveToT);
+    if (!arriveDay || !m1 || !m2) return null;
+    const from = +m1[1] * 60 + +m1[2], to = +m2[1] * 60 + +m2[2];
+    return { from, to, width: to - from };
+  }
+  const wall = (minOfDay: number) => {
+    const d = new Date(Date.UTC(+arriveDay.slice(0, 4), +arriveDay.slice(5, 7) - 1, +arriveDay.slice(8, 10), 0, minOfDay));
+    return d.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM, still Cyprus wall time
+  };
+  const arriveCalc = (() => {
+    const w = arriveWindow();
+    if (!arriveMode || !w || route?.min == null) return null;
+    const drive = Math.ceil(route.min) + ARRIVE_MARGIN_MIN;
+    return { leaveFrom: wall(w.from - drive), leaveBy: wall(w.to - drive), drive };
+  })();
+  // The pickup sent with the order = the LATEST departure; a co-rider may make it earlier.
+  useEffect(() => {
+    if (arriveMode && arriveCalc && scheduledAt !== arriveCalc.leaveBy) { setScheduledAt(arriveCalc.leaveBy); setScheduleOffsetMin(undefined); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arriveMode, arriveCalc?.leaveBy]);
 
   const classes = cfg?.classes ?? [
     { key: 'COMFORT' as const, label: 'Comfort', maxPassengers: 4 },
@@ -1020,7 +1056,33 @@ export default function BookingApp() {
                     {when === 'SCHEDULE' ? (
                       <div data-testid="schedule-panel">
                         <h1 className="mb-3 pe-12 text-xl font-bold">🕒 {t('booking.form.schedule')}</h1>
-                        <input type="datetime-local" data-testid="schedule-time" className={`field block w-full min-w-0 max-w-full appearance-none ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
+                        <div className="mb-2 grid grid-cols-2 gap-1 rounded-[12px] border border-edge bg-page p-1" role="radiogroup" data-testid="schedule-mode">
+                          {([false, true] as const).map((m) => (
+                            <button key={String(m)} type="button" role="radio" aria-checked={arriveMode === m}
+                              onClick={() => { setArriveMode(m); if (m && !arriveDay) setArriveDay((scheduledAt || scheduleMin).slice(0, 10)); }}
+                              className={`rounded-[9px] py-2 text-sm font-semibold ${arriveMode === m ? 'bg-accent text-black' : 'text-muted'}`}>
+                              {m ? t('booking.arrive.modeArrive') : t('booking.arrive.modePickup')}
+                            </button>
+                          ))}
+                        </div>
+                        {!arriveMode ? (
+                          <input type="datetime-local" data-testid="schedule-time" className={`field block w-full min-w-0 max-w-full appearance-none ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
+                        ) : (
+                          <div data-testid="arrive-window">
+                            <input type="date" className="field block w-full min-w-0 max-w-full appearance-none" value={arriveDay} min={scheduleMin.slice(0, 10)} onChange={(e) => setArriveDay(e.target.value)} aria-label={t('booking.arrive.day')} />
+                            <div className="mt-2 grid grid-cols-2 gap-2">
+                              <label className="block"><span className="label">{t('booking.arrive.from')}</span>
+                                <input type="time" step={300} data-testid="arrive-from" className={`field mt-1 block w-full ${errors.scheduledAt ? 'border-danger' : ''}`} value={arriveFromT} onChange={(e) => setArriveFromT(e.target.value)} /></label>
+                              <label className="block"><span className="label">{t('booking.arrive.to')}</span>
+                                <input type="time" step={300} data-testid="arrive-to" className={`field mt-1 block w-full ${errors.scheduledAt ? 'border-danger' : ''}`} value={arriveToT} onChange={(e) => setArriveToT(e.target.value)} /></label>
+                            </div>
+                            <p className="mt-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium text-ink" data-testid="arrive-leave">
+                              {arriveCalc
+                                ? t('booking.arrive.leave', { from: arriveCalc.leaveFrom.slice(11), to: arriveCalc.leaveBy.slice(11), n: arriveCalc.drive })
+                                : arriveWindow() ? t('booking.arrive.needRoute') : t('booking.arrive.hint')}
+                            </p>
+                          </div>
+                        )}
                         {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
                         <div className="mb-3" />
                       </div>
@@ -1167,7 +1229,7 @@ export default function BookingApp() {
                           the list of places until the route is one where ride-share works. */}
                       {when === 'SCHEDULE' && cfg?.share && (
                         <div className="-mt-4 mb-3">
-                          <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook disabled={!shareAllowed} />
+                          <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook={!arriveMode} disabled={!shareAllowed} />
                         </div>
                       )}
                       {when === 'SCHEDULE' && (

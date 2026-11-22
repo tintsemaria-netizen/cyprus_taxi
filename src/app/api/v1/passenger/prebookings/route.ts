@@ -21,7 +21,7 @@ export async function GET() {
     orderBy: { scheduledAt: 'asc' },
     take: 50,
     select: {
-      id: true, reference: true, status: true, scheduledAt: true, pickupLabel: true, dropoffLabel: true, note: true, fareCents: true,
+      id: true, reference: true, status: true, scheduledAt: true, arriveFrom: true, arriveBy: true, pickupLabel: true, dropoffLabel: true, note: true, fareCents: true,
       preAssignments: { where: { status: 'COMMITTED' }, select: { driver: { select: { publicName: true } } }, take: 1 },
     },
   });
@@ -31,6 +31,7 @@ export async function GET() {
       return {
         id: b.id, reference: b.reference, status: b.status, at: b.scheduledAt!.toISOString(),
         pickup: b.pickupLabel, dropoff: b.dropoffLabel, note: b.note, fareCents: b.fareCents,
+        arrive: b.arriveFrom && b.arriveBy ? { from: b.arriveFrom.toISOString(), by: b.arriveBy.toISOString() } : null,
         driverConfirmed: b.preAssignments[0]?.driver.publicName ?? null,
         soon: at - now <= REMIND_MIN * 60_000 && at - now > -30 * 60_000,
       };

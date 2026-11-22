@@ -10,7 +10,7 @@
 // Privacy: no names, phones or exact addresses — only the district, time, people and bags.
 import { prisma } from '@/lib/db';
 import { getSettings } from '@/lib/settings';
-import { approxLegMin, bestPrebookPlan, shareFits, shareZone, sharedCents, type SharePlan } from '@/lib/share';
+import { approxLegMin, arrivalFits, bestPrebookPlan, shareFits, shareZone, sharedCents, type SharePlan } from '@/lib/share';
 import { shareCapable, planWithRoads, proposePrebook } from '@/server/share';
 import { approxLabel } from '@/server/share-detail';
 import { config } from '@/lib/config';
@@ -22,7 +22,7 @@ export const BOARD_HIDE_HOURS = config.share.boardHideHours;
 const SEL = {
   id: true, passengerId: true, status: true, vClass: true, shareOptIn: true, shareMaxExtraMin: true, fareCents: true, priceType: true,
   passengerCount: true, childCount: true, luggageCount: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true,
-  stopLat: true, scheduledAt: true, shareWaitMin: true, shareEarlyMin: true, pickupLabel: true, dropoffLabel: true,
+  stopLat: true, scheduledAt: true, shareWaitMin: true, shareEarlyMin: true, pickupLabel: true, dropoffLabel: true, arriveFrom: true, arriveBy: true,
 } as const;
 
 /** Open (listable) co-rider pre-bookings: no proposal or pair, no pre-accepted driver, far enough ahead. */
@@ -71,6 +71,8 @@ function pairAtTheirTime(me: Ride, them: Ride): { host: Ride; guest: Ride; start
   if (!plan) return null;
   const leg = plan.arrive.guestPickup;
   const startAt = them === host ? them.scheduledAt! : new Date(them.scheduledAt!.getTime() - leg * MIN);
+  // Both must still arrive inside their arrival windows, if they set one (2026-11-22).
+  if (!arrivalFits(host, new Date(startAt.getTime() + plan.arrive.host * MIN)) || !arrivalFits(guest, new Date(startAt.getTime() + plan.arrive.guest * MIN))) return null;
   const myPickup = me === host ? startAt : new Date(startAt.getTime() + leg * MIN);
   return { host, guest, startAt, plan, myShiftMin: Math.round((myPickup.getTime() - me.scheduledAt!.getTime()) / MIN) };
 }

@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic';
 
 interface Prebooking {
   id: string; reference: string; status: string; at: string; pickup: string; dropoff: string;
+  arrive?: { from: string; by: string } | null;
   note: string | null; fareCents: number | null; driverConfirmed: string | null; soon: boolean;
 }
 
@@ -88,6 +89,7 @@ export default function Page() {
                     <span className="font-semibold">{fmt.dateTime(b.at)}</span>
                     {b.soon ? <span className="chip !text-accent">⏰ {t('rides.prebookings.soon')}</span> : <span className="chip">{t(`common.status.${b.status}` as 'common.status.COMPLETED')}</span>}
                   </div>
+                  {b.arrive && <div className="mt-1 text-xs font-semibold text-accent">{t('rides.prebookings.arrive', { from: fmt.time(b.arrive.from), to: fmt.time(b.arrive.by) })}</div>}
                   <div className="mt-2 space-y-1 text-sm">
                     <div className="flex gap-2"><span className="text-accent">●</span><span className="min-w-0">{b.pickup}</span></div>
                     <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0">{b.dropoff}</span></div>

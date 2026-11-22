@@ -79,6 +79,7 @@ const rides: Catalog<typeof en> = {
     },
   },
   prebookings: {
+    arrive: 'להגיע {from}–{to}',
     title: "ההזמנות מראש שלי",
     subtitle: "הנסיעות המתוזמנות שלכם. כשעה לפני האיסוף נזכיר לכם כאן ובהתראה.",
     empty: "אין לכם הזמנות מראש קרובות.",

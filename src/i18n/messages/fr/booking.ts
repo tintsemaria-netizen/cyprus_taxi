@@ -209,5 +209,17 @@ const booking: Catalog<typeof en> = {
     myRides: "Mes courses",
     open: "Ouvrir la réservation",
   },
+  arrive: {
+    modePickup: 'Prise en charge à',
+    modeArrive: 'Être sur place',
+    day: 'Date',
+    from: 'Pas avant',
+    to: 'Pas après',
+    leave: 'Prise en charge vers {from}–{to} (trajet ~{n} min avec marge)',
+    hint: 'Indiquez quand vous devez être sur place — nous afficherons l’heure de départ.',
+    needRoute: 'Indiquez la destination — nous calculerons l’heure de départ.',
+    needTimes: 'Choisissez les deux heures.',
+    badWidth: 'Fenêtre : de 15 min à 3 h.',
+  },
 };
 export default booking;

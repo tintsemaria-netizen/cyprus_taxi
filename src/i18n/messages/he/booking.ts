@@ -209,5 +209,17 @@ const booking: Catalog<typeof en> = {
     myRides: "הנסיעות שלי",
     open: "פתיחת ההזמנה מראש",
   },
+  arrive: {
+    modePickup: 'איסוף ב-',
+    modeArrive: 'להגיע עד',
+    day: 'תאריך',
+    from: 'לא לפני',
+    to: 'לא אחרי',
+    leave: 'איסוף בערך {from}–{to} (דרך ~{n} דק׳ כולל מרווח)',
+    hint: 'בחרו מתי צריך להגיע — נראה את שעת האיסוף.',
+    needRoute: 'הזינו יעד — נחשב את שעת האיסוף.',
+    needTimes: 'בחרו את שתי השעות.',
+    badWidth: 'החלון: 15 דק׳ עד 3 שעות.',
+  },
 };
 export default booking;

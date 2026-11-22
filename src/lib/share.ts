@@ -54,6 +54,17 @@ export const STOP_OF: Record<StopKey, Stop> = {
 export interface SharePoints { start: LatLng; Hp: LatLng; Hd: LatLng; Gp: LatLng; Gd: LatLng }
 export type LegFn = (a: LatLng, b: LatLng) => number;
 
+/**
+ * «Быть на месте с … до …» (2026-11-22): does a drop-off at `at` fall inside the passenger's arrival
+ * window? `slackMin` loosens it for the quick straight-line pre-filter. No window → always fits.
+ */
+export function arrivalFits(b: { arriveFrom?: Date | null; arriveBy?: Date | null }, at: Date, slackMin = 0): boolean {
+  const M = 60_000;
+  if (b.arriveBy && at.getTime() > b.arriveBy.getTime() + slackMin * M) return false;
+  if (b.arriveFrom && at.getTime() < b.arriveFrom.getTime() - (5 + slackMin) * M) return false; // ≤5 min early is fine
+  return true;
+}
+
 export interface SharePlan {
   order: StopKey[]; // remaining stops after `start`
   extraHost: number; // minutes the host arrives later than without the co-rider

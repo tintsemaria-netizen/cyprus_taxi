@@ -50,8 +50,8 @@ export function ShareBookingOptions({ value, onChange, pct, maxPeople, prebook, 
           <Stepper label={t('share.booking.adults')} n={value.adults} min={1} max={maxPeople - value.children} onChange={(adults) => set({ adults })} />
           <Stepper label={t('share.booking.children')} n={value.children} min={0} max={Math.max(0, maxPeople - value.adults)} onChange={(children) => set({ children })} />
           <Stepper label={t('share.booking.luggage')} n={value.bags} min={0} max={6} onChange={(bags) => set({ bags })} />
-          <p className="label pt-1">{t('share.booking.flex')}</p>
-          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t('share.booking.flex')} data-testid="share-flex">
+          <p className="label pt-1">{t(prebook ? 'share.booking.flex' : 'share.booking.maxExtra')}</p>
+          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t(prebook ? 'share.booking.flex' : 'share.booking.maxExtra')} data-testid="share-flex">
             {SHARE_FLEX.map((f) => {
               const sel = value.maxExtra === f.maxExtra && (!prebook || ((value.early ?? 0) === f.early && value.wait === f.wait));
               return (

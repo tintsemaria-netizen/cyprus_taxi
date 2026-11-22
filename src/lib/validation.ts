@@ -52,6 +52,9 @@ const bookingFields = z.object({
   // Pre-booking: how long the passenger can wait for the co-rider (e.g. sit at the airport a bit).
   shareWaitMin: z.number().int().min(0).max(180).optional(),
   shareEarlyMin: z.number().int().min(0).max(180).optional(),
+  // «Быть на месте с … до …» (2026-11-22): Cyprus wall times like scheduledAt.
+  arriveFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).optional(),
+  arriveBy: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).optional(),
   childCount: z.number().int().min(0).max(5).optional(),
 });
 const atLeastOneAdult = (v: { childCount?: number; passengerCount: number }) => (v.childCount ?? 0) < v.passengerCount;

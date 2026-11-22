@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { getSettings } from '@/lib/settings';
 import { haversineMeters, type LatLng } from '@/lib/geo';
-import { isShareRoute, sharedCents, approxLegMin, bestSharePlan, bestPrebookPlan, shareFits, prebookTiming, STOP_OF, type SharePlan, type LegFn } from '@/lib/share';
+import { arrivalFits, isShareRoute, sharedCents, approxLegMin, bestSharePlan, bestPrebookPlan, shareFits, prebookTiming, STOP_OF, type SharePlan, type LegFn } from '@/lib/share';
 import { googleConfigured, googleRoute } from '@/server/google';
 import { enqueueDriver, enqueuePassenger, enqueuePassengerDriverNews } from '@/server/push';
 import { recordEvent, driverPseudo } from '@/server/events';
@@ -409,7 +409,8 @@ export async function matchPrebookings(now: Date = new Date()): Promise<number> 
       const pts = { Hp: pt(h.pickupLat, h.pickupLng), Hd: pt(h.dropoffLat, h.dropoffLng), Gp: pt(g.pickupLat, g.pickupLng), Gd: pt(g.dropoffLat, g.dropoffLng) };
       const timing = prebookTiming(h.scheduledAt!, g.scheduledAt!, approxLegMin(pts.Hp, pts.Gp), waitMin(h) + 5, waitMin(g) + 5, earlyMin(h) + 5, earlyMin(g) + 5);
       const plan = timing && bestPrebookPlan(pts, approxLegMin, { hostMaxExtra: maxExtra(h) + 5, guestMaxExtra: maxExtra(g) + 5 });
-      if (timing && plan) pre.push({ g, plan, timing });
+      const arrOk = (t: NonNullable<typeof timing>, pl: SharePlan, slack: number) => arrivalFits(h, new Date(t.startAt.getTime() + pl.arrive.host * MIN), slack) && arrivalFits(g, new Date(t.startAt.getTime() + pl.arrive.guest * MIN), slack);
+      if (timing && plan && arrOk(timing, plan, 10)) pre.push({ g, plan, timing });
     }
     pre.sort((a, b) => a.plan.extraHost + a.plan.extraGuest - (b.plan.extraHost + b.plan.extraGuest));
     let best: Pick | null = null;
@@ -419,7 +420,10 @@ export async function matchPrebookings(now: Date = new Date()): Promise<number> 
       const { result, routed } = await planWithRoads((leg) => {
         const timing = prebookTiming(h.scheduledAt!, c.g.scheduledAt!, leg(pts.Hp, pts.Gp), waitMin(h), waitMin(c.g), earlyMin(h), earlyMin(c.g));
         const plan = timing && bestPrebookPlan(pts, leg, { hostMaxExtra: maxExtra(h), guestMaxExtra: maxExtra(c.g) });
-        return timing && plan ? { timing, plan } : null;
+        // Everyone with an arrival window must arrive inside it (2026-11-22).
+        if (!timing || !plan) return null;
+        if (!arrivalFits(h, new Date(timing.startAt.getTime() + plan.arrive.host * MIN)) || !arrivalFits(c.g, new Date(timing.startAt.getTime() + plan.arrive.guest * MIN))) return null;
+        return { timing, plan };
       }, h.scheduledAt);
       if (result && (!best || result.plan.extraHost + result.plan.extraGuest < best.plan.extraHost + best.plan.extraGuest)) best = { g: c.g, ...result, routed };
     }

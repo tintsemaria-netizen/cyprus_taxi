@@ -193,5 +193,17 @@ const booking = {
     myRides: 'My rides',
     open: 'Open pre-booking',
   },
+  arrive: {
+    modePickup: 'Pickup at',
+    modeArrive: 'Be there',
+    day: 'Date',
+    from: 'Not before',
+    to: 'Not later than',
+    leave: 'Pickup approx. {from}–{to} (road ~{n} min incl. margin)',
+    hint: "Choose when you need to be there — we'll show the pickup time.",
+    needRoute: "Enter the destination — we'll work out the pickup time.",
+    needTimes: 'Choose both times.',
+    badWidth: 'The window must be 15 min to 3 h.',
+  },
 };
 export default booking;

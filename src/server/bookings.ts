@@ -122,6 +122,18 @@ export async function createBooking(
     if (when.getTime() > now + maxMs) return fail(422, 'SCHEDULE_TOO_FAR', 'Scheduled time is too far ahead.', { scheduledAt: `At most ${settings.scheduleMaxDays} days ahead.` });
     scheduledAt = when;
   }
+  // «Быть на месте с … до …» (2026-11-22): the app sends the arrival window and a pickup time it
+  // computed from the road time. The window is kept on the booking; the pickup must leave room to
+  // arrive by the end of it, and a co-rider may move it EARLIER by up to the window's width only.
+  let arrive: { from: Date; by: Date } | null = null;
+  if (scheduledAt && input.arriveFrom && input.arriveBy) {
+    const f = nicosiaWallTimeToUtc(input.arriveFrom), t = nicosiaWallTimeToUtc(input.arriveBy);
+    if (!f.ok || !t.ok) return fail(422, 'VALIDATION', 'Invalid arrival window.', { arriveBy: 'Pick a valid time.' });
+    const width = (t.utc.getTime() - f.utc.getTime()) / 60_000;
+    if (width < 15 || width > 180) return fail(422, 'VALIDATION', 'Arrival window must be 15 min – 3 h.', { arriveBy: '15 min – 3 h.' });
+    if (scheduledAt.getTime() > t.utc.getTime() - 5 * 60_000) return fail(422, 'VALIDATION', 'Pickup is too late for that arrival time.', { arriveBy: 'Too late.' });
+    arrive = { from: f.utc, by: t.utc };
+  }
 
   // 6b. Optional fare quote: validate ownership/expiry/payload and snapshot it onto the
   // booking (the client-supplied price is never trusted).
@@ -160,9 +172,9 @@ export async function createBooking(
           dropoffLat: input.dropoff.lat, dropoffLng: input.dropoff.lng, dropoffLabel: input.dropoff.label, dropoffPostcode,
           ...(input.stop ? { stopLat: input.stop.lat, stopLng: input.stop.lng, stopLabel: input.stop.label } : {}),
           passengerName: input.passengerName, phone: input.phone, note: input.note || null, flightNumber: input.flightNumber ?? null,
-          vClass: input.vClass, passengerCount: input.passengerCount, luggageCount: input.luggageCount ?? 0, scheduledAt, status: initialStatus,
+          vClass: input.vClass, passengerCount: input.passengerCount, luggageCount: input.luggageCount ?? 0, scheduledAt, status: initialStatus, ...(arrive ? { arriveFrom: arrive.from, arriveBy: arrive.by } : {}),
           childCount: input.childCount ?? 0,
-          ...(shareOptIn ? { shareOptIn: true, shareMaxExtraMin: input.shareMaxExtraMin ?? config.share.defaultMaxExtraMin, ...(scheduledAt ? { shareWaitMin: input.shareWaitMin ?? config.share.defaultWaitMin, shareEarlyMin: input.shareEarlyMin ?? 0 } : {}) } : {}),
+          ...(shareOptIn ? { shareOptIn: true, shareMaxExtraMin: input.shareMaxExtraMin ?? config.share.defaultMaxExtraMin, ...(scheduledAt ? (arrive ? { shareWaitMin: 0, shareEarlyMin: Math.round((arrive.by.getTime() - arrive.from.getTime()) / 60_000) } : { shareWaitMin: input.shareWaitMin ?? config.share.defaultWaitMin, shareEarlyMin: input.shareEarlyMin ?? 0 }) : {}) } : {}),
           ...(passengerId ? { passengerId } : {}),
           ...(fare ? { quoteId: input.quoteId, fareCents: fare.fareCents, priceType: fare.priceType, fareBreakdown: fare.fareBreakdown } : {}),
         },

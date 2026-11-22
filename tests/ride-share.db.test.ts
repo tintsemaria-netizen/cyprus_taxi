@@ -251,6 +251,50 @@ describe('pre-booked ride-share', () => {
     return prisma.booking.update({ where: { id: b.id }, data: { status: 'REQUESTED', scheduledAt: new Date(Date.now() + minutesAhead * MIN), shareWaitMin: o.wait ?? 15, shareEarlyMin: o.early ?? 0 } });
   }
 
+  // «Быть на месте с … до …» (2026-11-22): pickup = latest departure; a co-rider may only move it
+  // earlier by the window's width, and both must ARRIVE inside their windows.
+  async function arriving(from: typeof lca, to: typeof lca, byMinAhead: number, widthMin: number) {
+    const drive = Math.ceil(approxLegMin(from, to)) + 10;
+    const b = await scheduled(from, to, byMinAhead - drive, { wait: 0, early: widthMin });
+    return prisma.booking.update({ where: { id: b.id }, data: { arriveBy: new Date(Date.now() + byMinAhead * MIN), arriveFrom: new Date(Date.now() + (byMinAhead - widthMin) * MIN) } });
+  }
+
+  it('arrival windows that overlap → paired, and both arrive inside their windows', async () => {
+    const a = await arriving(lca, marina, 300, 60); // be there 4:00–5:00 from now
+    const b = await arriving(lcaNear, limCentre, 330, 60); // 4:30–5:30
+    expect(await matchPrebookings()).toBe(1);
+    const g = (await prisma.shareGroup.findFirst({ where: { OR: [{ hostBookingId: a.id }, { hostBookingId: b.id }] } }))!;
+    const plan = { arrive: g.arrivals as { host: number; guest: number } };
+    const host = g.hostBookingId === a.id ? a : b, guest = host === a ? b : a;
+    const hostArr = g.startAt!.getTime() + plan.arrive.host * MIN, guestArr = g.startAt!.getTime() + plan.arrive.guest * MIN;
+    expect(hostArr).toBeLessThanOrEqual(host.arriveBy!.getTime());
+    expect(guestArr).toBeLessThanOrEqual(guest.arriveBy!.getTime());
+    expect(hostArr).toBeGreaterThanOrEqual(host.arriveFrom!.getTime() - 5 * MIN);
+    expect(guestArr).toBeGreaterThanOrEqual(guest.arriveFrom!.getTime() - 5 * MIN);
+  });
+
+  it('arrival windows that do not overlap → not paired', async () => {
+    await arriving(lca, marina, 300, 30); // 4:30–5:00
+    await arriving(lcaNear, limCentre, 380, 30); // 5:50–6:20
+    expect(await matchPrebookings()).toBe(0);
+  });
+
+  it('booking with an arrival window: stored; earlier-only flexibility = window width; bad windows refused', async () => {
+    const day = (m: number) => { const d = new Date(Date.now() + m * MIN); return d.toLocaleString('sv-SE', { timeZone: 'Asia/Nicosia' }).slice(0, 16).replace(' ', 'T'); };
+    const base = { pickup: lca, dropoff: marina, when: 'SCHEDULE', vClass: 'COMFORT', passengerCount: 1, passengerName: 'P', phone: '+35799123456', shareOptIn: true, shareMaxExtraMin: 15 };
+    const ok = await createBooking(createBookingSchema.parse({ ...base, scheduledAt: day(200), arriveFrom: day(220), arriveBy: day(280), shareWaitMin: 30, shareEarlyMin: 5 }), `arr-${Date.now()}`);
+    expect(ok.ok).toBe(true);
+    if (!ok.ok) return;
+    const b = await prisma.booking.findUniqueOrThrow({ where: { reference: ok.body.reference } });
+    expect(b.arriveBy).not.toBeNull();
+    expect(b.shareWaitMin).toBe(0);
+    expect(b.shareEarlyMin).toBe(60);
+    const narrow = await createBooking(createBookingSchema.parse({ ...base, scheduledAt: day(200), arriveFrom: day(270), arriveBy: day(280) }), `arr2-${Date.now()}`);
+    expect(narrow.ok).toBe(false);
+    const late = await createBooking(createBookingSchema.parse({ ...base, scheduledAt: day(278), arriveFrom: day(220), arriveBy: day(280) }), `arr3-${Date.now()}`);
+    expect(late.ok).toBe(false);
+  });
+
   it('pairs two pre-bookings, both passengers agree, one order for a co-rider driver, guest joins on conversion', async () => {
     const a = await scheduled(lca, marina, 180, { pax: 2, bags: 2 });
     const b = await scheduled(lcaNear, limCentre, 195, { pax: 1, kids: 0, bags: 1, fare: 5000 });

@@ -79,6 +79,7 @@ const rides: Catalog<typeof en> = {
     },
   },
   prebookings: {
+    arrive: 'Na miejscu {from}–{to}',
     title: "Moje rezerwacje",
     subtitle: "Twoje zaplanowane przejazdy. Około godziny przed odbiorem przypomnimy tutaj i powiadomieniem.",
     empty: "Nie masz nadchodzących rezerwacji.",

@@ -76,6 +76,7 @@ const rides = {
     },
   },
   prebookings: {
+    arrive: 'Be there {from}–{to}',
     title: 'My pre-bookings',
     subtitle: 'Your upcoming scheduled rides. About an hour before pickup we remind you here and with a notification.',
     empty: 'You have no upcoming pre-bookings.',

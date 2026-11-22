@@ -209,5 +209,17 @@ const booking: Catalog<typeof en> = {
     myRides: "رحلاتي",
     open: "فتح الحجز المسبق",
   },
+  arrive: {
+    modePickup: 'الاستلام في',
+    modeArrive: 'الوصول إلى هناك',
+    day: 'التاريخ',
+    from: 'ليس قبل',
+    to: 'ليس بعد',
+    leave: 'الاستلام تقريباً {from}–{to} (الطريق ~{n} د مع هامش)',
+    hint: 'اختر متى يجب أن تكون هناك — سنعرض وقت الاستلام.',
+    needRoute: 'أدخل الوجهة — سنحسب وقت الاستلام.',
+    needTimes: 'اختر الوقتين.',
+    badWidth: 'النافذة من 15 دقيقة إلى 3 ساعات.',
+  },
 };
 export default booking;

@@ -209,5 +209,17 @@ const booking: Catalog<typeof en> = {
     myRides: "Meine Fahrten",
     open: "Vorbestellung öffnen",
   },
+  arrive: {
+    modePickup: 'Abholung um',
+    modeArrive: 'Dort sein',
+    day: 'Datum',
+    from: 'Nicht vor',
+    to: 'Nicht nach',
+    leave: 'Abholung ca. {from}–{to} (Fahrt ~{n} Min. inkl. Puffer)',
+    hint: 'Wählen Sie, wann Sie dort sein müssen — wir zeigen die Abholzeit.',
+    needRoute: 'Ziel eingeben — wir berechnen die Abholzeit.',
+    needTimes: 'Bitte beide Zeiten wählen.',
+    badWidth: 'Zeitfenster: 15 Min. bis 3 Std.',
+  },
 };
 export default booking;

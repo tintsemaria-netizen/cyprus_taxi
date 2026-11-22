@@ -209,5 +209,17 @@ const booking: Catalog<typeof en> = {
     myRides: "Moje przejazdy",
     open: "Otwórz rezerwację",
   },
+  arrive: {
+    modePickup: 'Odbiór o',
+    modeArrive: 'Być na miejscu',
+    day: 'Data',
+    from: 'Nie wcześniej',
+    to: 'Nie później',
+    leave: 'Odbiór ok. {from}–{to} (droga ~{n} min z zapasem)',
+    hint: 'Wybierz, kiedy musisz być na miejscu — pokażemy godzinę odbioru.',
+    needRoute: 'Podaj cel — obliczymy godzinę odbioru.',
+    needTimes: 'Wybierz obie godziny.',
+    badWidth: 'Okno: od 15 min do 3 h.',
+  },
 };
 export default booking;
