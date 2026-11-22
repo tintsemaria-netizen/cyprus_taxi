@@ -205,28 +205,35 @@ export async function releaseScheduled(driverId: string, bookingId: string, now:
 }
 
 // ---- worker step (runs every dispatch tick, BEFORE scheduled promotion) ----
-const REMIND2_MIN = 35;
+const COUNTDOWN_MIN = 5; // the last minutes before the driver must be online (operator, 2026-11-22)
 
 export async function runPreassignments(now: Date = new Date()): Promise<{ reminded: number; converted: number; lapsed: number }> {
   const p = config.dispatch.preassign;
   let reminded = 0, converted = 0, lapsed = 0;
 
-  // 1) Reminders per commitment: about an hour before, and again 35 minutes before (operator,
-  //    2026-11-22: a 10:00 ride → 09:00 and 09:25). A commitment already inside 35 min gets only the second.
-  const stages = [
-    { field: 'remindedAt' as const, from: now.getTime() + REMIND2_MIN * MIN, to: now.getTime() + p.remindMinutes * MIN, k: 'drv.preSoon', title: 'Upcoming pre-booked ride' },
-    { field: 'remind35At' as const, from: now.getTime(), to: now.getTime() + REMIND2_MIN * MIN, k: 'drv.preSoon35', title: 'Pre-booked ride in 35 minutes' },
-  ];
-  for (const st of stages) {
-    const due = await prisma.preAssignment.findMany({ where: { status: 'COMMITTED', [st.field]: null, pickupAt: { gt: new Date(st.from), lte: new Date(st.to) } }, include: { booking: { select: { pickupLabel: true, flightNumber: true } } }, take: 50 });
-    for (const r of due) {
-      const upd = await prisma.preAssignment.updateMany({ where: { id: r.id, [st.field]: null, status: 'COMMITTED' }, data: { [st.field]: now } });
-      if (upd.count !== 1) continue; // another worker reminded already (fencing)
-      const time = timeLabel(r.pickupAt);
-      await enqueueDriver(prisma, r.driverId, st.title, `Pickup ${time} at ${r.booking.pickupLabel}${r.booking.flightNumber ? ` · flight ${r.booking.flightNumber}` : ''}. Go online in time.`,
-        { tag: `pre-${r.bookingId}`, msg: { k: r.booking.flightNumber ? `${st.k}Flight` : st.k, p: { timeT: r.pickupAt.toISOString(), place: r.booking.pickupLabel, flight: r.booking.flightNumber ?? '' } } });
-      reminded++;
-    }
+  // 1) Driver reminders (operator, 2026-11-22):
+  //    a) about an hour before: «Скоро предзаказ» (once);
+  //    b) the last 5 minutes before the driver must be online (35 → 30 min before pickup, when the
+  //       ride converts): a countdown «⏱ 5:00 … 1:00 — осталось до выхода на линию», one notification
+  //       replaced every minute. Not sent to a driver who is already online.
+  const REMIND_AT = p.remindMinutes * MIN, GO_ONLINE_AT = p.convertMinutes * MIN;
+  const soon = await prisma.preAssignment.findMany({ where: { status: 'COMMITTED', remindedAt: null, pickupAt: { gt: new Date(now.getTime() + GO_ONLINE_AT + COUNTDOWN_MIN * MIN), lte: new Date(now.getTime() + REMIND_AT) } }, include: { booking: { select: { pickupLabel: true, flightNumber: true } } }, take: 50 });
+  for (const r of soon) {
+    const upd = await prisma.preAssignment.updateMany({ where: { id: r.id, remindedAt: null, status: 'COMMITTED' }, data: { remindedAt: now } });
+    if (upd.count !== 1) continue; // another worker reminded already (fencing)
+    await enqueueDriver(prisma, r.driverId, 'Upcoming pre-booked ride', `Pickup ${timeLabel(r.pickupAt)} at ${r.booking.pickupLabel}${r.booking.flightNumber ? ` · flight ${r.booking.flightNumber}` : ''}. Go online in time.`,
+      { tag: `pre-${r.bookingId}`, msg: { k: r.booking.flightNumber ? 'drv.preSoonFlight' : 'drv.preSoon', p: { timeT: r.pickupAt.toISOString(), place: r.booking.pickupLabel, flight: r.booking.flightNumber ?? '' } } });
+    reminded++;
+  }
+  const cd = await prisma.preAssignment.findMany({ where: { status: 'COMMITTED', pickupAt: { gt: new Date(now.getTime() + GO_ONLINE_AT), lte: new Date(now.getTime() + GO_ONLINE_AT + COUNTDOWN_MIN * MIN) } }, include: { booking: { select: { pickupLabel: true } }, driver: { select: { onDuty: true } } }, take: 50 });
+  for (const r of cd) {
+    if (r.driver.onDuty) continue;
+    const left = Math.min(COUNTDOWN_MIN, Math.ceil((r.pickupAt.getTime() - GO_ONLINE_AT - now.getTime()) / MIN));
+    if (left < 1) continue;
+    await prisma.preAssignment.updateMany({ where: { id: r.id, remind35At: null }, data: { remind35At: now } });
+    // One per minute (dedupe), same tag → the phone replaces it: a 5-minute countdown.
+    await enqueueDriver(prisma, r.driverId, `⏱ ${left}:00`, 'left to go online', { tag: `golive-${r.bookingId}`, dedupeKey: `golive:${r.id}:${left}`, msg: { k: 'drv.goOnline', p: { left, timeT: r.pickupAt.toISOString(), place: r.booking.pickupLabel } } });
+    reminded++;
   }
 
   // 2) Convert (or lapse) commitments inside the conversion window.

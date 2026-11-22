@@ -302,26 +302,6 @@ const MSG_TEXT = {
     he: ["נסיעה שהוזמנה מראש בקרוב", "איסוף ב־{timeT}, {place} · טיסה {flight}. התחברו בזמן."],
     ar: ["رحلة محجوزة قريباً", "الالتقاء الساعة {timeT}، {place} · رحلة {flight}. اتصل في الوقت المحدد."],
   },
-  'drv.preSoon35': {
-    ru: ["Предзаказ через 35 минут", "Посадка в {timeT}, {place}. Выйдите на линию вовремя."],
-    en: ["Pre-booked ride in 35 minutes", "Pickup {timeT} at {place}. Go online in time."],
-    el: ["Προκράτηση σε 35 λεπτά", "Παραλαβή στις {timeT}, {place}. Συνδεθείτε εγκαίρως."],
-    de: ["Vorbestellte Fahrt in 35 Minuten", "Abholung {timeT}, {place}. Rechtzeitig online gehen."],
-    fr: ["Course réservée dans 35 minutes", "Prise en charge à {timeT}, {place}. Connectez-vous à temps."],
-    pl: ["Przejazd z rezerwacji za 35 minut", "Odbiór o {timeT}, {place}. Wyjdź na linię na czas."],
-    he: ["נסיעה שהוזמנה מראש בעוד 35 דקות", "איסוף ב־{timeT}, {place}. התחברו בזמן."],
-    ar: ["رحلة محجوزة بعد 35 دقيقة", "الالتقاء الساعة {timeT}، {place}. اتصل في الوقت المحدد."],
-  },
-  'drv.preSoon35Flight': {
-    ru: ["Предзаказ через 35 минут", "Посадка в {timeT}, {place} · рейс {flight}. Выйдите на линию вовремя."],
-    en: ["Pre-booked ride in 35 minutes", "Pickup {timeT} at {place} · flight {flight}. Go online in time."],
-    el: ["Προκράτηση σε 35 λεπτά", "Παραλαβή στις {timeT}, {place} · πτήση {flight}. Συνδεθείτε εγκαίρως."],
-    de: ["Vorbestellte Fahrt in 35 Minuten", "Abholung {timeT}, {place} · Flug {flight}. Rechtzeitig online gehen."],
-    fr: ["Course réservée dans 35 minutes", "Prise en charge à {timeT}, {place} · vol {flight}. Connectez-vous à temps."],
-    pl: ["Przejazd z rezerwacji za 35 minut", "Odbiór o {timeT}, {place} · lot {flight}. Wyjdź na linię na czas."],
-    he: ["נסיעה שהוזמנה מראש בעוד 35 דקות", "איסוף ב־{timeT}, {place} · טיסה {flight}. התחברו בזמן."],
-    ar: ["رحلة محجوزة بعد 35 دقيقة", "الالتقاء الساعة {timeT}، {place} · رحلة {flight}. اتصل في الوقت المحدد."],
-  },
   'drv.preReassigned': {
     ru: ["Изменение по предзаказу", "Оператор передал ваш предзаказ другому водителю."],
     en: ["Pre-booked ride update", "A pre-booked ride you took was assigned to another driver by the operator."],
@@ -381,6 +361,16 @@ const MSG_TEXT = {
     pl: ["Zmiana w rezerwacji", "Przejazd przekazano do automatycznego wyszukiwania: nie byłeś na linii."],
     he: ["עדכון לנסיעה שהוזמנה מראש", "הנסיעה הועברה לשיבוץ אוטומטי: לא הייתם מחוברים."],
     ar: ["تحديث للرحلة المحجوزة", "تم تحويل رحلتك المحجوزة إلى التوزيع التلقائي: كنت غير متصل."],
+  },
+  'drv.goOnline': {
+    ru: ["⏱ {left}:00", "осталось до выхода на линию · {place}, {timeT}"],
+    en: ["⏱ {left}:00", "left to go online · {place}, {timeT}"],
+    el: ["⏱ {left}:00", "απομένουν για να συνδεθείτε · {place}, {timeT}"],
+    de: ["⏱ {left}:00", "bis Sie online sein müssen · {place}, {timeT}"],
+    fr: ["⏱ {left}:00", "avant de vous connecter · {place}, {timeT}"],
+    pl: ["⏱ {left}:00", "do wyjścia na linię · {place}, {timeT}"],
+    he: ["⏱ {left}:00", "נותרו עד ההתחברות · {place}, {timeT}"],
+    ar: ["⏱ {left}:00", "متبقٍ حتى الاتصال · {place}، {timeT}"],
   },
 };
 function msgText(msg, L) {
@@ -444,11 +434,13 @@ self.addEventListener('push', (event) => {
       const mt = msgText(data.msg, await appLocale());
       if (mt) { title = mt.title; body = mt.body; }
     }
+    // Countdown to going online (2026-11-22): the first one rings, the next minutes replace it quietly.
+    const quiet = !!(data.msg && data.msg.k === 'drv.goOnline' && data.msg.p && Number(data.msg.p.left) < 5);
     await self.registration.showNotification(title, {
       body,
       tag: data.tag,
-      renotify: true,
-      silent: false,
+      renotify: !quiet,
+      silent: quiet,
       requireInteraction: isOffer || isShare, // stays until the person acts on it
       vibrate: isOffer || isShare ? [600, 200, 600, 200, 600, 200, 600] : [200],
       icon: '/icons/icon-192.png',
