@@ -1,4 +1,5 @@
-import { bookingMinCents } from '@/lib/prebook-min';
+import { bookingMin } from '@/lib/prebook-min';
+import { minZones } from '@/server/min-fares';
 import { prisma } from '@/lib/db';
 import { isPairBlocked } from './blocked-pairs';
 import { Prisma } from '@prisma/client';
@@ -197,7 +198,7 @@ export async function getDriverActiveOffer(driverId: string) {
     scheduledAt: b.scheduledAt ? b.scheduledAt.toISOString() : null,
     fareCents: b.fareCents,
     priceType: b.priceType,
-    minCents: bookingMinCents(b), // pre-booking minimum in Nicosia (2026-11-22)
+    minCents: bookingMin(await minZones(), b)?.cents ?? null, // pre-booking minimum by area (2026-11-22)
     currency: config.currency,
     fareBreakdown: b.fareBreakdown ? safeParseLines(b.fareBreakdown) : null,
   };

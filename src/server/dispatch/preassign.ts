@@ -1,4 +1,5 @@
-import { bookingMinCents } from '@/lib/prebook-min';
+import { bookingMin } from '@/lib/prebook-min';
+import { minZones } from '@/server/min-fares';
 import { Prisma } from '@prisma/client';
 import { blockedPassengerIdsForDriver, isPairBlocked } from './blocked-pairs';
 import { prisma } from '@/lib/db';
@@ -92,12 +93,13 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
     include: { booking: { select: { reference: true, pickupLabel: true, dropoffLabel: true, dropoffPostcode: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, passengerCount: true, vClass: true, fareCents: true, priceType: true, flightNumber: true, note: true } } },
   });
   const minePairs = await sharePairs(mineRows.map((r) => r.bookingId));
+  const mz = await minZones();
   const mine = mineRows.map((p) => ({
     share: minePairs.get(p.bookingId)?.info ?? null,
     bookingId: p.bookingId, reference: p.booking.reference, pickupAt: p.pickupAt.toISOString(),
     pickupLabel: minePairs.get(p.bookingId) ? approxLabel(p.booking.pickupLabel) : p.booking.pickupLabel, dropoffLabel: minePairs.get(p.bookingId) ? approxLabel(p.booking.dropoffLabel) : p.booking.dropoffLabel, dropoffPostcode: p.booking.dropoffPostcode ?? null, vClass: p.booking.vClass,
     passengerCount: p.booking.passengerCount, fareCents: p.booking.fareCents, priceType: p.booking.priceType,
-    minCents: bookingMinCents({ ...p.booking, scheduledAt: p.pickupAt }),
+    minCents: bookingMin(mz, { ...p.booking, scheduledAt: p.pickupAt })?.cents ?? null,
     flightNumber: p.booking.flightNumber, note: p.booking.note,
     airport: isAirportPoint(p.booking.pickupLat, p.booking.pickupLng) || isAirportPoint(p.booking.dropoffLat, p.booking.dropoffLng),
     canReleaseFreely: p.pickupAt.getTime() - now.getTime() > config.dispatch.preassign.lateReleaseMinutes * MIN,
@@ -135,7 +137,7 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
     bookingId: b.id, reference: b.reference, pickupAt: b.scheduledAt!.toISOString(),
     // A ride-share pair shows approximate addresses until the ride starts (operator, 2026-11-19).
     pickupLabel: pairs.get(b.id) ? approxLabel(b.pickupLabel) : b.pickupLabel, dropoffLabel: pairs.get(b.id) ? approxLabel(b.dropoffLabel) : b.dropoffLabel, dropoffPostcode: b.dropoffPostcode ?? null, vClass: b.vClass, passengerCount: b.passengerCount,
-    fareCents: b.fareCents, priceType: b.priceType, flightNumber: b.flightNumber, note: b.note, minCents: bookingMinCents(b),
+    fareCents: b.fareCents, priceType: b.priceType, flightNumber: b.flightNumber, note: b.note, minCents: bookingMin(mz, b)?.cents ?? null,
     airport: isAirportPoint(b.pickupLat, b.pickupLng) || isAirportPoint(b.dropoffLat, b.dropoffLng),
     conflict: mineRows.length >= p.maxPerDriver || mineRows.some((m) => Math.abs(m.pickupAt.getTime() - b.scheduledAt!.getTime()) < gap),
   }));

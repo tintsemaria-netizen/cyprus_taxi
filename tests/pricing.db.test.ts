@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
 const dbUrl = process.env.DATABASE_URL || '';
 const dbName = (() => { try { return new URL(dbUrl).pathname.replace(/^\//, '').split('?')[0]; } catch { return ''; } })();
 
 import { prisma } from '@/lib/db';
 import { createQuote, consumeQuote } from '@/server/quote';
+import { invalidateMinFareCache } from '@/server/min-fares';
 import { createBooking } from '@/server/bookings';
 import type { CreateBookingInput } from '@/lib/validation';
 
@@ -95,7 +96,14 @@ describe('scheduled-time quote pricing', () => {
   });
 });
 
-describe('pre-booking minimum in Nicosia (2026-11-22)', () => {
+describe('pre-booking minimum by area (2026-11-22)', () => {
+  beforeAll(async () => {
+    await prisma.minFareZone.deleteMany({});
+    await prisma.minFareZone.create({ data: { name: 'Район Никосии', comfortCents: 2000, xlCents: 2800,
+      polygon: [[35.18,32.68],[35.14,32.84],[35.15,33.03],[35.18,33.16],[35.19,33.30],[35.18,33.40],[35.15,33.46],[35.10,33.50],[35.04,33.47],[34.99,33.42],[34.95,33.30],[34.91,33.18],[34.91,33.05],[34.94,32.95],[34.95,32.83],[34.97,32.72],[35.05,32.65],[35.14,32.62]] } });
+    invalidateMinFareCache();
+  });
+  afterAll(async () => { await prisma.minFareZone.deleteMany({}); invalidateMinFareCache(); });
   const nicA = { lat: 35.1667, lng: 33.3667, label: 'Eleftheria Sq.' };
   const nicB = { lat: 35.1700, lng: 33.3600, label: 'Nicosia centre' };
   const future = new Date(Date.now() + 2 * 86400_000).toISOString();
@@ -105,6 +113,10 @@ describe('pre-booking minimum in Nicosia (2026-11-22)', () => {
     expect(pre.quote.totalCents).toBe(2000);
     expect(pre.quote.rangeLowCents).toBe(2000);
     expect(pre.quote.minCents).toBe(2000);
+    expect(pre.quote.minZone).toBe('Район Никосии');
+    const xl = await createQuote({ pickup: nicA, dropoff: nicB, vClass: 'XL', passengerCount: 1, scheduledAtUtc: future });
+    if (!xl.ok) throw new Error('quote');
+    expect(xl.quote.totalCents).toBe(2800);
     expect(pre.quote.lines.some((l) => l.code === 'prebookMin')).toBe(true);
     const now = await createQuote({ pickup: nicA, dropoff: nicB, vClass: 'COMFORT', passengerCount: 1 });
     if (!now.ok) throw new Error('quote');

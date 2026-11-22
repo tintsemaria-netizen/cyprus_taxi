@@ -6,7 +6,7 @@ const staff = {
   nav: {
     fleets: 'Fleets', myFleet: 'My fleet',
     dispatch: 'Dispatch', analytics: 'Analytics', reliability: 'Reliability', applications: 'Applications',
-    passengers: 'Clients', drivers: 'Drivers', vehicles: 'Vehicles', settings: 'Settings', fixedPrices: 'Fixed prices', security: 'Security',
+    passengers: 'Clients', drivers: 'Drivers', vehicles: 'Vehicles', settings: 'Settings', fixedPrices: 'Fixed prices', minFares: 'Pre-booking minimum', security: 'Security',
   },
   role: { ADMIN: 'Admin', DISPATCHER: 'Dispatcher', DRIVER: 'Driver', FLEET_OWNER: 'Fleet owner' },
   status: {
@@ -149,6 +149,20 @@ const staff = {
     boundTo: 'bound to {name}',
     unbound: 'unbound',
     empty: 'No vehicles yet.',
+  },
+  minFare: {
+    title: 'Pre-booking minimum',
+    sub: 'A pre-booked ride with pickup and drop-off inside one area costs at least this; above it the meter counts. One area per town or district, Comfort and XL separately. Fixed airport fares and ride-share prices are not changed.',
+    newZone: '+ New area',
+    name: 'Area name',
+    comfort: 'Comfort minimum, €',
+    xl: 'XL minimum, €',
+    needPoints: 'Draw at least 3 corners on the map.',
+    needPrice: 'Enter both prices.',
+    saved: 'Saved.',
+    deleteConfirm: 'Delete area «{name}»?',
+    empty: 'No areas yet — pre-bookings are priced by the meter only.',
+    row: 'Comfort from {comfort} € · XL from {xl} €',
   },
   fixed: {
     title: "Fixed prices",

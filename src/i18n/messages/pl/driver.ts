@@ -304,7 +304,7 @@ const driver: Catalog<typeof en> = {
     loadFailed: "Nie udało się wczytać zaplanowanych przejazdów.",
   },
   close: {
-    prebookMin: 'Rezerwacja w Nikozji: minimum {amount}. Jeśli taksometr pokaże mniej, pasażer płaci {amount}.',
+    prebookMin: 'Rezerwacja — {zone}: minimum {amount}. Jeśli taksometr pokaże mniej, pasażer płaci {amount}.',
     title: "Koszt przejazdu",
     subtitle: "Sprawdź kwotę z {name} przed zakończeniem.",
     loadFailed: "Nie udało się wczytać kwoty. Nadal możesz zakończyć przejazd.",

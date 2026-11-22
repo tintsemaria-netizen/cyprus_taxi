@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-22 — Pre-booking minimum by AREA, edited in admin — deployed to main
+
+- Replaces the env/town-radius rule of the previous entry. Table `MinFareZone` (name, polygon, comfortCents, xlCents, active); migration `20261122020000_min_fare_zones` seeds «Район Никосии» (whole Nicosia district, approximate outline) at Comfort €20 / XL €20 — the operator sets XL in admin.
+- Rule (`src/lib/prebook-min.ts` `minFor` / `bookingMin`, loader `src/server/min-fares.ts` with 30 s cache): pre-booked, pickup AND drop-off in one active area (smallest wins), not fixed/shared → min by class. Used in quote (line `prebookMin`, `minCents`, `minZone`), driver offer / free orders / pre-booking board ranges, close sheet, settlement (422 BELOW_MINIMUM), stop added mid-trip.
+- Admin `/admin/min-fares` («Минимум предзаказа» in the nav): map with areas, draw/drag corners, ↶ step back, Comfort/XL prices, on/off, delete; audit events MIN_FARE_ZONE_*. API `/api/v1/admin/min-fares[/id]`. `ZoneEditorMap.airport` is now optional.
+- Tests: tests/prebook-min.test.ts, tests/pricing.db.test.ts; full suite 353 passed.
+
 ## 2026-11-22 — Pre-booking minimum in Nicosia (€20) — deployed to main
 
 - Operator: a PRE-BOOKED ride inside Nicosia costs at least €20; above €20 the meter counts. Our commercial rule, not a regulated figure.

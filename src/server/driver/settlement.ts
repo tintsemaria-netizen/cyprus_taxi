@@ -1,4 +1,4 @@
-import { bookingMinCents } from '@/lib/prebook-min';
+import { bookingMinCents } from '@/server/min-fares';
 import { prisma } from '@/lib/db';
 import { isFixedPrice } from '@/lib/price-type';
 import { config } from '@/lib/config';
@@ -60,8 +60,8 @@ export async function reportSettlement(
     if (isFixedPrice(b.priceType)) return err(409, 'UPFRONT_FIXED', 'This trip has an accepted upfront price; it cannot be re-settled.');
 
     // Pre-booking minimum in Nicosia (2026-11-22): below it the passenger pays the minimum.
-    const min = bookingMinCents(b);
-    if (min != null && input.reportedFinalCents < min) return err(422, 'BELOW_MINIMUM', `Pre-booking in Nicosia: at least €${(min / 100).toFixed(2)}.`);
+    const min = await bookingMinCents(b);
+    if (min != null && input.reportedFinalCents < min) return err(422, 'BELOW_MINIMUM', `Pre-booking minimum here: at least €${(min / 100).toFixed(2)}.`);
 
     const cur = await tx.driverSettlement.findFirst({ where: { bookingId }, orderBy: { revision: 'desc' } });
     const nextRev = (cur?.revision ?? 0) + 1;

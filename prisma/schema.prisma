@@ -651,6 +651,19 @@ model FixedFareZone {
   @@index([airport, active])
 }
 
+// Pre-booking minimum fare by area (2026-11-22, operator): a pre-booked ride with pickup AND drop-off inside
+// the area costs at least this (Comfort / XL); above it the taximeter counts. Drawn in admin «Минимум предзаказа».
+model MinFareZone {
+  id           String   @id @default(uuid())
+  name         String
+  polygon      Json // [[lat, lng], …] ≥ 3 points
+  comfortCents Int
+  xlCents      Int
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+}
+
 // E-mailed trip receipt (2026-11-17). One row per completed booking, written in the completion
 // transaction (outbox); the worker sends it through the e-mail provider. A passenger "send again"
 // request puts the same row back to PENDING (resendCount is capped).

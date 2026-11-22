@@ -8,7 +8,7 @@ const staff: Catalog<typeof en> = {
   nav: {
     fleets: 'Автопарки', myFleet: 'Мой автопарк',
     dispatch: 'Диспетчерская', analytics: 'Аналитика', reliability: 'Надёжность', applications: 'Заявки',
-    passengers: 'Клиенты', drivers: 'Водители', vehicles: 'Автомобили', settings: 'Настройки', fixedPrices: 'Фикс. цены', security: 'Безопасность',
+    passengers: 'Клиенты', drivers: 'Водители', vehicles: 'Автомобили', settings: 'Настройки', fixedPrices: 'Фикс. цены', minFares: 'Минимум предзаказа', security: 'Безопасность',
   },
   role: { ADMIN: 'Администратор', DISPATCHER: 'Диспетчер', DRIVER: 'Водитель', FLEET_OWNER: 'Владелец автопарка' },
   status: {
@@ -151,6 +151,20 @@ const staff: Catalog<typeof en> = {
     boundTo: 'водитель: {name}',
     unbound: 'без водителя',
     empty: 'Автомобилей пока нет.',
+  },
+  minFare: {
+    title: 'Минимум предзаказа',
+    sub: 'Предзаказ, у которого посадка и высадка внутри одной области, стоит не меньше этой суммы; дальше — по счётчику. Одна область на город или район, Comfort и XL отдельно. Фиксированные цены аэропортов и цены попутчика не меняются.',
+    newZone: '+ Новая область',
+    name: 'Название области',
+    comfort: 'Минимум Comfort, €',
+    xl: 'Минимум XL, €',
+    needPoints: 'Отметьте на карте минимум 3 угла.',
+    needPrice: 'Укажите обе цены.',
+    saved: 'Сохранено.',
+    deleteConfirm: 'Удалить область «{name}»?',
+    empty: 'Областей нет — предзаказы считаются только по счётчику.',
+    row: 'Comfort от {comfort} € · XL от {xl} €',
   },
   fixed: {
     title: "Фиксированные цены",

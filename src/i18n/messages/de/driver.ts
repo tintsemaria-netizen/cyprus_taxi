@@ -304,7 +304,7 @@ const driver: Catalog<typeof en> = {
     loadFailed: "Geplante Fahrten konnten nicht geladen werden.",
   },
   close: {
-    prebookMin: 'Vorbestellung in Nikosia: mindestens {amount}. Zeigt das Taxameter weniger, zahlt der Fahrgast {amount}.',
+    prebookMin: 'Vorbestellung — {zone}: mindestens {amount}. Zeigt das Taxameter weniger, zahlt der Fahrgast {amount}.',
     title: "Fahrtkosten",
     subtitle: "Prüfen Sie den Betrag mit {name}, bevor Sie beenden.",
     loadFailed: "Betrag konnte nicht geladen werden. Sie können die Fahrt trotzdem beenden.",

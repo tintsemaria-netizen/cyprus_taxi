@@ -300,7 +300,7 @@ const driver = {
     fareEstimate: '≈ {amount}',
     loadFailed: 'Could not load scheduled rides.',
   },
-  close: { prebookMin: 'Pre-booking in Nicosia: at least {amount}. If the meter shows less, the passenger pays {amount}.', title: 'Trip cost', subtitle: 'Check the amount with {name} before completing.', loadFailed: 'Could not load the amount. You can still complete the trip.', fare: 'Fare', estimate: 'Trip (estimate)', pickupWait: 'Waiting at pickup', stopWait: 'Paid waiting at the stop', total: 'Total', meterNote: 'Regulated meter: the final amount is what the taximeter shows.', confirm: 'Complete trip', back: 'Back', completed: 'Trip completed' },
+  close: { prebookMin: 'Pre-booking — {zone}: at least {amount}. If the meter shows less, the passenger pays {amount}.', title: 'Trip cost', subtitle: 'Check the amount with {name} before completing.', loadFailed: 'Could not load the amount. You can still complete the trip.', fare: 'Fare', estimate: 'Trip (estimate)', pickupWait: 'Waiting at pickup', stopWait: 'Paid waiting at the stop', total: 'Total', meterNote: 'Regulated meter: the final amount is what the taximeter shows.', confirm: 'Complete trip', back: 'Back', completed: 'Trip completed' },
   ratePax: { title: 'Rate {name}', skip: 'Skip' },
   stop: { rateNote: 'Taximeter waiting rate: {rate}/h, added to the fare', paidWaiting: 'Paid waiting', atStopHint: 'Passenger at the stop. Start paid waiting if they ask you to wait.', atStop: 'At the stop', via: 'Via stop:', arrived: 'Arrived at the stop', startWaiting: 'Start paid waiting', continue: 'Continue to the destination' },
   navigation: {

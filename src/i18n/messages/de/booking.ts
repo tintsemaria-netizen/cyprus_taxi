@@ -13,7 +13,7 @@ const booking: Catalog<typeof en> = {
   },
   currentLocation: "Aktueller Standort",
   form: {
-    prebookMin: 'Vorbestellung in Nikosia: mindestens {amount}, darüber nach Taxameter.',
+    prebookMin: 'Vorbestellung — {zone}: mindestens {amount}, darüber nach Taxameter.',
     priceUpdated: "Der Preis wurde auf {price} aktualisiert. Prüfen Sie ihn und tippen Sie erneut auf «Bestellen».",
     resetRoute: "Route löschen",
     onMap: "Auf der Karte",

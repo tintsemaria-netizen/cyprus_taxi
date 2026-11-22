@@ -24,7 +24,7 @@ function pillSvg(text: string, color: string): { url: string; w: number; h: numb
 
 interface Props {
   center: { lat: number; lng: number };
-  airport: { lat: number; lng: number };
+  airport?: { lat: number; lng: number } | null; // a faint 2.5 km circle around it (fixed airport fares); none when null
   zones: RefZone[];
   editing: Poly | null; // null = not editing
   onChange: (p: Poly) => void;
@@ -87,7 +87,7 @@ function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange
         icon: { url: pill.url, scaledSize: new g.Size(pill.w, pill.h), anchor: new g.Point(pill.w / 2, pill.h / 2) } });
     });
     s.airport?.setMap?.(null);
-    s.airport = new g.Circle({ map, center: airport, radius: 2500, strokeColor: '#ffffff', strokeOpacity: 0.6, strokeWeight: 1, fillOpacity: 0.05, clickable: false });
+    s.airport = !airport ? null : new g.Circle({ map, center: airport, radius: 2500, strokeColor: '#ffffff', strokeOpacity: 0.6, strokeWeight: 1, fillOpacity: 0.05, clickable: false });
     if (s.edit) { const ep = s.edit.getPath(); if (ep) g.event.clearInstanceListeners(ep); s.edit.setMap(null); s.edit = null; }
     if (editing) {
       // paths as ONE explicit ring (2026-11-21 fix): with a flat empty array (a new zone, no corners yet)
@@ -180,7 +180,7 @@ function LibreZoneMap({ center, airport, zones, editing, editingHoles, onChange,
     const lib = libRef.current;
     if (!map || !lib || !ready.current) return;
     const feats = [
-      { type: 'Feature', properties: { color: '#ffffff', op: 0.05, w: 1 }, geometry: { type: 'Polygon', coordinates: [circle(airport, 2500)] } },
+      ...(airport ? [{ type: 'Feature', properties: { color: '#ffffff', op: 0.05, w: 1 }, geometry: { type: 'Polygon', coordinates: [circle(airport, 2500)] } }] : []),
       ...zones.filter((z) => z.polygon.length >= 3).map((z) => ({ type: 'Feature', properties: { color: z.color, op: z.strong ? 0.2 : 0.08, w: z.strong ? 3 : 2 }, geometry: { type: 'Polygon', coordinates: [ring(z.polygon), ...(z.holes ?? []).map((h) => ring(h.slice().reverse()))] } })),
       ...(editing && editing.length >= 2 ? [{ type: 'Feature', properties: { color: LIME, op: editing.length >= 3 ? 0.2 : 0, w: 3 }, geometry: { type: 'Polygon', coordinates: [ring(editing), ...(editing.length >= 3 ? (editingHoles ?? []).map((h) => ring(h.slice().reverse())) : [])] } }] : []),
     ];

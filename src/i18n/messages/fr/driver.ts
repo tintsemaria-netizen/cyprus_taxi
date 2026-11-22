@@ -304,7 +304,7 @@ const driver: Catalog<typeof en> = {
     loadFailed: "Impossible de charger les courses programmées.",
   },
   close: {
-    prebookMin: 'Réservation à Nicosie : au moins {amount}. Si le compteur affiche moins, le passager paie {amount}.',
+    prebookMin: 'Réservation — {zone} : au moins {amount}. Si le compteur affiche moins, le passager paie {amount}.',
     title: "Coût de la course",
     subtitle: "Vérifiez le montant avec {name} avant de terminer.",
     loadFailed: "Impossible de charger le montant. Vous pouvez quand même terminer la course.",

@@ -1,4 +1,5 @@
-import { bookingMinCents } from '@/lib/prebook-min';
+import { minZones } from '@/server/min-fares';
+import { bookingMin } from '@/lib/prebook-min';
 import { prisma } from '@/lib/db';
 import { meterWaitingCents } from '@/lib/tariff';
 import { isFixedPrice } from '@/lib/price-type';
@@ -19,7 +20,8 @@ export async function farePreview(bookingId: string, driverId: string, now = new
   const stopWaitCents = b.stopWaitCents ?? (b.stopWaitStartedAt ? meterWaitingCents(b.stopWaitStartedAt, b.stopDepartedAt ?? now) : 0);
   const estimateCents = b.fareCents ?? null;
   const upfront = isFixedPrice(b.priceType);
-  const minCents = bookingMinCents(b); // pre-booking minimum in Nicosia (2026-11-22)
+  const minMatch = bookingMin(await minZones(), b); // pre-booking minimum by area (2026-11-22)
+  const minCents = minMatch?.cents ?? null;
   return {
     status: b.status,
     currency: 'EUR',
@@ -27,7 +29,7 @@ export async function farePreview(bookingId: string, driverId: string, now = new
     pickupWaitCents,
     stopWaitCents,
     totalCents: Math.max(minCents ?? 0, (estimateCents ?? 0) + pickupWaitCents + stopWaitCents),
-    minCents,
+    minCents, minZone: minMatch?.zone ?? null,
     upfront, // upfront = final; otherwise the regulated meter is final and this is an estimate
     stopLabel: b.stopLabel,
     pickupLabel: b.pickupLabel,
