@@ -66,7 +66,9 @@ export default function BookingApp() {
   const [scheduledAt, setScheduledAt] = useState('');
   // «Быть на месте с … до …» (2026-11-22, operator): the passenger gives an ARRIVAL window; the
   // pickup time is worked out from the road time (+ a margin for traffic) and shown to them.
-  const [arriveMode, setArriveMode] = useState(false);
+  // Pre-booking = «Быть на месте с … до …» only (2026-11-22, operator: no «Подача в / Быть на месте» tabs —
+  // one window, like the ride-share box). The pickup is computed from the window.
+  const [arriveMode, setArriveMode] = useState(true);
   const [arriveDay, setArriveDay] = useState('');
   const [arriveFromT, setArriveFromT] = useState('');
   const [arriveToT, setArriveToT] = useState('');
@@ -147,6 +149,7 @@ export default function BookingApp() {
   // × in the top-right corner: back to the initial state — only «Куда», pickup = auto location.
   // Leave the pre-booking window (2026-11-20): the ✕ at its top-right — back to «now» and the start screen.
   function exitSchedule() {
+    setArriveFromT(''); setArriveToT('');
     setJoin(null);
     setWhen('NOW'); setScheduledAt(''); setScheduleOffsetMin(undefined); setAmbiguous(null); setNote('');
     resetRoute();
@@ -849,7 +852,7 @@ export default function BookingApp() {
   };
   const arriveCalc = (() => {
     const w = arriveWindow();
-    if (!arriveMode || !w || w.width < 15 || w.width > 180 || route?.min == null) return null;
+    if (when !== 'SCHEDULE' || !arriveMode || !w || w.width < 15 || w.width > 180 || route?.min == null) return null;
     const drive = Math.ceil(route.min) + ARRIVE_MARGIN_MIN;
     return { leaveFrom: wall(w.from - drive), leaveBy: wall(w.to - drive), drive };
   })();
@@ -873,9 +876,9 @@ export default function BookingApp() {
   const shareMinH = Math.round(((cfg?.schedule.shareMinMinutes ?? 180) / 60) * 10) / 10;
   const shareTooSoon = when === 'SCHEDULE' && shareOn && !!scheduledAt && scheduledAt < shareMinWall;
   useEffect(() => {
-    if (shareArrive && !arriveMode) { setArriveMode(true); if (!arriveDay) setArriveDay((scheduledAt || scheduleMin).slice(0, 10)); }
+    if (when === 'SCHEDULE' && !arriveDay) setArriveDay(scheduleMin.slice(0, 10));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shareArrive]);
+  }, [when]);
   useEffect(() => {
     const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('join') : null;
     if (!id || !cfg) return;
@@ -1130,21 +1133,14 @@ export default function BookingApp() {
                             {pickup && dropoff && (shareZone(pickup) !== join.from || shareZone(dropoff) !== join.to) && <span className="mt-1 block font-semibold text-warn" data-testid="join-mismatch">{t('share.board.joinMismatch')}</span>}
                           </div>
                         )}
-                        {!shareArrive && <div className="mb-2 grid grid-cols-2 gap-1 rounded-[12px] border border-edge bg-page p-1" role="radiogroup" data-testid="schedule-mode">
-                          {([false, true] as const).map((m) => (
-                            <button key={String(m)} type="button" role="radio" aria-checked={arriveMode === m}
-                              onClick={() => { setArriveMode(m); if (m && !arriveDay) setArriveDay((scheduledAt || scheduleMin).slice(0, 10)); }}
-                              className={`rounded-[9px] py-2 text-sm font-semibold ${arriveMode === m ? 'bg-accent text-black' : 'text-muted'}`}>
-                              {m ? t('booking.arrive.modeArrive') : t('booking.arrive.modePickup')}
-                            </button>
-                          ))}
-                        </div>}
-                        {shareArrive ? null : !arriveMode ? (
-                          <input type="datetime-local" data-testid="schedule-time" className={`field block w-full min-w-0 max-w-full appearance-none ${errors.scheduledAt ? 'border-danger' : ''}`} value={scheduledAt} min={scheduleMin} onChange={(e) => { setScheduledAt(e.target.value); setScheduleOffsetMin(undefined); setAmbiguous(null); }} />
-                        ) : (
-                          arriveBox
+                        {/* Without a co-rider the window is here; with one it sits in the «Попутчик» box (operator 2026-11-22). */}
+                        {!shareArrive && (
+                          <div data-testid="schedule-arrive">
+                            <p className="label mb-1">{t('share.booking.arriveTitle')}</p>
+                            {arriveBox}
+                          </div>
                         )}
-                        {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
+                        {!shareArrive && errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
                         <div className="mb-3" />
                       </div>
                     ) : (
