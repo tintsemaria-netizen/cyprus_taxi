@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-23 (01:45) — Minimum fixed at booking, stop rules, red bubble — deployed
+
+- Pre-booking minimum is snapshotted: `Quote.minCents/minZone` → `Booking.fareMinCents/fareMinZone` (migration `20261123010000_min_snapshot`; backfill = bookings whose breakdown has a `prebookMin` line, zone «Район Никосии»). Driver offer, free orders, pre-booking board, close sheet, settlement and stop re-pricing read the booking's own minimum — admin price changes / switching areas apply to NEW bookings only (operator).
+- Stops: a pre-booking's stop can change only while it is REQUESTED; once started → 409 PREBOOK_STARTED (server) and no stop editing on the tracking screen. At booking, co-rider and stop exclude each other: tapping the other button shows a floating semi-transparent red bubble (`src/components/RedBubble.tsx`; texts share.booking.stopBlocked / shareBlocked, 8 languages). Co-rider rides never had stops (SHARE_NO_STOP) — unchanged. Rides «now» unchanged.
+- Tests: pricing.db (snapshot), passenger-stop.db (PREBOOK_STARTED); full suite 372 passed.
 ## 2026-11-23 — Driver navigation ☰ menu (branch `nav-menu`, deployed 2026-11-23)
 
 - ☰ now sits above the main button (Завершить / На месте …), bottom right, absolutely placed so the map buttons keep their room; it follows the panel (same `sheetDrag.style` as the panel) and is there for the whole trip (before: only top right, only before pickup, only «Отказаться»).
