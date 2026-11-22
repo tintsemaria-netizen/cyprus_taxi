@@ -60,11 +60,12 @@ function MinFares() {
 
   const euro = (c: number) => (c / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const cents = (s: string) => Math.round(Number(s.replace(',', '.')) * 100);
-  const colorOf = (z: Zone) => (z.active ? COLORS[zones.indexOf(z) % COLORS.length] : '#8A969A');
+  // Every area keeps its own colour (2026-11-22, operator: «выдели область городов»); a switched-off one is drawn too.
+  const colorOf = (z: Zone) => COLORS[zones.indexOf(z) % COLORS.length];
 
   const refZones: RefZone[] = zones.filter((z) => z.id !== draft?.id && z.polygon.length >= 3).map((z) => ({
     id: z.id, name: z.name, polygon: z.polygon, color: colorOf(z),
-    label: `${z.name} · Comfort ${euro(z.comfortCents)} € · XL ${euro(z.xlCents)} €`, labelAt: centroid(z.polygon),
+    label: z.active ? `${z.name} · Comfort ${euro(z.comfortCents)} € · XL ${euro(z.xlCents)} €` : `${z.name} · ${t('staff.fixed.off')}`, labelAt: centroid(z.polygon),
   }));
   const fitKey = `${draft ? (draft.id ?? 'new') : ''}|${zones.length}`;
   const fit = useMemo<[number, number, number, number]>(() => {
@@ -101,6 +102,7 @@ function MinFares() {
   }
 
   async function toggle(z: Zone) {
+    setMsg(null);
     await api(`/admin/min-fares/${z.id}`, { method: 'PUT', body: { name: z.name, polygon: z.polygon, comfortCents: z.comfortCents, xlCents: z.xlCents, active: !z.active } }).catch(() => null);
     await load();
   }
@@ -166,7 +168,7 @@ function MinFares() {
                 <span className="min-w-0 flex-1 truncate font-semibold">{z.name}</span>
                 {!z.active && <span className="text-xs text-muted">{t('staff.fixed.off')}</span>}
               </div>
-              <div className="mt-1 text-sm tabular-nums">{t('staff.minFare.row', { comfort: euro(z.comfortCents), xl: euro(z.xlCents) })}</div>
+              <PriceRow z={z} onSaved={load} />
               <div className="mt-2 flex gap-2 text-sm">
                 <button type="button" className="text-accent" onClick={() => startEdit(z)}>{t('staff.fixed.edit')}</button>
                 <button type="button" className="text-muted" onClick={() => toggle(z)}>{z.active ? t('staff.deactivate') : t('staff.activate')}</button>
@@ -176,6 +178,42 @@ function MinFares() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Prices right in the list (2026-11-22, operator: «цены на комфорт и xl можно было менять самому») — no map needed.
+function PriceRow({ z, onSaved }: { z: Zone; onSaved: () => Promise<void> }) {
+  const { t } = useT();
+  const euro = (c: number) => (c / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const [c, setC] = useState(euro(z.comfortCents));
+  const [x, setX] = useState(euro(z.xlCents));
+  const [state, setState] = useState<'idle' | 'busy' | 'saved' | 'error'>('idle');
+  useEffect(() => { setC(euro(z.comfortCents)); setX(euro(z.xlCents)); }, [z.comfortCents, z.xlCents]);
+  const toCents = (s: string) => Math.round(Number(s.replace(',', '.')) * 100);
+  const changed = toCents(c) !== z.comfortCents || toCents(x) !== z.xlCents;
+  async function save() {
+    const cc = toCents(c), xx = toCents(x);
+    if (!(cc >= 100) || !(xx >= 100)) { setState('error'); return; }
+    setState('busy');
+    try {
+      await api(`/admin/min-fares/${z.id}`, { method: 'PUT', body: { name: z.name, polygon: z.polygon, comfortCents: cc, xlCents: xx, active: z.active } });
+      setState('saved'); await onSaved();
+    } catch { setState('error'); }
+  }
+  return (
+    <div className="mt-2" data-testid="minfare-prices">
+      <div className="flex items-end gap-2">
+        <label className="min-w-0 flex-1 text-xs text-muted">Comfort, €
+          <input className="field mt-1 !min-h-[38px] !py-1.5 tabular-nums" inputMode="decimal" value={c} onChange={(e) => { setC(e.target.value); setState('idle'); }} data-testid="row-comfort" />
+        </label>
+        <label className="min-w-0 flex-1 text-xs text-muted">XL, €
+          <input className="field mt-1 !min-h-[38px] !py-1.5 tabular-nums" inputMode="decimal" value={x} onChange={(e) => { setX(e.target.value); setState('idle'); }} data-testid="row-xl" />
+        </label>
+        <button type="button" className="btn-primary !min-h-[38px] shrink-0 !px-3 !py-1.5 text-sm" disabled={!changed || state === 'busy'} onClick={save} data-testid="row-save">{t('staff.minFare.savePrices')}</button>
+      </div>
+      {state === 'saved' && <p className="mt-1 text-xs text-accent">{t('staff.minFare.saved')}</p>}
+      {state === 'error' && <p className="mt-1 text-xs text-danger">{t('staff.minFare.needPrice')}</p>}
     </div>
   );
 }

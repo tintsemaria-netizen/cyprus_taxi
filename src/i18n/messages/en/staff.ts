@@ -152,7 +152,7 @@ const staff = {
   },
   minFare: {
     title: 'Pre-booking minimum',
-    sub: 'A pre-booked ride with pickup and drop-off inside one area costs at least this; above it the meter counts. One area per town or district, Comfort and XL separately. Fixed airport fares and ride-share prices are not changed.',
+    sub: 'A pre-booked ride with pickup and drop-off inside one area costs at least this; above it the meter counts. One area per town or district, Comfort and XL separately. Fixed airport fares and ride-share prices are not changed. A switched-off area does nothing: set the prices and press «Activate».',
     newZone: '+ New area',
     name: 'Area name',
     comfort: 'Comfort minimum, €',
@@ -160,6 +160,7 @@ const staff = {
     needPoints: 'Draw at least 3 corners on the map.',
     needPrice: 'Enter both prices.',
     saved: 'Saved.',
+    savePrices: 'Save',
     deleteConfirm: 'Delete area «{name}»?',
     empty: 'No areas yet — pre-bookings are priced by the meter only.',
     row: 'Comfort from {comfort} € · XL from {xl} €',
