@@ -1,5 +1,14 @@
 # Session handoff
 
+## 2026-11-22 (22:30) — Co-rider notifications in the app's / phone's language (deployed)
+
+- NotificationOutbox.msg (JSONB, migration `20261122060000_push_msg`): text key + values next to the English title/body; carried through claim → payload (`PushMsg` in src/server/push.ts; `enqueuePassenger/enqueueDriver/enqueuePassengerDriverNews` accept `msg`).
+- public/sw.js `MSG_TEXT` + `msgText`: 8 languages, `{…C}` values are euro cents formatted with Intl for the language; language = the app's saved language (Cache `ily-prefs`) else the phone's. Unknown key / old worker → English.
+- Keys now sent: share.joinGuest, share.joinHost, share.confirmed, share.assigned, share.notComing, share.driverLeft, share.notPossible (proposals were already localized by the worker).
+- Still English (same mechanism, only keys + texts needed): driver arrived, arrived at stop, no driver available, ride canceled / no-show, driver confirmed / changed / finding another, pre-booking reminder, driver: stop added/removed, start code on/off, upcoming pre-booked ride, pre-booked ride active/update, ride canceled by passenger.
+- Tests: tests/sw-push-text.test.ts (every server key in all 8 languages, same placeholders), outbox msg stored.
+- Item 12 (arrival window in the co-rider sheet + on the navigation sheet when the co-rider's stop is next) is on branch `push-lang` stash → branch `co-arrive`, NOT deployed (operator: «покажи сперва»).
+
 ## 2026-11-22 (21:00) — Lead times in admin, open share board, hint above the date — deployed
 
 - Settings (admin «Настройки»): scheduleMinMinutes 60 (migration `20261122050000_prebook_leads` raises a saved lower value), new `shareMinMinutes` 180 (co-rider pre-booking; server 422 SHARE_TOO_SOON, UI note + validation) and `shareBoardHideMinutes` 240 (board; replaces config boardHideHours 10).

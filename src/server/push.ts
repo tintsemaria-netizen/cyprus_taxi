@@ -66,7 +66,13 @@ export async function saveSubscription(audience: string, sub: BrowserSubscriptio
   return true;
 }
 
-export interface PushPayload { title: string; body: string; url: string; tag?: string }
+/**
+ * Notification text key + values (2026-11-22). The phone's service worker (public/sw.js MSG_TEXT)
+ * shows the text in the app's language, or the phone's language when the app has not saved one;
+ * title/body are the English fallback for an unknown key or an old service worker.
+ */
+export interface PushMsg { k: string; p?: Record<string, string | number> }
+export interface PushPayload { title: string; body: string; url: string; tag?: string; msg?: PushMsg }
 
 // Actually POST to every device subscription for an audience. Returns delivered/failed
 // counts so the outbox can decide whether to retry. Prunes gone (404/410) subscriptions.
@@ -104,9 +110,9 @@ export async function deliverToAudience(audience: string, payload: PushPayload):
 // stale offers, so a transition is never silently un-notified and a duplicate is never re-sent.
 type Db = Prisma.TransactionClient | typeof prisma;
 
-export async function enqueuePassenger(db: Db, bookingId: string, title: string, body: string, opts?: { url?: string; tag?: string; dedupeKey?: string }): Promise<void> {
+export async function enqueuePassenger(db: Db, bookingId: string, title: string, body: string, opts?: { url?: string; tag?: string; dedupeKey?: string; msg?: PushMsg }): Promise<void> {
   const { enqueue } = await import('@/server/outbox');
-  await enqueue(db, { audience: `PASSENGER:${bookingId}`, title, body, url: opts?.url ?? '/track', tag: opts?.tag ?? `ride-${bookingId}`, dedupeKey: opts?.dedupeKey });
+  await enqueue(db, { audience: `PASSENGER:${bookingId}`, title, body, url: opts?.url ?? '/track', tag: opts?.tag ?? `ride-${bookingId}`, dedupeKey: opts?.dedupeKey, msg: opts?.msg });
 }
 /**
  * Driver news for the passenger (2026-11-19, operator). Rides booked NOW: sent as before. Pre-booked
@@ -114,21 +120,21 @@ export async function enqueuePassenger(db: Db, bookingId: string, title: string,
  * re-matched, converted) are not announced — the ride screen always shows the current driver.
  * Ride-share news (co-rider joins / cancels) is sent separately and is not affected.
  */
-export async function enqueuePassengerDriverNews(db: Db, bookingId: string, kind: 'assigned' | 'change', title: string, body: string): Promise<void> {
+export async function enqueuePassengerDriverNews(db: Db, bookingId: string, kind: 'assigned' | 'change', title: string, body: string, msg?: PushMsg): Promise<void> {
   const b = await db.booking.findUnique({ where: { id: bookingId }, select: { scheduledAt: true } });
   if (!b) return;
-  if (!b.scheduledAt) return enqueuePassenger(db, bookingId, title, body);
+  if (!b.scheduledAt) return enqueuePassenger(db, bookingId, title, body, { msg });
   if (kind === 'change') return;
   const told = await db.bookingEvent.findFirst({ where: { bookingId, type: 'PASSENGER_TOLD_DRIVER' }, select: { id: true } });
   if (told) return;
   await db.bookingEvent.create({ data: { bookingId, type: 'PASSENGER_TOLD_DRIVER', actorType: 'SYSTEM' } });
-  await enqueuePassenger(db, bookingId, title, body);
+  await enqueuePassenger(db, bookingId, title, body, { msg });
 }
-export async function enqueueDriver(db: Db, driverId: string, title: string, body: string, opts?: { tag?: string; url?: string; offerId?: string | null; dedupeKey?: string }): Promise<void> {
+export async function enqueueDriver(db: Db, driverId: string, title: string, body: string, opts?: { tag?: string; url?: string; offerId?: string | null; dedupeKey?: string; msg?: PushMsg }): Promise<void> {
   const d = await db.driver.findUnique({ where: { id: driverId }, select: { userId: true } });
   if (!d) return;
   const { enqueue } = await import('@/server/outbox');
-  await enqueue(db, { audience: `DRIVER:${d.userId}`, title, body, url: opts?.url ?? '/driver', tag: opts?.tag ?? 'ride', offerId: opts?.offerId ?? null, dedupeKey: opts?.dedupeKey });
+  await enqueue(db, { audience: `DRIVER:${d.userId}`, title, body, url: opts?.url ?? '/driver', tag: opts?.tag ?? 'ride', offerId: opts?.offerId ?? null, dedupeKey: opts?.dedupeKey, msg: opts?.msg });
 }
 // Build the offer-notification body from a pickup label + ETA (no passenger PII).
 // public/sw.js parses this exact format to show the banner in the driver's language.

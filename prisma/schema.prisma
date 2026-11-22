@@ -269,6 +269,9 @@ model NotificationOutbox {
   url           String
   tag           String?
   offerId       String? // bind an 'offer' notification to the exact DriverOffer it announces
+  // Text key + values (2026-11-22): the service worker shows the notification in the app's / phone's
+  // language (public/sw.js MSG_TEXT); title/body are the English fallback.
+  msg           Json?
   dedupeKey     String?   @unique
   // PENDING | PROCESSING | SENT_TO_PROVIDER | NO_SUBSCRIBERS | RETRY | FAILED | EXPIRED | SUPERSEDED
   status        String    @default("PENDING")

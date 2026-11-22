@@ -328,8 +328,8 @@ async function finalizeLiveTx(tx: Tx, groupId: string): Promise<ShareResult> {
   await tx.bookingEvent.create({ data: { bookingId: host.id, type: 'SHARE_JOINED', actorType: 'SYSTEM', reason: `co-rider ${guest.reference}` } });
   await tx.shareGroup.update({ where: { id: g.id }, data: { status: 'ACCEPTED', decidedAt: new Date() } });
   await recordEvent(tx, { eventType: 'share.accepted', aggregateType: 'share', aggregateId: g.id, aggregateVersion: 2, correlationId: guest.id, payload: { mode: 'LIVE', driverPseudo: driverPseudo(hostAsg.driverId) } });
-  await enqueuePassenger(tx, guest.id, 'Driver assigned — shared ride', `You share the car with a co-rider: €${(g.guestCents / 100).toFixed(2)} instead of €${(g.guestFullCents / 100).toFixed(2)}.`);
-  await enqueuePassenger(tx, host.id, 'Co-rider joins', `Your price is now €${(g.hostCents / 100).toFixed(2)}.`);
+  await enqueuePassenger(tx, guest.id, 'Driver assigned — shared ride', `You share the car with a co-rider: €${(g.guestCents / 100).toFixed(2)} instead of €${(g.guestFullCents / 100).toFixed(2)}.`, { msg: { k: 'share.joinGuest', p: { nowC: g.guestCents, wasC: g.guestFullCents } } });
+  await enqueuePassenger(tx, host.id, 'Co-rider joins', `Your price is now €${(g.hostCents / 100).toFixed(2)}.`, { msg: { k: 'share.joinHost', p: { nowC: g.hostCents } } });
   return { ok: true, status: 'ACCEPTED' };
 }
 
@@ -357,8 +357,8 @@ async function finalizePrebookTx(tx: Tx, groupId: string): Promise<ShareResult> 
   await tx.shareGroup.update({ where: { id: g.id }, data: { status: 'MATCHED', decidedAt: new Date() } });
   for (const id of [h.id, gu.id]) await tx.bookingEvent.create({ data: { bookingId: id, type: 'SHARE_MATCHED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED' } });
   await recordEvent(tx, { eventType: 'share.matched', aggregateType: 'share', aggregateId: g.id, aggregateVersion: 2, correlationId: h.id, payload: { mode: 'PREBOOK' } });
-  await enqueuePassenger(tx, h.id, 'Shared ride confirmed', `Your price is now €${(g.hostCents / 100).toFixed(2)}.`);
-  await enqueuePassenger(tx, gu.id, 'Shared ride confirmed', `Your price is now €${(g.guestCents / 100).toFixed(2)}.`);
+  await enqueuePassenger(tx, h.id, 'Shared ride confirmed', `Your price is now €${(g.hostCents / 100).toFixed(2)}.`, { msg: { k: 'share.confirmed', p: { nowC: g.hostCents } } });
+  await enqueuePassenger(tx, gu.id, 'Shared ride confirmed', `Your price is now €${(g.guestCents / 100).toFixed(2)}.`, { msg: { k: 'share.confirmed', p: { nowC: g.guestCents } } });
   return { ok: true, status: 'MATCHED' };
 }
 
@@ -490,7 +490,7 @@ export async function attachMatchedGuestTx(tx: Tx, hostId: string): Promise<bool
   await tx.booking.update({ where: { id: guest.id }, data: { status: 'ASSIGNED', revision: { increment: 1 } } });
   await tx.bookingEvent.create({ data: { bookingId: guest.id, type: 'SHARE_ASSIGNED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'ASSIGNED' } });
   await tx.shareGroup.update({ where: { id: g.id }, data: { status: 'ACCEPTED', driverId: hostAsg.driverId } });
-  await enqueuePassengerDriverNews(tx, guest.id, 'assigned', 'Driver assigned', `${hostAsg.driverPublicName.split(' ')[0]} is assigned to your shared ride — track them live.`);
+  await enqueuePassengerDriverNews(tx, guest.id, 'assigned', 'Driver assigned', `${hostAsg.driverPublicName.split(' ')[0]} is assigned to your shared ride — track them live.`, { k: 'share.assigned', p: { driver: hostAsg.driverPublicName.split(' ')[0] } });
   return true;
 }
 
@@ -519,8 +519,8 @@ export async function leaveShareTx(tx: Tx, bookingId: string, reason: string, op
   const restored = await restoreFullPriceTx(tx, otherId);
   await tx.shareGroup.update({ where: { id: g.id }, data: opts.noShowFeeCents != null ? { noShowBookingId: bookingId, noShowFeeCents: opts.noShowFeeCents } : {} });
   await closeGroupTx(tx, g.id, 'ENDED', reason);
-  if (restored) await enqueuePassenger(tx, otherId, 'Your co-rider is not coming', 'You ride alone at the normal price — no discount.');
-  if (g.driverId) await enqueueDriver(tx, g.driverId, 'Co-rider left the trip', 'One passenger left the shared ride. The other pays the full price.', { tag: `share-${g.id}` });
+  if (restored) await enqueuePassenger(tx, otherId, 'Your co-rider is not coming', 'You ride alone at the normal price — no discount.', { msg: { k: 'share.notComing' } });
+  if (g.driverId) await enqueueDriver(tx, g.driverId, 'Co-rider left the trip', 'One passenger left the shared ride. The other pays the full price.', { tag: `share-${g.id}`, msg: { k: 'share.driverLeft' } });
 }
 
 /**
@@ -560,7 +560,7 @@ export async function dissolveUnclaimedTx(tx: Tx, bookingId: string): Promise<bo
   await restoreFullPriceTx(tx, g.guestBookingId);
   await closeGroupTx(tx, g.id, g.status === 'PROPOSED' ? 'CANCELED' : 'ENDED', 'no driver for the shared pair');
   if (g.status === 'MATCHED') {
-    for (const id of [g.hostBookingId, g.guestBookingId]) await enqueuePassenger(tx, id, 'Shared ride not possible', 'No driver took the shared ride, so you ride alone at the normal price.');
+    for (const id of [g.hostBookingId, g.guestBookingId]) await enqueuePassenger(tx, id, 'Shared ride not possible', 'No driver took the shared ride, so you ride alone at the normal price.', { msg: { k: 'share.notPossible' } });
   }
   return true;
 }

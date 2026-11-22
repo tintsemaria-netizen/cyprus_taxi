@@ -35,6 +35,15 @@ describe('notification outbox — claim + precise outcomes', () => {
     expect(after.leaseToken).toBeNull(); // lease released
   });
 
+  it('2026-11-22: a text key + values is stored with the notification and survives the claim', async () => {
+    const key = `msg-${RUN}-${++n}`;
+    await enqueue(prisma, { audience: `PASSENGER:none-${RUN}`, title: 'Shared ride confirmed', body: 'Your price is now €42.00.', url: '/track', dedupeKey: key, msg: { k: 'share.confirmed', p: { nowC: 4200 } } });
+    const row = (await prisma.notificationOutbox.findUnique({ where: { dedupeKey: key } }))!;
+    expect(row.msg).toEqual({ k: 'share.confirmed', p: { nowC: 4200 } });
+    await drainOutbox(new Date());
+    expect((await prisma.notificationOutbox.findUnique({ where: { id: row.id } }))!.status).toBe('NO_SUBSCRIBERS');
+  });
+
   it('dedupeKey prevents a duplicate enqueue', async () => {
     const key = `dup-${RUN}-${++n}`;
     await enqueue(prisma, { audience: `PASSENGER:x`, title: 't', body: 'b', url: '/track', dedupeKey: key });

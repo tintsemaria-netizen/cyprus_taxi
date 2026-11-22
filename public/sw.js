@@ -46,6 +46,97 @@ function shareText(tag, body, L) {
   return null;
 }
 
+// Other notifications sent with a text key (2026-11-22, server `msg: { k, p }` — src/server/push.ts
+// PushMsg): shown in the app's language, or the phone's when the app has not saved one. A key or
+// language missing here → the server's English title/body. `…C` values are euro cents.
+const MSG_TEXT = {
+  'share.joinGuest': {
+    ru: ['Водитель назначен — поездка с попутчиком', 'Вы едете с попутчиком: {nowC} вместо {wasC}.'],
+    en: ['Driver assigned — shared ride', 'You share the car with a co-rider: {nowC} instead of {wasC}.'],
+    el: ['Οδηγός ορίστηκε — κοινή διαδρομή', 'Μοιράζεστε το ταξί με συνεπιβάτη: {nowC} αντί {wasC}.'],
+    de: ['Fahrer zugewiesen — geteilte Fahrt', 'Sie teilen das Auto mit einem Mitfahrer: {nowC} statt {wasC}.'],
+    fr: ['Chauffeur attribué — trajet partagé', 'Vous partagez la voiture avec un covoyageur : {nowC} au lieu de {wasC}.'],
+    pl: ['Kierowca przydzielony — wspólny przejazd', 'Jedziesz ze współpasażerem: {nowC} zamiast {wasC}.'],
+    he: ['נהג שובץ — נסיעה משותפת', 'אתם חולקים את הרכב עם נוסע נוסף: {nowC} במקום {wasC}.'],
+    ar: ['تم تعيين سائق — رحلة مشتركة', 'تتشارك السيارة مع راكب آخر: {nowC} بدلاً من {wasC}.'],
+  },
+  'share.joinHost': {
+    ru: ['К вам присоединился попутчик', 'Ваша цена теперь {nowC}.'],
+    en: ['Co-rider joins', 'Your price is now {nowC}.'],
+    el: ['Προστέθηκε συνεπιβάτης', 'Η τιμή σας είναι τώρα {nowC}.'],
+    de: ['Ein Mitfahrer steigt zu', 'Ihr Preis beträgt jetzt {nowC}.'],
+    fr: ['Un covoyageur vous rejoint', 'Votre prix est maintenant de {nowC}.'],
+    pl: ['Dołącza współpasażer', 'Twoja cena to teraz {nowC}.'],
+    he: ['נוסע משותף מצטרף', 'המחיר שלכם עכשיו {nowC}.'],
+    ar: ['انضم راكب مشارك', 'سعرك الآن {nowC}.'],
+  },
+  'share.confirmed': {
+    ru: ['Поездка с попутчиком подтверждена', 'Ваша цена теперь {nowC}.'],
+    en: ['Shared ride confirmed', 'Your price is now {nowC}.'],
+    el: ['Η κοινή διαδρομή επιβεβαιώθηκε', 'Η τιμή σας είναι τώρα {nowC}.'],
+    de: ['Geteilte Fahrt bestätigt', 'Ihr Preis beträgt jetzt {nowC}.'],
+    fr: ['Trajet partagé confirmé', 'Votre prix est maintenant de {nowC}.'],
+    pl: ['Wspólny przejazd potwierdzony', 'Twoja cena to teraz {nowC}.'],
+    he: ['הנסיעה המשותפת אושרה', 'המחיר שלכם עכשיו {nowC}.'],
+    ar: ['تم تأكيد الرحلة المشتركة', 'سعرك الآن {nowC}.'],
+  },
+  'share.assigned': {
+    ru: ['Водитель назначен', '{driver} назначен на вашу поездку с попутчиком — следите за ним на карте.'],
+    en: ['Driver assigned', '{driver} is assigned to your shared ride — track them live.'],
+    el: ['Οδηγός ορίστηκε', 'Ο/Η {driver} ορίστηκε στην κοινή σας διαδρομή — παρακολουθήστε ζωντανά.'],
+    de: ['Fahrer zugewiesen', '{driver} fährt Ihre geteilte Fahrt — live verfolgen.'],
+    fr: ['Chauffeur attribué', '{driver} assure votre trajet partagé — suivez-le en direct.'],
+    pl: ['Kierowca przydzielony', '{driver} obsłuży Twój wspólny przejazd — śledź na żywo.'],
+    he: ['נהג שובץ', '{driver} שובץ לנסיעה המשותפת שלכם — עקבו בזמן אמת.'],
+    ar: ['تم تعيين سائق', 'تم تعيين {driver} لرحلتك المشتركة — تابعه مباشرة.'],
+  },
+  'share.notComing': {
+    ru: ['Попутчик не поедет', 'Вы едете один по обычной цене — без скидки.'],
+    en: ['Your co-rider is not coming', 'You ride alone at the normal price — no discount.'],
+    el: ['Ο συνεπιβάτης δεν έρχεται', 'Ταξιδεύετε μόνοι στην κανονική τιμή — χωρίς έκπτωση.'],
+    de: ['Ihr Mitfahrer kommt nicht', 'Sie fahren allein zum normalen Preis — ohne Rabatt.'],
+    fr: ['Votre covoyageur ne vient pas', 'Vous voyagez seul au prix normal — sans réduction.'],
+    pl: ['Współpasażer nie jedzie', 'Jedziesz sam w zwykłej cenie — bez zniżki.'],
+    he: ['הנוסע המשותף לא מגיע', 'אתם נוסעים לבד במחיר הרגיל — ללא הנחה.'],
+    ar: ['الراكب المشارك لن يأتي', 'ستسافر وحدك بالسعر العادي — بدون خصم.'],
+  },
+  'share.driverLeft': {
+    ru: ['Попутчик вышел из поездки', 'Один пассажир отказался от совместной поездки. Второй платит полную цену.'],
+    en: ['Co-rider left the trip', 'One passenger left the shared ride. The other pays the full price.'],
+    el: ['Ένας συνεπιβάτης αποχώρησε', 'Ένας επιβάτης αποχώρησε από την κοινή διαδρομή. Ο άλλος πληρώνει πλήρη τιμή.'],
+    de: ['Mitfahrer hat die Fahrt verlassen', 'Ein Fahrgast hat die geteilte Fahrt verlassen. Der andere zahlt den vollen Preis.'],
+    fr: ['Un covoyageur a quitté le trajet', 'Un passager a quitté le trajet partagé. L’autre paie le plein tarif.'],
+    pl: ['Współpasażer zrezygnował', 'Jeden pasażer zrezygnował ze wspólnego przejazdu. Drugi płaci pełną cenę.'],
+    he: ['נוסע עזב את הנסיעה', 'נוסע אחד עזב את הנסיעה המשותפת. השני משלם מחיר מלא.'],
+    ar: ['غادر راكب الرحلة', 'غادر أحد الركاب الرحلة المشتركة. يدفع الآخر السعر الكامل.'],
+  },
+  'share.notPossible': {
+    ru: ['Поездка с попутчиком не состоялась', 'Ни один водитель не взял совместную поездку — вы едете один по обычной цене.'],
+    en: ['Shared ride not possible', 'No driver took the shared ride, so you ride alone at the normal price.'],
+    el: ['Η κοινή διαδρομή δεν είναι δυνατή', 'Κανένας οδηγός δεν ανέλαβε την κοινή διαδρομή — ταξιδεύετε μόνοι στην κανονική τιμή.'],
+    de: ['Geteilte Fahrt nicht möglich', 'Kein Fahrer hat die geteilte Fahrt übernommen — Sie fahren allein zum normalen Preis.'],
+    fr: ['Trajet partagé impossible', 'Aucun chauffeur n’a pris le trajet partagé — vous voyagez seul au prix normal.'],
+    pl: ['Wspólny przejazd niemożliwy', 'Żaden kierowca nie przyjął wspólnego przejazdu — jedziesz sam w zwykłej cenie.'],
+    he: ['נסיעה משותפת לא אפשרית', 'אף נהג לא לקח את הנסיעה המשותפת — אתם נוסעים לבד במחיר הרגיל.'],
+    ar: ['الرحلة المشتركة غير ممكنة', 'لم يقبل أي سائق الرحلة المشتركة — ستسافر وحدك بالسعر العادي.'],
+  },
+};
+function msgText(msg, L) {
+  const byLang = msg && MSG_TEXT[msg.k];
+  const t = byLang && (byLang[L] || null);
+  if (!t) return null;
+  const p = msg.p || {};
+  const fill = (str) => str.replace(/\{(\w+)\}/g, (_m, k) => {
+    const v = p[k];
+    if (v == null) return '';
+    if (/C$/.test(k) && typeof v === 'number') {
+      try { return new Intl.NumberFormat(L, { style: 'currency', currency: 'EUR' }).format(v / 100); } catch (_e) { return `€${(v / 100).toFixed(2)}`; }
+    }
+    return String(v);
+  });
+  return { title: fill(t[0]), body: fill(t[1]) };
+}
+
 async function appLocale() {
   try {
     const c = await caches.open('ily-prefs');
@@ -81,6 +172,10 @@ self.addEventListener('push', (event) => {
     if (isShare) {
       const st = shareText(data.tag, body, await appLocale());
       if (st) { title = st.title; body = st.body; }
+    }
+    if (data.msg && !isOffer) {
+      const mt = msgText(data.msg, await appLocale());
+      if (mt) { title = mt.title; body = mt.body; }
     }
     await self.registration.showNotification(title, {
       body,

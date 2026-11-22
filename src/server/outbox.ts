@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
-import { deliverToAudience } from '@/server/push';
+import { deliverToAudience, type PushMsg } from '@/server/push';
 
 // Durable notification delivery (Task 013, hardened for Task 016 §4). Rows are ENQUEUED
 // inside domain transactions. A worker CLAIMS due rows with a lease (FOR UPDATE SKIP LOCKED)
@@ -23,6 +23,7 @@ export interface EnqueueInput {
   url: string;
   tag?: string | null;
   offerId?: string | null; // bind an 'offer' notification to the exact DriverOffer
+  msg?: PushMsg; // shown in the app's / phone's language by the service worker
   dedupeKey?: string | null;
 }
 
@@ -48,7 +49,7 @@ export async function enqueue(db: Db, n: EnqueueInput): Promise<void> {
   }
   try {
     await db.notificationOutbox.create({
-      data: { audience: n.audience, title: n.title, body: n.body, url: n.url, tag: n.tag ?? null, offerId: n.offerId ?? null, dedupeKey: n.dedupeKey ?? null, status: 'PENDING' },
+      data: { audience: n.audience, title: n.title, body: n.body, url: n.url, tag: n.tag ?? null, msg: (n.msg as unknown as Prisma.InputJsonObject) ?? undefined, offerId: n.offerId ?? null, dedupeKey: n.dedupeKey ?? null, status: 'PENDING' },
     });
     kickDrain();
   } catch (e) {
@@ -59,7 +60,7 @@ export async function enqueue(db: Db, n: EnqueueInput): Promise<void> {
 
 interface OutboxRow {
   id: string; audience: string; title: string; body: string; url: string;
-  tag: string | null; offerId: string | null; attempts: number;
+  tag: string | null; offerId: string | null; attempts: number; msg: PushMsg | null;
 }
 
 // Claim up to `batch` due rows atomically. FOR UPDATE SKIP LOCKED means a second worker
@@ -76,7 +77,7 @@ async function claimDue(owner: string, token: string, now: Date, batch: number):
       FOR UPDATE SKIP LOCKED
       LIMIT ${batch}
     )
-    RETURNING o.id, o.audience, o.title, o.body, o.url, o.tag, o."offerId", o.attempts`;
+    RETURNING o.id, o.audience, o.title, o.body, o.url, o.tag, o."offerId", o.attempts, o.msg`;
 }
 
 async function finalize(id: string, token: string, data: Prisma.NotificationOutboxUpdateManyMutationInput): Promise<void> {
@@ -103,7 +104,7 @@ export async function drainOutbox(now: Date = new Date(), batch = 50): Promise<{
         const live = await offerStillLive(r);
         if (!live) { await finalize(r.id, token, { status: 'SUPERSEDED', deliveredAt: now }); continue; }
       }
-      const res = await deliverToAudience(r.audience, { title: r.title, body: r.body, url: r.url, tag: r.tag ?? undefined });
+      const res = await deliverToAudience(r.audience, { title: r.title, body: r.body, url: r.url, tag: r.tag ?? undefined, msg: r.msg ?? undefined });
       if (res.failed === 0) {
         await finalize(r.id, token, { status: res.sent > 0 ? 'SENT_TO_PROVIDER' : 'NO_SUBSCRIBERS', deliveredAt: now });
       } else {
