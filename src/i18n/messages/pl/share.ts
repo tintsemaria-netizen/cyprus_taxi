@@ -104,6 +104,7 @@ const share: Catalog<typeof en> = {
       IN_PROGRESS: "W aucie",
     },
     pair: {
+      legMin: '{min} min',
       stopsTitle: "Przystanki po kolei",
       passengerN: "Pasażer {n}",
       pickupWord: "Odbiór",

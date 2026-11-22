@@ -9,7 +9,6 @@ export interface PairBooking {
   id: string; status: string; passengerName: string;
   pickupLat: number; pickupLng: number; pickupLabel: string;
   dropoffLat: number; dropoffLng: number; dropoffLabel: string;
-  arriveFrom?: Date | null; arriveBy?: Date | null;
 }
 
 export interface PairStop {
@@ -18,8 +17,8 @@ export interface PairStop {
   primary: boolean;
   bookingId: string; status: string; name: string;
   lat: number; lng: number; label: string; done: boolean;
-  /** This passenger's «быть на месте с … до …» (2026-11-22). */
-  arrive: { from: string; by: string } | null;
+  /** Road minutes from this stop to the next one (operator, 2026-11-23: the driver needs these, not «быть на месте»). */
+  toNextMin?: number | null;
 }
 
 export interface PairStops { stops: PairStop[]; next: number | null }
@@ -37,7 +36,6 @@ export function pairStops(plan: PlanStep[], host: PairBooking, guest: PairBookin
       lat: pickup ? b.pickupLat : b.dropoffLat, lng: pickup ? b.pickupLng : b.dropoffLng,
       label: pickup ? b.pickupLabel : b.dropoffLabel,
       done: (pickup ? PICKED_UP : DROPPED).has(b.status),
-      arrive: b.arriveFrom && b.arriveBy ? { from: b.arriveFrom.toISOString(), by: b.arriveBy.toISOString() } : null,
     };
   });
   const i = stops.findIndex((s) => !s.done);

@@ -200,6 +200,9 @@ describe('live ride-share', () => {
     expect(v.pair?.stops.map((s) => `${s.kind}:${s.primary ? 'me' : 'co'}`)).toEqual(plan.map((p) => `${p.kind}:${p.who === 'host' ? 'me' : 'co'}`));
     expect(v.pair?.stops.map((s) => s.n)).toEqual([1, 2, 3, 4]);
     expect(v.pair?.next).toBe(0);
+    // 2026-11-23: the road time between the stops (1 → 2, 2 → 3, 3 → 4), the last stop has none.
+    expect(v.pair!.stops.slice(0, 3).every((s) => typeof s.toNextMin === 'number' && s.toNextMin >= 0)).toBe(true);
+    expect(v.pair!.stops[3].toNextMin ?? null).toBeNull();
 
     // Walk the plan: every step the next stop is the first one not done, and the co-rider's stop
     // is reported (for the route) exactly when it is the next one.

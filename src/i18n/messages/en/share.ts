@@ -102,6 +102,7 @@ const share = {
       IN_PROGRESS: 'On board',
     },
     pair: {
+      legMin: '{min} min',
       stopsTitle: "Stops in order",
       passengerN: "Passenger {n}",
       pickupWord: "Pick up",

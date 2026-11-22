@@ -34,7 +34,7 @@ const fuzz = (v: number) => Math.round(v / 0.0015) * 0.0015; // ~150 m grid: "th
 
 const legCache = new Map<string, { min: number; km: number; path: [number, number][]; at: number; routed: boolean }>();
 
-async function leg(a: LatLng, b: LatLng, when: Date | null) {
+export async function leg(a: LatLng, b: LatLng, when: Date | null) {
   const key = `${a.lat.toFixed(4)},${a.lng.toFixed(4)}>${b.lat.toFixed(4)},${b.lng.toFixed(4)}|${when ? Math.round(when.getTime() / 900_000) : 'now'}`;
   const c = legCache.get(key);
   if (c && Date.now() - c.at < 10 * 60_000) return c;

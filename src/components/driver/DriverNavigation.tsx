@@ -2,6 +2,7 @@
 
 import { Postcode } from '@/components/driver/Postcode';
 import { coRiderNext, type PairStops } from '@/lib/pair-stops';
+import { PairLegs } from '@/components/share/PairLegs';
 import { navZoomTarget, nextNavZoom, smoothSpeed, NAV_ZOOM_MAX } from '@/lib/nav-zoom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
@@ -477,8 +478,8 @@ export function DriverNavigation(props: {
 
         {/* No «Подробнее» section (2026-11-18). The passenger's comment and flight stay visible. */}
         {trip.note && <div className="mt-2 text-sm text-warn">{t('driver.trip.note', { note: trip.note })}</div>}
-        {/* The window of the passenger the next stop belongs to (the co-rider's when their stop is next, 2026-11-22). */}
-        {(() => { const arr = co ? co.arrive : trip.arrive; return arr && <div className="mt-1 text-sm font-semibold text-accent" data-testid="trip-arrive">🏁 {t('driver.scheduled.arrive', { from: fmt.time(arr.from), to: fmt.time(arr.by) })}</div>; })()}
+        {/* No «быть на месте» for the driver (operator, 2026-11-23): he needs the time between the stops. */}
+        {props.pair && <PairLegs pair={props.pair} />}
         {trip.flightNumber && <div className="mt-1 font-mono text-sm">✈ {t('driver.scheduled.flight', { flight: formatFlight(trip.flightNumber) })}</div>}
         </div>
       </div>
