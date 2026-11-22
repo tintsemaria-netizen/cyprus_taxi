@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-22 (21:00) — Lead times in admin, open share board, hint above the date — deployed
+
+- Settings (admin «Настройки»): scheduleMinMinutes 60 (migration `20261122050000_prebook_leads` raises a saved lower value), new `shareMinMinutes` 180 (co-rider pre-booking; server 422 SHARE_TOO_SOON, UI note + validation) and `shareBoardHideMinutes` 240 (board; replaces config boardHideHours 10).
+- Open share board: `shareBoard().all` = every other open ride (no names/phones/streets), «Поехать с этим попутчиком» → `/?join=<id>` (BookingApp prefills co-rider + day/window, warns on a different route, proposes after booking via POST /passenger/share-board). GET `/passenger/share-board?ride=<id>`. Entry: account menu «👥 Табло попутчиков», link under the share box. A passenger whose phone is a driver's phone gets no board (`driver: true`) and cannot propose (DRIVER_ACCOUNT). Board error codes translated (8 languages).
+- Arrival window: hint «Укажите, когда нужно быть на месте» above the date; the box below only for departure / warnings.
+- Full suite 359 passed; Playwright: board → join → booking 201 → proposal sent.
 ## 2026-11-22 — Ride-share pair: co-rider stops on the driver's live navigation (merged to main, deployed)
 
 - Operator: «начнем с остановки». Before: the live navigation only drove the primary trip; the co-rider's pickup / drop-off were reachable only through the «👥» pill → Google Maps (e.g. host on board → the app routed straight to the host's destination, skipping the co-rider's pickup).
