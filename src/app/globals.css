@@ -132,3 +132,4 @@ body {
 /* iPhone date / time fields (2026-11-22): never wider than their column, value centred. */
 input[type='time'], input[type='date'], input[type='datetime-local'] { min-width: 0; }
 input[type='time']::-webkit-date-and-time-value, input[type='date']::-webkit-date-and-time-value { text-align: center; min-width: 0; }
+@keyframes ily-bubble-in { from { opacity: 0; transform: translateY(-4px) scale(.97) } to { opacity: 1; transform: none } }

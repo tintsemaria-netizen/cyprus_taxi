@@ -22,6 +22,7 @@ import { nicosiaInputValue } from '@/lib/timezone';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
 import { NotifyPrompt } from '@/components/NotifyPrompt';
+import { RedBubble } from '@/components/RedBubble';
 import { ShareBookingOptions, type ShareOpts } from '@/components/share/ShareBookingOptions';
 import { isShareRoute, shareZone } from '@/lib/share';
 import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
@@ -1267,9 +1268,11 @@ export default function BookingApp() {
                             );
                           })()}
                           {addrOpen && !hasStop && (
+                            <span className="relative inline-block">
                             <button type="button" className="chip mt-2 hover:border-accent/50" data-testid="add-stop" onClick={() => { if (when === 'SCHEDULE' && shareOn) { setStopWarn(true); return; } setHasStop(true); openEditor('s'); }}>＋ {t('booking.form.addStop')}</button>
+                            {stopWarn && <RedBubble text={t('share.booking.stopBlocked')} testid="stop-blocked" />}
+                            </span>
                           )}
-                          {stopWarn && <p role="alert" className="mt-2 rounded-[10px] border border-danger/50 bg-danger/15 px-3 py-2 text-[13px] font-medium text-danger" data-testid="stop-blocked">{t('share.booking.stopBlocked')}</p>}
                         </div>
                       );
                     })()}

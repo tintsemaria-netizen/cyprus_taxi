@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useT } from '@/i18n/I18nProvider';
+import { RedBubble } from '@/components/RedBubble';
 
 // Ride-share «Попутчик» at booking (Task 022): shown only for airport / intercity routes. The
 // passenger says how many adults, children and suitcases (so a co-rider can be matched to the free
@@ -29,7 +30,7 @@ export function ShareBookingOptions({ value, onChange, pct, maxPeople, prebook, 
   const people = value.adults + value.children;
   const on = value.on && !disabled && !blockMsg;
   return (
-    <div className={`mt-4 rounded-[14px] border px-3 py-3 transition ${on ? 'border-accent bg-accent/10' : 'border-edge bg-elevated'} ${disabled ? 'opacity-60' : ''}`} data-testid="share-options">
+    <div className={`relative mt-4 rounded-[14px] border px-3 py-3 transition ${on ? 'border-accent bg-accent/10' : 'border-edge bg-elevated'} ${disabled ? 'opacity-60' : ''}`} data-testid="share-options">
       <label className={`flex items-center gap-3 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
         <span className="min-w-0 flex-1">
           {/* 2026-11-22 (operator): the discount must be noticed — a lime badge + a highlighted note. */}
@@ -45,7 +46,7 @@ export function ShareBookingOptions({ value, onChange, pct, maxPeople, prebook, 
           <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? 'start-[22px]' : 'start-0.5'}`} />
         </span>
       </label>
-      {warn && blockMsg && <p role="alert" className="mt-2 rounded-[10px] border border-danger/50 bg-danger/15 px-3 py-2 text-[13px] font-medium text-danger" data-testid="share-blocked">{blockMsg}</p>}
+      {warn && blockMsg && <span className="absolute end-3 top-12"><RedBubble text={blockMsg} align="end" testid="share-blocked" /></span>}
       {!disabled && (
         <p className="mt-2 flex items-start gap-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium leading-snug text-ink" data-testid="share-hint">
           <span aria-hidden>💰</span><span>{t('share.booking.hint', { pct })}</span>
