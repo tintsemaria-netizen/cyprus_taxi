@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useSyncExternalStore } from 'react';
+import { rememberPushLocale } from '@/lib/push-client';
 import { ApiRequestError } from '@/lib/api-client';
 import { DEFAULT_LOCALE, INTL_TAG, LOCALE_COOKIE, Locale } from './config';
 import { MESSAGES, Messages } from './messages';
@@ -14,6 +15,10 @@ export type PluralKey = PluralPath<Messages>;
 const Ctx = createContext<Locale>(DEFAULT_LOCALE);
 
 export function I18nProvider({ locale, children }: { locale: Locale; children: React.ReactNode }) {
+  // Language rule (operator, 2026-11-22): every person first gets the phone's / browser's language;
+  // once they choose one, it stays (cookie). Notifications follow the same language on every page
+  // and for every role — saved for the service worker whenever the language is known or changed.
+  useEffect(() => { void rememberPushLocale(locale); }, [locale]);
   return <Ctx.Provider value={locale}>{children}</Ctx.Provider>;
 }
 
