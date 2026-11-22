@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 
-interface Preview { gpsMeter?: { totalCents: number; totalKm: number } | null; estimateCents: number | null; pickupWaitCents: number; stopWaitCents: number; totalCents: number; upfront: boolean; stopLabel: string | null; pickupLabel: string; dropoffLabel: string; passengerName: string }
+interface Preview { gpsMeter?: { totalCents: number; totalKm: number } | null; estimateCents: number | null; pickupWaitCents: number; stopWaitCents: number; totalCents: number; minCents?: number | null; upfront: boolean; stopLabel: string | null; pickupLabel: string; dropoffLabel: string; passengerName: string }
 
 // Before the final «Завершить» (2026-11-15): show the driver what the trip costs — the total, with
 // any pickup / stop waiting listed above it (2026-11-17: no separate estimate line, no subtitle).
@@ -34,6 +34,7 @@ export function FarePreviewSheet({ bookingId, passengerName: _passengerName, onC
               {/* Only the total (2026-11-17): waiting is included in it, not listed. */}
               <Line k={t('driver.close.total')} v={fmt.money(p.totalCents)} strong />
               {/* GPS taximeter for comparison with the car's meter (2026-11-19; not charged). */}
+              {p.minCents != null && <p className="rounded-[10px] border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-ink" data-testid="prebook-min">{t('driver.close.prebookMin', { amount: fmt.money(p.minCents) })}</p>}
               {p.gpsMeter && <Line k={`${t('driver.gpsMeter.preview')} · ${t('driver.gpsMeter.km', { km: p.gpsMeter.totalKm.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })}`} v={fmt.money(p.gpsMeter.totalCents)} />}
             </>
           )}

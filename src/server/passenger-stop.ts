@@ -1,3 +1,4 @@
+import { bookingMinCents } from '@/lib/prebook-min';
 import { prisma } from '@/lib/db';
 import { createQuote, consumeQuote } from '@/server/quote';
 import { enqueueDriver } from '@/server/push';
@@ -33,7 +34,8 @@ export async function passengerSetStop(bookingId: string, stop: StopChange): Pro
     const q = await createQuote(input);
     if (q.ok) {
       const c = await consumeQuote(q.quote.quoteId, input);
-      if (c.ok) fare = { fareCents: c.totalCents, priceType: c.priceType, fareBreakdown: c.breakdown, quoteId: q.quote.quoteId };
+      // A pre-booking in Nicosia keeps its minimum after a stop is added mid-trip (2026-11-22).
+      if (c.ok) fare = { fareCents: Math.max(bookingMinCents(b) ?? 0, c.totalCents), priceType: c.priceType, fareBreakdown: c.breakdown, quoteId: q.quote.quoteId };
     }
   } catch { fare = null; } // keep the old estimate rather than block the change
 

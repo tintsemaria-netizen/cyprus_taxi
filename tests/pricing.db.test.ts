@@ -95,6 +95,33 @@ describe('scheduled-time quote pricing', () => {
   });
 });
 
+describe('pre-booking minimum in Nicosia (2026-11-22)', () => {
+  const nicA = { lat: 35.1667, lng: 33.3667, label: 'Eleftheria Sq.' };
+  const nicB = { lat: 35.1700, lng: 33.3600, label: 'Nicosia centre' };
+  const future = new Date(Date.now() + 2 * 86400_000).toISOString();
+  it('a short pre-booking inside Nicosia is priced €20 (line «prebookMin»); a ride now is not', async () => {
+    const pre = await createQuote({ pickup: nicA, dropoff: nicB, vClass: 'COMFORT', passengerCount: 1, scheduledAtUtc: future });
+    if (!pre.ok) throw new Error('quote');
+    expect(pre.quote.totalCents).toBe(2000);
+    expect(pre.quote.rangeLowCents).toBe(2000);
+    expect(pre.quote.minCents).toBe(2000);
+    expect(pre.quote.lines.some((l) => l.code === 'prebookMin')).toBe(true);
+    const now = await createQuote({ pickup: nicA, dropoff: nicB, vClass: 'COMFORT', passengerCount: 1 });
+    if (!now.ok) throw new Error('quote');
+    expect(now.quote.totalCents).toBeLessThan(2000);
+    expect(now.quote.minCents).toBeNull();
+  });
+  it('a long pre-booking inside Nicosia keeps its meter estimate (above €20 the meter counts)', async () => {
+    const far = { lat: 35.10, lng: 33.30, label: 'Lakatamia' }; // still inside the Nicosia area
+    const r = await createQuote({ pickup: { lat: 35.24, lng: 33.40 }, dropoff: far, vClass: 'COMFORT', passengerCount: 1, scheduledAtUtc: future });
+    if (!r.ok) throw new Error('quote');
+    if (r.quote.minCents) {
+      expect(r.quote.totalCents).toBeGreaterThan(2000);
+      expect(r.quote.lines.some((l) => l.code === 'prebookMin')).toBe(false);
+    }
+  });
+});
+
 describe('UPFRONT_DYNAMIC quote', () => {
   it('no supply → priceType UPFRONT_DYNAMIC but no surge (equals meter estimate)', async () => {
     const meter = await createQuote(qInput, new Date(), 'REGULATED_METER_ESTIMATE');

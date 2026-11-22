@@ -4,6 +4,7 @@ import { sha256 } from '@/lib/crypto';
 import { haversineMeters } from '@/lib/geo';
 import { isAirportPoint } from '@/lib/airports';
 import { findFixedFare } from '@/server/fixed-fares';
+import { prebookMinCents } from '@/lib/prebook-min';
 import { computeMeterEstimate } from '@/lib/tariff';
 import { computeDynamicMultiplier, dynamicSurchargeCents } from '@/lib/pricing-dynamic';
 import { marketSnapshot } from '@/server/dispatch/market';
@@ -64,6 +65,7 @@ export interface QuoteBody {
   airport: boolean;
   pricedForAt: string | null; // journey time the price/tariff applies to (scheduled), else null
   dynamic?: { multiplier: number; applied: boolean; demandSupplyRatio: number | null; reasons: string[]; version: string };
+  minCents?: number | null; // pre-booking minimum (src/lib/prebook-min.ts), null when none
 }
 
 // Straight-line length of the trip, through the stop when there is one (fallback estimate only).
@@ -174,6 +176,17 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
     dynamic = undefined;
   }
 
+  // Pre-booking minimum inside Nicosia (2026-11-22): at least €20, above that the meter counts.
+  const minCents = prebookMinCents({ pickup: input.pickup, dropoff: input.dropoff, scheduled: !!input.scheduledAtUtc, priceType });
+  if (minCents != null) {
+    if (totalCents < minCents) {
+      lines = [...lines, { code: 'prebookMin', label: `Pre-booking minimum in Nicosia (€${(minCents / 100).toFixed(2)})`, cents: minCents - totalCents }];
+      totalCents = minCents;
+    }
+    rangeLowCents = Math.max(minCents, rangeLowCents);
+    rangeHighCents = Math.max(minCents, rangeHighCents);
+  }
+
   const row = await prisma.quote.create({
     data: {
       pickupLat: input.pickup.lat, pickupLng: input.pickup.lng,
@@ -195,6 +208,7 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
       lines, totalCents, rangeLowCents, rangeHighCents,
       expiresAt: expiresAt.toISOString(), routeAvailable, routeSource,
       pricedForAt: input.scheduledAtUtc ? pricingAt.toISOString() : null,
+      minCents,
       airport: isAirportPoint(input.pickup.lat, input.pickup.lng) || isAirportPoint(input.dropoff.lat, input.dropoff.lng),
       dynamic,
     },

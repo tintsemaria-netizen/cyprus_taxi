@@ -6,6 +6,7 @@ const booking = {
   },
   currentLocation: 'Current location',
   form: {
+    prebookMin: 'Pre-booking in Nicosia: at least {amount}, above that by the meter.',
     priceUpdated: 'The price was updated to {price}. Check it and tap «Order» again.',
     resetRoute: 'Clear the route',
     onMap: 'On map',

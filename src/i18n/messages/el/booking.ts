@@ -9,6 +9,7 @@ const booking: Catalog<typeof en> = {
   },
   currentLocation: 'Τρέχουσα τοποθεσία',
   form: {
+    prebookMin: 'Προκράτηση στη Λευκωσία: τουλάχιστον {amount}, πάνω από αυτό με το ταξίμετρο.',
     priceUpdated: 'Η τιμή ενημερώθηκε σε {price}. Ελέγξτε την και πατήστε ξανά «Παραγγελία».',
     resetRoute: 'Εκκαθάριση διαδρομής',
     onMap: 'Στον χάρτη',

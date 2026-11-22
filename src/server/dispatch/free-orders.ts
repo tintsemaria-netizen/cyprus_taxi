@@ -1,3 +1,4 @@
+import { bookingMinCents } from '@/lib/prebook-min';
 import { prisma } from '@/lib/db';
 import { blockedPassengerIdsForDriver, isPairBlocked } from './blocked-pairs';
 import { Prisma } from '@prisma/client';
@@ -36,6 +37,7 @@ export interface FreeOrder {
   scheduledAt: string | null;
   fareCents: number | null;
   priceType: string | null;
+  minCents: number | null;
   currency: string;
   waitingSince: string; // when the ride was opened to all drivers
   expiresAt: string; // when it leaves the board (→ NO_DRIVER)
@@ -87,6 +89,7 @@ export async function listFreeOrders(driverId: string, now: Date = new Date()): 
       scheduledAt: b.scheduledAt ? b.scheduledAt.toISOString() : null,
       fareCents: b.fareCents,
       priceType: b.priceType,
+      minCents: bookingMinCents(b), // pre-booking minimum in Nicosia (2026-11-22)
       currency: config.currency,
       waitingSince: openedAt!.toISOString(),
       expiresAt: deadlineAt.toISOString(),

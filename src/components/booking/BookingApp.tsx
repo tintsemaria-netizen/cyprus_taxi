@@ -547,7 +547,7 @@ export default function BookingApp() {
   // Only the ±15 % range is shown, no single «≈» figure (2026-11-16). An upfront fare (low = high) shows one price.
   const fmtRange = (q: { rangeLowCents: number; rangeHighCents: number }) =>
     q.rangeLowCents === q.rangeHighCents ? fmt.money(q.rangeLowCents, 'EUR') : `${fmt.money(q.rangeLowCents, 'EUR')}–${fmt.money(q.rangeHighCents, 'EUR')}`;
-  interface QuoteBody { quoteId: string; priceType: string; totalCents: number; rangeLowCents: number; rangeHighCents: number; night: boolean; holiday: boolean; routeAvailable: boolean; airport?: boolean; lines: { code: string; label: string; cents: number }[]; }
+  interface QuoteBody { quoteId: string; priceType: string; totalCents: number; rangeLowCents: number; rangeHighCents: number; night: boolean; holiday: boolean; routeAvailable: boolean; airport?: boolean; minCents?: number | null; lines: { code: string; label: string; cents: number }[]; }
   // Every class is quoted in parallel so the passenger can compare prices before choosing
   // (2026-10-01 audit). `quote` is the selected class's quote (used for booking + review).
   const [quotes, setQuotes] = useState<Partial<Record<'COMFORT' | 'XL', QuoteBody>>>({});
@@ -843,6 +843,8 @@ export default function BookingApp() {
           );
         })}
       </div>
+      {/* Pre-booking minimum in Nicosia (2026-11-22): at least €20, above that the meter counts. */}
+      {(() => { const m = quotes[vClass as 'COMFORT' | 'XL']?.minCents; return m ? <p className="mt-2 rounded-[10px] border border-accent/40 bg-accent/10 px-3 py-2 text-xs text-ink" data-testid="prebook-min">{t('booking.form.prebookMin', { amount: fmt.money(m, 'EUR') })}</p> : null; })()}
       {errors.pax && <p className="mt-1 text-xs text-danger">{errors.pax}</p>}
     </div>
   );

@@ -1,5 +1,15 @@
 # Session handoff
 
+## 2026-11-22 — Pre-booking minimum in Nicosia (€20) — deployed to main
+
+- Operator: a PRE-BOOKED ride inside Nicosia costs at least €20; above €20 the meter counts. Our commercial rule, not a regulated figure.
+- `src/lib/prebook-min.ts`: `prebookMinCents` / `bookingMinCents` — scheduled AND pickup + drop-off in the Nicosia area (SHARE_TOWNS NICOSIA, 11 km), never fixed/shared fares. Env `PREBOOK_MIN_NICOSIA_CENTS` (default 2000, 0 = off).
+- Quote: total raised to €20 with line `prebookMin`, range clamped, `minCents` returned. `fareRangeCents/Text(…, minCents)` clamp the ±15 % range (driver offer, free orders, pre-booking board).
+- Driver close sheet: note + total ≥ minimum; settlement below the minimum → 422 BELOW_MINIMUM. Passenger stop added mid-trip keeps the minimum.
+- Passenger: note under the class prices (testid prebook-min). i18n 8 languages.
+- Tests: tests/prebook-min.test.ts, tests/pricing.db.test.ts (full suite 351 passed).
+- Branch `arrive-window` (arrival window + driver/dispatch display, commit df13862) is still LOCAL, not deployed.
+
 ## 2026-11-22 — ride-share option wording (deployed)
 
 **Change:**

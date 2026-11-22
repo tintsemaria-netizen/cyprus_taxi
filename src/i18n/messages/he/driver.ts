@@ -304,6 +304,7 @@ const driver: Catalog<typeof en> = {
     loadFailed: "לא ניתן לטעון נסיעות מתוזמנות.",
   },
   close: {
+    prebookMin: 'הזמנה מראש בניקוסיה: לפחות {amount}. אם המונה מראה פחות, הנוסע משלם {amount}.',
     title: "עלות הנסיעה",
     subtitle: "בדקו את הסכום עם {name} לפני הסיום.",
     loadFailed: "לא ניתן לטעון את הסכום. אפשר עדיין לסיים את הנסיעה.",

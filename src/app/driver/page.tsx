@@ -48,7 +48,7 @@ interface Offer {
   offerId: string; expiresAt: string; expiresInMs: number; localDeadline?: number; pickupEtaSec: number | null; pickupDistanceM: number | null;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string; postcode?: string | null }; stop?: { lat: number; lng: number; label: string } | null;
   vClass: string; passengerCount: number; luggageCount?: number; passengerName: string; note: string | null; flightNumber?: string | null; scheduledAt: string | null;
-  fareCents: number | null; priceType: string | null; currency: string; fareBreakdown: { label: string; cents: number }[] | null;
+  fareCents: number | null; priceType: string | null; currency: string; fareBreakdown: { label: string; cents: number }[] | null; minCents?: number | null;
 }
 interface TripCard {
   bookingId: string; reference: string; at: string; pickupLabel: string; dropoffLabel: string; vClass: string; passengerCount: number;
@@ -634,7 +634,7 @@ function HomeSection(props: {
             {offer.stop && <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.stop.via')}</span><span className="font-medium">{offer.stop.label}</span></div>}
             <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{offer.dropoff.label}<Postcode code={offer.dropoff.postcode} /></span></div>
             <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span><ClassBadge vClass={offer.vClass} /></div>
-            <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{offer.fareCents != null ? fareRangeText(offer.fareCents, offer.priceType, (c) => money(c, offer.currency)) : '—'}</span></div>
+            <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{offer.fareCents != null ? fareRangeText(offer.fareCents, offer.priceType, (c) => money(c, offer.currency), offer.minCents) : '—'}</span></div>
             {offer.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(offer.scheduledAt)}</div>}
             {offer.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: offer.note })}</div>}
             {offer.flightNumber && <div className="font-mono text-xs text-ink">✈ {t('driver.scheduled.flight', { flight: formatFlight(offer.flightNumber) })}</div>}
@@ -684,7 +684,7 @@ function SubTabs<T extends string>({ value, onChange, items }: { value: T; onCha
 interface FreeOrder {
   bookingId: string; pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string; postcode?: string | null }; stop?: { lat: number; lng: number; label: string } | null;
   vClass: string; passengerName: string; passengerCount: number; luggageCount?: number; note: string | null; flightNumber: string | null; scheduledAt: string | null;
-  fareCents: number | null; priceType: string | null; currency: string; waitingSince: string; expiresAt: string; expiresInMs: number; distanceM: number | null;
+  fareCents: number | null; priceType: string | null; minCents?: number | null; currency: string; waitingSince: string; expiresAt: string; expiresInMs: number; distanceM: number | null;
   localDeadline?: number;
 }
 
@@ -754,7 +754,7 @@ function FreeOrdersSection({ pos, onDuty, onTaken }: { pos: { lat: number; lng: 
               <p className="mt-2 text-sm font-medium">{o.passengerName}</p>
               {o.note && <p className="mt-1 text-xs text-muted">{t('driver.offer.note', { note: o.note })}</p>}
               <div className="mt-3 flex items-center justify-between gap-3">
-                <div className="text-sm"><span className="font-semibold">{o.fareCents != null ? fareRangeText(o.fareCents, o.priceType, (c) => money(c, o.currency)) : '—'}</span></div>
+                <div className="text-sm"><span className="font-semibold">{o.fareCents != null ? fareRangeText(o.fareCents, o.priceType, (c) => money(c, o.currency), o.minCents) : '—'}</span></div>
                 <button className="btn-primary min-h-[44px]" onClick={() => setViewId(o.bookingId)}>{t('driver.free.view')}</button>
               </div>
             </div>
@@ -811,7 +811,7 @@ function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
                 {o.stop && <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.stop.via')}</span><span className="font-medium">{o.stop.label}</span></div>}
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{o.dropoff.label}<Postcode code={o.dropoff.postcode} /></span></div>
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{o.passengerName}</span><ClassBadge vClass={o.vClass} /></div>
-                <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{o.fareCents != null ? fareRangeText(o.fareCents, o.priceType, (c) => money(c, o.currency)) : '—'}</span></div>
+                <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{o.fareCents != null ? fareRangeText(o.fareCents, o.priceType, (c) => money(c, o.currency), o.minCents) : '—'}</span></div>
                 {o.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(o.scheduledAt)}</div>}
                 {o.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: o.note })}</div>}
                 {o.flightNumber && <div className="font-mono text-xs text-ink">✈ {t('driver.scheduled.flight', { flight: formatFlight(o.flightNumber) })}</div>}
