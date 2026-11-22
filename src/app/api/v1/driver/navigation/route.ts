@@ -5,6 +5,8 @@ import { isLocale } from '@/i18n/config';
 import { prisma } from '@/lib/db';
 import { googleConfigured, googleNavRoute } from '@/server/google';
 import { rateLimit } from '@/lib/rate-limit';
+import { pairStopsFor } from '@/server/pair-route';
+import { coRiderNext } from '@/lib/pair-stops';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,18 +31,30 @@ export async function POST(req: Request) {
   const toStop = b.status === 'IN_PROGRESS' && b.stopLat != null && b.stopLng != null && !b.stopDepartedAt;
   const leg = b.status !== 'IN_PROGRESS' ? 'pickup' : toStop ? 'stop' : 'dropoff';
   const to = leg === 'dropoff' ? { lat: b.dropoffLat, lng: b.dropoffLng } : leg === 'stop' ? { lat: b.stopLat!, lng: b.stopLng! } : { lat: b.pickupLat, lng: b.pickupLng };
+  // A ride-share pair (2026-11-22): when the co-rider's pickup / drop-off comes next in the trip
+  // order, drive there first. The stop always comes from the pair the driver carries, never the client.
+  const co = coRiderNext(await pairStopsFor(ctx.driver.id, b.id));
+  if (co) {
+    const coBase = { bookingId: co.bookingId, status: co.status, leg: `co-${co.kind}`, target: { lat: co.lat, lng: co.lng } };
+    if (co.status === 'ARRIVED') return apiOk({ ...coBase, available: false, reason: 'ARRIVED' });
+    return route(coBase, coBase.target);
+  }
   const base = { bookingId: b.id, status: b.status, leg, target: to };
   if (b.status === 'ARRIVED') return apiOk({ ...base, available: false, reason: 'ARRIVED' });
-  if (!googleConfigured()) return apiOk({ ...base, available: false, reason: 'NO_ROUTER' });
+  return route(base, to);
 
-  // Rerouting is client-driven (off-route / periodic); bound it per driver.
-  const rl = await rateLimit('driver-nav', ctx.driver.id, 20, 60);
-  if (!rl.ok) return Errors.throttled(rl.retryAfter);
-  try {
-    const r = await googleNavRoute({ ...from, heading }, to, lang, { timeoutMs: 8000 });
-    if (!r) return apiOk({ ...base, available: false, reason: 'NO_ROUTE' });
-    return apiOk({ ...base, available: true, ...r });
-  } catch {
-    return apiOk({ ...base, available: false, reason: 'ROUTER_ERROR' });
+  async function route(base: Record<string, unknown>, to: { lat: number; lng: number }) {
+    if (!googleConfigured()) return apiOk({ ...base, available: false, reason: 'NO_ROUTER' });
+
+    // Rerouting is client-driven (off-route / periodic); bound it per driver.
+    const rl = await rateLimit('driver-nav', ctx.driver.id, 20, 60);
+    if (!rl.ok) return Errors.throttled(rl.retryAfter);
+    try {
+      const r = await googleNavRoute({ ...from, heading }, to, lang, { timeoutMs: 8000 });
+      if (!r) return apiOk({ ...base, available: false, reason: 'NO_ROUTE' });
+      return apiOk({ ...base, available: true, ...r });
+    } catch {
+      return apiOk({ ...base, available: false, reason: 'ROUTER_ERROR' });
+    }
   }
 }

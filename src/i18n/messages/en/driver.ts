@@ -313,6 +313,7 @@ const driver = {
     arriveAt: 'arrive {time}',
     arrivedPickup: 'You have arrived at the pickup',
     arrivedDestination: 'You have arrived at the destination',
+    pairStep: 'Stop {n} of {total}',
     waitingFor: 'Waiting for {name}',
     continueTo: 'Continue to {place}',
     loading: 'Building the route…',

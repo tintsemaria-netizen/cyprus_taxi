@@ -342,6 +342,7 @@ const driver: Catalog<typeof en> = {
     arriveAt: "przyjazd {time}",
     arrivedPickup: "Jesteś na miejscu odbioru",
     arrivedDestination: "Jesteś w miejscu docelowym",
+    pairStep: 'Przystanek {n} z {total}',
     waitingFor: "Czekasz na: {name}",
     continueTo: "Jedź dalej do {place}",
     loading: "Wyznaczanie trasy…",

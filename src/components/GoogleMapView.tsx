@@ -6,7 +6,7 @@ import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { CYPRUS_BOUNDS } from '@/lib/config';
 import type { MapMarker } from './MapView';
 import { fitKeyOf } from './mapFit';
-import { vehicleMarkerEl, orientVehicle, steerVehicle, bearing, personMarkerEl, pickupPinEl, navArrowEl } from './carMarker';
+import { vehicleMarkerEl, orientVehicle, steerVehicle, bearing, personMarkerEl, pickupPinEl, navArrowEl, numberedStopEl } from './carMarker';
 import { distanceM } from '@/lib/gpsFilter';
 import { useIdleReturn } from './useIdleReturn';
 import { useTwoFingerCamera } from './useTwoFingerCamera';
@@ -102,6 +102,7 @@ function markerEl(mk: MapMarker): HTMLElement {
     el.classList.add('ily-vehicle');
     return centerOnPoint(el);
   }
+  if (mk.num != null && mk.kind !== 'vehicle' && mk.kind !== 'person') return centerOnPoint(numberedStopEl({ num: mk.num, kind: mk.kind, next: mk.next, title: mk.label }));
   if (mk.kind === 'person') return centerOnPoint(personMarkerEl({ title: mk.label, stale: mk.stale }));
   // Pin: the needle tip (element bottom) is the point — Google's default bottom anchor, no shift.
   if (mk.kind === 'pickup') { const el = pickupPinEl({ title: mk.label, stale: mk.stale, pulse: mk.pulse }); el.dataset.sig = mk.pulse ? 'pulse' : 'pin'; return el; }
@@ -331,19 +332,20 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     // A focus point with its own zoom owns the camera (2026-11-17): don't fit the markers around it.
     if (focus && focusZoom != null) return;
     const pad = fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 };
+    const fm = markers.filter((m) => !m.noFit); // later stops of a shared ride are shown, not framed
     // One point + a drawn route (2026-11-19: trip in progress while the car's position is not known)
     // frames the whole route too, instead of a close-up of the destination with the line cut off.
-    if (markers.length >= 2 || (markers.length === 1 && fitRoute && route && route.length > 1)) {
+    if (fm.length >= 2 || (fm.length === 1 && fitRoute && route && route.length > 1)) {
       const b = new g.LatLngBounds();
-      markers.forEach((m) => b.extend({ lat: m.lat, lng: m.lng }));
+      fm.forEach((m) => b.extend({ lat: m.lat, lng: m.lng }));
       // The drawn route can bulge outside its end points — include it so all of it shows.
       if (fitRoute && route) route.forEach(([lng, lat]) => b.extend({ lat, lng }));
       map.fitBounds(b, pad);
       // Points very close together (driver waiting at the pickup): don't zoom in past street level.
       g.event.addListenerOnce(map, 'idle', () => { if (map.getZoom() > 17) map.setZoom(17); });
-    } else if (markers.length === 1) {
-      if (focusZoom != null) centerPointAt(map, markers[0].lat, markers[0].lng, pad, focusZoom);
-      else framePoint(map, g, markers[0].lat, markers[0].lng, pad);
+    } else if (fm.length === 1) {
+      if (focusZoom != null) centerPointAt(map, fm[0].lat, fm[0].lng, pad, focusZoom);
+      else framePoint(map, g, fm[0].lat, fm[0].lng, pad);
     } else {
       const b = new g.LatLngBounds();
       b.extend({ lat: CYPRUS_BOUNDS.south, lng: CYPRUS_BOUNDS.west });
@@ -360,7 +362,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   useEffect(() => {
     const map = mapRef.current, el = containerRef.current;
     if (!keepInView || !map || !el || !ready || followRef.current || idle.active.current) return;
-    const pts: { lat: number; lng: number }[] = markers.map((m) => ({ lat: m.lat, lng: m.lng }));
+    const pts: { lat: number; lng: number }[] = markers.filter((m) => !m.noFit).map((m) => ({ lat: m.lat, lng: m.lng }));
     if (route) route.forEach(([lng, lat]) => pts.push({ lat, lng }));
     if (pts.length < 2) return;
     const pad = fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 };

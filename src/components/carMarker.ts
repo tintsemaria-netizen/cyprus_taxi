@@ -275,3 +275,20 @@ export function steerVehicle(el: HTMLElement, mapHeading: number, targetBearing:
   el.dataset.bearingShown = String(next);
   setVehicleHeading(el, ((next - mapHeading) % 360 + 360) % 360);
 }
+
+/**
+ * A numbered stop of a ride-share pair (2026-11-22): a round badge with the stop's number in trip
+ * order — lime for a pickup, white for a drop-off; the next stop is larger with a glow. Centred on the point.
+ */
+export function numberedStopEl(opts: { num: number; kind: 'pickup' | 'dropoff' | 'stop'; next?: boolean; title?: string }): HTMLElement {
+  const el = document.createElement('div');
+  const size = opts.next ? 34 : 26;
+  const bg = opts.kind === 'pickup' ? '#C8FF46' : opts.kind === 'stop' ? '#FFC83D' : '#F5F7F6';
+  el.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;background:${bg};color:#0d1608;border:2px solid #0d1608;`
+    + `display:flex;align-items:center;justify-content:center;font:800 ${opts.next ? 17 : 14}px/1 system-ui,sans-serif;`
+    + `box-shadow:${opts.next ? '0 0 0 5px rgba(200,255,70,0.35),' : ''}0 2px 6px rgba(0,0,0,0.5)`;
+  el.textContent = String(opts.num);
+  el.dataset.testid = 'pair-stop';
+  if (opts.title) el.title = opts.title;
+  return el;
+}

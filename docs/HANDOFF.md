@@ -1,5 +1,15 @@
 # Session handoff
 
+## 2026-11-22 — Ride-share pair: co-rider stops on the driver's live navigation (branch `pair-stops-nav`, NOT deployed)
+
+- Operator: «начнем с остановки». Before: the live navigation only drove the primary trip; the co-rider's pickup / drop-off were reachable only through the «👥» pill → Google Maps (e.g. host on board → the app routed straight to the host's destination, skipping the co-rider's pickup).
+- Now: `src/lib/pair-stops.ts` (`pairStops`, `coRiderNext`) + `src/server/pair-route.ts` (`pairStopsFor`). `driverCurrentTrip` returns `pair: { stops[n, kind, primary, status, name, lat, lng, label, done], next }`.
+- `/api/v1/driver/navigation`: when the co-rider's stop is next in the plan, the route goes there (`leg: co-pickup | co-dropoff`; ARRIVED → no route, waiting). Target still comes only from the driver's own accepted pair.
+- DriverNavigation: route / hint / sheet follow the next stop; sheet line «Остановка N из 4 · Посадка/Высадка», co-rider name; the stage button becomes «👥 На месте / Посадил / Высадил» and opens the co-rider sheet (event `il-y:open-co-rider`); primary actions hidden while the co-rider's stop is next.
+- Map: numbered stop badges (`MapMarker.num/next`, `numberedStopEl`) for every stop still ahead; only the next one is framed (`MapMarker.noFit` for the rest, both Google and MapLibre). The pre-booking pair map (ScheduledRides) now uses the same numbered badges.
+- Tests: tests/pair-stops.test.ts, ride-share.db «2026-11-22 … follows the pair's stop order». Full suite 356 passed / 1 skipped.
+- Local screenshots /tmp/shots/61-pair-*.png (local map has no tiles and no Google router, so the route line and badges are not visible locally).
+
 ## 2026-11-22 — Pre-booking minimum in Nicosia (€20) — deployed to main
 
 - Operator: a PRE-BOOKED ride inside Nicosia costs at least €20; above €20 the meter counts. Our commercial rule, not a regulated figure.

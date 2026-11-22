@@ -240,7 +240,7 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
 
   const markers = useMemo<MapMarker[]>(() => !d ? [] : d.pair
     // A pair: every stop on the map, numbered in the order the trip runs.
-    ? d.pair.stops.map((s) => ({ id: `s${s.n}`, kind: s.kind, lat: s.lat, lng: s.lng, label: `${s.n}. ${s.label}` }))
+    ? d.pair.stops.map((s) => ({ id: `s${s.n}`, kind: s.kind, lat: s.lat, lng: s.lng, label: `${s.n}. ${s.label}`, num: s.n }))
     : [
       { id: 'p', kind: 'pickup', lat: d.pickup.lat, lng: d.pickup.lng, label: d.pickup.label },
       { id: 'd', kind: 'dropoff', lat: d.dropoff.lat, lng: d.dropoff.lng, label: d.dropoff.label },

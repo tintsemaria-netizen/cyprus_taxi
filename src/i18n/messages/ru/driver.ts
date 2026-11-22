@@ -316,6 +316,7 @@ const driver: Catalog<typeof en> = {
     arriveAt: 'прибытие {time}',
     arrivedPickup: 'Вы прибыли к месту подачи',
     arrivedDestination: 'Вы прибыли к месту назначения',
+    pairStep: 'Остановка {n} из {total}',
     waitingFor: 'Ожидание: {name}',
     continueTo: 'Продолжайте движение к {place}',
     loading: 'Строим маршрут…',

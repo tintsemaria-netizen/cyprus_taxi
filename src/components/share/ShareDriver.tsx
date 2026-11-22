@@ -93,12 +93,16 @@ export function DriverShareProposalSheet({ p, onAnswered }: { p: DriverShareProp
  * opens a sheet with that passenger's stops and the next action (go / arrived / picked up /
  * dropped off / didn't come).
  */
+/** The navigation's «👥» action button opens the co-rider's sheet (2026-11-22). */
+export const OPEN_CO_RIDER = 'il-y:open-co-rider';
+
 export function CoRiderLegPill({ leg, share, onChanged, onError }: { leg: CoRiderLeg; share: ShareInfo | null; onChanged: () => void; onError: (msg: string) => void }) {
   const { t, fmt, tError } = useT();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState('');
   const [confirmNoShow, setConfirmNoShow] = useState(false);
+  useEffect(() => { const on = () => setOpen(true); window.addEventListener(OPEN_CO_RIDER, on); return () => window.removeEventListener(OPEN_CO_RIDER, on); }, []);
   const statusText = ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(leg.status) ? t(`share.driver.state.${leg.status as 'ASSIGNED'}`) : leg.status;
   async function act(path: string, body: Record<string, unknown> = {}) {
     setBusy(true);

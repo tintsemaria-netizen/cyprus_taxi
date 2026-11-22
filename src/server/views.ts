@@ -1,3 +1,4 @@
+import { pairStopsFor } from '@/server/pair-route';
 import { config } from '@/lib/config';
 import { noDriverRetryable } from '@/lib/ride-outcome';
 import { gpsMeterFor } from '@/server/gps-meter';
@@ -291,7 +292,9 @@ async function driverShareView(driverId: string, primaryBookingId: string) {
       };
     }
   }
-  return { shareProposal, coRider, share };
+  // All four stops in trip order, so the live navigation drives to the co-rider's stop when it is next (2026-11-22).
+  const pair = g ? await pairStopsFor(driverId, primaryBookingId) : null;
+  return { shareProposal, coRider, share, pair };
 }
 
 export async function driverCurrentTrip(driverId: string) {
@@ -301,7 +304,7 @@ export async function driverCurrentTrip(driverId: string) {
   });
   const driver = await prisma.driver.findUnique({ where: { id: driverId } });
   if (!active) {
-    return { onDuty: driver?.onDuty ?? false, available: driver?.available ?? false, trip: null, shareProposal: null, coRider: null, share: null, gpsMeter: null };
+    return { onDuty: driver?.onDuty ?? false, available: driver?.available ?? false, trip: null, shareProposal: null, coRider: null, share: null, pair: null, gpsMeter: null };
   }
   const b = active.booking;
   const waiting = b.status === 'ARRIVED' ? await prisma.waitingSession.findUnique({ where: { bookingId: b.id } }) : null;
