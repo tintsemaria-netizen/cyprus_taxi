@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-22 (23:55) — Pre-booking window: arrival window only, under «Попутчик»; board only from «Мои предзаказы» — deployed
+
+- Operator: no «Подача в / Быть на месте» tabs. A pre-booking is always «Когда вам нужно быть на месте?» (date, «Не раньше», «Не позже», computed departure); the block sits UNDER the «Попутчик» box, with or without a co-rider (`schedule-arrive`). The share box shows only people/bags + «минимум за 3 ч». `arriveMode` is always true for pre-bookings; arriveCalc only in SCHEDULE.
+- Share board link: only on «Мои предзаказы» (removed from the account menu and from under the share box); board back arrow → /prebookings.
+- Full suite 364 passed; Playwright: plain and co-rider pre-bookings POST 201.
 ## 2026-11-22 (23:30) — Notification changes by the operator (branch `co-arrive`, deployed 2026-11-23 on «заливай»)
 
 Branch `co-arrive` also holds: co-rider arrival window in the co-rider sheet / navigation (item 12) and the language rule (I18nProvider saves the language for pushes on every page; rule in CLAUDE.md).

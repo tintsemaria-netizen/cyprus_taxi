@@ -55,7 +55,7 @@ export default function Page() {
 
   return (
     <div>
-      <PassengerTopBar back="/" />
+      <PassengerTopBar back="/prebookings" />
       <div className="mx-auto max-w-lg p-4 sm:p-6" data-testid="share-board">
         <h1 className="mb-1 text-xl font-bold">{t('share.board.title')}</h1>
         <p className="mb-4 text-sm text-muted">{t('share.board.subtitle', { h: board?.hideHours ?? 10 })}</p>
