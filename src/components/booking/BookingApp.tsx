@@ -897,6 +897,8 @@ export default function BookingApp() {
   const arriveBox = (
     <div data-testid="arrive-window">
       {shareArrive && <p className="mb-2 text-xs text-muted" data-testid="share-min-note">{t('share.booking.minNote', { h: shareMinH })}</p>}
+      {/* The hint sits ABOVE the date field until both times are set (2026-11-22, operator). */}
+      {!arriveWindow() && <p className="mb-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium text-ink" data-testid="arrive-hint">{t('booking.arrive.hint')}</p>}
       <input type="date" className="field block w-full min-w-0 max-w-full appearance-none" value={arriveDay} min={scheduleMin.slice(0, 10)} onChange={(e) => setArriveDay(e.target.value)} aria-label={t('booking.arrive.day')} />
       {/* Two equal columns that never overflow (iPhone draws time inputs wider than the column), a grey «00:00»
           until a time is chosen (2026-11-22, operator). */}
@@ -904,11 +906,13 @@ export default function BookingApp() {
         <TimeBox label={t('booking.arrive.from')} testid="arrive-from" value={arriveFromT} onChange={setArriveFromT} bad={!!errors.scheduledAt} />
         <TimeBox label={t('booking.arrive.to')} testid="arrive-to" value={arriveToT} onChange={setArriveToT} bad={!!errors.scheduledAt} />
       </div>
-      <p className={`mt-2 rounded-[10px] border px-3 py-2 text-[13px] font-medium text-ink ${arriveBadWidth ? 'border-warn/50 bg-warn/15' : 'border-accent/50 bg-accent/15'}`} data-testid="arrive-leave">
-        {arriveBadWidth ? t('booking.arrive.badWidth') : arriveCalc
-          ? t('booking.arrive.leave', { from: fmt.clock(arriveCalc.leaveFrom.slice(11)), to: fmt.clock(arriveCalc.leaveBy.slice(11)), n: arriveCalc.drive })
-          : arriveWindow() ? t('booking.arrive.needRoute') : t('booking.arrive.hint')}
-      </p>
+      {arriveWindow() && (
+        <p className={`mt-2 rounded-[10px] border px-3 py-2 text-[13px] font-medium text-ink ${arriveBadWidth ? 'border-warn/50 bg-warn/15' : 'border-accent/50 bg-accent/15'}`} data-testid="arrive-leave">
+          {arriveBadWidth ? t('booking.arrive.badWidth') : arriveCalc
+            ? t('booking.arrive.leave', { from: fmt.clock(arriveCalc.leaveFrom.slice(11)), to: fmt.clock(arriveCalc.leaveBy.slice(11)), n: arriveCalc.drive })
+            : t('booking.arrive.needRoute')}
+        </p>
+      )}
       {shareArrive && errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
     </div>
   );
