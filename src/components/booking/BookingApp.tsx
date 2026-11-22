@@ -1278,7 +1278,6 @@ export default function BookingApp() {
                       {when === 'SCHEDULE' && cfg?.share && (
                         <div className="-mt-4 mb-3">
                           <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook arrive={shareOn ? <p className="text-xs text-muted" data-testid="share-min-note">{t('share.booking.minNote', { h: shareMinH })}</p> : undefined} disabled={!shareAllowed} />
-                          {passenger && !passenger.guest && <a href="/share-board" className="mt-2 block text-center text-sm font-semibold text-accent" data-testid="open-board-link">👥 {t('share.board.open')} →</a>}
                         </div>
                       )}
                       {/* «Когда вам нужно быть на месте?» under the «Попутчик» switch (2026-11-22, operator), with or without a co-rider. */}
