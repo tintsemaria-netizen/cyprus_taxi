@@ -33,17 +33,10 @@ function SharePairBox({ s }: { s: ShareBoard }) {
       <div className="font-semibold text-accent">👥 {t('share.driver.boardPair', { n: s.passengers, bags: s.luggage })}</div>
       <div className="text-ink">{t('share.driver.boardSecond', { time: fmt.time(s.guestPickupAt), from: s.guestPickupLabel, to: s.guestDropoffLabel })}</div>
       <div className="font-semibold text-ink">{t('share.driver.boardTotal', { amount: fmt.money(s.totalFareCents) })}</div>
-      {s.hostArrive && <ArriveLine a={s.hostArrive} who={1} />}
-      {s.guestArrive && <ArriveLine a={s.guestArrive} who={2} />}
     </div>
   );
 }
-// «Быть на месте с … до …» (2026-11-22): the passenger must ARRIVE inside this window — the driver
-// sees the deadline so he knows he must not be late.
-function ArriveLine({ a, who }: { a: { from: string; by: string }; who?: 1 | 2 }) {
-  const { t, fmt } = useT();
-  return <div className="font-semibold text-accent" data-testid="arrive-line">🏁 {who ? `${t('driver.scheduled.passengerN', { n: who })} · ` : ''}{t('driver.scheduled.arrive', { from: fmt.time(a.from), to: fmt.time(a.by) })}</div>;
-}
+// No «быть на месте» on the driver's screens (operator, 2026-11-23): only the time between the stops.
 interface Board { available: Item[]; mine: Item[]; blocked: string | null }
 
 // Mirrors config.dispatch.preassign defaults (display only; the server enforces the real values).
@@ -91,7 +84,6 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
       <div className="mt-1 text-sm font-semibold text-accent">👥 {t('share.driver.boardCompact')}</div>
       <div className="mt-1.5 text-sm">{i.pickupLabel} → {i.dropoffLabel}</div>
       <div className="mt-1.5 text-base font-bold">{fmt.money(s.totalFareCents)}</div>
-      {(s.hostArrive || s.guestArrive) && <div className="mt-1 text-xs">{s.hostArrive && <ArriveLine a={s.hostArrive} who={1} />}{s.guestArrive && <ArriveLine a={s.guestArrive} who={2} />}</div>}
       {i.conflict && <p className="mt-1 text-xs text-warn">{t('driver.scheduled.conflict')}</p>}
     </button>
   );
@@ -112,7 +104,6 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
         {i.flightNumber && <span className="font-mono text-ink">{t('driver.scheduled.flight', { flight: formatFlight(i.flightNumber) })}</span>}
         {i.fareCents != null && <span>{fareRangeText(i.fareCents, i.priceType, (c) => fmt.money(c), i.minCents)}</span>}
       </div>
-      {i.arrive && <div className="mt-1.5 text-xs"><ArriveLine a={i.arrive} /></div>}
       {i.share && <SharePairBox s={i.share} />}
       {i.note && <p className="mt-2 rounded-[10px] border border-warn/30 bg-warn/5 px-2.5 py-1.5 text-xs text-warn">💬 {i.note}</p>}
       {/* This ride's own time rules (2026-11-13: moved here from the page header). */}
@@ -221,7 +212,6 @@ function PairStops({ p, s: sb }: { p: PairDetail; s?: ShareBoard | null }) {
           {s.kind === 'pickup' && (
             <div className="mt-0.5 text-muted">{who(s)}{s.fareCents != null && <> · <span className="font-semibold text-ink">{fmt.money(s.fareCents)}</span></>}</div>
           )}
-          {s.kind === 'dropoff' && (s.who === 'host' ? sb?.hostArrive : sb?.guestArrive) && <div className="mt-1 text-xs"><ArriveLine a={(s.who === 'host' ? sb?.hostArrive : sb?.guestArrive)!} /></div>}
           {s.toNext && <div className="mt-1 text-xs text-accent">→ {t('share.driver.pair.toNext', { min: s.toNext.min, km: s.toNext.km.toLocaleString(undefined, { maximumFractionDigits: 1 }) })}</div>}
         </div>
       ))}
@@ -291,7 +281,6 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
               </>}
               {d.pair ? <PairStops p={d.pair} s={d.share} /> : d.share && <SharePairBox s={d.share} />}
               {d.note && <p className="mt-2 rounded-[10px] border border-warn/30 bg-warn/5 px-2.5 py-1.5 text-xs text-warn">💬 {d.note}</p>}
-              {d.arrive && <div className="mt-2 rounded-[10px] border border-accent/50 bg-accent/10 px-2.5 py-1.5 text-sm"><ArriveLine a={d.arrive} /></div>}
               {d.flightNumber && <p className="mt-2 font-mono text-xs text-ink">{t('driver.scheduled.flight', { flight: formatFlight(d.flightNumber) })}</p>}
               <div className="mt-2 space-y-0.5 rounded-[10px] border border-edge bg-page px-2.5 py-2 text-xs text-muted">
                 <div>🕒 {t('driver.scheduled.freeUntil', { time: fmt.time(new Date(new Date(d.pickupAt).getTime() - PROTECT_MIN * 60_000)), min: PROTECT_MIN })}</div>

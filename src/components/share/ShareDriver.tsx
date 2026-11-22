@@ -1,5 +1,7 @@
 'use client';
 
+import { PairLegs } from '@/components/share/PairLegs';
+import type { PairStops } from '@/lib/pair-stops';
 import { useEffect, useState } from 'react';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
@@ -17,8 +19,6 @@ export interface CoRiderLeg {
   passengerName: string; passengerPhone: string; passengerCount: number; childCount: number; luggageCount: number;
   fareCents: number | null; startCodeRequired: boolean; flightNumber: string | null; note: string | null; isHost: boolean;
   waiting: { arrivedAt: string; graceSeconds: number } | null;
-  /** «Быть на месте с … до …» of this passenger (2026-11-22). */
-  arrive?: { from: string; by: string } | null;
 }
 export interface ShareInfo { groupId: string; discountPct: number; totalCents: number; primaryIsHost: boolean }
 
@@ -98,7 +98,7 @@ export function DriverShareProposalSheet({ p, onAnswered }: { p: DriverShareProp
 /** The navigation's «👥» action button opens the co-rider's sheet (2026-11-22). */
 export const OPEN_CO_RIDER = 'il-y:open-co-rider';
 
-export function CoRiderLegPill({ leg, share, onChanged, onError }: { leg: CoRiderLeg; share: ShareInfo | null; onChanged: () => void; onError: (msg: string) => void }) {
+export function CoRiderLegPill({ leg, share, pair, onChanged, onError }: { leg: CoRiderLeg; share: ShareInfo | null; pair?: PairStops | null; onChanged: () => void; onError: (msg: string) => void }) {
   const { t, fmt, tError } = useT();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -146,10 +146,10 @@ export function CoRiderLegPill({ leg, share, onChanged, onError }: { leg: CoRide
                 {t('share.who.adults', { n: leg.passengerCount - leg.childCount })}{leg.childCount ? ` · ${t('share.who.children', { n: leg.childCount })}` : ''} · {t('share.who.luggage', { n: leg.luggageCount })}
                 {leg.fareCents != null && <> · <span className="font-semibold text-ink">{fmt.money(leg.fareCents)}</span></>}
               </div>
-              {leg.arrive && <div className="text-sm font-semibold text-accent" data-testid="co-arrive">🏁 {t('driver.scheduled.arrive', { from: fmt.time(leg.arrive.from), to: fmt.time(leg.arrive.by) })}</div>}
               {leg.flightNumber && <div className="font-mono text-xs text-muted">✈ {leg.flightNumber}</div>}
               {leg.note && <div className="text-xs text-warn">{leg.note}</div>}
               {share && <div className="pt-1 text-xs text-muted">{t('share.driver.total', { amount: fmt.money(share.totalCents) })}</div>}
+              {pair && <PairLegs pair={pair} />}
             </div>
             {leg.status === 'ARRIVED' && leg.startCodeRequired && (
               <input className="field mt-3 text-center font-mono text-lg tracking-[0.3em]" inputMode="numeric" maxLength={4} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} placeholder="••••" />

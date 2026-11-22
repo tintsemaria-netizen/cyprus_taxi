@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-23 — Driver: no «быть на месте», time between the pair's stops instead (branch `pair-legs`, NOT deployed — shown)
+
+- Operator: «это ничего не нужно водителю, ему нужно только время в дороге 1→2, 2→3, 3→4».
+- Removed the arrival window from every DRIVER screen: DriverNavigation sheet, co-rider sheet (ShareDriver), pre-booking list / pair box / pair stops / detail (ScheduledRides ArriveLine removed). Passenger, share board, dispatch and admin keep it. Server fields for the driver (trip.arrive, hostArrive/guestArrive) are still sent but unused.
+- New `PairLegs` (src/components/share/PairLegs.tsx): the 4 stops in order with «↓ N мин» between them; done stops dimmed (✓), next highlighted. In the navigation sheet and in the co-rider sheet. `pairStopsFor` fills `toNextMin` per stop via share-detail `leg()` (Google road time, cached 10 min; estimate otherwise).
+- The pre-booking pair detail already had «до следующей точки: N мин · N км» per stop (unchanged).
+- Tests 370 passed / 1 skipped; screenshots /tmp/shots/80-legs-b.png, 80-legs-c.png.
+
 ## 2026-11-22 (23:55) — Pre-booking window: arrival window only, under «Попутчик»; board only from «Мои предзаказы» — deployed
 
 - Operator: no «Подача в / Быть на месте» tabs. A pre-booking is always «Когда вам нужно быть на месте?» (date, «Не раньше», «Не позже», computed departure); the block sits UNDER the «Попутчик» box, with or without a co-rider (`schedule-arrive`). The share box shows only people/bags + «минимум за 3 ч». `arriveMode` is always true for pre-bookings; arriveCalc only in SCHEDULE.

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { pairStops, type PairStops, type PlanStep } from '@/lib/pair-stops';
+import { leg } from '@/server/share-detail';
 
 /** The driver's accepted ride-share pair around this primary trip, as ordered stops (null when riding alone). */
 export async function pairStopsFor(driverId: string, primaryBookingId: string): Promise<PairStops | null> {
@@ -10,5 +11,9 @@ export async function pairStopsFor(driverId: string, primaryBookingId: string): 
   if (!g) return null;
   const plan = (g.plan as PlanStep[] | null) ?? [];
   if (plan.length === 0) return null;
-  return pairStops(plan, g.host, g.guest, primaryBookingId);
+  const p = pairStops(plan, g.host, g.guest, primaryBookingId);
+  // Time between the stops (operator, 2026-11-23): 1 → 2, 2 → 3, 3 → 4 by road (cached), else an estimate.
+  const legs = await Promise.all(p.stops.slice(0, -1).map((s, i) => leg(s, p.stops[i + 1], null).catch(() => null)));
+  p.stops.forEach((s, i) => { s.toNextMin = legs[i]?.min ?? null; });
+  return p;
 }

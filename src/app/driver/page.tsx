@@ -377,7 +377,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
           pair={data.pair ?? null} onOpenCoRider={() => window.dispatchEvent(new Event(OPEN_CO_RIDER))} />
         {/* Ride-share (Task 022): the second passenger's leg, and a co-rider proposal to decide on the spot. */}
         {trip.status === 'IN_PROGRESS' && data.gpsMeter && <GpsMeterCard m={data.gpsMeter} />}
-        {data.coRider && <CoRiderLegPill leg={data.coRider} share={data.share ?? null} onChanged={() => { void load(); void loadDash(); }} onError={setBanner} />}
+        {data.coRider && <CoRiderLegPill leg={data.coRider} share={data.share ?? null} pair={data.pair ?? null} onChanged={() => { void load(); void loadDash(); }} onError={setBanner} />}
         {data.shareProposal && <DriverShareProposalSheet key={data.shareProposal.groupId} p={data.shareProposal} onAnswered={() => { void load(); }} />}
       </>
     );
