@@ -1,9 +1,9 @@
 # Session handoff
 
-## 2026-11-23 — Driver navigation ☰ menu (branch `nav-menu`, NOT deployed — «покажи перед заливом»)
+## 2026-11-23 — Driver navigation ☰ menu (branch `nav-menu`, deployed 2026-11-23)
 
 - ☰ now sits above the main button (Завершить / На месте …), bottom right, absolutely placed so the map buttons keep their room; it follows the panel (same `sheetDrag.style` as the panel) and is there for the whole trip (before: only top right, only before pickup, only «Отказаться»).
-- Menu: comment + flight (if any), «📤 Поделиться поездкой» (new POST /api/v1/driver/trip/share — the driver's own ACTIVE trip only, same view-only share link as the passenger's: car, position, route, no phones; navigator.share or copy), «📋 Подробности о заказе», «Отказаться от поездки» (only before pickup, as before), «Отмена».
+- Menu: comment + flight (if any), «📤 Поделиться поездкой» (new POST /api/v1/driver/trip/share — the driver's own ACTIVE trip only, same view-only share link as the passenger's: car, position, route, no phones; navigator.share or copy), «📋 Подробности о заказе», «Отказаться от поездки» (only before pickup, as before). No «Отмена» button (operator) — a tap outside closes the menu.
 - «Подробности о заказе» — ONLY for a ride-share pair (operator 01:13): sub-sheet with BackArrow (back → menu), the pair's stops with minutes between them (PairLegs, moved here from the panel) plus comment and flight.
 - Comment and flight removed from the panel (only in ☰); an amber dot on ☰ when the ride has a comment or a flight.
 - Texts in 8 languages (driver.navigation.shareTrip/…/orderDetails/comment/flight). Test: navigation.db «Поделиться поездкой». Suite 371 passed / 1 skipped. Screens /tmp/shots/90-menu-*.png.

@@ -528,7 +528,7 @@ export function DriverNavigation(props: {
             {/* Only for a ride-share pair (operator, 2026-11-23): an ordinary ride has nothing more to show. */}
             {props.pair && <button className="relative mx-auto block h-[53px] w-[80%] rounded-full border border-edge bg-page text-[16px] font-bold text-ink" onClick={() => { setMenuOpen(false); setDetailsOpen(true); }} data-testid="nav-details"><EdgeShine />📋 {t('driver.navigation.orderDetails')}</button>}
             {canRelease && <button className="relative mx-auto block h-[53px] w-[80%] min-w-[260px] rounded-full border border-danger/50 bg-page px-3 text-[15px] font-bold text-danger" onClick={() => { setMenuOpen(false); setAsk('release'); }}><EdgeShine />{t('driver.trip.release')}</button>}
-            <button className="relative mx-auto block h-[53px] w-[80%] rounded-full border border-edge bg-page text-[16px] font-bold text-muted" onClick={() => setMenuOpen(false)}><EdgeShine />{t('common.cancel')}</button>
+            {/* No «Отмена» (operator, 2026-11-23): tapping outside the menu closes it. */}
           </div>
         </div>
       )}
