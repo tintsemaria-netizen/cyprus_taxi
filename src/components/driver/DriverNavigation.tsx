@@ -516,7 +516,12 @@ export function DriverNavigation(props: {
 
       {menuOpen && (
         <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) setMenuOpen(false); }} data-testid="nav-menu-sheet">
-          <div className="space-y-2 rounded-t-[18px] bg-elevated p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+          <div className="relative space-y-2 rounded-t-[18px] bg-elevated p-4 pt-12" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+            {/* Small ✕ back to the main screen (operator, 2026-11-23); a tap outside closes it too. */}
+            <button type="button" onClick={() => setMenuOpen(false)} data-testid="nav-menu-close" aria-label={t('common.close')} title={t('common.close')}
+              className="absolute end-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-edge bg-page text-muted">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
+            </button>
             {(trip.note || trip.flightNumber) && (
               <div className="mb-1 space-y-1 rounded-[12px] border border-edge bg-page p-3 text-sm" data-testid="nav-menu-info">
                 {trip.note && <div><span className="text-muted">{t('driver.navigation.comment')}: </span><span className="text-warn">{trip.note}</span></div>}
