@@ -353,19 +353,13 @@ describe('pre-booked ride-share', () => {
     expect([g.mode, g.guestBookingId]).toEqual(['PREBOOK', b.id]);
     // The car leaves when the co-rider can be picked up; the first passenger waits (they allowed 15 min).
     expect(g.startAt!.getTime()).toBeGreaterThan(a.scheduledAt!.getTime());
-    // Both answer within 30 min, and at the latest an hour before the car leaves.
-    expect(g.expiresAt.getTime()).toBeLessThanOrEqual(g.startAt!.getTime() - config.share.prebookAnswerBeforePickupMin * MIN);
-    const wa = (await trackingView(a.id))!.shareProposal!;
-    expect(wa.waitMin).toBeGreaterThan(0);
-    expect(wa.waitMin).toBeLessThanOrEqual(15);
-    expect(wa.pickupAt).toBe(g.startAt!.toISOString());
-    expect(wa.arriveAt).not.toBeNull();
-    // Each passenger is asked; no names or addresses in the proposal.
-    const va = (await trackingView(a.id))!;
-    expect(va.shareProposal).toMatchObject({ mode: 'PREBOOK', coRider: { adults: 1, children: 0, luggage: 1 } });
-    expect(JSON.stringify(va.shareProposal)).not.toContain(b.pickupLabel);
-    expect(await answerShare(g.id, { kind: 'PASSENGER', bookingId: a.id }, true)).toEqual({ ok: true, status: 'PROPOSED' });
-    expect(await answerShare(g.id, { kind: 'PASSENGER', bookingId: b.id }, true)).toEqual({ ok: true, status: 'MATCHED' });
+    // Operator 2026-11-22: pre-bookings are not asked — both chose «Попутчик» with their window, so the
+    // pair is confirmed at once; each hears only «confirmed, −30%» (no prices, no question).
+    expect(g.status).toBe('MATCHED');
+    expect((await trackingView(a.id))!.shareProposal ?? null).toBeNull();
+    const pushes = await prisma.notificationOutbox.findMany({ where: { audience: { in: [`PASSENGER:${a.id}`, `PASSENGER:${b.id}`] } } });
+    expect(pushes.map((n) => (n.msg as { k: string } | null)?.k).sort()).toEqual(['share.confirmed', 'share.confirmed']);
+    expect(pushes.every((n) => !/€/.test(n.body))).toBe(true);
     expect((await fresh(a.id)).fareCents).toBe(4200);
     expect((await fresh(b.id)).fareCents).toBe(3500);
     // The first pickup moves to the shared departure; the booked time is kept for a break-up.

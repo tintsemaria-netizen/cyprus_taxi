@@ -187,7 +187,8 @@ export async function claimFreeOrder(bookingId: string, driverId: string, now: D
         correlationId: booking.id,
         payload: { bookingId: booking.id, status: 'EN_ROUTE', actorType: 'DRIVER', reason: 'auto on claim' },
       });
-      await enqueuePassengerDriverNews(tx, booking.id, 'assigned', 'Driver found', 'A driver took your ride and is on the way — track them live.');
+      // Same words as a normal assignment (operator, 2026-11-22): the passenger does not know the ride was in the free list.
+      await enqueuePassengerDriverNews(tx, booking.id, 'assigned', 'Driver assigned', 'A driver is on the way — track them live.', { k: 'ride.assigned' });
       return { ok: true, status: enRoute.status, revision: enRoute.revision };
     });
   } catch (e) {

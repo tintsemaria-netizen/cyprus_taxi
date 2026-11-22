@@ -160,14 +160,26 @@ describe('conversion near pickup', () => {
     await promoteScheduled(new Date());
     expect((await prisma.booking.findUnique({ where: { id: b.id } }))!.status).toBe('SEARCHING');
     expect(await prisma.dispatchJob.findUnique({ where: { bookingId: b.id } })).not.toBeNull();
-    // Pre-booked ride: driver changes are not announced to the passenger (2026-11-19, operator).
-    expect(await prisma.notificationOutbox.count({ where: { audience: `PASSENGER:${b.id}`, title: 'Finding you a driver' } })).toBe(0);
+    // Operator 2026-11-22: the passenger IS told — «the driver did not get online in time, we assign another».
+    const n = await prisma.notificationOutbox.findMany({ where: { audience: `PASSENGER:${b.id}`, title: 'Finding you a driver' } });
+    expect(n.map((x) => (x.msg as { k: string }).k)).toEqual(['pre.lapsedLate']);
   });
 
   it('an offline driver at the cutoff lapses too', async () => {
     const { b } = await committed(config.dispatch.scheduleLeadMinutes - 1, false);
     expect((await runPreassignments(new Date())).lapsed).toBe(1);
     expect((await prisma.preAssignment.findFirst({ where: { bookingId: b.id } }))!.endReason).toBe('driver offline at conversion');
+  });
+
+  it('2026-11-22: driver reminders an hour and 35 min before (10:00 → 09:00 and 09:25), each once', async () => {
+    const { b } = await committed(P.remindMinutes - 5, false);
+    const keys = async () => (await prisma.notificationOutbox.findMany({ where: { tag: `pre-${b.id}` }, orderBy: { createdAt: 'asc' } })).map((x) => (x.msg as { k: string } | null)?.k ?? x.title);
+    await runPreassignments(new Date());
+    expect((await keys()).filter((k) => k.startsWith('drv.preSoon'))).toHaveLength(1);
+    await runPreassignments(new Date(Date.now() + 21 * MIN)); // 34 min before
+    await runPreassignments(new Date(Date.now() + 22 * MIN));
+    const k = (await keys()).filter((x) => x.startsWith('drv.preSoon'));
+    expect(k.map((x) => x.replace('Flight', ''))).toEqual(['drv.preSoon', 'drv.preSoon35']);
   });
 
   it('the driver reminder is sent exactly once', async () => {

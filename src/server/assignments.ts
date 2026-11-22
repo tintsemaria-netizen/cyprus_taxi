@@ -161,7 +161,7 @@ export async function assignBooking(params: {
 
     // Tear down any in-flight autonomous dispatch / pre-booking for this booking.
     await stopSearchTx(tx, booking.id);
-    await endPreAssignmentTx(tx, booking.id, 'RELEASED', 'manually assigned by staff', { notifyDriver: 'A pre-booked ride you took was assigned to another driver by the operator.' });
+    await endPreAssignmentTx(tx, booking.id, 'RELEASED', 'manually assigned by staff', { notifyDriver: 'A pre-booked ride you took was assigned to another driver by the operator.', notifyDriverKey: 'drv.preReassigned' });
 
     const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: 'ASSIGNED', revision: { increment: 1 } } });
     await tx.bookingEvent.create({
@@ -196,7 +196,7 @@ export async function unassignBooking(params: {
       data: { bookingId: booking.id, type: 'UNASSIGNED', actorType: 'STAFF', actorId: params.actorId, beforeStatus: booking.status, afterStatus: next, reason: params.reason },
     });
     await recordEvent(tx, { eventType: 'booking.unassigned', aggregateType: 'booking', aggregateId: booking.id, aggregateVersion: updated.revision, correlationId: booking.id, payload: { bookingId: booking.id, status: next, actorType: 'STAFF', reason: params.reason ?? null } });
-    if (next === 'SEARCHING') await enqueuePassengerDriverNews(tx, booking.id, 'change', 'Finding you another driver', 'Your driver was changed — we’re matching you again.');
+    if (next === 'SEARCHING') await enqueuePassengerDriverNews(tx, booking.id, 'change', 'Finding you another driver', 'Your driver was changed — we’re matching you again.', { k: 'ride.rematchChanged' });
     return { revision: updated.revision, status: updated.status };
   });
 }
@@ -279,7 +279,7 @@ export async function changeStatus(params: {
     // withdraw any outstanding offer so the offered driver is released immediately.
     if (params.to === 'SEARCHING') await startSearchTx(tx, booking.id);
     if (params.to === 'CANCELED' || params.to === 'NO_DRIVER') await stopSearchTx(tx, booking.id);
-    if (params.to === 'CANCELED') await endPreAssignmentTx(tx, booking.id, 'RELEASED', 'booking canceled', { notifyDriver: 'A ride you pre-booked was canceled by the passenger.' });
+    if (params.to === 'CANCELED') await endPreAssignmentTx(tx, booking.id, 'RELEASED', 'booking canceled', { notifyDriver: 'A ride you pre-booked was canceled by the passenger.', notifyDriverKey: 'drv.preCanceled' });
     if (params.to === 'CANCELED' || params.to === 'NO_DRIVER') await leaveShareTx(tx, booking.id, `booking ${String(params.to).toLowerCase()}`);
 
     const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: params.to, revision: { increment: 1 } } });
@@ -293,7 +293,7 @@ export async function changeStatus(params: {
     });
     // Atomic driver notification when a passenger cancels an in-flight ride.
     if (params.to === 'CANCELED' && priorDriverId) {
-      await enqueueDriver(tx, priorDriverId, 'Ride canceled', 'The passenger canceled this ride.', { tag: 'ride' });
+      await enqueueDriver(tx, priorDriverId, 'Ride canceled', 'The passenger canceled this ride.', { tag: 'ride', msg: { k: 'drv.rideCanceled' } });
     }
     return { revision: updated.revision, status: updated.status };
   });

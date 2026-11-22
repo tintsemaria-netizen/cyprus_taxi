@@ -22,8 +22,8 @@ export async function passengerSetStartCode(bookingId: string, enabled: boolean)
     await tx.bookingEvent.create({ data: { bookingId, type: enabled ? 'START_CODE_ON' : 'START_CODE_OFF', actorType: 'PASSENGER', actorId: 'tracking', beforeStatus: b.status, afterStatus: b.status } });
     const a = await tx.assignment.findFirst({ where: { activeBookingId: bookingId } });
     if (a?.activeDriverId) {
-      await enqueueDriver(tx, a.activeDriverId, enabled ? 'Start code switched on' : 'Start code switched off',
-        enabled ? 'Ask the passenger for the 4-digit code to start the trip.' : 'No start code needed for this trip.', { tag: `code-${bookingId}` });
+      // No push (operator, 2026-11-22): the driver cannot start without the passenger anyway, and the
+      // trip screen asks for the code when it is needed.
     }
     return { ok: true as const, startCode };
   });

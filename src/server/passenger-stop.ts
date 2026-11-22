@@ -56,8 +56,10 @@ export async function passengerSetStop(bookingId: string, stop: StopChange): Pro
     await tx.bookingEvent.create({ data: { bookingId, type: stop ? 'STOP_SET' : 'STOP_REMOVED', actorType: 'PASSENGER', actorId: 'tracking', beforeStatus: cur.status, afterStatus: cur.status } });
     const a = await tx.assignment.findFirst({ where: { activeBookingId: bookingId } });
     if (a?.activeDriverId) {
+      // No street names (operator, 2026-11-22): «a new route is built» — the driver's navigation
+      // rebuilds the route by itself when the stop appears / disappears.
       await enqueueDriver(tx, a.activeDriverId, stop ? 'Stop added by the passenger' : 'Stop removed by the passenger',
-        stop ? `New stop: ${stop.label}` : 'The passenger removed the stop.', { tag: `stop-${bookingId}` });
+        stop ? 'A new route has been built.' : 'Building a new route.', { tag: `stop-${bookingId}`, msg: { k: stop ? 'drv.stopAdded' : 'drv.stopRemoved' } });
     }
     return { ok: true as const, fareCents: u.fareCents ?? null };
   });
