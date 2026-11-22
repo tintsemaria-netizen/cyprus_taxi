@@ -476,7 +476,8 @@ export function DriverNavigation(props: {
 
         {/* No «Подробнее» section (2026-11-18). The passenger's comment and flight stay visible. */}
         {trip.note && <div className="mt-2 text-sm text-warn">{t('driver.trip.note', { note: trip.note })}</div>}
-        {trip.arrive && <div className="mt-1 text-sm font-semibold text-accent" data-testid="trip-arrive">🏁 {t('driver.scheduled.arrive', { from: fmt.time(trip.arrive.from), to: fmt.time(trip.arrive.by) })}</div>}
+        {/* The window of the passenger the next stop belongs to (the co-rider's when their stop is next, 2026-11-22). */}
+        {(() => { const arr = co ? co.arrive : trip.arrive; return arr && <div className="mt-1 text-sm font-semibold text-accent" data-testid="trip-arrive">🏁 {t('driver.scheduled.arrive', { from: fmt.time(arr.from), to: fmt.time(arr.by) })}</div>; })()}
         {trip.flightNumber && <div className="mt-1 font-mono text-sm">✈ {t('driver.scheduled.flight', { flight: formatFlight(trip.flightNumber) })}</div>}
         </div>
       </div>

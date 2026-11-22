@@ -290,6 +290,7 @@ async function driverShareView(driverId: string, primaryBookingId: string) {
         scheduledAt: o.scheduledAt?.toISOString() ?? null,
         waiting: w ? { arrivedAt: w.arrivedAt.toISOString(), graceSeconds: w.graceSeconds, paidRateCentsPerMin: w.paidRateCentsPerMin } : null,
         isHost: g.hostBookingId === o.id,
+        arrive: o.arriveFrom && o.arriveBy ? { from: o.arriveFrom.toISOString(), by: o.arriveBy.toISOString() } : null, // «быть на месте с … до …» (2026-11-22)
       };
     }
   }
