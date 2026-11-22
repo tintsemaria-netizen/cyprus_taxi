@@ -276,6 +276,8 @@ const driver: Catalog<typeof en> = {
     staffLogin: "Connexion personnel / admin",
   },
   scheduled: {
+    arrive: 'Sur place {from}–{to}',
+    passengerN: 'Passager {n}',
     trip: "Course",
     freeUntil: "Jusqu’à {time}, vous êtes libre pour d’autres courses (départ −{min} min).",
     activeAt: "À {time}, elle devient votre course active si vous êtes en ligne et libre ; sinon elle passe à l’attribution automatique (départ −{min} min).",

@@ -276,6 +276,8 @@ const driver: Catalog<typeof en> = {
     staffLogin: "Anmeldung Mitarbeiter / Admin",
   },
   scheduled: {
+    arrive: 'Dort sein {from}–{to}',
+    passengerN: 'Fahrgast {n}',
     trip: "Fahrt",
     freeUntil: "Bis {time} sind Sie frei für andere Fahrten (Abholung −{min} Min.).",
     activeAt: "Um {time} wird sie Ihre aktive Fahrt, wenn Sie online und frei sind; sonst geht sie an die automatische Vermittlung (Abholung −{min} Min.).",

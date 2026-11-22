@@ -204,6 +204,20 @@ describe('live ride-share', () => {
     expect(await tryLiveShare(guest2.id)).toBe(false);
   });
 
+  it('«быть на месте до …»: a live co-rider that would make the passenger in the car late is never proposed', async () => {
+    const d = await driver('Andreas');
+    const host = await hostOnTrip(d, { pax: 1, bags: 1 });
+    const solo = Math.ceil(approxLegMin(lca, marina));
+    // Deadline = solo drive + 1 min: any detour for a co-rider would make the host late.
+    await prisma.booking.update({ where: { id: host.id }, data: { arriveBy: new Date(Date.now() + (solo + 1) * MIN), arriveFrom: new Date(Date.now() + (solo - 30) * MIN) } });
+    const guest = await booking(lcaNear, limCentre, { pax: 1, bags: 1 });
+    expect(await tryLiveShare(guest.id)).toBe(false);
+    // With room in the window the same pair is proposed.
+    await prisma.booking.update({ where: { id: host.id }, data: { arriveBy: new Date(Date.now() + (solo + 60) * MIN) } });
+    const guest2 = await booking(lcaNear, limCentre, { pax: 1, bags: 1 });
+    expect(await tryLiveShare(guest2.id)).toBe(true);
+  });
+
   it('a co-rider ride cannot get an intermediate stop', async () => {
     const { passengerSetStop } = await import('@/server/passenger-stop');
     const b = await booking(lca, marina);

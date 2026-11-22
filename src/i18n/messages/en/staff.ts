@@ -50,6 +50,8 @@ const staff = {
     onDuty: 'On-duty vehicles: {n}',
   },
   booking: {
+    arrive: 'Must arrive {from}–{to}',
+    arriveLabel: 'Arrival window',
     loading: 'Loading booking…',
     back: '‹ Back to queue',
     stop: 'Stop', stopWait: 'waiting', stopWaiting: 'paid waiting running',

@@ -52,6 +52,8 @@ const staff: Catalog<typeof en> = {
     onDuty: 'Машин на линии: {n}',
   },
   booking: {
+    arrive: 'Быть на месте {from}–{to}',
+    arriveLabel: 'Окно прибытия',
     loading: 'Загрузка заказа…',
     back: '‹ К очереди',
     stop: 'Остановка', stopWait: 'ожидание', stopWaiting: 'идёт платное ожидание',

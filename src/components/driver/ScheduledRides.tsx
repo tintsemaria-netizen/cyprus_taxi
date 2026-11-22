@@ -17,10 +17,12 @@ interface Item {
   flightNumber: string | null; airport: boolean; conflict?: boolean; canReleaseFreely?: boolean;
   note?: string | null;
   share?: ShareBoard | null; // ride-share pair (Task 022)
+  arrive?: { from: string; by: string } | null; // «быть на месте с … до …» (2026-11-22)
 }
 interface ShareBoard {
   guestPickupAt: string; guestPickupLabel: string; guestDropoffLabel: string;
   passengers: number; children: number; luggage: number; totalFareCents: number; extraMin: number;
+  hostArrive?: { from: string; by: string } | null; guestArrive?: { from: string; by: string } | null;
 }
 
 // A pre-booked ride-share pair (Task 022): one order with two passengers; the driver earns both.
@@ -31,8 +33,16 @@ function SharePairBox({ s }: { s: ShareBoard }) {
       <div className="font-semibold text-accent">👥 {t('share.driver.boardPair', { n: s.passengers, bags: s.luggage })}</div>
       <div className="text-ink">{t('share.driver.boardSecond', { time: fmt.time(s.guestPickupAt), from: s.guestPickupLabel, to: s.guestDropoffLabel })}</div>
       <div className="font-semibold text-ink">{t('share.driver.boardTotal', { amount: fmt.money(s.totalFareCents) })}</div>
+      {s.hostArrive && <ArriveLine a={s.hostArrive} who={1} />}
+      {s.guestArrive && <ArriveLine a={s.guestArrive} who={2} />}
     </div>
   );
+}
+// «Быть на месте с … до …» (2026-11-22): the passenger must ARRIVE inside this window — the driver
+// sees the deadline so he knows he must not be late.
+function ArriveLine({ a, who }: { a: { from: string; by: string }; who?: 1 | 2 }) {
+  const { t, fmt } = useT();
+  return <div className="font-semibold text-accent" data-testid="arrive-line">🏁 {who ? `${t('driver.scheduled.passengerN', { n: who })} · ` : ''}{t('driver.scheduled.arrive', { from: fmt.time(a.from), to: fmt.time(a.by) })}</div>;
 }
 interface Board { available: Item[]; mine: Item[]; blocked: string | null }
 
@@ -81,6 +91,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
       <div className="mt-1 text-sm font-semibold text-accent">👥 {t('share.driver.boardCompact')}</div>
       <div className="mt-1.5 text-sm">{i.pickupLabel} → {i.dropoffLabel}</div>
       <div className="mt-1.5 text-base font-bold">{fmt.money(s.totalFareCents)}</div>
+      {(s.hostArrive || s.guestArrive) && <div className="mt-1 text-xs">{s.hostArrive && <ArriveLine a={s.hostArrive} who={1} />}{s.guestArrive && <ArriveLine a={s.guestArrive} who={2} />}</div>}
       {i.conflict && <p className="mt-1 text-xs text-warn">{t('driver.scheduled.conflict')}</p>}
     </button>
   );
@@ -101,6 +112,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
         {i.flightNumber && <span className="font-mono text-ink">{t('driver.scheduled.flight', { flight: formatFlight(i.flightNumber) })}</span>}
         {i.fareCents != null && <span>{fareRangeText(i.fareCents, i.priceType, (c) => fmt.money(c), i.minCents)}</span>}
       </div>
+      {i.arrive && <div className="mt-1.5 text-xs"><ArriveLine a={i.arrive} /></div>}
       {i.share && <SharePairBox s={i.share} />}
       {i.note && <p className="mt-2 rounded-[10px] border border-warn/30 bg-warn/5 px-2.5 py-1.5 text-xs text-warn">💬 {i.note}</p>}
       {/* This ride's own time rules (2026-11-13: moved here from the page header). */}
@@ -190,7 +202,7 @@ interface PairDetail {
 
 // Ride-share pair in the pre-booking detail: every stop in order with its passenger, approximate
 // address, time, people / suitcases, price, and time + km to the next stop; then the whole trip.
-function PairStops({ p }: { p: PairDetail }) {
+function PairStops({ p, s: sb }: { p: PairDetail; s?: ShareBoard | null }) {
   const { t, fmt } = useT();
   const who = (s: PairStop) => [
     t('share.who.adults', { n: s.adults }), ...(s.children ? [t('share.who.children', { n: s.children })] : []), t('share.who.luggage', { n: s.luggage }),
@@ -209,6 +221,7 @@ function PairStops({ p }: { p: PairDetail }) {
           {s.kind === 'pickup' && (
             <div className="mt-0.5 text-muted">{who(s)}{s.fareCents != null && <> · <span className="font-semibold text-ink">{fmt.money(s.fareCents)}</span></>}</div>
           )}
+          {s.kind === 'dropoff' && (s.who === 'host' ? sb?.hostArrive : sb?.guestArrive) && <div className="mt-1 text-xs"><ArriveLine a={(s.who === 'host' ? sb?.hostArrive : sb?.guestArrive)!} /></div>}
           {s.toNext && <div className="mt-1 text-xs text-accent">→ {t('share.driver.pair.toNext', { min: s.toNext.min, km: s.toNext.km.toLocaleString(undefined, { maximumFractionDigits: 1 }) })}</div>}
         </div>
       ))}
@@ -276,8 +289,9 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
                 <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{d.fareCents != null ? fareRangeText(d.fareCents, d.priceType, (c) => fmt.money(c), d.minCents) : '—'}</span></div>
               </div>
               </>}
-              {d.pair ? <PairStops p={d.pair} /> : d.share && <SharePairBox s={d.share} />}
+              {d.pair ? <PairStops p={d.pair} s={d.share} /> : d.share && <SharePairBox s={d.share} />}
               {d.note && <p className="mt-2 rounded-[10px] border border-warn/30 bg-warn/5 px-2.5 py-1.5 text-xs text-warn">💬 {d.note}</p>}
+              {d.arrive && <div className="mt-2 rounded-[10px] border border-accent/50 bg-accent/10 px-2.5 py-1.5 text-sm"><ArriveLine a={d.arrive} /></div>}
               {d.flightNumber && <p className="mt-2 font-mono text-xs text-ink">{t('driver.scheduled.flight', { flight: formatFlight(d.flightNumber) })}</p>}
               <div className="mt-2 space-y-0.5 rounded-[10px] border border-edge bg-page px-2.5 py-2 text-xs text-muted">
                 <div>🕒 {t('driver.scheduled.freeUntil', { time: fmt.time(new Date(new Date(d.pickupAt).getTime() - PROTECT_MIN * 60_000)), min: PROTECT_MIN })}</div>

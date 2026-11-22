@@ -19,6 +19,7 @@ interface QueueRow {
   pickupLabel: string;
   dropoffLabel: string;
   scheduledAt: string | null;
+  arrive?: { from: string; by: string } | null;
   createdAt: string;
   assignedDriver: string | null;
   dueSoon: boolean;
@@ -100,6 +101,7 @@ function Dispatch() {
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
                 <span className="chip">{b.vClass} · {b.passengerCount}p</span>
                 {b.scheduledAt ? <span className={`chip ${b.dueSoon ? '!text-warn !border-warn/40' : ''}`}>⏱ {fmt.dateTime(b.scheduledAt)}{b.dueSoon ? t('staff.dispatch.dueSoon') : ''}</span> : <span className="chip">{t('staff.dispatch.immediate')}</span>}
+                {b.arrive && <span className="chip !border-accent/50 !text-accent" data-testid="arrive-chip">🏁 {t('staff.booking.arrive', { from: fmt.time(b.arrive.from), to: fmt.time(b.arrive.by) })}</span>}
                 {b.assignedDriver ? <span className="chip !text-accent">👤 {b.assignedDriver}</span> : b.status === 'REQUESTED' ? <span className="chip !text-warn !border-warn/40">{t('staff.dispatch.unassigned')}</span> : null}
               </div>
             </a>

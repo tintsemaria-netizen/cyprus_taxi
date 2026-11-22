@@ -141,6 +141,7 @@ export async function tryLiveShare(guestId: string, now: Date = new Date()): Pro
     if (haversineMeters(start, gp) > 40_000) continue; // far away: not "on the way"
     const pts = { start, Hp: pt(h.pickupLat, h.pickupLng), Hd: pt(h.dropoffLat, h.dropoffLng), Gp: gp, Gd: pt(guest.dropoffLat, guest.dropoffLng) };
     const plan = bestSharePlan(pts, approxLegMin, { hostOnBoard: h.status === 'IN_PROGRESS', hostMaxExtra: maxExtra(h) + SLACK, guestMaxExtra: maxExtra(guest) + SLACK });
+    if (plan && !hostArrivesInTime(h, plan, now, SLACK)) continue;
     if (plan) pre.push({ host: h, plan, pts });
   }
   pre.sort((a, b) => a.plan.extraHost + a.plan.extraGuest - (b.plan.extraHost + b.plan.extraGuest));
@@ -148,10 +149,19 @@ export async function tryLiveShare(guestId: string, now: Date = new Date()): Pro
   for (const c of pre.slice(0, 3)) {
     const { result: plan, routed } = await planWithRoads(
       (leg) => bestSharePlan(c.pts, leg, { hostOnBoard: c.host.status === 'IN_PROGRESS', hostMaxExtra: maxExtra(c.host), guestMaxExtra: maxExtra(guest) }), null);
+    if (plan && !hostArrivesInTime(c.host, plan, now)) continue; // «быть на месте до …» is a hard deadline
     if (plan && (!best || plan.extraHost + plan.extraGuest < best.plan.extraHost + best.plan.extraGuest)) best = { host: c.host, plan, routed };
   }
   if (!best) return false;
   return proposeLive(best.host.id, guestId, best.host.assignments[0].driverId, best.plan, best.routed, now);
+}
+
+// «Быть на месте до …» (2026-11-22): a co-rider picked up on the way must never make a host with an
+// arrival window late. Conservative: the trip cannot start before the booked pickup time.
+function hostArrivesInTime(h: { arriveBy: Date | null; scheduledAt: Date | null; status: string }, plan: SharePlan, now: Date, slackMin = 0): boolean {
+  if (!h.arriveBy) return true;
+  const start = h.status === 'IN_PROGRESS' ? now.getTime() : Math.max(now.getTime(), h.scheduledAt?.getTime() ?? 0);
+  return start + plan.arrive.host * MIN <= h.arriveBy.getTime() + slackMin * MIN;
 }
 
 async function proposeLive(hostId: string, guestId: string, driverId: string, plan: SharePlan, routed: boolean, now: Date): Promise<boolean> {

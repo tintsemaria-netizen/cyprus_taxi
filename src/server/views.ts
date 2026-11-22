@@ -391,6 +391,7 @@ export async function dispatchQueue(f: QueueFilters) {
       pickupLabel: b.pickupLabel,
       dropoffLabel: b.dropoffLabel,
       scheduledAt: b.scheduledAt?.toISOString() ?? null,
+      arrive: b.arriveFrom && b.arriveBy ? { from: b.arriveFrom.toISOString(), by: b.arriveBy.toISOString() } : null,
       createdAt: b.createdAt.toISOString(),
       assignedDriver: b.assignments[0]?.driverPublicName ?? null,
       dueSoon: b.scheduledAt ? b.scheduledAt.getTime() - Date.now() < 30 * 60 * 1000 : false,
@@ -423,6 +424,7 @@ export async function dispatchDetail(id: string) {
     passengerCount: b.passengerCount,
     luggageCount: b.luggageCount,
     scheduledAt: b.scheduledAt?.toISOString() ?? null,
+    arrive: b.arriveFrom && b.arriveBy ? { from: b.arriveFrom.toISOString(), by: b.arriveBy.toISOString() } : null,
     createdAt: b.createdAt.toISOString(),
     allowedNext: allowedNext(b.status as BookingStatus, 'STAFF'),
     activeAssignment: active

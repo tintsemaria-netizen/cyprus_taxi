@@ -25,6 +25,7 @@ interface Detail {
   vClass: string;
   passengerCount: number;
   scheduledAt: string | null;
+  arrive?: { from: string; by: string } | null;
   createdAt: string;
   allowedNext: string[];
   activeAssignment: null | { driverName: string; plate: string; make: string; model: string; color: string };
@@ -136,6 +137,7 @@ function BookingDetail() {
             <div className="grid grid-cols-2 gap-3">
               <Field label={t('staff.booking.class')} value={`${d.vClass} · ${d.passengerCount}p`} />
               <Field label={t('staff.booking.when')} value={d.scheduledAt ? fmt.dateTime(d.scheduledAt) : t('staff.booking.immediate')} />
+              {d.arrive && <Field label={t('staff.booking.arriveLabel')} value={`🏁 ${t('staff.booking.arrive', { from: fmt.time(d.arrive.from), to: fmt.time(d.arrive.by) })}`} />}
               <Field label={t('staff.booking.passenger')} value={d.passengerName} />
               <Field label={t('staff.booking.phone')} value={d.phone} />
             </div>

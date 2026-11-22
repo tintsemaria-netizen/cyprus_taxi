@@ -276,6 +276,8 @@ const driver: Catalog<typeof en> = {
     staffLogin: "دخول الموظفين / الإدارة",
   },
   scheduled: {
+    arrive: 'الوصول {from}–{to}',
+    passengerN: 'الراكب {n}',
     trip: "رحلة",
     freeUntil: "حتى {time} أنت متاح لرحلات أخرى (الانطلاق −{min} د).",
     activeAt: "في {time} تصبح رحلتك النشطة إذا كنت متصلًا ومتاحًا؛ وإلا تنتقل إلى التوزيع التلقائي (الانطلاق −{min} د).",
