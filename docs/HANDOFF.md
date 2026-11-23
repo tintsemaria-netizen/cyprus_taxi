@@ -2686,3 +2686,7 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - 2026-11-24 follow-up (DEPLOYED): live check showed ~600 m of sea past Limassol port accepted (Natural Earth is coarse).
   Polygon now = geoBoundaries CYP ADM0 (CC BY 4.0; accurate coast, whole island) ∪ UK bases from Natural Earth, +~300 m,
   889 pts (src/lib/cyprus-island.ts, ~20 KB, also in the passenger bundle). Tests 425 passed / 1 skipped.
+- 2026-11-24 follow-up 2 (DEPLOYED): operator «точку в море всё ещё можно». 300 m margin let near-shore water through.
+  Now ≤ ~90 m (p95 ~80 m) from the geoBoundaries coast; UK bases from Natural Earth only where geoBoundaries has a gap
+  (an over-large Akrotiri box had covered Limassol's sea front); Ayia Napa marina added explicitly. 2732 pts, ~61 KB.
+  Tests 430 passed / 1 skipped.
