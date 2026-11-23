@@ -85,6 +85,7 @@ const rides: Catalog<typeof en> = {
     empty: "Sie haben keine anstehenden Vorbestellungen.",
     soon: "innerhalb einer Stunde",
     driver: "Fahrer: {name}",
+    answerBy: "Mitfahrer gefunden — Zeit wählen bis {time}",
     noDriverYet: "Noch kein Fahrer zugewiesen",
     open: "Öffnen",
     reminderTitle: "Ihre vorbestellte Fahrt steht bald an",

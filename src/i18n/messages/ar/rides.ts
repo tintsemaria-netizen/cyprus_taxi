@@ -85,6 +85,7 @@ const rides: Catalog<typeof en> = {
     empty: "لا توجد لديك حجوزات مسبقة قادمة.",
     soon: "خلال ساعة",
     driver: "السائق: {name}",
+    answerBy: "وُجد راكب مشارك — اختر الوقت قبل {time}",
     noDriverYet: "لم يُعيَّن سائق بعد",
     open: "فتح",
     reminderTitle: "رحلتك المحجوزة مسبقًا قريبة",

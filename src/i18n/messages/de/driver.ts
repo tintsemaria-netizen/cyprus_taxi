@@ -290,6 +290,7 @@ const driver: Catalog<typeof en> = {
     available: "Offene Vorbestellungen",
     noneAvailable: "Gerade passen keine geplanten Fahrten zu Ihrem Fahrzeug.",
     take: "Diese Fahrt annehmen",
+    pairTotal: "Gesamt für die Fahrt",
     taking: "Wird angenommen…",
     taken: "Fahrt vorbestellt. Wir erinnern Sie vor der Abholung.",
     release: "Abgeben",

@@ -23,6 +23,9 @@ export async function GET() {
     select: {
       id: true, reference: true, status: true, scheduledAt: true, arriveFrom: true, arriveBy: true, pickupLabel: true, dropoffLabel: true, note: true, fareCents: true,
       preAssignments: { where: { status: 'COMMITTED' }, select: { driver: { select: { publicName: true } } }, take: 1 },
+      // A co-rider question waiting for THIS passenger (older booking, TZ 2026-11-23).
+      shareAsHost: { where: { status: 'PROPOSED', hostAnswer: null, expiresAt: { gt: new Date(now) } }, select: { expiresAt: true }, take: 1 },
+      shareAsGuest: { where: { status: 'PROPOSED', guestAnswer: null, expiresAt: { gt: new Date(now) } }, select: { expiresAt: true }, take: 1 },
     },
   });
   return apiOk({
@@ -34,6 +37,7 @@ export async function GET() {
         arrive: b.arriveFrom && b.arriveBy ? { from: b.arriveFrom.toISOString(), by: b.arriveBy.toISOString() } : null,
         driverConfirmed: b.preAssignments[0]?.driver.publicName ?? null,
         soon: at - now <= REMIND_MIN * 60_000 && at - now > -30 * 60_000,
+        answerBy: (b.shareAsHost[0] ?? b.shareAsGuest[0])?.expiresAt.toISOString() ?? null,
       };
     }),
   });

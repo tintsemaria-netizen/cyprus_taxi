@@ -290,6 +290,7 @@ const driver: Catalog<typeof en> = {
     available: "Réservations ouvertes",
     noneAvailable: "Aucune course programmée ne correspond à votre véhicule pour le moment.",
     take: "Prendre cette course",
+    pairTotal: "Total de la course",
     taking: "Prise en cours…",
     taken: "Course réservée. Nous vous la rappellerons avant le départ.",
     release: "Libérer",

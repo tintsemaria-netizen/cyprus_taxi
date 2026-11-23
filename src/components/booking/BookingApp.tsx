@@ -18,7 +18,7 @@ import { PassengerLoginModal } from './PassengerLoginModal';
 import { AccountMenu } from './AccountMenu';
 import { recordVisit } from '@/lib/navTrail';
 import { BackArrow } from '@/components/BackArrow';
-import { nicosiaInputValue } from '@/lib/timezone';
+import { nicosiaInputValue, nicosiaWallTimeToUtc } from '@/lib/timezone';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
 import { NotifyPrompt } from '@/components/NotifyPrompt';
@@ -566,6 +566,8 @@ export default function BookingApp() {
   // Only the ±15 % range is shown, no single «≈» figure (2026-11-16). An upfront fare (low = high) shows one price.
   const fmtRange = (q: { rangeLowCents: number; rangeHighCents: number }) =>
     q.rangeLowCents === q.rangeHighCents ? fmt.money(q.rangeLowCents, 'EUR') : `${fmt.money(q.rangeLowCents, 'EUR')}–${fmt.money(q.rangeHighCents, 'EUR')}`;
+  // A Nicosia wall time («2026-11-24T11:30») shown in the passenger's language and clock (24.11.2026, 11:30).
+  const wallText = (v: string) => { const r = v ? nicosiaWallTimeToUtc(v) : null; return r?.ok ? fmt.dateTime(r.utc) : v.replace('T', ' '); };
   interface QuoteBody { quoteId: string; priceType: string; totalCents: number; rangeLowCents: number; rangeHighCents: number; night: boolean; holiday: boolean; routeAvailable: boolean; airport?: boolean; minCents?: number | null; minZone?: string | null; lines: { code: string; label: string; cents: number }[]; }
   // Every class is quoted in parallel so the passenger can compare prices before choosing
   // (2026-10-01 audit). `quote` is the selected class's quote (used for booking + review).
@@ -1005,7 +1007,10 @@ export default function BookingApp() {
               <span className="shrink-0 text-end">
                 {q ? (
                   <>
-                    <span className={`block font-semibold tabular-nums ${selected ? 'text-accent' : 'text-ink'}`}>{fmtRange(q)}</span>
+                    {shareOn && when === 'SCHEDULE' && cfg?.share
+                      // Co-rider pre-booking: the price with a co-rider, no range; the full one below (TZ review 2026-11-23).
+                      ? <span className={`block font-semibold tabular-nums ${selected ? 'text-accent' : 'text-ink'}`}>{fmt.money(sharedCents(q.totalCents, cfg.share.discountPct), 'EUR')}</span>
+                      : <span className={`block font-semibold tabular-nums ${selected ? 'text-accent' : 'text-ink'}`}>{fmtRange(q)}</span>}
                   </>
                 ) : <span className="text-xs text-muted">{quoting ? t('booking.form.pricing') : '—'}</span>}
               </span>
@@ -1021,8 +1026,12 @@ export default function BookingApp() {
         if (!(shareOn && when === 'SCHEDULE' && q && cfg?.share)) return null;
         return (
           <div className="mt-2 rounded-[10px] border border-accent/50 bg-accent/10 px-3 py-2 text-[13px] text-ink" data-testid="share-prices">
-            <p>{t('share.terms.prices', { shared: fmt.money(sharedCents(q.totalCents, cfg.share.discountPct), 'EUR'), full: fmt.money(q.totalCents, 'EUR') })}</p>
-            <p className="mt-1 text-xs text-muted">{t('share.terms.noShow', { fee: fmt.money(Math.min(cfg.share.noShowFeeCents ?? 1000, sharedCents(q.totalCents, cfg.share.discountPct)), 'EUR') })}</p>
+            {/* Two sums, no range (TZ review 2026-11-23): what they pay with a co-rider and without one. */}
+            <div className="flex items-baseline justify-between gap-2"><span className="font-semibold">{t('share.terms.withPair')}</span><span className="text-base font-bold text-accent tabular-nums" data-testid="price-shared">{fmt.money(sharedCents(q.totalCents, cfg.share.discountPct), 'EUR')}</span></div>
+            <p className="text-xs text-muted">{t('share.terms.withPairWhen')}</p>
+            <div className="mt-1.5 flex items-baseline justify-between gap-2"><span className="font-semibold">{t('share.terms.noPair')}</span><span className="text-base font-bold tabular-nums" data-testid="price-full">{q.priceType === 'REGULATED_FIXED' ? '' : '≈ '}{fmt.money(q.totalCents, 'EUR')}</span></div>
+            <p className="text-xs text-muted">{q.priceType === 'REGULATED_FIXED' ? '' : `${t('share.terms.meter')} · `}{t('share.terms.noPairWhen')}</p>
+            <p className="mt-1.5 text-xs text-muted">{t('share.terms.noShow', { fee: fmt.money(Math.min(cfg.share.noShowFeeCents ?? 1000, sharedCents(q.totalCents, cfg.share.discountPct)), 'EUR') })}</p>
           </div>
         );
       })()}
@@ -1406,7 +1415,7 @@ export default function BookingApp() {
                     <div className="text-center">
                       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent/15 text-2xl text-accent">✓</div>
                       <h2 className="mt-3 text-xl font-bold">{t('booking.prebooked.title')}</h2>
-                      <p className="mt-1 text-sm text-muted">{t('booking.prebooked.when', { when: (doneAt ?? '').replace('T', ' ') })}</p>
+                      <p className="mt-1 text-sm text-muted">{t('booking.prebooked.when', { when: wallText(doneAt ?? '') })}</p>
                       <p className="mt-2 text-sm text-muted">{t('booking.prebooked.body')}</p>
                       {joinResult && <p role="status" data-testid="join-result" className={`mt-3 rounded-[12px] border px-3 py-2 text-sm ${joinResult.ok ? 'border-accent/40 bg-accent/10 text-accent' : 'border-warn/40 bg-warn/10 text-warn'}`}>{joinResult.text}</p>}
                       <div className="mt-5 space-y-2">
@@ -1425,7 +1434,7 @@ export default function BookingApp() {
                         above the (now content-high) sheet. Only a scheduled time or a missing quote still gets a row. */}
                     {(when !== 'NOW' || !quote) && (
                       <div className="mt-1 space-y-3 text-sm">
-                        {when !== 'NOW' && <Row label={t('booking.review.when')} value={`${scheduledAt.replace('T', ' ')} · ${cfg?.timezone}`} />}
+                        {when !== 'NOW' && <Row label={t('booking.review.when')} value={wallText(scheduledAt)} />}
                         {!quote && <Row label={t('booking.review.fare')} value={t('booking.review.fareByMeter')} />}
                       </div>
                     )}

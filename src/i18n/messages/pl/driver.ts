@@ -290,6 +290,7 @@ const driver: Catalog<typeof en> = {
     available: "Otwarte rezerwacje",
     noneAvailable: "Brak zaplanowanych przejazdów pasujących do Twojego pojazdu.",
     take: "Weź ten przejazd",
+    pairTotal: "Razem za przejazd",
     taking: "Przyjmowanie…",
     taken: "Przejazd zarezerwowany. Przypomnimy przed odbiorem.",
     release: "Zwolnij",

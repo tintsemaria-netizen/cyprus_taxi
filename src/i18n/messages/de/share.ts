@@ -16,7 +16,11 @@ const share: Catalog<typeof en> = {
     pickTo: 'bis',
     pickExact: 'Abholung um',
     inside: 'Innerhalb {from}–{to}.',
-    prices: 'Mit Mitfahrer {shared}. Ohne Partner, bei Storno oder Nichterscheinen des Mitfahrers zahlen Sie Ihren vollen Preis — {full}.',
+    withPair: "Mit Mitfahrer",
+    withPairWhen: "wenn wir einen Mitfahrer finden",
+    noPair: "Ohne Mitfahrer",
+    noPairWhen: "wenn es kein Paar gibt oder der Mitfahrer storniert oder nicht erscheint",
+    meter: "nach Taxameter",
     noShow: 'Wenn Sie nicht erscheinen, Gebühr {fee} (höchstens der Fahrpreis).',
   },
   booking: {

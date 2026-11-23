@@ -14,7 +14,11 @@ const share = {
     pickTo: 'to',
     pickExact: 'Pickup at',
     inside: 'Within {from}–{to}.',
-    prices: 'With a co-rider {shared}. Without a pair, on a cancellation or the co-rider’s no-show you pay your full price — {full}.',
+    withPair: "With a co-rider",
+    withPairWhen: "if we find a co-rider",
+    noPair: "Without a co-rider",
+    noPairWhen: "if there is no pair, or the co-rider cancels or does not show",
+    meter: "by the meter",
     noShow: 'If you do not show up, a {fee} fee (never more than the ride’s price).',
   },
   booking: {

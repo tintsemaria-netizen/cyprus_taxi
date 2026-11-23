@@ -16,7 +16,11 @@ const share: Catalog<typeof en> = {
     pickTo: 'إلى',
     pickExact: 'الاستلام في',
     inside: 'ضمن {from}–{to}.',
-    prices: 'مع رفيق {shared}. بدون شريك، أو عند الإلغاء أو عدم حضور الرفيق تدفع سعرك الكامل — {full}.',
+    withPair: "مع راكب مشارك",
+    withPairWhen: "إذا وجدنا راكباً مشاركاً",
+    noPair: "بدون راكب مشارك",
+    noPairWhen: "إذا لم يوجد شريك أو ألغى الراكب المشارك أو لم يحضر",
+    meter: "حسب العداد",
     noShow: 'إذا لم تحضر، غرامة {fee} (لا تتجاوز سعر الرحلة).',
   },
   booking: {

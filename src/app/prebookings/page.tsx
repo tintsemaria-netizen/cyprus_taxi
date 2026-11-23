@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 interface Prebooking {
   id: string; reference: string; status: string; at: string; pickup: string; dropoff: string;
   arrive?: { from: string; by: string } | null;
-  note: string | null; fareCents: number | null; driverConfirmed: string | null; soon: boolean;
+  note: string | null; fareCents: number | null; driverConfirmed: string | null; soon: boolean; answerBy?: string | null;
 }
 
 // "My pre-bookings" (2026-11-13): the passenger's upcoming scheduled rides, soonest first, with a
@@ -84,11 +84,12 @@ export default function Page() {
           ) : (
             <div className="space-y-2">
               {items.map((b) => (
-                <button key={b.id} onClick={() => open(b.id)} className={`card block w-full p-3 text-start ${b.soon ? 'border-2 border-accent' : ''}`}>
+                <button key={b.id} onClick={() => open(b.id)} className={`card block w-full p-3 text-start ${b.soon || b.answerBy ? 'border-2 border-accent' : ''}`} data-testid={b.answerBy ? 'prebook-needs-answer' : undefined}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-semibold">{fmt.dateTime(b.at)}</span>
                     {b.soon ? <span className="chip !text-accent">⏰ {t('rides.prebookings.soon')}</span> : <span className="chip">{t(`common.status.${b.status}` as 'common.status.COMPLETED')}</span>}
                   </div>
+                  {b.answerBy && <div className="mt-1.5 rounded-[10px] bg-accent px-2.5 py-1.5 text-xs font-bold text-[#0b0f0c]">👥 {t('rides.prebookings.answerBy', { time: fmt.time(b.answerBy) })}</div>}
                   {b.arrive && <div className="mt-1 text-xs font-semibold text-accent">{t('rides.prebookings.arrive', { from: fmt.time(b.arrive.from), to: fmt.time(b.arrive.by) })}</div>}
                   <div className="mt-2 space-y-1 text-sm">
                     <div className="flex gap-2"><span className="text-accent">●</span><span className="min-w-0">{b.pickup}</span></div>

@@ -287,6 +287,7 @@ const driver = {
     available: 'Open pre-bookings',
     noneAvailable: 'No scheduled rides fit your vehicle right now.',
     take: 'Take this ride',
+    pairTotal: "Total for the trip",
     taking: 'Taking…',
     taken: 'Ride pre-booked. We will remind you before pickup.',
     release: 'Release',

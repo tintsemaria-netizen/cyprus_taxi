@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-23 (later) — share-v2 review fixes (LOCAL, not pushed)
+- One booking end to end (CY-SDFX-6VM9, exact pickup 11:30): stays 11:30 after pairing, at the driver and in the push; receipt 35,20 €. Earlier 12:15 screenshot was a DIFFERENT booking that I had turned into an «old» one in the test DB with +30 min allowance.
+- Class step with «Попутчик»: no range; card shows the co-rider price; box «С попутчиком X / Без попутчика (≈ по счётчику) Y» + when each applies.
+- Driver pair detail: «Итого за поездку» next to «Взять поездку».
+- Co-rider pushes open `/prebookings?open=<id>` (straight to the ride/choice); list shows «Попутчик найден — выберите время до …».
+- Review «Когда» line and «Поездка забронирована на …» now formatted via fmt.dateTime (was raw `2026-11-24 11:30 · Europe/Nicosia`).
+- vitest 383/384, build OK.
+
 ## 2026-11-23 — «Попутчик −30%» TZ stage 1 (branch `share-v2`, LOCAL, not pushed, not deployed)
 - Booking: terms snapshot (`shareTermsVersion/At`, `sharePickupFrom/To`, `shareBookedPickupAt`, `shareBookedCents`), migration `20261123020000_share_terms`; consent box with arrival + pickup interval, narrow / exact time; both sums + full-price / €10 no-show text before ordering (8 languages).
 - Matching: `fitPair` (src/server/share.ts) used by auto search AND the share board — each passenger keeps own interval, ≤15 extra min, arrival window; choice by `comparePairs` (smaller largest pickup shift, then smaller detour). Board no longer moves anyone to the other's time (`boardMaxShiftMin` now unused).

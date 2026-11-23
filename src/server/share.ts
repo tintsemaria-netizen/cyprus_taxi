@@ -376,7 +376,7 @@ async function finalizePrebookTx(tx: Tx, groupId: string): Promise<ShareResult> 
     const clock = (d: Date) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Nicosia', hour: '2-digit', minute: '2-digit' }).format(d);
     for (const [b, pick, eta, cents] of [[h, g.startAt, at(arr.host), g.hostCents], [gu, at(arr.guestPickup), at(arr.guest), g.guestCents]] as const) {
       await enqueuePassenger(tx, b.id, 'Co-rider found', `Pickup ${clock(pick)}, arrival about ${clock(eta)}. You pay €${(cents / 100).toFixed(2)}.`,
-        { url: '/prebookings', tag: `share-m-${g.id}`, msg: { k: 'share.found', p: { pickT: pick.toISOString(), etaT: eta.toISOString(), payC: cents } } });
+        { url: rideUrl(b), tag: `share-m-${g.id}`, msg: { k: 'share.found', p: { pickT: pick.toISOString(), etaT: eta.toISOString(), payC: cents } } });
     }
   } else {
     for (const [b, cents] of [[h, g.hostCents], [gu, g.guestCents]] as const) {
@@ -484,6 +484,9 @@ export async function matchPrebookings(now: Date = new Date()): Promise<number> 
   return made;
 }
 
+/** Where a co-rider push opens: an account holder's ride page straight away (the choice is there); a guest's tracking page. */
+const rideUrl = (b: { id: string; passengerId: string | null }) => (b.passengerId ? `/prebookings?open=${b.id}` : '/track');
+
 /** A pickup-time option for an older booking's owner (TZ 2026-11-23). */
 export interface PairVariant { startAt: string; guestPickupAt: string; hostArriveAt: string; guestArriveAt: string }
 
@@ -544,7 +547,7 @@ export async function proposePrebook(hostId: string, guestId: string, plan: Shar
       // Ask only the older booking's owner (both, if both are older).
       for (const [b, other, yes, extra] of [[h, g, hostYes, plan.extraHost], [g, h, guestYes, plan.extraGuest]] as const) {
         if (yes) continue;
-        await enqueuePassenger(tx, b.id, 'Co-rider found', proposalBody(other, extra, S().discountPct), { url: '/prebookings', tag: `share-p-${group.id}` });
+        await enqueuePassenger(tx, b.id, 'Co-rider found', proposalBody(other, extra, S().discountPct), { url: rideUrl(b), tag: `share-p-${group.id}` });
       }
       return group.id;
     });

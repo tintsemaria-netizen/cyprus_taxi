@@ -290,6 +290,7 @@ const driver: Catalog<typeof en> = {
     available: "حجوزات مسبقة متاحة",
     noneAvailable: "لا توجد رحلات مجدولة تناسب مركبتك الآن.",
     take: "خذ هذه الرحلة",
+    pairTotal: "المجموع للرحلة",
     taking: "جارٍ الأخذ…",
     taken: "تم حجز الرحلة مسبقًا. سنذكّرك قبل الانطلاق.",
     release: "تخلٍّ",

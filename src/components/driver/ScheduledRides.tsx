@@ -290,6 +290,8 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
             </>
           )}
           <div className="sticky -bottom-4 -mx-4 -mb-4 mt-4 grid grid-cols-2 gap-2 bg-panel px-4 pb-4 pt-2">
+            {/* A pair: the whole trip's sum right at the button (TZ review 2026-11-23). */}
+            {d?.pair && <div className="col-span-2 flex items-baseline justify-between rounded-[10px] border border-accent/40 bg-accent/10 px-3 py-1.5" data-testid="pair-total"><span className="text-sm text-muted">{t('driver.scheduled.pairTotal')}</span><span className="text-lg font-bold">{fmt.money(d.pair.totals.fareCents)}</span></div>}
             <button className="btn-ghost min-h-[44px]" onClick={() => onBack(false)}>{t('driver.free.back')}</button>
             {d?.mine
               ? <button className="btn-ghost min-h-[44px] border border-danger/40 !text-danger" disabled={busy} onClick={onRelease}>{t('driver.scheduled.release')}</button>

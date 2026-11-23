@@ -16,7 +16,11 @@ const share: Catalog<typeof en> = {
     pickTo: 'à',
     pickExact: 'Prise en charge à',
     inside: 'Dans {from}–{to}.',
-    prices: 'Avec co-passager {shared}. Sans partenaire, en cas d’annulation ou d’absence du co-passager, vous payez votre prix complet — {full}.',
+    withPair: "Avec covoyageur",
+    withPairWhen: "si nous trouvons un covoyageur",
+    noPair: "Sans covoyageur",
+    noPairWhen: "s’il n’y a pas de paire, ou si le covoyageur annule ou ne vient pas",
+    meter: "au compteur",
     noShow: 'Si vous ne venez pas, frais de {fee} (au plus le prix de la course).',
   },
   booking: {

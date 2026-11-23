@@ -85,6 +85,7 @@ const rides: Catalog<typeof en> = {
     empty: "אין לכם הזמנות מראש קרובות.",
     soon: "בתוך שעה",
     driver: "נהג: {name}",
+    answerBy: "נמצא נוסע משותף — בחרו שעה עד {time}",
     noDriverYet: "עדיין לא שובץ נהג",
     open: "פתיחה",
     reminderTitle: "הנסיעה שהזמנתם מתקרבת",

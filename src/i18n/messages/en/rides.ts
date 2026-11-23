@@ -82,6 +82,7 @@ const rides = {
     empty: 'You have no upcoming pre-bookings.',
     soon: 'within the hour',
     driver: 'Driver: {name}',
+    answerBy: "Co-rider found — choose a time by {time}",
     noDriverYet: 'Driver not assigned yet',
     open: 'Open',
     reminderTitle: 'Your pre-booked ride soon',

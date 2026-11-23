@@ -16,7 +16,11 @@ const share: Catalog<typeof en> = {
     pickTo: 'עד',
     pickExact: 'איסוף ב־',
     inside: 'בתוך {from}–{to}.',
-    prices: 'עם שותף {shared}. בלי זוג, בביטול או באי־הגעה של השותף תשלמו את המחיר המלא — {full}.',
+    withPair: "עם נוסע משותף",
+    withPairWhen: "אם נמצא נוסע משותף",
+    noPair: "בלי נוסע משותף",
+    noPairWhen: "אם אין זוג, או שהנוסע המשותף מבטל או לא מגיע",
+    meter: "לפי מונה",
     noShow: 'אם לא תגיעו — קנס {fee} (לא יותר ממחיר הנסיעה).',
   },
   booking: {

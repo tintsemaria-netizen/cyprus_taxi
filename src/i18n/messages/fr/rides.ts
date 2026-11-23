@@ -85,6 +85,7 @@ const rides: Catalog<typeof en> = {
     empty: "Vous n’avez aucune réservation à venir.",
     soon: "dans l’heure",
     driver: "Chauffeur : {name}",
+    answerBy: "Covoyageur trouvé — choisissez l’heure avant {time}",
     noDriverYet: "Chauffeur pas encore attribué",
     open: "Ouvrir",
     reminderTitle: "Votre course réservée approche",

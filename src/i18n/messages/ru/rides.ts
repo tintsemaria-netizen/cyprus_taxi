@@ -85,6 +85,7 @@ const rides: Catalog<typeof en> = {
     empty: 'Предстоящих предзаказов нет.',
     soon: 'в течение часа',
     driver: 'Водитель: {name}',
+    answerBy: "Попутчик найден — выберите время до {time}",
     noDriverYet: 'Водитель ещё не назначен',
     open: 'Открыть',
     reminderTitle: 'Скоро ваш предзаказ',

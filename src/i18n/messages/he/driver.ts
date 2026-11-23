@@ -290,6 +290,7 @@ const driver: Catalog<typeof en> = {
     available: "הזמנות מראש פתוחות",
     noneAvailable: "אין כרגע נסיעות מתוזמנות שמתאימות לרכב שלכם.",
     take: "לקחת את הנסיעה",
+    pairTotal: "סה״כ לנסיעה",
     taking: "לוקח…",
     taken: "הנסיעה נשמרה. נזכיר לכם לפני האיסוף.",
     release: "שחרור",

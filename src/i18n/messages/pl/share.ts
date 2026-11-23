@@ -16,7 +16,11 @@ const share: Catalog<typeof en> = {
     pickTo: 'do',
     pickExact: 'Odbiór o',
     inside: 'W oknie {from}–{to}.',
-    prices: 'Ze współpasażerem {shared}. Bez pary, przy anulowaniu lub niestawieniu się współpasażera płacisz pełną cenę — {full}.',
+    withPair: "Ze współpasażerem",
+    withPairWhen: "jeśli znajdziemy współpasażera",
+    noPair: "Bez współpasażera",
+    noPairWhen: "jeśli nie będzie pary albo współpasażer odwoła lub nie przyjdzie",
+    meter: "według taksometru",
     noShow: 'Jeśli się nie zjawisz — opłata {fee} (nie więcej niż cena przejazdu).',
   },
   booking: {

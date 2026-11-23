@@ -85,6 +85,7 @@ const rides: Catalog<typeof en> = {
     empty: 'Δεν έχετε επερχόμενες προκρατήσεις.',
     soon: 'μέσα στην ώρα',
     driver: 'Οδηγός: {name}',
+    answerBy: "Βρέθηκε συνεπιβάτης — επιλέξτε ώρα έως {time}",
     noDriverYet: 'Δεν έχει οριστεί οδηγός ακόμη',
     open: 'Άνοιγμα',
     reminderTitle: 'Η προκράτησή σας σύντομα',
