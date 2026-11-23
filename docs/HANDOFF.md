@@ -4,7 +4,8 @@
 - LIVE co-rider: only the driver is asked, 90 s (SHARE_ANSWER_SEC default 90); passenger in the car not asked (hostAnswer YES at creation), no question push.
 - Not offered at all if the in-car passenger would exceed his extra minutes or arrive later than «быть на месте» − 10 min.
 - After the driver's «yes»: one push each — `share.liveHost` {etaT, payC}, `share.liveGuest` {pickT, etaT, payC} (sw.js, 8 languages). Driver «no»/silence: nobody hears anything, newcomer keeps searching.
-- vitest 385/386.
+- After a driver's «no» the next fitting co-rider car is offered at once (lastLiveTry keeps `fits`); an ordinary car only when no co-rider car is left.
+- vitest 386/387.
 
 ## 2026-11-23 — Superadmin: staff management + change log with notifications (deployed)
 

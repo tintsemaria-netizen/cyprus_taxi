@@ -88,7 +88,9 @@ export async function planWithRoads<T>(run: (leg: LegFn) => T, departure: Date |
 }
 
 // Live matching runs every worker tick while a ride searches; road-route a newcomer at most every 15 s.
-const lastLiveTry = new Map<string, number>();
+// `fits`: the cars that fitted at the last look — while one of them is untried, the newcomer keeps waiting for
+// a co-rider and gets no ordinary car (operator 2026-11-23: an ordinary car only when no co-rider is left).
+const lastLiveTry = new Map<string, { at: number; fits: string[] }>();
 
 async function lockBookings(tx: Tx, ids: string[]) {
   // One lock order everywhere (sorted ids) so two groups never deadlock each other.
@@ -125,10 +127,12 @@ export async function tryLiveShare(guestId: string, now: Date = new Date()): Pro
     take: 50,
   });
 
-  const last = lastLiveTry.get(guestId) ?? 0;
-  if (now.getTime() - last < 15_000) return false;
-  lastLiveTry.set(guestId, now.getTime());
-  if (lastLiveTry.size > 2000) for (const [k, v] of lastLiveTry) if (now.getTime() - v > 10 * MIN) lastLiveTry.delete(k);
+  const last = lastLiveTry.get(guestId);
+  const triedIds = new Set(tried.map((t) => t.hostBookingId));
+  const untriedFit = !!last && last.fits.some((id) => !triedIds.has(id) && hosts.some((h) => h.id === id));
+  // Road routing at most every 15 s — except right after a driver said no while another co-rider car still fits.
+  if (last && now.getTime() - last.at < 15_000 && !untriedFit) return false;
+  if (lastLiveTry.size > 2000) for (const [k, v] of lastLiveTry) if (now.getTime() - v.at > 10 * MIN) lastLiveTry.delete(k);
 
   const gp = pt(guest.pickupLat, guest.pickupLng);
   // 1) Straight-line prefilter with some slack, 2) road time for the best three.
@@ -148,12 +152,18 @@ export async function tryLiveShare(guestId: string, now: Date = new Date()): Pro
   }
   pre.sort((a, b) => a.plan.extraHost + a.plan.extraGuest - (b.plan.extraHost + b.plan.extraGuest));
   let best: { host: (typeof hosts)[number]; plan: SharePlan; routed: boolean } | null = null;
-  for (const c of pre.slice(0, 3)) {
-    const { result: plan, routed } = await planWithRoads(
-      (leg) => bestSharePlan(c.pts, leg, { hostOnBoard: c.host.status === 'IN_PROGRESS', hostMaxExtra: maxExtra(c.host), guestMaxExtra: maxExtra(guest) }), null);
-    if (plan && !hostArrivesInTime(c.host, plan, now)) continue; // «быть на месте до …» is a hard deadline
-    if (plan && (!best || plan.extraHost + plan.extraGuest < best.plan.extraHost + best.plan.extraGuest)) best = { host: c.host, plan, routed };
+  const fits: string[] = [];
+  // Road time for three at a time, best first; the next three only if none of these fits (at most nine).
+  for (let i = 0; i < Math.min(pre.length, 9) && !best; i += 3) {
+    for (const c of pre.slice(i, i + 3)) {
+      const { result: plan, routed } = await planWithRoads(
+        (leg) => bestSharePlan(c.pts, leg, { hostOnBoard: c.host.status === 'IN_PROGRESS', hostMaxExtra: maxExtra(c.host), guestMaxExtra: maxExtra(guest) }), null);
+      if (!plan || !hostArrivesInTime(c.host, plan, now)) continue; // «быть на месте до …» − 10 min is a hard deadline
+      fits.push(c.host.id);
+      if (!best || plan.extraHost + plan.extraGuest < best.plan.extraHost + best.plan.extraGuest) best = { host: c.host, plan, routed };
+    }
   }
+  lastLiveTry.set(guestId, { at: now.getTime(), fits });
   if (!best) return false;
   return proposeLive(best.host.id, guestId, best.host.assignments[0].driverId, best.plan, best.routed, now);
 }

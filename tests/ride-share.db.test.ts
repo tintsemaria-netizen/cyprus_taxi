@@ -229,6 +229,24 @@ describe('live ride-share', () => {
     expect((await driverCurrentTrip(d.driverId)).trip).toBeNull();
   });
 
+  it('2026-11-23: a driver says no → the next co-rider car is offered at once; an ordinary car only when none is left', async () => {
+    const d1 = await driver('Andreas'), d2 = await driver('Maria');
+    const h1 = await hostOnTrip(d1), h2 = await hostOnTrip(d2);
+    const guest = await booking(lcaNear, limCentre);
+    expect(await tryLiveShare(guest.id)).toBe(true);
+    const g1 = (await prisma.shareGroup.findFirst({ where: { guestBookingId: guest.id } }))!;
+    const firstDrv = g1.driverId === d1.driverId ? d1 : d2;
+    expect((await answerShare(g1.id, { kind: 'DRIVER', driverId: firstDrv.driverId }, false)).ok).toBe(true);
+    // Right away (no 15 s pause, no ordinary car in between) the other car is offered.
+    expect(await tryLiveShare(guest.id)).toBe(true);
+    const g2 = (await prisma.shareGroup.findFirst({ where: { guestBookingId: guest.id, status: 'PROPOSED' } }))!;
+    expect(g2.driverId).not.toBe(firstDrv.driverId);
+    expect([g1.hostBookingId, g2.hostBookingId].sort()).toEqual([h1.id, h2.id].sort());
+    expect((await answerShare(g2.id, { kind: 'DRIVER', driverId: g2.driverId! }, false)).ok).toBe(true);
+    expect(await tryLiveShare(guest.id)).toBe(false); // nobody left → the ordinary search goes on
+    expect(await prisma.notificationOutbox.count({ where: { audience: { in: [`PASSENGER:${h1.id}`, `PASSENGER:${h2.id}`] } } })).toBe(0);
+  });
+
   it('a "no" or silence leaves everything as it was; the same car is not proposed again', async () => {
     const d = await driver('Andreas');
     const host = await hostOnTrip(d);
