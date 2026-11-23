@@ -2668,3 +2668,8 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - The picked point and the user's zoom become the camera focus (no snap-back when the sheet opens). «Моё местоположение» resets the
   pickup to the GPS position. With a destination the pin is a normal map marker again.
 - Checked locally (MapLibre) and on the LIVE site (Google map, iPhone emulation, touch drag): pin stays centred, pickup re-geocoded at the new point.
+
+## 2026-11-24 — Centre pin fast flick (branch `pin-exact`, NOT deployed)
+- Operator: on a fast flick the logo lands a little to the left of its shadow (real iPhone; not reproducible in emulation — no inertia there).
+- Cause candidate: after the pick, GoogleMapView.centerPointAt re-centred in two steps (moveCamera to the middle + animated panBy back).
+  Now one exact moveCamera via the projection, and nothing at all if the camera is already there. Needs a real-iPhone check after deploy.
