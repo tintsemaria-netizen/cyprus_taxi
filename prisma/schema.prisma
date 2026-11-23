@@ -1105,3 +1105,21 @@ model LedgerRecurring {
 
   entries LedgerEntry[]
 }
+
+// «Журнал изменений» (2026-11-23, operator: «все изменения с уведомлением суперадмину»). Every
+// changing request (POST / PUT / PATCH / DELETE) by an admin who is not the owner is written here
+// and announced to the owner by push. Recorded when the request is let in (requireStaff).
+model StaffAction {
+  id        String    @id @default(uuid())
+  actorId   String
+  actorName String
+  actorRole String
+  method    String
+  path      String
+  status    Int?
+  seenAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([seenAt])
+}

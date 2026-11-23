@@ -1,5 +1,5 @@
 import { config } from '@/lib/config';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import bcrypt from 'bcryptjs';
 import { prisma } from './db';
 import { generateToken, sessionDigest } from './crypto';
@@ -77,6 +77,12 @@ export async function requireStaff(roles?: Role[]): Promise<StaffContext | { err
   // enrollment endpoints (which call getStaff directly), not any guarded staff API.
   if (config.staffMfaEnforce && (ctx.user.role === 'ADMIN' || ctx.user.role === 'DISPATCHER' || ctx.user.role === 'FLEET_OWNER') && !ctx.user.totpEnabledAt) {
     return { error: 403 };
+  }
+  // «Журнал изменений» (2026-11-23): an admin's change is logged and the owner is notified.
+  if (ctx.user.role === 'ADMIN' && !ctx.user.isOwner) {
+    let mutation: string | null = null;
+    try { mutation = (await headers()).get('x-ily-mutation'); } catch { /* outside a request */ }
+    if (mutation) await (await import('@/server/staff-log')).logStaffChange(ctx.user, mutation);
   }
   return ctx;
 }

@@ -372,6 +372,16 @@ const MSG_TEXT = {
     he: ["⏱ {left}:00", "נותרו עד ההתחברות · {place}, {timeT}"],
     ar: ["⏱ {left}:00", "متبقٍ حتى الاتصال · {place}، {timeT}"],
   },
+  'staff.change': {
+    ru: ["Изменение в админке", "{name} внёс изменение — откройте журнал."],
+    en: ["Change in the admin panel", "{name} made a change — open the change log."],
+    el: ["Αλλαγή στη διαχείριση", "Ο/Η {name} έκανε αλλαγή — ανοίξτε το ημερολόγιο αλλαγών."],
+    de: ["Änderung im Admin-Bereich", "{name} hat etwas geändert — Änderungsprotokoll öffnen."],
+    fr: ["Modification dans l’administration", "{name} a fait une modification — ouvrez le journal."],
+    pl: ["Zmiana w panelu administratora", "{name} wprowadził zmianę — otwórz dziennik zmian."],
+    he: ["שינוי בממשק הניהול", "{name} ביצע שינוי — פתחו את יומן השינויים."],
+    ar: ["تغيير في لوحة الإدارة", "أجرى {name} تغييراً — افتح سجل التغييرات."],
+  },
 };
 function msgText(msg, L) {
   const byLang = msg && MSG_TEXT[msg.k];

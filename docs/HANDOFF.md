@@ -1,6 +1,16 @@
 # Session handoff
 
-## 2026-11-23 — «Бухгалтерия» for the owner (branch `accounting`, NOT deployed — shown)
+## 2026-11-23 — Superadmin: staff management + change log with notifications (deployed)
+
+- Operator: «нынешний админ — суперадмин, следующие — просто админы; сделай и залей, по ходу будем менять; не подтверждение, а уведомление — все изменения с уведомлением суперадмину».
+- Superadmin = the owner (`StaffUser.isOwner`, see «Бухгалтерия» below). Label «Суперадмин»; his menu starts with «Изменения (N)», «Бухгалтерия», «Сотрудники».
+- «Сотрудники» /admin/staff (owner only, API /api/v1/admin/staff, /staff/[id]): create ADMIN / DISPATCHER with a one-time temporary password; switch off (signs out everywhere) / on; new temporary password; reset 2FA; last sign-in. The owner cannot do these to himself. Audit rows in AuditEvent.
+- «Изменения» /admin/changes (owner only): every POST/PUT/PATCH/DELETE to /api/v1/** by an ADMIN who is not the owner is logged in `StaffAction` (migration 20261123180000_staff_actions) when requireStaff lets it in (the proxy sets `x-ily-mutation`, always overwriting any client value). Push to the owner (`STAFF:<id>`, key `staff.change`, 8 languages) at most once per 2 min per admin. Opening the page marks all as read. Button «Включить уведомления на этом устройстве» → POST /api/v1/staff/push.
+- NOT logged: dispatchers (routine dispatch work would flood it) and the owner's own changes. Logged at request entry — also a request that then fails validation.
+- Regular admins keep every other section for now (operator: «по ходу будем менять»).
+- Tests: tests/superadmin.db.test.ts, proxy marker in https-redirect.test.ts. Suite 387 passed / 1 skipped.
+
+## 2026-11-23 — «Бухгалтерия» for the owner (deployed 2026-11-23 together with the superadmin)
 
 - Operator: «бухгалтерия для меня в суперадмине; только я; только евро; начинай» (manual entries + reports first; driver subscriptions join automatically once they exist).
 - Owner = `StaffUser.isOwner` (an ADMIN). Migration `20261123120000_accounting` marks the OLDEST active ADMIN (the bootstrap admin) as owner; move it on the server with `npm run owner:set -- <login>` (scripts/owner-set.ts, exactly one owner). Not editable from the UI. /auth/me returns `isOwner`; the staff menu shows «Бухгалтерия» only to him. Other admins / dispatchers get 403 on every accounting API.
