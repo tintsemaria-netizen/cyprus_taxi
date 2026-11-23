@@ -21,3 +21,15 @@ describe('plain-http visitors go to https', () => {
     expect(direct.headers.get('strict-transport-security')).toBeNull();
   });
 });
+
+// 2026-11-23: the change-log marker is set only by the proxy, for changing API calls.
+describe('change-log marker', () => {
+  const call = (method: string, path: string) => proxy(new NextRequest(`http://localhost:3000${path}`, { method, headers: { host: 'localhost:3000', origin: 'http://localhost:3000', 'x-ily-mutation': 'POST /api/v1/forged' } }));
+  it('POST to the API carries the real method and path; a forged one is replaced', () => {
+    expect(call('POST', '/api/v1/admin/min-fares').headers.get('x-middleware-request-x-ily-mutation')).toBe('POST /api/v1/admin/min-fares');
+  });
+  it('GET and pages never carry it, even if the client sent it', () => {
+    expect(call('GET', '/api/v1/admin/min-fares').headers.get('x-middleware-request-x-ily-mutation')).toBeNull();
+    expect(call('GET', '/admin').headers.get('x-middleware-request-x-ily-mutation')).toBeNull();
+  });
+});

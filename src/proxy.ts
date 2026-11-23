@@ -45,6 +45,8 @@ function cameOverPlainHttp(req: NextRequest): boolean {
   return !!v && /"scheme"\s*:\s*"http"/.test(v);
 }
 
+const MUTATION_HEADER = 'x-ily-mutation';
+
 export function proxy(req: NextRequest) {
   if (cameOverPlainHttp(req) && (req.method === 'GET' || req.method === 'HEAD')) {
     const host = req.headers.get('host') || req.nextUrl.host;
@@ -56,7 +58,12 @@ export function proxy(req: NextRequest) {
       { status: 403, headers: { 'Cache-Control': 'no-store' } },
     );
   }
-  const res = NextResponse.next();
+  // «Журнал изменений» (2026-11-23): tell requireStaff which changing API call this is, so an admin's
+  // change is logged for the owner. Always overwritten here — a client can never set it itself.
+  const reqHeaders = new Headers(req.headers);
+  reqHeaders.delete(MUTATION_HEADER);
+  if (req.nextUrl.pathname.startsWith('/api/v1/') && MUTATING.has(req.method)) reqHeaders.set(MUTATION_HEADER, `${req.method} ${req.nextUrl.pathname}`);
+  const res = NextResponse.next({ request: { headers: reqHeaders } });
   const tiles = tileOrigin();
   // Google Maps JS SDK resource hosts (per Google's CSP guidance). The vector/WebGL
   // map's shared-label worker fetches label images from *.gstatic.com AND data: URIs

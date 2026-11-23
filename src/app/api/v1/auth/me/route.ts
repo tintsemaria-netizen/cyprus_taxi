@@ -16,6 +16,8 @@ export async function GET() {
   }
   return apiOk({
     id: ctx.user.id, role: ctx.user.role, displayName: ctx.user.displayName, driverId,
+    isOwner: ctx.user.role === 'ADMIN' && ctx.user.isOwner, // superadmin: «Бухгалтерия», «Сотрудники», «Изменения» (2026-11-23)
+    unreadChanges: ctx.user.role === 'ADMIN' && ctx.user.isOwner ? await prisma.staffAction.count({ where: { seenAt: null } }) : 0,
     fleet: ctx.user.role === 'FLEET_OWNER' || ctx.user.role === 'DRIVER' ? await ownedFleet(ctx.user.id) : null,
     mfa: { eligible: isPrivileged(ctx.user), enabled: !!ctx.user.totpEnabledAt, setupRequired: mfaSetupRequired(ctx.user) },
   });

@@ -1,5 +1,24 @@
 # Session handoff
 
+## 2026-11-23 — Superadmin: staff management + change log with notifications (deployed)
+
+- Operator: «нынешний админ — суперадмин, следующие — просто админы; сделай и залей, по ходу будем менять; не подтверждение, а уведомление — все изменения с уведомлением суперадмину».
+- Superadmin = the owner (`StaffUser.isOwner`, see «Бухгалтерия» below). Label «Суперадмин»; his menu starts with «Изменения (N)», «Бухгалтерия», «Сотрудники».
+- «Сотрудники» /admin/staff (owner only, API /api/v1/admin/staff, /staff/[id]): create ADMIN / DISPATCHER with a one-time temporary password; switch off (signs out everywhere) / on; new temporary password; reset 2FA; last sign-in. The owner cannot do these to himself. Audit rows in AuditEvent.
+- «Изменения» /admin/changes (owner only): every POST/PUT/PATCH/DELETE to /api/v1/** by an ADMIN who is not the owner is logged in `StaffAction` (migration 20261123180000_staff_actions) when requireStaff lets it in (the proxy sets `x-ily-mutation`, always overwriting any client value). Push to the owner (`STAFF:<id>`, key `staff.change`, 8 languages) at most once per 2 min per admin. Opening the page marks all as read. Button «Включить уведомления на этом устройстве» → POST /api/v1/staff/push.
+- NOT logged: dispatchers (routine dispatch work would flood it) and the owner's own changes. Logged at request entry — also a request that then fails validation.
+- Regular admins keep every other section for now (operator: «по ходу будем менять»).
+- Tests: tests/superadmin.db.test.ts, proxy marker in https-redirect.test.ts. Suite 387 passed / 1 skipped.
+
+## 2026-11-23 — «Бухгалтерия» for the owner (deployed 2026-11-23 together with the superadmin)
+
+- Operator: «бухгалтерия для меня в суперадмине; только я; только евро; начинай» (manual entries + reports first; driver subscriptions join automatically once they exist).
+- Owner = `StaffUser.isOwner` (an ADMIN). Migration `20261123120000_accounting` marks the OLDEST active ADMIN (the bootstrap admin) as owner; move it on the server with `npm run owner:set -- <login>` (scripts/owner-set.ts, exactly one owner). Not editable from the UI. /auth/me returns `isOwner`; the staff menu shows «Бухгалтерия» only to him. Other admins / dispatchers get 403 on every accounting API.
+- Data: `LedgerEntry` (INCOME/EXPENSE, day, cents, category, counterparty, method, note, receipt, soft delete) and `LedgerRecurring` (MONTH/YEAR, nextDay; booked idempotently when the page is opened — unique (recurringId, day), conditional nextDay move).
+- src/server/accounting.ts: requireOwner, periodRange (month / quarter / year, prev / next), accountingView (totals, profit, 15 % tax «for information», by category, VAT turnover of 12 months vs 15 600 €, drivers' totals through the SHARED `earningsSummary` summed over all drivers), CSV export (Excel, BOM). Receipts: private store under `ledger/` (same magic-byte checks); the KYC orphan sweep now keeps ledger receipts.
+- API /api/v1/admin/accounting (GET, POST), /entries/[id] (PATCH, DELETE), /entries/[id]/receipt (POST, GET), /recurring (POST), /recurring/[id] (DELETE), /export.
+- Page /admin/accounting (en/ru texts; other languages use English as for all staff pages). Hint to turn on 2FA if off. Staff top menu now scrolls instead of overlapping the language / sign-out buttons (it overflowed at 1280 px).
+- Tests: tests/accounting.db.test.ts (owner only, figures, recurring incl. month end, VAT/periods, receipts + sweep). Suite 381 passed / 1 skipped. Seed marks the demo admin as owner. Screens /tmp/shots/acc-*.png.
 ## 2026-11-23 (evening) — share-v2 simplified by the operator (LOCAL, not pushed)
 - Auto: pairs only by «быть на месте» windows; route first, then the latest start so the later arrival is ~10 min (ARRIVE_BUFFER_MIN) before the end of the common part; ≤15 extra min each. Old bookings (no terms version) are NOT auto-paired.
 - Board: shows rides within ±1 h of my window (BOARD_REACH_MIN); «Поехать вместе» = I adapt to their time; if outside my window → confirm dialog («Ваше указанное время… не пересекаются. Вы уверены…»), then «Вы будете на месте около …»; my window is widened to what I agreed.

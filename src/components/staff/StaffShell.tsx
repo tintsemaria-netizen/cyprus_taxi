@@ -9,6 +9,9 @@ import { useT } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 export interface Me {
+  /** The business owner — superadmin: «Бухгалтерия», «Сотрудники», «Изменения» (2026-11-23). */
+  isOwner?: boolean;
+  unreadChanges?: number;
   id: string;
   role: 'ADMIN' | 'DISPATCHER' | 'DRIVER' | 'FLEET_OWNER';
   displayName: string;
@@ -69,6 +72,12 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
           { href: '/dispatch', label: t('staff.nav.dispatch') },
           ...(me.role === 'ADMIN'
             ? [
+                // Superadmin first: the menu scrolls on narrow screens (2026-11-23).
+                ...(me.isOwner ? [
+                  { href: '/admin/changes', label: `${t('staff.nav.changes')}${me.unreadChanges ? ` (${me.unreadChanges})` : ''}` },
+                  { href: '/admin/accounting', label: t('staff.nav.accounting') },
+                  { href: '/admin/staff', label: t('staff.nav.staff') },
+                ] : []),
                 { href: '/admin/analytics', label: t('staff.nav.analytics') },
                 { href: '/admin/reliability', label: t('staff.nav.reliability') },
                 { href: '/admin/applications', label: t('staff.nav.applications') },
@@ -91,7 +100,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
           {/* Driver sub-screens (pre-bookings, free orders, 2026-11-19): ‹ back to the map, left of the logo. */}
           {me.role === 'DRIVER' && driverBack && <BackArrow className="-ms-2 -me-3" onBack={() => window.dispatchEvent(new Event('il-y:driver-back'))} />}
           <a href="/dispatch" className="shrink-0"><Logo className="h-6" /></a>
-          <nav className="hidden items-center gap-1 xl:flex">
+          <nav className="hidden min-w-0 items-center gap-1 overflow-x-auto xl:flex">
             {nav.map((n) => (
               <a
                 key={n.href}
@@ -104,7 +113,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
           </nav>
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden text-xs text-muted 2xl:inline">{me.displayName} · {t(`staff.role.${me.role}`)}</span>
+          <span className="hidden text-xs text-muted 2xl:inline">{me.displayName} · {me.isOwner ? t('staff.role.OWNER') : t(`staff.role.${me.role}`)}</span>
           {/* Drivers (2026-11-17): language and sign-out live in their Profile, not in this bar. */}
           {me.role !== 'DRIVER' && <LanguageSwitcher compact />}
           {me.role !== 'DRIVER' && <button onClick={logout} className="btn-ghost !min-h-0 !py-1.5 text-sm">{t('common.signOut')}</button>}

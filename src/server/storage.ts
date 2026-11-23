@@ -41,6 +41,11 @@ export async function saveDocument(applicationId: string, docId: string, buf: Bu
   return { storageKey, mime, sizeBytes: buf.length, sha256: createHash('sha256').update(buf).digest('hex') };
 }
 
+// Owner's receipts for the bookkeeping (2026-11-23): same checks, under «ledger/».
+export async function saveLedgerReceipt(entryId: string, buf: Buffer): Promise<StoredDoc | { error: string }> {
+  return saveDocument('ledger', entryId, buf);
+}
+
 // Read a stored file. Resolves under the uploads root only (guards against traversal).
 export async function readDocument(storageKey: string): Promise<Buffer | null> {
   const root = path.resolve(/*turbopackIgnore: true*/ config.uploads.dir);

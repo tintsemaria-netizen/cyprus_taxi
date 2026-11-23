@@ -33,7 +33,9 @@ async function staff(login: string, role: 'ADMIN' | 'DISPATCHER' | 'DRIVER', dis
 async function main() {
   console.log('Seeding synthetic demo data…');
 
-  await staff('admin', 'ADMIN', 'Demo Admin');
+  const admin = await staff('admin', 'ADMIN', 'Demo Admin');
+  // The demo admin is the business owner («Бухгалтерия», 2026-11-23) unless another owner exists.
+  if (!(await prisma.staffUser.count({ where: { isOwner: true } }))) await prisma.staffUser.update({ where: { id: admin.id }, data: { isOwner: true } });
   await staff('dispatcher', 'DISPATCHER', 'Demo Dispatcher');
 
   const drivers = [
