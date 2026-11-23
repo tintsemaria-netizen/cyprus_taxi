@@ -2612,7 +2612,7 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   NOTE for the owner: the booking form still REQUIRES «Телефон для водителя» although the owner said drivers talk to
   passengers in the in-app chat — proposed removing it; not changed yet.
 
-## 2026-11-23 — «Не ваши изменения» (branch `changes-red`, NOT deployed yet)
+## 2026-11-23 — «Не ваши изменения» — DEPLOYED (main 346a508; live: /admin/changes/count 401, /staff/push 404, ready)
 - Operator: no push with sound. Section renamed «Изменения» → «Не ваши изменения» / «Not your changes».
 - Owner menu item turns red with a pulsing dot and a count while there are unseen changes
   (StaffShell polls GET /api/v1/admin/changes/count every 30 s + on return; opening the page marks read and fires `il-y:changes-seen`).
