@@ -10,7 +10,7 @@ import { useIdleReturn } from './useIdleReturn';
 import { smoothRoute } from './routeSmooth';
 import { compassEl } from './mapCompass';
 import { useT } from '@/i18n/I18nProvider';
-import { fitKeyOf } from './mapFit';
+import { fitKeyOf, safePadding } from './mapFit';
 import { currentTheme } from '@/lib/theme';
 
 export interface MapMarker {
@@ -234,10 +234,10 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         // An earlier easeTo({padding}) leaves that padding on the map, and fitBounds adds its own on
         // top — together they no longer fit and MapLibre silently skips the fit (2026-11-17).
         map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
-        map.fitBounds(b, { padding: fitPadding ?? 70, maxZoom: fitRoute ? 15 : 12, duration: 400 });
+        { const c = map.getContainer(); map.fitBounds(b, { padding: fitPadding ? safePadding(fitPadding, c.clientWidth, c.clientHeight) : 70, maxZoom: fitRoute ? 15 : 12, duration: 400 }); }
       } else if (fm.length === 1 && !focus) {
         // A focus point owns the camera when given (it runs first; this async fit must not undo it).
-        map.easeTo({ center: [fm[0].lng, fm[0].lat], zoom: 12, duration: 400, ...(fitPadding ? { padding: fitPadding } : {}) });
+        map.easeTo({ center: [fm[0].lng, fm[0].lat], zoom: 12, duration: 400, ...(fitPadding ? { padding: safePadding(fitPadding, map.getContainer().clientWidth, map.getContainer().clientHeight) } : {}) });
       }
     })();
     // Only a change in the padding VALUES re-fits (padKey), not a new object identity.
@@ -268,7 +268,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     const map = mapRef.current;
     if (!map || !ready || !focus || followRef.current || idle.active.current) return;
     // Centre in the visible area (between overlays / above a sheet) — fitPadding, 2026-11-16.
-    map.easeTo({ center: [focus.lng, focus.lat], zoom: focusZoom, duration: 500, ...(fitPadding ? { padding: fitPadding } : {}) });
+    map.easeTo({ center: [focus.lng, focus.lat], zoom: focusZoom, duration: 500, ...(fitPadding ? { padding: safePadding(fitPadding, map.getContainer().clientWidth, map.getContainer().clientHeight) } : {}) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusKey, ready, idle.returnTick, padKey, recenterTick]);
 

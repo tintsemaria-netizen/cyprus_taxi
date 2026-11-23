@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { CYPRUS_BOUNDS } from '@/lib/config';
 import type { MapMarker } from './MapView';
-import { fitKeyOf } from './mapFit';
+import { fitKeyOf, safePadding } from './mapFit';
 import { vehicleMarkerEl, orientVehicle, steerVehicle, bearing, personMarkerEl, pickupPinEl, navArrowEl, numberedStopEl } from './carMarker';
 import { distanceM } from '@/lib/gpsFilter';
 import { useIdleReturn } from './useIdleReturn';
@@ -111,6 +111,9 @@ function markerEl(mk: MapMarker): HTMLElement {
   el.title = mk.label || mk.kind;
   return centerOnPoint(el);
 }
+
+/** Fitting never zooms out past the whole island. */
+const MIN_FIT_ZOOM = 8;
 
 export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], fleetLikeSelf, routeWidth = 7, focus, focusZoom, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -331,7 +334,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     if (!map || !g || !ready || followRef.current || idle.active.current) return;
     // A focus point with its own zoom owns the camera (2026-11-17): don't fit the markers around it.
     if (focus && focusZoom != null) return;
-    const pad = fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 };
+    const box = containerRef.current?.getBoundingClientRect();
+    const pad = safePadding(fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 }, box?.width ?? 0, box?.height ?? 0);
     const fm = markers.filter((m) => !m.noFit); // later stops of a shared ride are shown, not framed
     // One point + a drawn route (2026-11-19: trip in progress while the car's position is not known)
     // frames the whole route too, instead of a close-up of the destination with the line cut off.
@@ -342,7 +346,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       if (fitRoute && route) route.forEach(([lng, lat]) => b.extend({ lat, lng }));
       map.fitBounds(b, pad);
       // Points very close together (driver waiting at the pickup): don't zoom in past street level.
-      g.event.addListenerOnce(map, 'idle', () => { if (map.getZoom() > 17) map.setZoom(17); });
+      // …and never further out than the whole of Cyprus (2026-11-23: a tiny visible band showed the Middle East).
+      g.event.addListenerOnce(map, 'idle', () => { const z = map.getZoom(); if (z > 17) map.setZoom(17); else if (z < MIN_FIT_ZOOM) map.setZoom(MIN_FIT_ZOOM); });
     } else if (fm.length === 1) {
       if (focusZoom != null) centerPointAt(map, fm[0].lat, fm[0].lng, pad, focusZoom);
       else framePoint(map, g, fm[0].lat, fm[0].lng, pad);
@@ -365,7 +370,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     const pts: { lat: number; lng: number }[] = markers.filter((m) => !m.noFit).map((m) => ({ lat: m.lat, lng: m.lng }));
     if (route) route.forEach(([lng, lat]) => pts.push({ lat, lng }));
     if (pts.length < 2) return;
-    const pad = fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 };
+    const pad = safePadding(fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 }, el.clientWidth, el.clientHeight);
     const W = el.clientWidth, H = el.clientHeight;
     const target = cameraFor(pts, W, H, pad);
     if (!target) return;
@@ -395,7 +400,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
     if (!map || !g || !ready || !focus || markers.length >= 2 || followRef.current || idle.active.current) return;
-    const fpad = fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 };
+    const fbox = containerRef.current?.getBoundingClientRect();
+    const fpad = safePadding(fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 }, fbox?.width ?? 0, fbox?.height ?? 0);
     if (focusZoom != null) centerPointAt(map, focus.lat, focus.lng, fpad, focusZoom);
     else framePoint(map, g, focus.lat, focus.lng, fpad);
     // eslint-disable-next-line react-hooks/exhaustive-deps
