@@ -4,6 +4,7 @@ const staff = {
   required: 'Required.',
   minChars: 'At least {n} characters.',
   nav: {
+    groupDrivers: 'Drivers & cars', groupPrices: 'Prices', groupReports: 'Reports', groupOwner: 'Superadmin', groupSettings: 'Settings',
     fleets: 'Fleets', myFleet: 'My fleet',
     dispatch: 'Dispatch', analytics: 'Analytics', reliability: 'Reliability', applications: 'Applications',
     passengers: 'Clients', drivers: 'Drivers', vehicles: 'Vehicles', settings: 'Settings', fixedPrices: 'Fixed prices', minFares: 'Pre-booking minimum', accounting: 'Accounting', changes: 'Not your changes', staff: 'Staff', security: 'Security',

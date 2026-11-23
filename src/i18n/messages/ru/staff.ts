@@ -6,6 +6,7 @@ const staff: Catalog<typeof en> = {
   required: 'Обязательное поле.',
   minChars: 'Минимум {n} символа.',
   nav: {
+    groupDrivers: 'Водители и машины', groupPrices: 'Цены', groupReports: 'Отчёты', groupOwner: 'Суперадмин', groupSettings: 'Настройки',
     fleets: 'Автопарки', myFleet: 'Мой автопарк',
     dispatch: 'Диспетчерская', analytics: 'Аналитика', reliability: 'Надёжность', applications: 'Заявки',
     passengers: 'Клиенты', drivers: 'Водители', vehicles: 'Автомобили', settings: 'Настройки', fixedPrices: 'Фикс. цены', minFares: 'Минимум предзаказа', accounting: 'Бухгалтерия', changes: 'Не ваши изменения', staff: 'Сотрудники', security: 'Безопасность',
