@@ -10,7 +10,7 @@ import { useIdleReturn } from './useIdleReturn';
 import { smoothRoute } from './routeSmooth';
 import { compassEl } from './mapCompass';
 import { useT } from '@/i18n/I18nProvider';
-import { fitKeyOf, safePadding } from './mapFit';
+import { fitKeyOf, safePadding, pinPoint } from './mapFit';
 import { currentTheme } from '@/lib/theme';
 
 export interface MapMarker {
@@ -73,6 +73,9 @@ interface Props {
   recenterTick?: number;
   /** The user dragged the map by hand. */
   onUserMove?: () => void;
+  /** Centre-pin pick (2026-11-23): after the user moves the map by hand and it stops, the point under the
+   *  centre pin (pinPoint of fitPadding). */
+  onCenterPick?: (p: { lat: number; lng: number; zoom: number }) => void;
 }
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
@@ -98,7 +101,7 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], fleetLikeSelf, routeWidth = 7, focus, focusZoom: focusZoomProp, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], fleetLikeSelf, routeWidth = 7, focus, focusZoom: focusZoomProp, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
   const focusZoom = focusZoomProp ?? 15;
   // Re-frame / re-centre when the visible area changes (e.g. the sheet under the map grew or shrank).
   const padKey = fitPadding ? `${fitPadding.top},${fitPadding.right},${fitPadding.bottom},${fitPadding.left}` : '';
@@ -129,6 +132,10 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
   breakRef.current = onFollowBreak;
   const userMoveRef = useRef(onUserMove);
   userMoveRef.current = onUserMove;
+  const centerPickRef = useRef(onCenterPick);
+  centerPickRef.current = onCenterPick;
+  const padRef = useRef(fitPadding);
+  padRef.current = fitPadding;
 
   useEffect(() => {
     let cancelled = false;
@@ -158,6 +165,14 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         if (compass) { const box = document.createElement('div'); box.className = 'maplibregl-ctrl'; box.appendChild(compass.el); map.addControl({ onAdd: () => box, onRemove: () => box.remove() }, 'top-right'); }
         map.on('rotate', () => { const b = map!.getBearing(); compass?.update(b); document.querySelectorAll<HTMLElement>('.ily-vehicle').forEach((el) => orientVehicle(el, b)); });
         map.on('dragstart', () => { userMoveRef.current?.(); if (followRef.current) breakRef.current?.(); });
+        // Centre pin (see GoogleMapView): only user moves report the point under the pin, after they stop.
+        map.on('moveend', (e: { originalEvent?: unknown }) => {
+          if (!e.originalEvent || !centerPickRef.current) return;
+          const c = map!.getContainer();
+          const pt = pinPoint(padRef.current, c.clientWidth, c.clientHeight);
+          const ll = map!.unproject([pt.x, pt.y]);
+          centerPickRef.current({ lat: ll.lat, lng: ll.lng, zoom: map!.getZoom() });
+        });
         if (interactive) {
           // Zoom buttons only with a mouse; on touch screens pinch-zoom is used and bottom sheets
           // would cover the buttons anyway (2026-11-15 multi-device audit). (Google: right-centre.)

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { CYPRUS_BOUNDS } from '@/lib/config';
 import type { MapMarker } from './MapView';
-import { fitKeyOf, safePadding } from './mapFit';
+import { pinPoint, fitKeyOf, safePadding } from './mapFit';
 import { vehicleMarkerEl, orientVehicle, steerVehicle, bearing, personMarkerEl, pickupPinEl, navArrowEl, numberedStopEl } from './carMarker';
 import { distanceM } from '@/lib/gpsFilter';
 import { useIdleReturn } from './useIdleReturn';
@@ -53,6 +53,9 @@ interface Props {
   recenterTick?: number;
   /** The user dragged the map by hand. */
   onUserMove?: () => void;
+  /** Centre-pin pick (2026-11-23): after the user moves the map by hand and it stops, the point under the
+   *  centre pin (pinPoint of fitPadding). */
+  onCenterPick?: (p: { lat: number; lng: number; zoom: number }) => void;
 }
 
 const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
@@ -115,7 +118,7 @@ function markerEl(mk: MapMarker): HTMLElement {
 /** Fitting never zooms out past the whole island. */
 const MIN_FIT_ZOOM = 8;
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], fleetLikeSelf, routeWidth = 7, focus, focusZoom, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], fleetLikeSelf, routeWidth = 7, focus, focusZoom, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const lastUpd = useRef(new Map<string, number>());
@@ -142,6 +145,10 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   breakRef.current = onFollowBreak;
   const userMoveRef = useRef(onUserMove);
   userMoveRef.current = onUserMove;
+  const centerPickRef = useRef(onCenterPick);
+  centerPickRef.current = onCenterPick;
+  const padRef = useRef(fitPadding);
+  padRef.current = fitPadding;
   const camAnim = useRef<number | null>(null);
   const homeRef = useRef<{ lat: number; lng: number }>(center ?? CYPRUS_CENTER);
   // Any touch/pinch/scroll stops the navigation follow-camera at once (not only a drag) and,
@@ -197,6 +204,30 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
         }
         mapRef.current = map;
         map.addListener('dragstart', () => { userMoveRef.current?.(); if (followRef.current) breakRef.current?.(); });
+        // Centre pin: only a move the user made by hand (finger / mouse / wheel) reports the point under
+        // the pin, once the map has stopped and the finger is up — programmatic camera moves never do.
+        {
+          const box = containerRef.current!;
+          let touched = false, down = false;
+          const press = () => { touched = true; down = true; };
+          const release = () => { down = false; };
+          const wheel = () => { touched = true; };
+          box.addEventListener('pointerdown', press, { passive: true });
+          box.addEventListener('touchstart', press, { passive: true });
+          window.addEventListener('pointerup', release, { passive: true });
+          window.addEventListener('touchend', release, { passive: true });
+          box.addEventListener('wheel', wheel, { passive: true });
+          map.addListener('idle', () => {
+            if (!touched || down || !centerPickRef.current) return;
+            touched = false;
+            const proj = map.getProjection?.(), c = map.getCenter?.(), z = map.getZoom?.();
+            if (!proj || !c || z == null) return;
+            const pt = pinPoint(padRef.current, box.clientWidth, box.clientHeight);
+            const scale = 2 ** z, w = proj.fromLatLngToPoint(c);
+            const ll = proj.fromPointToLatLng(new g.Point(w.x + (pt.x - box.clientWidth / 2) / scale, w.y + (pt.y - box.clientHeight / 2) / scale));
+            if (ll) centerPickRef.current({ lat: ll.lat(), lng: ll.lng(), zoom: z });
+          });
+        }
         // Keep cars pointing along their travel direction while the map rotates (heading-up nav).
         // Compass (north button) only on maps without an automatic return — those go back to north by themselves.
         const compass = interactive && !idleReturnMs && g.ControlPosition
