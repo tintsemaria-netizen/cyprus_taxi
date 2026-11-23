@@ -1,7 +1,8 @@
 'use client';
 
+import { onCyprusIsland } from '@/lib/cyprus-island';
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { api, uuid } from '@/lib/api-client';
+import { api, uuid, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { Selected } from './PlacesInput';
 import { localMatches, nearParam } from '@/lib/nearHint';
@@ -70,7 +71,7 @@ export function RouteEditor(p: Props) {
   };
   const inputs = useRef<Partial<Record<RouteSlot, HTMLInputElement | null>>>({});
   const [results, setResults] = useState<Result[]>([]);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'none' | 'unavailable'>('idle');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'none' | 'unavailable' | 'offIsland'>('idle');
   const seq = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const session = useRef('');
@@ -121,10 +122,12 @@ export function RouteEditor(p: Props) {
       try {
         const r = await api<{ place: { lat: number; lng: number; label: string } | null }>(`/places/details?placeId=${encodeURIComponent(place.placeId)}&session=${token()}`, { timeoutMs: 6000 });
         if (r.place) sel = { lat: r.place.lat, lng: r.place.lng, label: r.place.label || place.label };
-      } catch { sel = null; }
+      } catch (e) { sel = null; if (e instanceof ApiRequestError && e.body.code === 'OFF_ISLAND') { session.current = ''; setStatus('offIsland'); return; } }
     }
     session.current = '';
     if (!sel) { setStatus('unavailable'); return; }
+    // Only on the island of Cyprus (2026-11-24, operator).
+    if (!onCyprusIsland(sel)) { setStatus('offIsland'); return; }
     p.onSelect(active, sel);
     p.onText(active, sel.label);
     setResults([]); setStatus('idle');
@@ -257,6 +260,7 @@ export function RouteEditor(p: Props) {
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-6" role="listbox" aria-label={t('booking.route.suggestions')}>
         {status === 'loading' && !quick.length && <p className="px-2 py-3 text-sm text-muted">{t('booking.places.searching')}</p>}
         {status === 'none' && !quick.length && <p className="px-2 py-3 text-sm text-muted">{t('booking.places.none')}</p>}
+        {status === 'offIsland' && <p className="px-2 py-3 text-sm font-medium text-danger" data-testid="off-island">{t('errors.OFF_ISLAND')}</p>}
         {status === 'unavailable' && <p className="px-2 py-3 text-sm text-warn">{t('booking.places.unavailable')}</p>}
         {[...listed, ...(showSaved ? popular.filter((x) => !listed.some((l) => l.label.toLowerCase() === x.label.toLowerCase())) : [])].map((r, i, all) => {
           const [main, sub] = 'name' in r && r.name ? [r.name, r.label] : twoLines(r.label);

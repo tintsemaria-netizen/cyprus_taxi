@@ -3,6 +3,7 @@ import { createQuote } from '@/server/quote';
 import { rateLimit } from '@/lib/rate-limit';
 import { config } from '@/lib/config';
 import { validCoord } from '@/lib/geo';
+import { onCyprusIsland } from '@/lib/cyprus-island';
 import { nicosiaWallTimeToUtc } from '@/lib/timezone';
 import { z } from 'zod';
 
@@ -30,6 +31,12 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(raw);
   if (!parsed.success) return Errors.validation({ _: 'Invalid quote request.' });
   if (!validCoord(parsed.data.pickup) || !validCoord(parsed.data.dropoff) || (parsed.data.stop && !validCoord(parsed.data.stop))) return Errors.validation({ _: 'Invalid coordinates.' });
+
+  // Only on the island of Cyprus (2026-11-24, operator).
+  const { pickup, dropoff, stop } = parsed.data;
+  if (!onCyprusIsland(pickup) || !onCyprusIsland(dropoff) || (stop && !onCyprusIsland(stop))) {
+    return apiError(422, 'OFF_ISLAND', 'The point is not on the island of Cyprus.');
+  }
 
   // Convert a scheduled wall time to UTC; if it's not a valid instant (DST gap/ambiguous)
   // we price the quote for "now" — the booking endpoint does the strict schedule check.

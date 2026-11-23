@@ -1,4 +1,5 @@
 import { apiOk, Errors, clientIp } from '@/lib/http';
+import { onCyprusIsland } from '@/lib/cyprus-island';
 import { searchPlaces } from '@/lib/places';
 import { rateLimit } from '@/lib/rate-limit';
 import { config } from '@/lib/config';
@@ -7,6 +8,8 @@ import { popularResults } from '@/server/popular';
 import { photonSearch } from '@/server/photon';
 import { searchOsm } from '@/server/osm/search';
 
+// Only places on the island of Cyprus (2026-11-24, operator); suggestions without coordinates are checked when chosen.
+const onIsland = (r: object) => { const { lat, lng } = r as { lat?: number | null; lng?: number | null }; return lat == null || lng == null || onCyprusIsland({ lat, lng }); };
 function withPopular<T extends { label: string }>(pop: { label: string }[], rest: T[]): (T | (typeof pop)[number])[] {
   const seen = new Set(pop.map((p) => p.label.toLowerCase()));
   return [...pop, ...rest.filter((r) => !seen.has(r.label.toLowerCase()))];
@@ -31,7 +34,7 @@ export async function GET(req: Request) {
   // Own Cyprus address base first (2026-11-19): every named place, street and house on the island,
   // on our server — instant and free. Outside services are asked only when it has nothing.
   const own = await searchOsm(q, near, 8).catch((e) => { console.error('[places] own base', e); return null; });
-  if (own && own.length) return apiOk({ provider: 'osm', demo: false, attribution: '© OpenStreetMap', results: withPopular(popular, own).slice(0, 10) });
+  if (own && own.length) return apiOk({ provider: 'osm', demo: false, attribution: '© OpenStreetMap', results: withPopular(popular, own.filter(onIsland)).slice(0, 10) });
   if (googleConfigured()) {
     // Prefer Places (New) autocomplete (predictions → resolved via /places/details).
     // Falls back to forward geocoding if Places is not enabled on the project.
@@ -54,12 +57,12 @@ export async function GET(req: Request) {
     // A whole-country / town-centre geocode answer is no help while typing — keep only real addresses.
     const geoUseful = (geo ?? []).filter((g) => /\d/.test(g.label) || g.label.split(',').length >= 3);
     const merged = withPopular(popular, [...osm, ...geoUseful.filter((g) => !osm.some((o) => Math.abs(o.lat - g.lat) < 0.0005 && Math.abs(o.lng - g.lng) < 0.0005))]);
-    if (merged.length) return apiOk({ provider: 'google', demo: false, results: merged.slice(0, 10) });
+    if (merged.length) return apiOk({ provider: 'google', demo: false, results: merged.filter(onIsland).slice(0, 10) });
     return apiOk({ provider: 'google', demo: false, unavailable: geo === null && !osm.length, results: [] });
   }
 
   // No real adapter → demo fixtures only in demo mode; otherwise unavailable.
   if (!config.demoMode) return popular.length ? apiOk({ demo: false, results: popular }) : apiOk({ demo: false, unavailable: true, results: [] });
   const results = searchPlaces(q).map((p) => ({ label: p.label, lat: p.lat, lng: p.lng, kind: p.kind }));
-  return apiOk({ demo: true, results: withPopular(popular, results) });
+  return apiOk({ demo: true, results: withPopular(popular, results.filter(onIsland)) });
 }

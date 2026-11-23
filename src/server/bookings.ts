@@ -1,4 +1,5 @@
 import { lookupPostcode } from '@/server/postcode';
+import { onCyprusIsland } from '@/lib/cyprus-island';
 import { startSearchTx } from '@/server/dispatch/search';
 import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
@@ -47,6 +48,11 @@ export async function createBooking(
       passengerCount: `Max ${cls.maxPassengers} for ${cls.label}.`,
     });
   }
+
+  // 1b. Only on the island of Cyprus (2026-11-24, operator) — before the admin's service area.
+  if (!onCyprusIsland(input.pickup)) return fail(422, 'OFF_ISLAND', 'Pickup is not on the island of Cyprus.', { pickup: 'Not on Cyprus.' });
+  if (!onCyprusIsland(input.dropoff)) return fail(422, 'OFF_ISLAND', 'Destination is not on the island of Cyprus.', { dropoff: 'Not on Cyprus.' });
+  if (input.stop && !onCyprusIsland(input.stop)) return fail(422, 'OFF_ISLAND', 'The stop is not on the island of Cyprus.', { stop: 'Not on Cyprus.' });
 
   // 2. Service area (both stops inside configured polygon)
   const poly = settings.serviceAreaPolygon;

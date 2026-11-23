@@ -33,6 +33,7 @@ const errors: Catalog<typeof en> = {
   NOT_RETRYABLE: "Für diese Fahrt kann nicht erneut gesucht werden.",
   NO_FRESH_GPS: "Ihr Standort ist nicht aktuell. Aktivieren Sie die Standortfreigabe und versuchen Sie es erneut.",
   NO_RECEIPT: "Eine Quittung ist nach Ende der Fahrt verfügbar.",
+  OFF_ISLAND: 'Wir fahren nur auf der Insel Zypern. Wählen Sie einen Punkt an Land.',
   NO_ROUTE: "Ein Auto kann diesen Punkt nicht erreichen. Wählen Sie eine Adresse an einer Straße.",
   OFFER_EXPIRED: "Dieses Angebot ist abgelaufen.",
   OFFER_GONE: "Dieses Angebot ist nicht mehr verfügbar.",

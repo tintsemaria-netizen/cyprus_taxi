@@ -1,6 +1,7 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { onCyprusIsland } from '@/lib/cyprus-island';
 import { BRAND_PIN_SVG } from '@/components/carMarker';
 import { useEffect, useRef, useState } from 'react';
 import { useTwoFingerCamera } from '@/components/useTwoFingerCamera';
@@ -48,6 +49,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
   const popped = useRef(false);
 
   const [center, setCenter] = useState(centerRef.current);
+  const offIsland = !onCyprusIsland(center);
   const [addr, setAddr] = useState<string | null>(initial?.label ?? null);
   const [resolving, setResolving] = useState(false);
   const [geo, setGeo] = useState<GeoState>('idle');
@@ -220,10 +222,12 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
   }
   function confirm() {
     if (closed.current) return;
-    closed.current = true;
     const c = mapRef.current?.getCenter?.();
     const lat = c ? c.lat() : centerRef.current.lat;
     const lng = c ? c.lng() : centerRef.current.lng;
+    // Only on the island of Cyprus (2026-11-24, operator): the button is off and a red line says why.
+    if (!onCyprusIsland({ lat, lng })) return;
+    closed.current = true;
     const snap = addrRef.current;
     // Stored on the booking and shown to the driver → language-neutral English, not the passenger's UI language.
     const l = snap && snap.rev === draftRev.current ? snap.label : translate('en', 'booking.picker.pin', { coords: `${lat.toFixed(5)}, ${lng.toFixed(5)}` });
@@ -281,17 +285,19 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
       <div className="border-t border-edge bg-panel p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
         {geoMsg[geo] && <p className="mb-2 text-xs text-warn">{geoMsg[geo]}</p>}
         {geo === 'ok' && coarse && <p className="mb-2 text-xs text-muted">{t('booking.picker.approximate', { m: Math.round(accuracyM as number) })}</p>}
-        <div className="mb-3 h-[3.25rem]">
+        <div className="mb-3 min-h-[3.25rem]">
           <div className="label">{kind === 'pickup' ? t('booking.picker.selectedPickup') : kind === 'stop' ? t('booking.picker.selectedStop') : t('booking.picker.selectedDestination')}</div>
           <div className="mt-0.5 truncate text-sm font-medium">
             {addr ?? coordLabel(center.lat, center.lng)}
             {resolving && !addr && <span className="ms-2 text-xs text-muted">{t('booking.picker.resolving')}</span>}
           </div>
-          <div className="truncate text-xs text-muted">{addr ? ' ' : t('booking.picker.noAddress')}</div>
+          {offIsland
+            ? <div className="text-xs font-medium leading-snug text-danger" data-testid="picker-off-island">{t('errors.OFF_ISLAND')}</div>
+            : <div className="truncate text-xs text-muted">{addr ? ' ' : t('booking.picker.noAddress')}</div>}
         </div>
         <div className="flex gap-2">
           <button className="btn-ghost !min-h-[44px] shrink-0 !px-4 !py-2 text-sm" onClick={cancel}>{t('common.cancel')}</button>
-          <button className="btn-primary !min-h-[44px] min-w-0 flex-1 !px-3 !py-2 text-sm whitespace-nowrap" onClick={confirm} disabled={failed || !mapLoaded}>
+          <button className="btn-primary !min-h-[44px] min-w-0 flex-1 !px-3 !py-2 text-sm whitespace-nowrap" onClick={confirm} disabled={failed || !mapLoaded || offIsland}>
             {kind === 'pickup' ? t('booking.picker.confirmPickup') : kind === 'stop' ? t('booking.picker.confirmStop') : t('booking.picker.confirmDestination')}
           </button>
         </div>

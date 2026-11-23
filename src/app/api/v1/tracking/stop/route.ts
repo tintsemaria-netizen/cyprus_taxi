@@ -1,3 +1,4 @@
+import { onCyprusIsland } from '@/lib/cyprus-island';
 import { apiOk, apiError, Errors } from '@/lib/http';
 import { getTrackingBookingId } from '@/lib/tracking';
 import { rateLimit } from '@/lib/rate-limit';
@@ -16,6 +17,7 @@ export async function POST(req: Request) {
   try { b = await req.json(); } catch { return Errors.validation({ _: 'Invalid JSON body.' }); }
   const lat = Number(b.lat), lng = Number(b.lng), label = typeof b.label === 'string' ? b.label.trim() : '';
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return Errors.validation({ stop: 'Invalid coordinates.' });
+  if (!onCyprusIsland({ lat, lng })) return apiError(422, 'OFF_ISLAND', 'The stop is not on the island of Cyprus.', { stop: 'Not on Cyprus.' }); // 2026-11-24
   if (!label) return Errors.validation({ stop: 'Address required.' });
   const r = await passengerSetStop(bookingId, { lat, lng, label });
   return r.ok ? apiOk(r) : apiError(r.status, r.code, r.message);
