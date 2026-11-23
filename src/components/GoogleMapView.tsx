@@ -66,10 +66,21 @@ const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
 // box: fitBounds with a big box landed below the wanted zoom on narrow phones, so the map looked
 // zoomed out / scaled instead of moving closer to the car (2026-11-16).
 function centerPointAt(map: any, lat: number, lng: number, pad: any, zoom: number) {
-  map.moveCamera({ center: { lat, lng }, zoom });
   const p = typeof pad === 'number' ? { top: pad, right: pad, bottom: pad, left: pad } : pad;
-  const dx = Math.round(((p.right ?? 0) - (p.left ?? 0)) / 2), dy = Math.round(((p.bottom ?? 0) - (p.top ?? 0)) / 2);
-  if (dx || dy) map.panBy(dx, dy);
+  const dx = ((p.right ?? 0) - (p.left ?? 0)) / 2, dy = ((p.bottom ?? 0) - (p.top ?? 0)) / 2;
+  // One exact camera move (2026-11-24): the point lands between the overlays without a jump to the
+  // middle and an animated pan back — after the centre-pin pick the map must not shift under the logo.
+  const proj = map.getProjection?.(), g = (window as any).google?.maps;
+  if (proj && g?.Point) {
+    const w = proj.fromLatLngToPoint(new g.LatLng(lat, lng)), scale = 2 ** zoom;
+    const c = proj.fromPointToLatLng(new g.Point(w.x + dx / scale, w.y + dy / scale));
+    const cur = map.getCenter?.();
+    if (cur && Math.abs((map.getZoom?.() ?? -1) - zoom) < 1e-6 && Math.abs(cur.lat() - c.lat()) < 1e-7 && Math.abs(cur.lng() - c.lng()) < 1e-7) return; // already there
+    map.moveCamera({ center: { lat: c.lat(), lng: c.lng() }, zoom });
+    return;
+  }
+  map.moveCamera({ center: { lat, lng }, zoom });
+  if (dx || dy) map.panBy(Math.round(dx), Math.round(dy));
 }
 function framePoint(map: any, g: any, lat: number, lng: number, pad: any, maxZoom = 16) {
   // ~650m half-box → street zoom at 16; each zoom level out doubles the box (zoom 13 ≈ half a city).
