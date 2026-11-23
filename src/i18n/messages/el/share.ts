@@ -2,6 +2,23 @@ import type { Catalog } from '../../types';
 import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
+  terms: {
+    auto: 'Αν βρεθεί ταίριασμα, ενώνουμε τις διαδρομές αυτόματα.',
+    times: 'Άφιξη {af}–{at} · Παραλαβή {pf}–{pt}',
+    timesExact: 'Άφιξη {af}–{at} · Παραλαβή στις {p}',
+    needWindow: 'Ορίστε παρακάτω πότε πρέπει να είστε εκεί — θα δείξουμε το διάστημα παραλαβής.',
+    extra: 'Έως {n} επιπλέον λεπτά στη διαδρομή',
+    change: 'Αλλαγή',
+    mode_all: 'Όλο το διάστημα',
+    mode_range: 'Στένεμα',
+    mode_exact: 'Ακριβής ώρα',
+    pickFrom: 'Παραλαβή από',
+    pickTo: 'έως',
+    pickExact: 'Παραλαβή στις',
+    inside: 'Μέσα στο {from}–{to}.',
+    prices: 'Με συνεπιβάτη {shared}. Χωρίς ζευγάρι, σε ακύρωση ή μη εμφάνιση του συνεπιβάτη πληρώνετε την πλήρη τιμή σας — {full}.',
+    noShow: 'Αν δεν εμφανιστείτε, χρέωση {fee} (όχι πάνω από την τιμή της διαδρομής).',
+  },
   booking: {
     stopBlocked: 'Δεν μπορεί να προστεθεί στάση σε προκράτηση με συνεπιβάτη.',
     shareBlocked: 'Η προκράτηση με συνεπιβάτη δεν λειτουργεί με στάση.',
@@ -34,6 +51,10 @@ const share: Catalog<typeof en> = {
     luggage: "βαλίτσες: {n}",
   },
   proposal: {
+    optPickup: 'Παραλαβή {time}',
+    optArrive: 'Εκεί περίπου {time}',
+    noneFits: 'Κανένα δεν ταιριάζει',
+    choose: 'Επιλογή {time}',
     departEarly: 'Αναχώρηση στις {time} — {n} λεπτά νωρίτερα',
     title: "Βρέθηκε συνεπιβάτης",
     titlePrebook: "Βρέθηκε συνεπιβάτης για την κράτησή σας",

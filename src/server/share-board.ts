@@ -10,8 +10,8 @@
 // Privacy: no names, phones or exact addresses — only the district, time, people and bags.
 import { prisma } from '@/lib/db';
 import { getSettings } from '@/lib/settings';
-import { approxLegMin, arrivalFits, bestPrebookPlan, shareFits, shareZone, sharedCents, type SharePlan } from '@/lib/share';
-import { shareCapable, planWithRoads, proposePrebook } from '@/server/share';
+import { approxLegMin, shareFits, shareZone, sharedCents, type LegFn } from '@/lib/share';
+import { shareCapable, planWithRoads, proposePrebook, fitPair } from '@/server/share';
 import { approxLabel } from '@/server/share-detail';
 import { config } from '@/lib/config';
 
@@ -74,19 +74,16 @@ function view(r: Ride, mine: boolean): BoardRide {
   };
 }
 
-/** Who is picked up first and when the car leaves, so that `keep` keeps its booked time. */
-function pairAtTheirTime(me: Ride, them: Ride): { host: Ride; guest: Ride; startAt: Date; plan: SharePlan; myShiftMin: number } | null {
-  const host = me.scheduledAt!.getTime() <= them.scheduledAt!.getTime() ? me : them;
-  const guest = host === me ? them : me;
-  const pts = { Hp: { lat: host.pickupLat, lng: host.pickupLng }, Hd: { lat: host.dropoffLat, lng: host.dropoffLng }, Gp: { lat: guest.pickupLat, lng: guest.pickupLng }, Gd: { lat: guest.dropoffLat, lng: guest.dropoffLng } };
-  const plan = bestPrebookPlan(pts, approxLegMin, { hostMaxExtra: host.shareMaxExtraMin ?? 15, guestMaxExtra: guest.shareMaxExtraMin ?? 15 });
-  if (!plan) return null;
-  const leg = plan.arrive.guestPickup;
-  const startAt = them === host ? them.scheduledAt! : new Date(them.scheduledAt!.getTime() - leg * MIN);
-  // Both must still arrive inside their arrival windows, if they set one (2026-11-22).
-  if (!arrivalFits(host, new Date(startAt.getTime() + plan.arrive.host * MIN)) || !arrivalFits(guest, new Date(startAt.getTime() + plan.arrive.guest * MIN))) return null;
-  const myPickup = me === host ? startAt : new Date(startAt.getTime() + leg * MIN);
-  return { host, guest, startAt, plan, myShiftMin: Math.round((myPickup.getTime() - me.scheduledAt!.getTime()) / MIN) };
+/**
+ * The pair as both passengers agreed to ride (TZ «Попутчик −30%» 2026-11-23): the same planner as the
+ * automatic search — each keeps their own pickup interval, extra-minutes limit and arrival window; nobody is
+ * moved to the other's time. `myShiftMin` = my pickup minus my booked time (negative = earlier).
+ */
+function boardPair(me: Ride, them: Ride, leg: LegFn = approxLegMin) {
+  const f = fitPair(me, them, leg);
+  if (!f) return null;
+  const myPickup = me === f.host ? f.timing.startAt.getTime() : f.timing.startAt.getTime() + f.plan.arrive.guestPickup * MIN;
+  return { ...f, myShiftMin: Math.round((myPickup - me.scheduledAt!.getTime()) / MIN) };
 }
 
 /** A driver (same phone as a driver account) does not use the passenger board (operator question 2026-11-22). */
@@ -133,8 +130,8 @@ export async function shareBoard(passengerId: string, now: Date = new Date()): P
       if (mz.from !== oz.from || mz.to !== oz.to || m.vClass !== o.vClass) continue;
       const seats = settings.classes.find((c) => c.key === m.vClass)?.maxPassengers ?? 4;
       if (!shareFits(m, o, seats, S().luggage[m.vClass])) continue;
-      const p = pairAtTheirTime(m, o);
-      if (!p || Math.abs(p.myShiftMin) > S().boardMaxShiftMin) continue; // too far apart in time
+      const p = boardPair(m, o);
+      if (!p) continue; // outside one of the two passengers' terms
       others.push({ ...view(o, false), myBookingId: m.id, myFullCents: m.fareCents!, mySharedCents: sharedCents(m.fareCents!, S().discountPct), myShiftMin: p.myShiftMin });
       break;
     }
@@ -163,15 +160,11 @@ export async function proposeFromBoard(passengerId: string, myBookingId: string,
   if (!shareFits(me, them, seats, S().luggage[me.vClass])) return fail(422, 'NO_ROOM', 'Everyone would not fit in one car.');
   const declined = await prisma.shareGroup.findFirst({ where: { OR: [{ hostBookingId: me.id, guestBookingId: them.id }, { hostBookingId: them.id, guestBookingId: me.id }], status: 'DECLINED' } });
   if (declined) return fail(409, 'DECLINED_BEFORE', 'This passenger already said no to riding together.');
-  // Road times with the traffic expected at that time; the other passenger keeps their time.
-  const base = pairAtTheirTime(me, them);
-  if (!base) return fail(422, 'TOO_FAR', 'The detour would be longer than you both allow.');
-  if (Math.abs(base.myShiftMin) > S().boardMaxShiftMin) return fail(422, 'TOO_FAR_IN_TIME', 'These rides are too far apart in time.');
-  const pts = { Hp: { lat: base.host.pickupLat, lng: base.host.pickupLng }, Hd: { lat: base.host.dropoffLat, lng: base.host.dropoffLng }, Gp: { lat: base.guest.pickupLat, lng: base.guest.pickupLng }, Gd: { lat: base.guest.dropoffLat, lng: base.guest.dropoffLng } };
-  const { result, routed } = await planWithRoads((leg) => bestPrebookPlan(pts, leg, { hostMaxExtra: base.host.shareMaxExtraMin ?? 15, guestMaxExtra: base.guest.shareMaxExtraMin ?? 15 }), them.scheduledAt);
-  const plan = result ?? base.plan;
-  const startAt = them === base.host ? them.scheduledAt! : new Date(them.scheduledAt!.getTime() - plan.arrive.guestPickup * MIN);
-  const id = await proposePrebook(base.host.id, base.guest.id, plan, startAt, routed && !!result, now, { byBookingId: me.id });
+  // Same terms as the automatic search, then road times with the traffic expected at that time.
+  if (!boardPair(me, them)) return fail(422, 'TOO_FAR', 'The pickup times or the detour do not fit both of you.');
+  const { result, routed } = await planWithRoads((leg) => fitPair(me, them, leg), me.scheduledAt);
+  if (!result) return fail(422, 'TOO_FAR', 'The pickup times or the detour do not fit both of you.');
+  const id = await proposePrebook(result.host.id, result.guest.id, result.plan, result.timing.startAt, routed, now, { byBookingId: me.id }, result.timing);
   if (!id) return fail(409, 'BUSY', 'One of the rides already has a proposal — try again later.');
   return { ok: true, proposalId: id };
 }

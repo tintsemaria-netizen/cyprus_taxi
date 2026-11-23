@@ -74,6 +74,10 @@ export const config = {
   // Ride-share «Попутчик» (Task 022). Our own product defaults; adjust after the pilot.
   share: {
     discountPct: num('SHARE_DISCOUNT_PCT', 30), // each passenger's discount when a co-rider actually joins
+    // TZ «Попутчик −30%» (2026-11-23): the terms shown at booking; a pre-booking carrying this version is
+    // paired automatically. First version: at most 15 extra minutes in the car for each passenger.
+    termsVersion: '2026-11-23',
+    termsMaxExtraMin: num('SHARE_TERMS_MAX_EXTRA_MIN', 15),
     answerSec: num('SHARE_ANSWER_SEC', 60), // live: host passenger + driver must both say yes within this
     prebookAnswerMin: num('SHARE_PREBOOK_ANSWER_MIN', 30), // pre-booking: both passengers answer within this…
     prebookAnswerBeforePickupMin: num('SHARE_PREBOOK_ANSWER_BEFORE_PICKUP_MIN', 60), // …and at the latest this long before pickup

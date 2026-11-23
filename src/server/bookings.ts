@@ -85,7 +85,7 @@ export async function createBooking(
       // Only when present, so hashes of requests without a flight number stay unchanged.
       ...(input.flightNumber ? { f: input.flightNumber } : {}),
       ...(input.stop ? { st: input.stop } : {}),
-      ...(input.shareOptIn ? { sh: [input.shareMaxExtraMin ?? null, input.childCount ?? 0, input.shareWaitMin ?? null, input.shareEarlyMin ?? 0] } : {}),
+      ...(input.shareOptIn ? { sh: [input.shareMaxExtraMin ?? null, input.childCount ?? 0, input.shareWaitMin ?? null, input.shareEarlyMin ?? 0, input.shareTerms ?? null, input.sharePickupFrom ?? null] } : {}),
       ...(!input.shareOptIn && input.childCount ? { ch: input.childCount } : {}),
     }),
   );
@@ -139,6 +139,24 @@ export async function createBooking(
     if (scheduledAt.getTime() > t.utc.getTime() - 5 * 60_000) return fail(422, 'VALIDATION', 'Pickup is too late for that arrival time.', { arriveBy: 'Too late.' });
     arrive = { from: f.utc, by: t.utc };
   }
+  // «Попутчик −30%» terms (TZ 2026-11-23): a pre-booking with a co-rider and an arrival window gets a pickup
+  // interval [from, scheduledAt]. By default it is as wide as the window (the computed «Подача 13:00–14:00»);
+  // «Изменить» may narrow it or make it one exact time. Only bookings that saw these terms are paired
+  // without a question; the snapshot (version, time, interval, booked pickup and price) stays on the booking.
+  let terms: { from: Date; to: Date } | null = null;
+  if (scheduledAt && shareOptIn && arrive && input.shareTerms === config.share.termsVersion) {
+    const width = arrive.by.getTime() - arrive.from.getTime();
+    let from = new Date(scheduledAt.getTime() - width);
+    if (input.sharePickupFrom) {
+      const pf = nicosiaWallTimeToUtc(input.sharePickupFrom);
+      if (!pf.ok) return fail(422, 'VALIDATION', 'Invalid pickup time.', { sharePickupFrom: 'Pick a valid time.' });
+      if (pf.utc.getTime() > scheduledAt.getTime() || scheduledAt.getTime() - pf.utc.getTime() > width + 60_000) {
+        return fail(422, 'VALIDATION', 'The pickup interval must lie inside the computed one.', { sharePickupFrom: 'Outside the interval.' });
+      }
+      from = pf.utc;
+    }
+    terms = { from, to: scheduledAt };
+  }
 
   // 6b. Optional fare quote: validate ownership/expiry/payload and snapshot it onto the
   // booking (the client-supplied price is never trusted).
@@ -180,6 +198,11 @@ export async function createBooking(
           vClass: input.vClass, passengerCount: input.passengerCount, luggageCount: input.luggageCount ?? 0, scheduledAt, status: initialStatus, ...(arrive ? { arriveFrom: arrive.from, arriveBy: arrive.by } : {}),
           childCount: input.childCount ?? 0,
           ...(shareOptIn ? { shareOptIn: true, shareMaxExtraMin: input.shareMaxExtraMin ?? config.share.defaultMaxExtraMin, ...(scheduledAt ? (arrive ? { shareWaitMin: 0, shareEarlyMin: Math.round((arrive.by.getTime() - arrive.from.getTime()) / 60_000) } : { shareWaitMin: input.shareWaitMin ?? config.share.defaultWaitMin, shareEarlyMin: input.shareEarlyMin ?? 0 }) : {}) } : {}),
+          ...(terms ? {
+            shareTermsVersion: config.share.termsVersion, shareTermsAt: new Date(), sharePickupFrom: terms.from, sharePickupTo: terms.to,
+            shareBookedPickupAt: terms.to, shareBookedCents: fare?.fareCents ?? null,
+            shareWaitMin: 0, shareEarlyMin: Math.round((terms.to.getTime() - terms.from.getTime()) / 60_000), shareMaxExtraMin: config.share.termsMaxExtraMin,
+          } : {}),
           ...(passengerId ? { passengerId } : {}),
           ...(fare ? { quoteId: input.quoteId, fareCents: fare.fareCents, priceType: fare.priceType, fareBreakdown: fare.fareBreakdown, fareMinCents: fare.minCents, fareMinZone: fare.minZone } : {}),
         },

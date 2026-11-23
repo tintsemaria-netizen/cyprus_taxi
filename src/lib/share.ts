@@ -118,7 +118,7 @@ export function bestSharePlan(
 }
 
 /** Two pre-bookings: start at the host's pickup (the earlier one). */
-export function bestPrebookPlan(pts: Omit<SharePoints, 'start'>, leg: LegFn, opts: { hostMaxExtra: number; guestMaxExtra: number }): SharePlan | null {
+export function bestPrebookPlan(pts: Omit<SharePoints, 'start'>, leg: LegFn, opts: { hostMaxExtra: number; guestMaxExtra: number; accept?: (p: SharePlan) => boolean }): SharePlan | null {
   const directHost = leg(pts.Hp, pts.Hd);
   const directGuest = leg(pts.Gp, pts.Gd);
   let best: SharePlan | null = null;
@@ -132,6 +132,7 @@ export function bestPrebookPlan(pts: Omit<SharePoints, 'start'>, leg: LegFn, opt
       order: ['Hp', ...order], extraHost, extraGuest, extraDriver: Math.max(0, Math.round(at.total - directHost)), totalMin: Math.round(at.total),
       arrive: { host: Math.round(at.Hd), guest: Math.round(at.Gd), end: Math.round(at.total), guestPickup: Math.round(at.Gp) },
     };
+    if (opts.accept && !opts.accept(plan)) continue; // e.g. someone would miss their arrival window
     if (!best || extraHost + extraGuest < best.extraHost + best.extraGuest) best = plan;
   }
   return best;
@@ -157,7 +158,7 @@ export function shareFits(
 export function prebookTiming(
   hostAt: Date, guestAt: Date, legHpGpMin: number, hostWaitMin: number, guestWaitMin: number,
   hostEarlyMin = 0, guestEarlyMin = 0,
-): { startAt: Date; hostWait: number; guestWait: number; guestPickupAt: Date } | null {
+): { startAt: Date; hostWait: number; guestWait: number; guestPickupAt: Date; lo: Date; hi: Date } | null {
   const MIN = 60_000;
   const leg = legHpGpMin * MIN;
   const lo = Math.max(hostAt.getTime() - hostEarlyMin * MIN, guestAt.getTime() - guestEarlyMin * MIN - leg);
@@ -168,5 +169,18 @@ export function prebookTiming(
   const hostWait = Math.round((start - hostAt.getTime()) / MIN);
   const guestPickup = start + leg;
   const guestWait = Math.round((guestPickup - guestAt.getTime()) / MIN);
-  return { startAt: new Date(start), hostWait, guestWait, guestPickupAt: new Date(guestPickup) };
+  return { startAt: new Date(start), hostWait, guestWait, guestPickupAt: new Date(guestPickup), lo: new Date(lo), hi: new Date(hi) };
+}
+
+/**
+ * Which of two possible pairs is better (TZ 2026-11-23): first the smaller LARGEST pickup shift of the two
+ * passengers (minutes away from the pickup each booked), then the smaller total detour. Negative = a is better.
+ */
+export function comparePairs(
+  a: { hostWait: number; guestWait: number; extraHost: number; extraGuest: number },
+  b: { hostWait: number; guestWait: number; extraHost: number; extraGuest: number },
+): number {
+  const sa = Math.max(Math.abs(a.hostWait), Math.abs(a.guestWait)), sb = Math.max(Math.abs(b.hostWait), Math.abs(b.guestWait));
+  if (sa !== sb) return sa - sb;
+  return a.extraHost + a.extraGuest - (b.extraHost + b.extraGuest);
 }

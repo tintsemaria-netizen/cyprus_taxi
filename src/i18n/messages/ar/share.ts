@@ -2,6 +2,23 @@ import type { Catalog } from '../../types';
 import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
+  terms: {
+    auto: 'إذا وُجد تطابق نجمع الرحلتين تلقائيًا.',
+    times: 'الوصول {af}–{at} · الاستلام {pf}–{pt}',
+    timesExact: 'الوصول {af}–{at} · الاستلام {p}',
+    needWindow: 'حدّد أدناه متى يجب أن تكون هناك — سنعرض فترة الاستلام.',
+    extra: 'حتى {n} دقيقة إضافية في الطريق',
+    change: 'تغيير',
+    mode_all: 'الفترة كلها',
+    mode_range: 'تضييق',
+    mode_exact: 'وقت محدد',
+    pickFrom: 'الاستلام من',
+    pickTo: 'إلى',
+    pickExact: 'الاستلام في',
+    inside: 'ضمن {from}–{to}.',
+    prices: 'مع رفيق {shared}. بدون شريك، أو عند الإلغاء أو عدم حضور الرفيق تدفع سعرك الكامل — {full}.',
+    noShow: 'إذا لم تحضر، غرامة {fee} (لا تتجاوز سعر الرحلة).',
+  },
   booking: {
     stopBlocked: 'لا يمكن إضافة توقف إلى حجز مسبق مع رفيق رحلة.',
     shareBlocked: 'الحجز المسبق مع رفيق لا يعمل مع توقف.',
@@ -34,6 +51,10 @@ const share: Catalog<typeof en> = {
     luggage: "حقائب: {n}",
   },
   proposal: {
+    optPickup: 'الاستلام {time}',
+    optArrive: 'الوصول نحو {time}',
+    noneFits: 'لا شيء يناسب',
+    choose: 'اختيار {time}',
     departEarly: 'الانطلاق في {time} — أبكر بـ {n} دقيقة',
     title: "راكب مشارك في طريقك",
     titlePrebook: "راكب مشارك لحجزك المسبق",

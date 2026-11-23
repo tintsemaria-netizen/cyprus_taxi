@@ -298,10 +298,10 @@ describe('live ride-share', () => {
 });
 
 describe('pre-booked ride-share', () => {
-  async function scheduled(from: typeof lca, to: typeof lca, minutesAhead: number, o: Parameters<typeof booking>[2] & { wait?: number; early?: number } = {}) {
+  async function scheduled(from: typeof lca, to: typeof lca, minutesAhead: number, o: Parameters<typeof booking>[2] & { wait?: number; early?: number; old?: boolean } = {}) {
     const b = await booking(from, to, o);
     await prisma.dispatchJob.deleteMany({ where: { bookingId: b.id } });
-    return prisma.booking.update({ where: { id: b.id }, data: { status: 'REQUESTED', scheduledAt: new Date(Date.now() + minutesAhead * MIN), shareWaitMin: o.wait ?? 15, shareEarlyMin: o.early ?? 0 } });
+    return prisma.booking.update({ where: { id: b.id }, data: { status: 'REQUESTED', scheduledAt: new Date(Date.now() + minutesAhead * MIN), shareWaitMin: o.wait ?? 15, shareEarlyMin: o.early ?? 0, shareTermsVersion: o.old ? null : config.share.termsVersion } });
   }
 
   // «Быть на месте с … до …» (2026-11-22): pickup = latest departure; a co-rider may only move it
@@ -356,13 +356,17 @@ describe('pre-booked ride-share', () => {
     expect([g.mode, g.guestBookingId]).toEqual(['PREBOOK', b.id]);
     // The car leaves when the co-rider can be picked up; the first passenger waits (they allowed 15 min).
     expect(g.startAt!.getTime()).toBeGreaterThan(a.scheduledAt!.getTime());
-    // Operator 2026-11-22: pre-bookings are not asked — both chose «Попутчик» with their window, so the
-    // pair is confirmed at once; each hears only «confirmed, −30%» (no prices, no question).
+    // Both booked under the shown terms (TZ 2026-11-23) → confirmed at once, nobody is asked; each gets ONE
+    // notification with their own pickup time, estimated arrival and the amount they pay.
     expect(g.status).toBe('MATCHED');
     expect((await trackingView(a.id))!.shareProposal ?? null).toBeNull();
     const pushes = await prisma.notificationOutbox.findMany({ where: { audience: { in: [`PASSENGER:${a.id}`, `PASSENGER:${b.id}`] } } });
-    expect(pushes.map((n) => (n.msg as { k: string } | null)?.k).sort()).toEqual(['share.confirmed', 'share.confirmed']);
-    expect(pushes.every((n) => !/€/.test(n.body))).toBe(true);
+    expect(pushes).toHaveLength(2);
+    const byAud = Object.fromEntries(pushes.map((n) => [n.audience, n.msg as { k: string; p: { pickT: string; etaT: string; payC: number } }]));
+    expect(byAud[`PASSENGER:${a.id}`]).toMatchObject({ k: 'share.found', p: { pickT: g.startAt!.toISOString(), payC: 4200 } });
+    expect(byAud[`PASSENGER:${b.id}`]).toMatchObject({ k: 'share.found', p: { payC: 3500 } });
+    expect(new Date(byAud[`PASSENGER:${b.id}`].p.pickT).getTime()).toBeGreaterThan(g.startAt!.getTime());
+    expect(new Date(byAud[`PASSENGER:${a.id}`].p.etaT).getTime()).toBeGreaterThan(g.startAt!.getTime());
     expect((await fresh(a.id)).fareCents).toBe(4200);
     expect((await fresh(b.id)).fareCents).toBe(3500);
     // The first pickup moves to the shared departure; the booked time is kept for a break-up.
@@ -399,6 +403,122 @@ describe('pre-booked ride-share', () => {
     expect((await fresh(b.id)).status).toBe('ASSIGNED');
     expect((await prisma.assignment.findFirst({ where: { activeBookingId: b.id } }))!.driverId).toBe(yes.driverId);
     expect((await prisma.shareGroup.findUniqueOrThrow({ where: { id: g.id } })).status).toBe('ACCEPTED');
+  });
+
+  // ---- TZ «Попутчик −30%» 2026-11-23, release checks ----
+  it('TZ: an OLD booking paired with a new one — only the old owner answers, with pickup options; repeated tap; two drivers at once; one driver, own payment each', async () => {
+    const a = await scheduled(lca, marina, 300, { old: true, pax: 2, bags: 2, wait: 30, early: 30 }); // booked before the terms
+    const b = await scheduled(lcaNear, limCentre, 310, { pax: 1, kids: 0, bags: 1, fare: 5000 });
+    expect(await matchPrebookings()).toBe(1);
+    const g = (await prisma.shareGroup.findFirst({ where: { OR: [{ hostBookingId: a.id }, { guestBookingId: a.id }] } }))!;
+    const aIsHost = g.hostBookingId === a.id;
+    expect(g.status).toBe('PROPOSED');
+    expect([aIsHost ? g.hostAnswer : g.guestAnswer, aIsHost ? g.guestAnswer : g.hostAnswer]).toEqual([null, 'YES']); // the new one is not asked
+    // Up to 30 min, and at the latest 1 h before the first pickup.
+    const variants = g.variants as { startAt: string }[];
+    expect(variants.length).toBeGreaterThanOrEqual(1);
+    expect(g.expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + 30 * MIN + 5000);
+    expect(g.expiresAt.getTime()).toBeLessThanOrEqual(new Date(variants[0].startAt).getTime() - 60 * MIN);
+    // Prices untouched until he agrees; only he gets the card and one question push.
+    expect((await fresh(a.id)).fareCents).toBe(6000);
+    const va = (await trackingView(a.id))!.shareProposal!;
+    expect(va.options!.length).toBe(variants.length);
+    expect(va.newFareCents).toBe(4200);
+    expect((await trackingView(b.id))!.shareProposal ?? null).toBeNull();
+    const asks = await prisma.notificationOutbox.findMany({ where: { tag: { startsWith: 'share-p-' } } });
+    expect(asks.map((n) => n.audience)).toEqual([`PASSENGER:${a.id}`]);
+    // A wrong option is refused; he picks the last one — a double tap counts once.
+    expect((await answerShare(g.id, { kind: 'PASSENGER', bookingId: a.id }, true, new Date(), 9)).ok).toBe(false);
+    const pick = variants.length - 1;
+    const [r1, r2] = await Promise.all([
+      answerShare(g.id, { kind: 'PASSENGER', bookingId: a.id }, true, new Date(), pick),
+      answerShare(g.id, { kind: 'PASSENGER', bookingId: a.id }, true, new Date(), pick),
+    ]);
+    expect([r1.ok, r2.ok].filter(Boolean)).toHaveLength(1);
+    const g2 = await prisma.shareGroup.findUniqueOrThrow({ where: { id: g.id } });
+    expect([g2.status, g2.chosenVariant, g2.startAt!.toISOString()]).toEqual(['MATCHED', pick, variants[pick].startAt]);
+    const found = await prisma.notificationOutbox.findMany({ where: { tag: `share-m-${g.id}` } });
+    expect(found.map((n) => n.audience).sort()).toEqual([`PASSENGER:${a.id}`, `PASSENGER:${b.id}`].sort()); // ONE each
+    expect([(await fresh(a.id)).fareCents, (await fresh(b.id)).fareCents]).toEqual([4200, 3500]);
+
+    // Two co-rider drivers take the pair at the same moment → exactly one gets it.
+    const d1 = await driver('Andreas', { acceptsShared: true, onDuty: false });
+    const d2 = await driver('Maria', { acceptsShared: true, onDuty: false });
+    const host = g2.hostBookingId, guest = g2.guestBookingId;
+    const claims = await Promise.all([claimScheduled(d1.driverId, host), claimScheduled(d2.driverId, host)]);
+    expect(claims.filter((c) => c.ok)).toHaveLength(1);
+    const winner = claims[0].ok ? d1 : d2;
+    expect(await prisma.preAssignment.count({ where: { activeBookingId: { in: [host, guest] } } })).toBe(1);
+
+    // Conversion → both in the same car; each ride is completed and paid on its own.
+    await prisma.booking.updateMany({ where: { id: { in: [host, guest] } }, data: { scheduledAt: new Date(Date.now() + 20 * MIN) } });
+    await prisma.preAssignment.updateMany({ where: { bookingId: host }, data: { pickupAt: new Date(Date.now() + 20 * MIN) } });
+    await prisma.driver.update({ where: { id: winner.driverId }, data: { onDuty: true, available: true } });
+    expect((await runPreassignments()).converted).toBe(1);
+    for (const id of [host, guest]) expect((await prisma.assignment.findFirst({ where: { activeBookingId: id } }))!.driverId).toBe(winner.driverId);
+    for (const id of [host, guest]) {
+      let x = await fresh(id);
+      if (x.status === 'ASSIGNED') { expect((await changeStatus({ bookingId: id, to: 'EN_ROUTE', expectedRevision: x.revision, actor: 'DRIVER', driverId: winner.driverId })).ok).toBe(true); x = await fresh(id); }
+      expect((await arriveAtPickup(id, winner.driverId, x.revision)).ok).toBe(true);
+      x = await fresh(id);
+      expect((await startTrip(id, winner.driverId, x.revision, '')).ok).toBe(true);
+    }
+    for (const id of [host, guest]) expect((await completeTrip(id, winner.driverId, (await fresh(id)).revision)).ok).toBe(true);
+    const fares = await prisma.fare.findMany({ where: { bookingId: { in: [a.id, b.id] } } });
+    expect(fares).toHaveLength(2); // one payment / receipt per passenger
+    expect(Object.fromEntries(fares.map((f) => [f.bookingId, f.finalCents]))).toEqual({ [a.id]: 4200, [b.id]: 3500 });
+  });
+
+  it('TZ: an OLD booking whose owner says no (or stays silent) keeps the full price; the pair is not made', async () => {
+    const a = await scheduled(lca, marina, 300, { old: true, wait: 30, early: 30 });
+    const b = await scheduled(lcaNear, limCentre, 310);
+    expect(await matchPrebookings()).toBe(1);
+    const g = (await prisma.shareGroup.findFirst({ where: { OR: [{ hostBookingId: a.id }, { guestBookingId: a.id }] } }))!;
+    expect((await answerShare(g.id, { kind: 'PASSENGER', bookingId: a.id }, false)).ok).toBe(true);
+    expect((await prisma.shareGroup.findUniqueOrThrow({ where: { id: g.id } })).status).toBe('DECLINED');
+    expect([(await fresh(a.id)).fareCents, (await fresh(b.id)).fareCents]).toEqual([6000, 6000]);
+    expect([(await fresh(a.id)).scheduledAt!.getTime(), (await fresh(b.id)).scheduledAt!.getTime()]).toEqual([a.scheduledAt!.getTime(), b.scheduledAt!.getTime()]);
+    expect(await matchPrebookings()).toBe(0); // the same two are not proposed again
+    // Silence: a second old booking, the answer time passes.
+    const c = await scheduled(lca, marina, 400, { old: true, wait: 30, early: 30 });
+    const d = await scheduled(lcaNear, limCentre, 410);
+    expect(await matchPrebookings()).toBe(1);
+    const g2 = (await prisma.shareGroup.findFirst({ where: { OR: [{ hostBookingId: c.id }, { guestBookingId: c.id }] } }))!;
+    await expireShares(new Date(g2.expiresAt.getTime() + 1000));
+    expect((await prisma.shareGroup.findUniqueOrThrow({ where: { id: g2.id } })).status).toBe('EXPIRED');
+    expect([(await fresh(c.id)).fareCents, (await fresh(d.id)).fareCents]).toEqual([6000, 6000]);
+  });
+
+  it('TZ: an exact pickup time is kept; a pair that would move it is not made', async () => {
+    const a = await scheduled(lca, marina, 300, { wait: 0, early: 0 }); // exact time
+    const b = await scheduled(lcaNear, limCentre, 300 - 3, { wait: 0, early: 0 }); // would need a 3+ min earlier start
+    expect(await matchPrebookings()).toBe(0);
+    await prisma.booking.update({ where: { id: b.id }, data: { status: 'CANCELED' } });
+    const c = await scheduled(lcaNear, limCentre, 310, { wait: 0, early: 20 }); // can be picked up up to 20 min earlier
+    expect(await matchPrebookings()).toBe(1);
+    const g = (await prisma.shareGroup.findFirst({ where: { hostBookingId: a.id } }))!;
+    expect(g.guestBookingId).toBe(c.id);
+    expect(g.startAt!.getTime()).toBe(a.scheduledAt!.getTime());
+    expect((await fresh(a.id)).scheduledAt!.getTime()).toBe(a.scheduledAt!.getTime());
+  });
+
+  it('TZ: booking stores the terms snapshot; an exact pickup or a narrower interval inside the computed one; outside refused', async () => {
+    const day = (m: number) => { const d = new Date(Date.now() + m * MIN); return d.toLocaleString('sv-SE', { timeZone: 'Asia/Nicosia' }).slice(0, 16).replace(' ', 'T'); };
+    const base = { pickup: lca, dropoff: marina, when: 'SCHEDULE', vClass: 'COMFORT', passengerCount: 1, passengerName: 'P', phone: '+35799123456', shareOptIn: true, shareMaxExtraMin: 15, shareTerms: config.share.termsVersion, arriveFrom: day(220), arriveBy: day(280) };
+    const exact = await createBooking(createBookingSchema.parse({ ...base, scheduledAt: day(190), sharePickupFrom: day(190) }), `t1-${Date.now()}`);
+    expect(exact.ok).toBe(true);
+    if (!exact.ok) return;
+    const e = await prisma.booking.findUniqueOrThrow({ where: { reference: exact.body.reference } });
+    expect([e.shareTermsVersion, e.shareEarlyMin, e.shareWaitMin, e.shareMaxExtraMin]).toEqual([config.share.termsVersion, 0, 0, 15]);
+    expect(e.sharePickupFrom!.getTime()).toBe(e.sharePickupTo!.getTime());
+    expect(e.shareBookedPickupAt!.getTime()).toBe(e.scheduledAt!.getTime());
+    expect(e.shareBookedCents).toBe(e.fareCents);
+    expect(e.shareTermsAt).not.toBeNull();
+    const range = await createBooking(createBookingSchema.parse({ ...base, scheduledAt: day(190), sharePickupFrom: day(160) }), `t2-${Date.now()}`);
+    expect(range.ok).toBe(true);
+    if (range.ok) expect((await prisma.booking.findUniqueOrThrow({ where: { reference: range.body.reference } })).shareEarlyMin).toBe(30);
+    const outside = await createBooking(createBookingSchema.parse({ ...base, scheduledAt: day(190), sharePickupFrom: day(100) }), `t3-${Date.now()}`);
+    expect(outside.ok).toBe(false);
   });
 
   it('no-show on a pre-booked pair: a part of the no-show’s price, the other pays in full', async () => {

@@ -535,6 +535,16 @@ model Booking {
   arriveFrom            DateTime? // pre-booking «быть на месте с … до …» (2026-11-22): arrival window
   arriveBy              DateTime?
   shareOrigScheduledAt  DateTime? // the booked pickup time, if a pre-booked pair moved it (restored on break-up)
+  // «Попутчик −30%» terms accepted at booking (TZ 2026-11-23). A pre-booking WITH a version was booked under
+  // «при совпадении объединим автоматически» and is paired without a question; WITHOUT one (older bookings,
+  // or terms unknown) its owner must answer the pair offer. Snapshot of what was shown: the pickup interval,
+  // the booked pickup time and the full price.
+  shareTermsVersion     String?
+  shareTermsAt          DateTime?
+  sharePickupFrom       DateTime?
+  sharePickupTo         DateTime?
+  shareBookedPickupAt   DateTime?
+  shareBookedCents      Int?
   // Airport meeting point for pairs (on 2026-11-19 18:30–19:10, then postponed until airports are set up):
   // the passenger's own pickup point, restored on break-up. Unused while the feature is off.
   shareOrigPickupLat    Float?
@@ -1041,6 +1051,10 @@ model ShareGroup {
   noShowFeeCents       Int?
   activeHostBookingId  String?   @unique
   activeGuestBookingId String?   @unique
+  // Pair with an older booking (TZ 2026-11-23): pickup-time options its owner chooses from
+  // [{ startAt, guestPickupAt, hostArriveAt, guestArriveAt }]; the chosen index once answered.
+  variants             Json?
+  chosenVariant        Int?
 
   @@index([status, expiresAt])
   @@index([guestBookingId])

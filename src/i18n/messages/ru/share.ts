@@ -2,6 +2,23 @@ import type { Catalog } from '../../types';
 import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
+  terms: {
+    auto: 'При совпадении объединим поездки автоматически.',
+    times: 'Прибытие {af}–{at} · Подача {pf}–{pt}',
+    timesExact: 'Прибытие {af}–{at} · Подача в {p}',
+    needWindow: 'Укажите ниже, когда нужно быть на месте, — покажем интервал подачи.',
+    extra: 'Дополнительно в пути до {n} минут',
+    change: 'Изменить',
+    mode_all: 'Весь интервал',
+    mode_range: 'Сузить',
+    mode_exact: 'Точное время',
+    pickFrom: 'Подача с',
+    pickTo: 'до',
+    pickExact: 'Подача в',
+    inside: 'Внутри {from}–{to}.',
+    prices: 'С попутчиком {shared}. Без пары, при отмене или неявке попутчика вы платите свою полную цену — {full}.',
+    noShow: 'Если вы не придёте, штраф {fee} (не больше цены заказа).',
+  },
   booking: {
     stopBlocked: 'При оформлении предзаказа с попутчиком добавить остановку нельзя.',
     shareBlocked: 'С остановкой предзаказ с попутчиком не работает.',
@@ -34,6 +51,10 @@ const share: Catalog<typeof en> = {
     luggage: 'чемоданов: {n}',
   },
   proposal: {
+    optPickup: 'Подача {time}',
+    optArrive: 'На месте около {time}',
+    noneFits: 'Ни один не подходит',
+    choose: 'Выбрать {time}',
     departEarly: 'Выезд в {time} — на {n} мин раньше',
     title: 'Появился попутчик',
     titlePrebook: 'Нашёлся попутчик для вашего предзаказа',

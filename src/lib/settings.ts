@@ -90,6 +90,6 @@ export async function getPublicConfig() {
     serviceAreaPolygon: s.serviceAreaPolygon,
     fareWording: 'Metered fare estimate — settled with the driver',
     // Ride-share «Попутчик» (Task 022): offered on airport / intercity routes only.
-    share: { discountPct: config.share.discountPct, defaultMaxExtraMin: config.share.defaultMaxExtraMin, defaultWaitMin: config.share.defaultWaitMin },
+    share: { discountPct: config.share.discountPct, defaultMaxExtraMin: config.share.defaultMaxExtraMin, defaultWaitMin: config.share.defaultWaitMin, termsVersion: config.share.termsVersion, termsMaxExtraMin: config.share.termsMaxExtraMin, noShowFeeCents: config.share.noShowFeeCents },
   };
 }

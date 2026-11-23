@@ -7,7 +7,7 @@ import { useT } from '@/i18n/I18nProvider';
 // Ride-share «Попутчик» for the passenger (Task 022).
 export interface CoRiderCounts { adults: number; children: number; luggage: number }
 interface ShareTiming { arriveAt: string | null; pickupAt: string | null; waitMin: number; approx: boolean }
-export interface ShareProposalView extends ShareTiming { groupId: string; mode: string; expiresAt: string; extraMin: number; fullFareCents: number; newFareCents: number; coRider: CoRiderCounts }
+export interface ShareProposalView extends ShareTiming { groupId: string; mode: string; expiresAt: string; extraMin: number; fullFareCents: number; newFareCents: number; coRider: CoRiderCounts; options?: { pickupAt: string; arriveAt: string }[] }
 export interface SharedView extends ShareTiming { status: string; discountPct: number; fullFareCents: number; fareCents: number; extraMin?: number; coRider: CoRiderCounts }
 
 /** When the car comes (pre-booking, with the wait the passenger agreed to) and when they arrive. */
@@ -53,13 +53,14 @@ export function ShareProposalCard({ p, onAnswered, route }: { p: ShareProposalVi
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [opt, setOpt] = useState(0);
   useEffect(() => { const iv = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(iv); }, []);
   const left = Math.max(0, Math.ceil((new Date(p.expiresAt).getTime() - now) / 1000));
   if (left === 0) return null;
   async function answer(accept: boolean) {
     setBusy(true); setErr(null);
     try {
-      await api('/tracking/share-answer', { method: 'POST', body: { groupId: p.groupId, accept } });
+      await api('/tracking/share-answer', { method: 'POST', body: { groupId: p.groupId, accept, ...(accept && p.options?.length ? { variant: opt } : {}) } });
       onAnswered();
     } catch (e) {
       setErr(e instanceof ApiRequestError ? tError(e) : t('common.retry'));
@@ -110,12 +111,23 @@ export function ShareProposalCard({ p, onAnswered, route }: { p: ShareProposalVi
         {route && (
           <p className="mt-2 text-xs text-muted"><span className="font-semibold text-ink">{t('share.proposal.yourRide')}:</span> {route.from} → {route.to}</p>
         )}
-        <TimingLines s={p} isPrebook={!live} />
+        {p.options && p.options.length > 0 ? (
+          // Older booking (TZ 2026-11-23): one card, the pickup times to choose from, or «none fits».
+          <div className="mt-2 space-y-1.5" role="radiogroup" data-testid="share-options-list">
+            {p.options.map((o, i) => (
+              <button key={o.pickupAt} type="button" role="radio" aria-checked={opt === i} onClick={() => setOpt(i)} data-testid="share-option"
+                className={`flex w-full items-center justify-between gap-2 rounded-[12px] border px-3 py-2 text-start ${opt === i ? 'border-accent bg-accent/10' : 'border-edge'}`}>
+                <span><span className="block text-sm font-semibold">{t('share.proposal.optPickup', { time: fmt.time(o.pickupAt) })}</span><span className="block text-xs text-muted">{t('share.proposal.optArrive', { time: fmt.time(o.arriveAt) })}</span></span>
+                <span className="text-sm font-bold">{fmt.money(p.newFareCents)}</span>
+              </button>
+            ))}
+          </div>
+        ) : <TimingLines s={p} isPrebook={!live} />}
         <p className="mt-1 text-xs text-muted">{t('share.proposal.privacy')}</p>
         {err && <p className="mt-2 text-xs text-danger">{err}</p>}
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <button className="btn-ghost" disabled={busy} onClick={() => answer(false)}>{t('share.proposal.no')}</button>
-          <button className="btn-primary" disabled={busy} onClick={() => answer(true)}>{t('share.proposal.yes')}</button>
+          <button className="btn-ghost" disabled={busy} onClick={() => answer(false)} data-testid="share-no">{p.options?.length ? t('share.proposal.noneFits') : t('share.proposal.no')}</button>
+          <button className="btn-primary" disabled={busy} onClick={() => answer(true)} data-testid="share-yes">{p.options?.length ? t('share.proposal.choose', { time: fmt.time(p.options[opt]?.pickupAt ?? p.options[0].pickupAt) }) : t('share.proposal.yes')}</button>
         </div>
       </div>
     </div>

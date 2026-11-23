@@ -7,6 +7,7 @@ const dbUrl = process.env.DATABASE_URL || '';
 const dbName = (() => { try { return new URL(dbUrl).pathname.replace(/^\//, '').split('?')[0]; } catch { return ''; } })();
 
 import { prisma } from '@/lib/db';
+import { config } from '@/lib/config';
 import { createBooking } from '@/server/bookings';
 import { answerShare, matchPrebookings } from '@/server/share';
 import { shareBoard, proposeFromBoard } from '@/server/share-board';
@@ -24,13 +25,13 @@ let n = 0;
 async function passenger() {
   return prisma.passenger.create({ data: { phone: `+3579${RUN.slice(-5)}${String(++n).padStart(2, '0')}`, phoneVerifiedAt: new Date(), name: 'Secret Name' } });
 }
-async function ride(pid: string, from: typeof lca, to: typeof lca, hoursAhead: number, o: { wait?: number; early?: number; pax?: number } = {}) {
+async function ride(pid: string, from: typeof lca, to: typeof lca, hoursAhead: number, o: { wait?: number; early?: number; pax?: number; old?: boolean } = {}) {
   const input = createBookingSchema.parse({ pickup: from, dropoff: to, when: 'NOW', vClass: 'COMFORT', passengerCount: o.pax ?? 1, luggageCount: 1, passengerName: 'Secret Name', phone: '+35799123456', shareOptIn: true, shareMaxExtraMin: 20 });
   const r = await createBooking(input, `sb-${RUN}-${++n}`);
   if (!r.ok) throw new Error(r.code);
   const b = await prisma.booking.findUniqueOrThrow({ where: { reference: r.body.reference } });
   await prisma.dispatchJob.deleteMany({ where: { bookingId: b.id } });
-  return prisma.booking.update({ where: { id: b.id }, data: { passengerId: pid, status: 'REQUESTED', fareCents: 6000, priceType: 'REGULATED_FIXED', scheduledAt: new Date(Date.now() + hoursAhead * 3600_000), shareWaitMin: o.wait ?? 0, shareEarlyMin: o.early ?? 0 } });
+  return prisma.booking.update({ where: { id: b.id }, data: { passengerId: pid, status: 'REQUESTED', fareCents: 6000, priceType: 'REGULATED_FIXED', scheduledAt: new Date(Date.now() + hoursAhead * 3600_000), shareWaitMin: o.wait ?? 0, shareEarlyMin: o.early ?? 0, shareTermsVersion: o.old ? null : config.share.termsVersion } });
 }
 
 beforeAll(() => { if (!dbName.endsWith('_test')) throw new Error('Refusing: not a _test DB'); });
@@ -44,18 +45,20 @@ beforeEach(async () => {
 });
 
 describe('share board', () => {
-  it('lists a same-way ride that the automatic matching cannot pair; nothing private is shown', async () => {
-    const a = await passenger(), b = await passenger();
+  it('TZ 2026-11-23: «ride together» is offered only for a ride that fits BOTH passengers’ terms; nothing private is shown', async () => {
+    const a = await passenger(), b = await passenger(), c = await passenger();
     const ra = await ride(a.id, lca, nic1, 24);
-    const rb = await ride(b.id, lcaNear, nic2, 26); // 2 h apart, nobody flexible
+    const rb = await ride(b.id, lcaNear, nic2, 26); // 2 h apart, nobody flexible → nobody is moved to the other's time
     expect(await matchPrebookings()).toBe(0);
+    const v0 = await shareBoard(a.id);
+    expect(v0.mine.map((m) => m.id)).toEqual([ra.id]);
+    expect(v0.others).toHaveLength(0);
+    expect(v0.all.map((r) => r.id)).toEqual([rb.id]); // still visible in the open list
+    // 10 min later, and that passenger can be picked up up to 20 min earlier: fits both, I keep my time.
+    const rc = await ride(c.id, lcaNear, nic2, 24 + 10 / 60, { early: 20 });
     const v = await shareBoard(a.id);
-    expect(v.mine.map((m) => m.id)).toEqual([ra.id]);
-    expect(v.others.map((o) => o.id)).toEqual([rb.id]);
-    // I move to their time: picked up first, a few minutes' drive before their 2 h later pickup.
-    const gap = Math.round((rb.scheduledAt!.getTime() - ra.scheduledAt!.getTime()) / MIN);
-    expect(v.others[0].myShiftMin).toBeGreaterThan(gap - 15);
-    expect(v.others[0].myShiftMin).toBeLessThanOrEqual(gap);
+    expect(v.others.map((o) => o.id)).toEqual([rc.id]);
+    expect(v.others[0].myShiftMin).toBe(0);
     const json = JSON.stringify(v);
     expect(json).not.toMatch(/Secret Name|\+357|Eleftheria|Makariou/); // no names, phones or streets
   });
@@ -99,10 +102,18 @@ describe('share board', () => {
     expect((await createBooking(plain, `sb-soon2-${RUN}`)).ok).toBe(true); // without a co-rider 2 h ahead is fine (≥ 1 h)
   });
 
-  it('«ride together» (operator 2026-11-22: no question) → matched at once at THEIR time; the proposer moved; −30% for both', async () => {
+  it('«ride together» outside the other passenger’s terms is refused (TZ 2026-11-23: nobody is moved to the other’s time)', async () => {
     const a = await passenger(), b = await passenger();
     const ra = await ride(a.id, lca, nic1, 24);
     const rb = await ride(b.id, lcaNear, nic2, 26);
+    const r = await proposeFromBoard(a.id, ra.id, rb.id);
+    expect(r).toMatchObject({ ok: false, code: 'TOO_FAR' });
+  });
+
+  it('«ride together» inside both terms → matched at once; both keep their intervals; −30% for both; one «found» push each', async () => {
+    const a = await passenger(), b = await passenger();
+    const ra = await ride(a.id, lca, nic1, 24);
+    const rb = await ride(b.id, lcaNear, nic2, 24 + 10 / 60, { early: 20 });
     const r = await proposeFromBoard(a.id, ra.id, rb.id);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
@@ -111,10 +122,11 @@ describe('share board', () => {
     // Nobody is asked; both hear «confirmed, −30%».
     expect(await prisma.notificationOutbox.count({ where: { title: 'A co-rider for your ride' } })).toBe(0);
     const conf = await prisma.notificationOutbox.findMany({ where: { audience: { in: [`PASSENGER:${ra.id}`, `PASSENGER:${rb.id}`] } } });
-    expect(conf.map((n) => (n.msg as { k: string }).k)).toEqual(['share.confirmed', 'share.confirmed']);
+    expect(conf.map((n) => (n.msg as { k: string }).k)).toEqual(['share.found', 'share.found']);
     const [fa, fb] = await Promise.all([prisma.booking.findUniqueOrThrow({ where: { id: ra.id } }), prisma.booking.findUniqueOrThrow({ where: { id: rb.id } })]);
-    expect(fb.scheduledAt!.getTime()).toBe(rb.scheduledAt!.getTime()); // their time kept
-    expect(fa.scheduledAt!.getTime()).toBeGreaterThan(ra.scheduledAt!.getTime()); // I moved later
+    expect(fa.scheduledAt!.getTime()).toBe(ra.scheduledAt!.getTime()); // my time kept (no flexibility)
+    expect(fb.scheduledAt!.getTime()).toBeLessThanOrEqual(rb.scheduledAt!.getTime()); // inside their interval
+    expect(fb.scheduledAt!.getTime()).toBeGreaterThanOrEqual(rb.scheduledAt!.getTime() - 20 * MIN)
     expect(fa.fareCents).toBe(4200); // 30 % off for both
     expect(fb.fareCents).toBe(4200);
   });
@@ -122,7 +134,7 @@ describe('share board', () => {
   it('cannot use someone else’s ride as mine, nor pair a ride that is already paired', async () => {
     const a = await passenger(), b = await passenger();
     const ra = await ride(a.id, lca, nic1, 24);
-    const rb = await ride(b.id, lcaNear, nic2, 26);
+    const rb = await ride(b.id, lcaNear, nic2, 24 + 10 / 60, { early: 20 });
     expect((await proposeFromBoard(a.id, rb.id, ra.id)).ok).toBe(false);
     const r = await proposeFromBoard(a.id, ra.id, rb.id);
     if (!r.ok) throw new Error('propose');

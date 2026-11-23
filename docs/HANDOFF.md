@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-23 — «Попутчик −30%» TZ stage 1 (branch `share-v2`, LOCAL, not pushed, not deployed)
+- Booking: terms snapshot (`shareTermsVersion/At`, `sharePickupFrom/To`, `shareBookedPickupAt`, `shareBookedCents`), migration `20261123020000_share_terms`; consent box with arrival + pickup interval, narrow / exact time; both sums + full-price / €10 no-show text before ordering (8 languages).
+- Matching: `fitPair` (src/server/share.ts) used by auto search AND the share board — each passenger keeps own interval, ≤15 extra min, arrival window; choice by `comparePairs` (smaller largest pickup shift, then smaller detour). Board no longer moves anyone to the other's time (`boardMaxShiftMin` now unused).
+- Old bookings (`shareTermsVersion IS NULL`): only the old owner answers; card with up to 3 pickup options + «Ни один не подходит»; 30 min, ≤1 h before first pickup; no/silence → full price. `ShareGroup.variants/chosenVariant`, `answerShare(..., variant)`.
+- One push per passenger on pairing: `share.found` {pickT, etaT, payC} in sw.js MSG_TEXT (8 languages).
+- Tests: full vitest 383/384 passed before the last small fix; share tests re-run after it. Build OK. Screenshots /tmp/ui/tz-*.png.
+- Next: operator review → «заливай»; stage 2 «Попутчик в дороге»; count of old active co-rider pre-bookings on prod (no DB access here).
+
 ## 2026-11-23 — Booking map zoomed out to the Middle East (branch `map-pad`, deployed 2026-11-23)
 
 - Operator screenshot: «Выберите класс» with «Попутчик» on → the map behind showed Iraq / Afghanistan. Cause: the sheet covers almost the whole map; the bottom padding (`reviewH + 24`) left a few px or less, and Google `fitBounds` then zooms out to the world.

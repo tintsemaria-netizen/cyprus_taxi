@@ -2,6 +2,23 @@ import type { Catalog } from '../../types';
 import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
+  terms: {
+    auto: 'אם יימצא שותף, נאחד את הנסיעות אוטומטית.',
+    times: 'הגעה {af}–{at} · איסוף {pf}–{pt}',
+    timesExact: 'הגעה {af}–{at} · איסוף ב־{p}',
+    needWindow: 'קבעו למטה מתי עליכם להגיע — נציג את חלון האיסוף.',
+    extra: 'עד {n} דקות נוספות בדרך',
+    change: 'שינוי',
+    mode_all: 'כל החלון',
+    mode_range: 'צמצום',
+    mode_exact: 'שעה מדויקת',
+    pickFrom: 'איסוף מ־',
+    pickTo: 'עד',
+    pickExact: 'איסוף ב־',
+    inside: 'בתוך {from}–{to}.',
+    prices: 'עם שותף {shared}. בלי זוג, בביטול או באי־הגעה של השותף תשלמו את המחיר המלא — {full}.',
+    noShow: 'אם לא תגיעו — קנס {fee} (לא יותר ממחיר הנסיעה).',
+  },
   booking: {
     stopBlocked: 'לא ניתן להוסיף עצירה להזמנה מראש עם שותף לנסיעה.',
     shareBlocked: 'הזמנה מראש עם שותף לא עובדת עם עצירה.',
@@ -34,6 +51,10 @@ const share: Catalog<typeof en> = {
     luggage: "מזוודות: {n}",
   },
   proposal: {
+    optPickup: 'איסוף {time}',
+    optArrive: 'הגעה בערך {time}',
+    noneFits: 'אף אחד לא מתאים',
+    choose: 'לבחור {time}',
     departEarly: 'יציאה ב-{time} — {n} דק׳ מוקדם יותר',
     title: "נמצא נוסע משותף בדרך שלכם",
     titlePrebook: "נמצא נוסע משותף להזמנה שלכם",

@@ -1,5 +1,22 @@
 // Ride-share «Попутчик» (Task 022): airport/intercity, at most two bookings in one car.
 const share = {
+  terms: {
+    auto: 'If a match is found, we pair the rides automatically.',
+    times: 'Arrive {af}–{at} · Pickup {pf}–{pt}',
+    timesExact: 'Arrive {af}–{at} · Pickup at {p}',
+    needWindow: 'Set below when you need to be there — we will show the pickup interval.',
+    extra: 'Up to {n} extra minutes on the way',
+    change: 'Change',
+    mode_all: 'Whole interval',
+    mode_range: 'Narrow',
+    mode_exact: 'Exact time',
+    pickFrom: 'Pickup from',
+    pickTo: 'to',
+    pickExact: 'Pickup at',
+    inside: 'Within {from}–{to}.',
+    prices: 'With a co-rider {shared}. Without a pair, on a cancellation or the co-rider’s no-show you pay your full price — {full}.',
+    noShow: 'If you do not show up, a {fee} fee (never more than the ride’s price).',
+  },
   booking: {
     stopBlocked: 'A stop cannot be added to a pre-booking with a co-rider.',
     shareBlocked: 'A pre-booking with a co-rider does not work with a stop.',
@@ -32,6 +49,10 @@ const share = {
     luggage: '{n} suitcase(s)',
   },
   proposal: {
+    optPickup: 'Pickup {time}',
+    optArrive: 'There around {time}',
+    noneFits: 'None fits',
+    choose: 'Choose {time}',
     departEarly: 'Car leaves at {time} — {n} min earlier',
     title: 'A co-rider is going your way',
     titlePrebook: 'A co-rider for your pre-booking',

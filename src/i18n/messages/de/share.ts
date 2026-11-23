@@ -2,6 +2,23 @@ import type { Catalog } from '../../types';
 import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
+  terms: {
+    auto: 'Bei einem Treffer verbinden wir die Fahrten automatisch.',
+    times: 'Ankunft {af}–{at} · Abholung {pf}–{pt}',
+    timesExact: 'Ankunft {af}–{at} · Abholung um {p}',
+    needWindow: 'Geben Sie unten an, wann Sie dort sein müssen — wir zeigen das Abholfenster.',
+    extra: 'Bis zu {n} zusätzliche Minuten unterwegs',
+    change: 'Ändern',
+    mode_all: 'Ganzes Fenster',
+    mode_range: 'Eingrenzen',
+    mode_exact: 'Genaue Zeit',
+    pickFrom: 'Abholung ab',
+    pickTo: 'bis',
+    pickExact: 'Abholung um',
+    inside: 'Innerhalb {from}–{to}.',
+    prices: 'Mit Mitfahrer {shared}. Ohne Partner, bei Storno oder Nichterscheinen des Mitfahrers zahlen Sie Ihren vollen Preis — {full}.',
+    noShow: 'Wenn Sie nicht erscheinen, Gebühr {fee} (höchstens der Fahrpreis).',
+  },
   booking: {
     stopBlocked: 'Zu einer Vorbestellung mit Mitfahrer kann kein Zwischenstopp hinzugefügt werden.',
     shareBlocked: 'Eine Vorbestellung mit Mitfahrer funktioniert nicht mit Zwischenstopp.',
@@ -34,6 +51,10 @@ const share: Catalog<typeof en> = {
     luggage: "Koffer: {n}",
   },
   proposal: {
+    optPickup: 'Abholung {time}',
+    optArrive: 'Dort ca. {time}',
+    noneFits: 'Keine passt',
+    choose: '{time} wählen',
     departEarly: 'Abfahrt um {time} — {n} Min. früher',
     title: "Ein Mitfahrer fährt in Ihre Richtung",
     titlePrebook: "Ein Mitfahrer für Ihre Vorbestellung",

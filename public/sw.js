@@ -72,6 +72,16 @@ const MSG_TEXT = {
     he: ["נוסע משותף מצטרף", "הנסיעה שלכם עכשיו בהנחה של −{pct}%."],
     ar: ["انضم راكب مشارك", "رحلتك الآن بخصم −{pct}%."],
   },
+  'share.found': {
+    ru: ["Попутчик найден", "Подача в {pickT}, на месте около {etaT}. К оплате {payC}."],
+    en: ["Co-rider found", "Pickup at {pickT}, arrival about {etaT}. You pay {payC}."],
+    el: ["Βρέθηκε συνεπιβάτης", "Παραλαβή στις {pickT}, άφιξη περίπου {etaT}. Πληρώνετε {payC}."],
+    he: ["נמצא נוסע משותף", "איסוף ב-{pickT}, הגעה בערך {etaT}. לתשלום {payC}."],
+    ar: ["تم العثور على راكب مشارك", "الاستلام الساعة {pickT}، الوصول نحو {etaT}. المبلغ {payC}."],
+    pl: ["Znaleziono współpasażera", "Odbiór o {pickT}, przyjazd ok. {etaT}. Do zapłaty {payC}."],
+    de: ["Mitfahrer gefunden", "Abholung um {pickT}, Ankunft ca. {etaT}. Sie zahlen {payC}."],
+    fr: ["Covoyageur trouvé", "Prise en charge à {pickT}, arrivée vers {etaT}. À payer : {payC}."],
+  },
   'share.confirmed': {
     ru: ["Поездка с попутчиком подтверждена", "Ваша поездка со скидкой −{pct}%."],
     en: ["Shared ride confirmed", "Your ride is now −{pct}%."],

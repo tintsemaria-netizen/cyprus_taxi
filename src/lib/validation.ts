@@ -55,6 +55,10 @@ const bookingFields = z.object({
   // «Быть на месте с … до …» (2026-11-22): Cyprus wall times like scheduledAt.
   arriveFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).optional(),
   arriveBy: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).optional(),
+  // «Попутчик −30%» (TZ 2026-11-23): the version of the terms the app showed, and the earliest pickup the
+  // passenger accepts (the latest is scheduledAt). Narrowed by «Изменить»; equal to scheduledAt = exact time.
+  shareTerms: z.string().max(20).optional(),
+  sharePickupFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).optional(),
   childCount: z.number().int().min(0).max(5).optional(),
 });
 const atLeastOneAdult = (v: { childCount?: number; passengerCount: number }) => (v.childCount ?? 0) < v.passengerCount;

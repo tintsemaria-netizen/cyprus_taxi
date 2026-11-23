@@ -24,7 +24,7 @@ import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
 import { NotifyPrompt } from '@/components/NotifyPrompt';
 import { RedBubble } from '@/components/RedBubble';
 import { ShareBookingOptions, type ShareOpts } from '@/components/share/ShareBookingOptions';
-import { isShareRoute, shareZone } from '@/lib/share';
+import { isShareRoute, shareZone, sharedCents } from '@/lib/share';
 import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
 interface PublicConfig {
@@ -33,7 +33,7 @@ interface PublicConfig {
   classes: { key: 'COMFORT' | 'XL'; label: string; maxPassengers: number }[];
   schedule: { minMinutes: number; maxDays: number; shareMinMinutes?: number };
   operatorName: string | null;
-  share?: { discountPct: number; defaultMaxExtraMin: number; defaultWaitMin: number };
+  share?: { discountPct: number; defaultMaxExtraMin: number; defaultWaitMin: number; termsVersion?: string; termsMaxExtraMin?: number; noShowFeeCents?: number };
 }
 
 const CLASS_META: Record<string, { seatsLabel: MsgKey; blurb: MsgKey }> = {
@@ -755,7 +755,9 @@ export default function BookingApp() {
         passengerName: name.trim() || passenger?.name || 'Passenger',
         phone: passenger?.phone || phone.trim(),
         note: effNote || undefined,
-        ...(shareOn ? { shareOptIn: true, shareMaxExtraMin: shareArrive && arriveWindow() ? Math.min(60, Math.max(10, arriveWindow()!.width)) : shareOpts.maxExtra, childCount: shareOpts.children, ...(when === 'SCHEDULE' ? { shareWaitMin: shareOpts.wait, shareEarlyMin: shareOpts.early ?? 0 } : {}) } : {}),
+        ...(shareOn ? { shareOptIn: true, shareMaxExtraMin: when === 'SCHEDULE' && pickRange ? (cfg?.share?.termsMaxExtraMin ?? 15) : shareOpts.maxExtra,
+          // The terms shown at booking (TZ 2026-11-23): paired automatically, inside this pickup interval.
+          ...(when === 'SCHEDULE' && pickRange && cfg?.share?.termsVersion ? { shareTerms: cfg.share.termsVersion, sharePickupFrom: pickRange.from } : {}), childCount: shareOpts.children, ...(when === 'SCHEDULE' ? { shareWaitMin: shareOpts.wait, shareEarlyMin: shareOpts.early ?? 0 } : {}) } : {}),
       };
       const res = await api<{ tracking: { token: string } }>('/bookings', {
         method: 'POST',
@@ -861,11 +863,27 @@ export default function BookingApp() {
     const drive = Math.ceil(route.min) + ARRIVE_MARGIN_MIN;
     return { leaveFrom: wall(w.from - drive), leaveBy: wall(w.to - drive), drive };
   })();
-  // The pickup sent with the order = the LATEST departure; a co-rider may make it earlier.
+  // «Попутчик −30%» pickup interval (TZ 2026-11-23): by default the whole computed «Подача с … до …»;
+  // «Изменить» narrows it or picks one exact time. Only with a co-rider, only inside the computed interval.
+  const [pickNarrow, setPickNarrow] = useState<{ mode: 'all' | 'range' | 'exact'; from: string; to: string }>({ mode: 'all', from: '', to: '' });
+  const [pickEdit, setPickEdit] = useState(false);
+  useEffect(() => { setPickNarrow({ mode: 'all', from: '', to: '' }); }, [arriveCalc?.leaveFrom, arriveCalc?.leaveBy]);
+  const hhmm = /^\d{2}:\d{2}$/;
+  const pickRange = (() => {
+    if (!arriveCalc) return null;
+    const lo = arriveCalc.leaveFrom.slice(11, 16), hi = arriveCalc.leaveBy.slice(11, 16), day = arriveCalc.leaveBy.slice(0, 11);
+    const inside = (x: string) => hhmm.test(x) && x >= lo && x <= hi;
+    if (pickNarrow.mode === 'exact' && inside(pickNarrow.from)) return { from: day + pickNarrow.from, to: day + pickNarrow.from, exact: true, bad: false };
+    if (pickNarrow.mode === 'range' && inside(pickNarrow.from) && inside(pickNarrow.to) && pickNarrow.from <= pickNarrow.to) return { from: day + pickNarrow.from, to: day + pickNarrow.to, exact: pickNarrow.from === pickNarrow.to, bad: false };
+    const typed = pickNarrow.mode !== 'all' && (pickNarrow.from !== '' || pickNarrow.to !== '');
+    return { from: arriveCalc.leaveFrom, to: arriveCalc.leaveBy, exact: false, bad: typed };
+  })();
+  // The pickup sent with the order = the LATEST departure of the interval; a co-rider may make it earlier.
+  const pickupTarget = arriveCalc ? (shareOn && pickRange ? pickRange.to : arriveCalc.leaveBy) : null;
   useEffect(() => {
-    if (arriveMode && arriveCalc && scheduledAt !== arriveCalc.leaveBy) { setScheduledAt(arriveCalc.leaveBy); setScheduleOffsetMin(undefined); }
+    if (arriveMode && pickupTarget && scheduledAt !== pickupTarget) { setScheduledAt(pickupTarget); setScheduleOffsetMin(undefined); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [arriveMode, arriveCalc?.leaveBy]);
+  }, [arriveMode, pickupTarget]);
 
   const classes = cfg?.classes ?? [
     { key: 'COMFORT' as const, label: 'Comfort', maxPassengers: 4 },
@@ -902,6 +920,48 @@ export default function BookingApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!cfg]);
   const arriveBadWidth = (() => { const w = arriveWindow(); return !!w && (w.width < 15 || w.width > 180); })();
+  // «Попутчик −30%» terms inside the co-rider box (TZ 2026-11-23): automatic pairing, arrival + pickup interval,
+  // +15 min limit, «Изменить» to narrow it or pick an exact time. Prices are on the class step, next to «Заказать».
+  const clk = (wallStr: string) => fmt.clock(wallStr.slice(11, 16));
+  const shareTermsBox = (
+    <div className="rounded-[12px] border border-accent/40 bg-accent/10 px-3 py-2.5" data-testid="share-terms">
+      <p className="text-[13px] font-semibold text-accent">{t('share.terms.auto')}</p>
+      {arriveCalc && pickRange ? (
+        <p className="mt-1 text-[15px] font-bold leading-snug" data-testid="share-terms-times">
+          {pickRange.exact
+            ? t('share.terms.timesExact', { af: fmt.clock(arriveFromT), at: fmt.clock(arriveToT), p: clk(pickRange.to) })
+            : t('share.terms.times', { af: fmt.clock(arriveFromT), at: fmt.clock(arriveToT), pf: clk(pickRange.from), pt: clk(pickRange.to) })}
+        </p>
+      ) : <p className="mt-1 text-xs text-muted">{t('share.terms.needWindow')}</p>}
+      <p className="mt-1 text-xs">
+        {t('share.terms.extra', { n: cfg?.share?.termsMaxExtraMin ?? 15 })}
+        {arriveCalc && <> · <button type="button" className="font-semibold text-accent" onClick={() => setPickEdit((v) => !v)} data-testid="share-terms-change">{t('share.terms.change')}</button></>}
+      </p>
+      {pickEdit && arriveCalc && (
+        <div className="mt-2 rounded-[10px] border border-edge bg-page/60 p-2.5" data-testid="share-terms-editor">
+          <div className="flex flex-wrap gap-1.5">
+            {(['all', 'range', 'exact'] as const).map((m) => (
+              <button key={m} type="button" onClick={() => setPickNarrow({ mode: m, from: m === 'all' ? '' : pickNarrow.from, to: m === 'all' ? '' : pickNarrow.to })}
+                className={`chip !py-1 text-xs ${pickNarrow.mode === m ? '!border-accent text-accent' : ''}`} data-testid={`pick-${m}`}>{t(`share.terms.mode_${m}` as 'share.terms.mode_all')}</button>
+            ))}
+          </div>
+          {pickNarrow.mode === 'range' && (
+            <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+              <TimeBox label={t('share.terms.pickFrom')} testid="pick-from" value={pickNarrow.from} onChange={(v) => setPickNarrow({ ...pickNarrow, from: v })} bad={!!pickRange?.bad} />
+              <TimeBox label={t('share.terms.pickTo')} testid="pick-to" value={pickNarrow.to} onChange={(v) => setPickNarrow({ ...pickNarrow, to: v })} bad={!!pickRange?.bad} />
+            </div>
+          )}
+          {pickNarrow.mode === 'exact' && (
+            <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+              <TimeBox label={t('share.terms.pickExact')} testid="pick-exact-time" value={pickNarrow.from} onChange={(v) => setPickNarrow({ ...pickNarrow, from: v, to: v })} bad={!!pickRange?.bad} />
+            </div>
+          )}
+          <p className={`mt-1.5 text-xs ${pickRange?.bad ? 'text-danger' : 'text-muted'}`}>{t('share.terms.inside', { from: clk(arriveCalc.leaveFrom), to: clk(arriveCalc.leaveBy) })}</p>
+        </div>
+      )}
+      <p className="mt-1.5 text-xs text-muted" data-testid="share-min-note">{t('share.booking.minNote', { h: shareMinH })}</p>
+    </div>
+  );
   const arriveBox = (
     <div data-testid="arrive-window">
       {/* The hint sits ABOVE the date field until both times are set (2026-11-22, operator). */}
@@ -954,6 +1014,18 @@ export default function BookingApp() {
         })}
       </div>
       {/* Pre-booking minimum in Nicosia (2026-11-22): at least €20, above that the meter counts. */}
+      {/* «Попутчик −30%» prices before «Заказать» (TZ 2026-11-23): both sums, and that without a pair, on a
+          cancel or the co-rider's no-show this passenger pays their full price; the no-show fee. */}
+      {(() => {
+        const q = quotes[vClass as 'COMFORT' | 'XL'];
+        if (!(shareOn && when === 'SCHEDULE' && q && cfg?.share)) return null;
+        return (
+          <div className="mt-2 rounded-[10px] border border-accent/50 bg-accent/10 px-3 py-2 text-[13px] text-ink" data-testid="share-prices">
+            <p>{t('share.terms.prices', { shared: fmt.money(sharedCents(q.totalCents, cfg.share.discountPct), 'EUR'), full: fmt.money(q.totalCents, 'EUR') })}</p>
+            <p className="mt-1 text-xs text-muted">{t('share.terms.noShow', { fee: fmt.money(Math.min(cfg.share.noShowFeeCents ?? 1000, sharedCents(q.totalCents, cfg.share.discountPct)), 'EUR') })}</p>
+          </div>
+        );
+      })()}
       {(() => { const q = quotes[vClass as 'COMFORT' | 'XL']; return q?.minCents ? <p className="mt-2 rounded-[10px] border border-accent/40 bg-accent/10 px-3 py-2 text-xs text-ink" data-testid="prebook-min">{t('booking.form.prebookMin', { amount: fmt.money(q.minCents, 'EUR'), zone: q.minZone ?? '' })}</p> : null; })()}
       {errors.pax && <p className="mt-1 text-xs text-danger">{errors.pax}</p>}
     </div>
@@ -1285,7 +1357,7 @@ export default function BookingApp() {
                           the list of places until the route is one where ride-share works. */}
                       {when === 'SCHEDULE' && cfg?.share && (
                         <div className="-mt-4 mb-3">
-                          <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook blockMsg={viaStop && shareRouteOk ? t('share.booking.shareBlocked') : null} arrive={shareOn ? <p className="text-xs text-muted" data-testid="share-min-note">{t('share.booking.minNote', { h: shareMinH })}</p> : undefined} disabled={!shareAllowed && !(viaStop && shareRouteOk)} />
+                          <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook blockMsg={viaStop && shareRouteOk ? t('share.booking.shareBlocked') : null} arrive={shareOn ? shareTermsBox : undefined} disabled={!shareAllowed && !(viaStop && shareRouteOk)} />
                         </div>
                       )}
                       {/* «Когда вам нужно быть на месте?» under the «Попутчик» switch (2026-11-22, operator), with or without a co-rider. */}

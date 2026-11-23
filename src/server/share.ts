@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { getSettings } from '@/lib/settings';
 import { haversineMeters, type LatLng } from '@/lib/geo';
-import { arrivalFits, isShareRoute, sharedCents, approxLegMin, bestSharePlan, bestPrebookPlan, shareFits, prebookTiming, STOP_OF, type SharePlan, type LegFn } from '@/lib/share';
+import { arrivalFits, isShareRoute, sharedCents, approxLegMin, bestSharePlan, bestPrebookPlan, shareFits, prebookTiming, comparePairs, STOP_OF, type SharePlan, type LegFn } from '@/lib/share';
 import { googleConfigured, googleRoute } from '@/server/google';
 import { enqueueDriver, enqueuePassenger, enqueuePassengerDriverNews } from '@/server/push';
 import { recordEvent, driverPseudo } from '@/server/events';
@@ -233,7 +233,7 @@ export type ShareParty = { kind: 'PASSENGER'; bookingId: string } | { kind: 'DRI
 export type ShareResult = { ok: true; status: string } | { ok: false; status: number; code: string; message: string };
 const fail = (status: number, code: string, message: string): ShareResult => ({ ok: false, status, code, message });
 
-export async function answerShare(groupId: string, party: ShareParty, accept: boolean, now: Date = new Date()): Promise<ShareResult> {
+export async function answerShare(groupId: string, party: ShareParty, accept: boolean, now: Date = new Date(), variant?: number): Promise<ShareResult> {
   const pre = await prisma.shareGroup.findUnique({ where: { id: groupId } });
   if (!pre) return fail(404, 'NOT_FOUND', 'Proposal not found.');
   return prisma.$transaction(async (tx) => {
@@ -254,7 +254,15 @@ export async function answerShare(groupId: string, party: ShareParty, accept: bo
     }
     if (grp[field]) return { ok: true, status: grp.status }; // already answered (double tap)
     const answer = accept ? 'YES' : 'NO';
-    const g2 = await tx.shareGroup.update({ where: { id: grp.id }, data: { [field]: answer } });
+    // An older booking's owner picks one of the offered pickup times (TZ 2026-11-23).
+    const variants = (grp.variants ?? null) as PairVariant[] | null;
+    let pick: Prisma.ShareGroupUpdateInput = {};
+    if (accept && grp.mode === 'PREBOOK' && variants?.length) {
+      const idx = variant ?? grp.chosenVariant ?? 0;
+      if (!Number.isInteger(idx) || idx < 0 || idx >= variants.length) return fail(422, 'VALIDATION', 'Choose one of the offered times.');
+      pick = { chosenVariant: idx, startAt: new Date(variants[idx].startAt) };
+    }
+    const g2 = await tx.shareGroup.update({ where: { id: grp.id }, data: { [field]: answer, ...pick } });
     if (!accept) {
       await closeGroupTx(tx, grp.id, 'DECLINED', `${field.replace('Answer', '')} declined`);
       return { ok: true, status: 'DECLINED' };
@@ -361,8 +369,20 @@ async function finalizePrebookTx(tx: Tx, groupId: string): Promise<ShareResult> 
   await tx.shareGroup.update({ where: { id: g.id }, data: { status: 'MATCHED', decidedAt: new Date() } });
   for (const id of [h.id, gu.id]) await tx.bookingEvent.create({ data: { bookingId: id, type: 'SHARE_MATCHED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED' } });
   await recordEvent(tx, { eventType: 'share.matched', aggregateType: 'share', aggregateId: g.id, aggregateVersion: 2, correlationId: h.id, payload: { mode: 'PREBOOK' } });
-  await enqueuePassenger(tx, h.id, 'Shared ride confirmed', `Your ride is now −${g.discountPct}%.`, { msg: { k: 'share.confirmed', p: { pct: g.discountPct } } });
-  await enqueuePassenger(tx, gu.id, 'Shared ride confirmed', `Your ride is now −${g.discountPct}%.`, { msg: { k: 'share.confirmed', p: { pct: g.discountPct } } });
+  // ONE notification per passenger (TZ 2026-11-23): their own pickup time, estimated arrival and the amount they pay.
+  if (g.startAt) {
+    const arr = (g.arrivals ?? {}) as { host?: number; guest?: number; guestPickup?: number };
+    const at = (min: number | undefined) => new Date(g.startAt!.getTime() + (min ?? 0) * MIN);
+    const clock = (d: Date) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Nicosia', hour: '2-digit', minute: '2-digit' }).format(d);
+    for (const [b, pick, eta, cents] of [[h, g.startAt, at(arr.host), g.hostCents], [gu, at(arr.guestPickup), at(arr.guest), g.guestCents]] as const) {
+      await enqueuePassenger(tx, b.id, 'Co-rider found', `Pickup ${clock(pick)}, arrival about ${clock(eta)}. You pay €${(cents / 100).toFixed(2)}.`,
+        { url: '/prebookings', tag: `share-m-${g.id}`, msg: { k: 'share.found', p: { pickT: pick.toISOString(), etaT: eta.toISOString(), payC: cents } } });
+    }
+  } else {
+    for (const [b, cents] of [[h, g.hostCents], [gu, g.guestCents]] as const) {
+      await enqueuePassenger(tx, b.id, 'Co-rider found', `You pay €${(cents / 100).toFixed(2)}.`, { msg: { k: 'share.confirmed', p: { pct: g.discountPct } } });
+    }
+  }
   return { ok: true, status: 'MATCHED' };
 }
 
@@ -382,6 +402,34 @@ export async function expireShares(now: Date = new Date()): Promise<number> {
 // ---------------------------------------------------------------------------------------------
 // PREBOOK: match two pre-bookings
 // ---------------------------------------------------------------------------------------------
+
+type PairInput = ShareBooking & { arriveFrom?: Date | null; arriveBy?: Date | null };
+export type PairFit<T extends PairInput> = { host: T; guest: T; timing: NonNullable<ReturnType<typeof prebookTiming>>; plan: SharePlan };
+
+/**
+ * The best way two co-rider pre-bookings can ride together (TZ 2026-11-23), or null. Each passenger keeps
+ * their own conditions: pickup inside their interval (booked time, earlier by `shareEarlyMin`, later by
+ * `shareWaitMin`), at most `shareMaxExtraMin` extra minutes in the car, arrival inside their window.
+ * Either can be picked up first; the better one wins by `comparePairs` (smaller largest pickup shift,
+ * then smaller total detour). `slack` loosens every limit for the quick straight-line pre-filter.
+ */
+export function fitPair<T extends PairInput>(a: T, b: T, leg: LegFn, slack = 0): PairFit<T> | null {
+  let best: PairFit<T> | null = null;
+  for (const [h, g] of [[a, b], [b, a]] as const) {
+    const pts = { Hp: pt(h.pickupLat, h.pickupLng), Hd: pt(h.dropoffLat, h.dropoffLng), Gp: pt(g.pickupLat, g.pickupLng), Gd: pt(g.dropoffLat, g.dropoffLng) };
+    const timing = prebookTiming(h.scheduledAt!, g.scheduledAt!, leg(pts.Hp, pts.Gp), waitMin(h) + slack, waitMin(g) + slack, earlyMin(h) + slack, earlyMin(g) + slack);
+    if (!timing) continue;
+    const start = timing.startAt.getTime();
+    const plan = bestPrebookPlan(pts, leg, {
+      hostMaxExtra: maxExtra(h) + slack, guestMaxExtra: maxExtra(g) + slack,
+      accept: (pl) => arrivalFits(h, new Date(start + pl.arrive.host * MIN), slack * 2) && arrivalFits(g, new Date(start + pl.arrive.guest * MIN), slack * 2),
+    });
+    if (!plan) continue;
+    const cand = { host: h, guest: g, timing, plan };
+    if (!best || comparePairs({ ...timing, ...plan }, { ...best.timing, ...best.plan }) < 0) best = cand;
+  }
+  return best;
+}
 
 export async function matchPrebookings(now: Date = new Date()): Promise<number> {
   const settings = await getSettings();
@@ -409,53 +457,68 @@ export async function matchPrebookings(now: Date = new Date()): Promise<number> 
   for (let i = 0; i < cands.length; i++) {
     const h = cands[i];
     if (used.has(h.id)) continue;
-    type Pick = { g: (typeof cands)[number]; plan: SharePlan; timing: NonNullable<ReturnType<typeof prebookTiming>>; routed: boolean };
-    const pre: Omit<Pick, 'routed'>[] = [];
+    type Fit = PairFit<(typeof cands)[number]>;
+    const pre: Fit[] = [];
     for (let j = i + 1; j < cands.length; j++) {
       const g = cands[j];
       if (used.has(g.id) || g.vClass !== h.vClass || tried.has(`${h.id}|${g.id}`)) continue;
       if (h.passengerId && h.passengerId === g.passengerId) continue; // the same person's two rides
-      // Sorted by time: once the gap is beyond what anyone could wait (plus driving to the
-      // co-rider), later rides cannot fit either.
+      // Sorted by time: once the gap is beyond what anyone could move (plus driving to the co-rider), later rides cannot fit either.
       if (g.scheduledAt!.getTime() - h.scheduledAt!.getTime() > (waitMin(h) + earlyMin(g) + 180) * MIN) break;
       const seats = settings.classes.find((c) => c.key === h.vClass)?.maxPassengers ?? 4;
       if (!shareFits(h, g, seats, S().luggage[h.vClass])) continue;
-      const pts = { Hp: pt(h.pickupLat, h.pickupLng), Hd: pt(h.dropoffLat, h.dropoffLng), Gp: pt(g.pickupLat, g.pickupLng), Gd: pt(g.dropoffLat, g.dropoffLng) };
-      const timing = prebookTiming(h.scheduledAt!, g.scheduledAt!, approxLegMin(pts.Hp, pts.Gp), waitMin(h) + 5, waitMin(g) + 5, earlyMin(h) + 5, earlyMin(g) + 5);
-      const plan = timing && bestPrebookPlan(pts, approxLegMin, { hostMaxExtra: maxExtra(h) + 5, guestMaxExtra: maxExtra(g) + 5 });
-      const arrOk = (t: NonNullable<typeof timing>, pl: SharePlan, slack: number) => arrivalFits(h, new Date(t.startAt.getTime() + pl.arrive.host * MIN), slack) && arrivalFits(g, new Date(t.startAt.getTime() + pl.arrive.guest * MIN), slack);
-      if (timing && plan && arrOk(timing, plan, 10)) pre.push({ g, plan, timing });
+      const f = fitPair(h, g, approxLegMin, 5); // straight-line pre-filter with a little slack
+      if (f) pre.push(f);
     }
-    pre.sort((a, b) => a.plan.extraHost + a.plan.extraGuest - (b.plan.extraHost + b.plan.extraGuest));
-    let best: Pick | null = null;
+    pre.sort((x, y) => comparePairs({ ...x.timing, ...x.plan }, { ...y.timing, ...y.plan }));
+    let best: (Fit & { routed: boolean }) | null = null;
     for (const c of pre.slice(0, 3)) {
-      const pts = { Hp: pt(h.pickupLat, h.pickupLng), Hd: pt(h.dropoffLat, h.dropoffLng), Gp: pt(c.g.pickupLat, c.g.pickupLng), Gd: pt(c.g.dropoffLat, c.g.dropoffLng) };
-      // Road time with the traffic expected at the ride's own time.
-      const { result, routed } = await planWithRoads((leg) => {
-        const timing = prebookTiming(h.scheduledAt!, c.g.scheduledAt!, leg(pts.Hp, pts.Gp), waitMin(h), waitMin(c.g), earlyMin(h), earlyMin(c.g));
-        const plan = timing && bestPrebookPlan(pts, leg, { hostMaxExtra: maxExtra(h), guestMaxExtra: maxExtra(c.g) });
-        // Everyone with an arrival window must arrive inside it (2026-11-22).
-        if (!timing || !plan) return null;
-        if (!arrivalFits(h, new Date(timing.startAt.getTime() + plan.arrive.host * MIN)) || !arrivalFits(c.g, new Date(timing.startAt.getTime() + plan.arrive.guest * MIN))) return null;
-        return { timing, plan };
-      }, h.scheduledAt);
-      if (result && (!best || result.plan.extraHost + result.plan.extraGuest < best.plan.extraHost + best.plan.extraGuest)) best = { g: c.g, ...result, routed };
+      // Road time with the traffic expected at the ride's own time; strict limits.
+      const { result, routed } = await planWithRoads((leg) => fitPair(c.host, c.guest, leg), c.host.scheduledAt);
+      if (result && (!best || comparePairs({ ...result.timing, ...result.plan }, { ...best.timing, ...best.plan }) < 0)) best = { ...result, routed };
     }
     if (!best) continue;
-    const ok = await proposePrebook(h.id, best.g.id, best.plan, best.timing.startAt, best.routed, now);
-    if (ok) { used.add(h.id); used.add(best.g.id); made++; }
+    const ok = await proposePrebook(best.host.id, best.guest.id, best.plan, best.timing.startAt, best.routed, now, undefined, best.timing);
+    if (ok) { used.add(best.host.id); used.add(best.guest.id); made++; }
   }
   return made;
 }
 
+/** A pickup-time option for an older booking's owner (TZ 2026-11-23). */
+export interface PairVariant { startAt: string; guestPickupAt: string; hostArriveAt: string; guestArriveAt: string }
+
 /**
- * `fromBoard` (share board, 2026-11-21): a passenger chose this co-rider himself — his own answer is
- * already «yes» and only the other passenger is notified. Returns the proposal id, or null.
+ * Up to three pickup times the pair can use: the best one, the earliest and the latest start that keep both
+ * passengers inside their intervals and arrival windows (at least 10 min apart). Sorted by time.
  */
-export async function proposePrebook(hostId: string, guestId: string, plan: SharePlan, startAt: Date, routed: boolean, now: Date, fromBoard?: { byBookingId: string }): Promise<string | null> {
-  // Both answer within prebookAnswerMin, and at the latest prebookAnswerBeforePickupMin before the car leaves.
-  const expiresAt = new Date(Math.min(now.getTime() + S().prebookAnswerMin * MIN, startAt.getTime() - S().prebookAnswerBeforePickupMin * MIN));
-  if (expiresAt.getTime() - now.getTime() < 5 * MIN) return null;
+function pairVariants(h: PairInput, g: PairInput, plan: SharePlan, startAt: Date, range?: { lo: Date; hi: Date }): PairVariant[] {
+  // Rounded to 5 minutes INSIDE the interval (the earliest up, the latest down); the best one as computed.
+  const step = 5 * MIN;
+  const starts = [startAt.getTime(), ...(range ? [Math.ceil(range.lo.getTime() / step) * step, Math.floor(range.hi.getTime() / step) * step] : [])];
+  const out: number[] = [];
+  for (const t of starts) {
+    if (range && (t < range.lo.getTime() || t > range.hi.getTime())) continue;
+    if (!arrivalFits(h, new Date(t + plan.arrive.host * MIN)) || !arrivalFits(g, new Date(t + plan.arrive.guest * MIN))) continue;
+    if (out.some((o) => Math.abs(o - t) < 10 * MIN)) continue;
+    out.push(t);
+  }
+  if (!out.length) out.push(startAt.getTime());
+  return out.sort((a, b) => a - b).map((t) => ({
+    startAt: new Date(t).toISOString(), guestPickupAt: new Date(t + plan.arrive.guestPickup * MIN).toISOString(),
+    hostArriveAt: new Date(t + plan.arrive.host * MIN).toISOString(), guestArriveAt: new Date(t + plan.arrive.guest * MIN).toISOString(),
+  }));
+}
+
+/**
+ * Create a pre-booked pair. TZ «Попутчик −30%» (2026-11-23): a booking made under the shown terms
+ * («при совпадении объединим автоматически», a version on the booking) needs no answer; nor does the
+ * passenger who chose this pair on the share board (`fromBoard`). An OLDER booking (no terms version —
+ * its owner was promised a separate question, or we cannot tell which terms he accepted) must answer:
+ * he gets one card with pickup-time options, the price and «no». Up to 30 min, at the latest 1 h before
+ * the first pickup; «no» or silence keeps both bookings separate at their full price.
+ * Returns the group id, or null.
+ */
+export async function proposePrebook(hostId: string, guestId: string, plan: SharePlan, startAt: Date, routed: boolean, now: Date, fromBoard?: { byBookingId: string }, range?: { lo: Date; hi: Date }): Promise<string | null> {
   try {
     return await prisma.$transaction(async (tx) => {
       await lockBookings(tx, [hostId, guestId]);
@@ -463,13 +526,27 @@ export async function proposePrebook(hostId: string, guestId: string, plan: Shar
       if (!h || !g || h.status !== 'REQUESTED' || g.status !== 'REQUESTED') return null;
       if ((await activeGroupOf(tx, hostId)) || (await activeGroupOf(tx, guestId))) return null;
       if (await tx.preAssignment.findFirst({ where: { activeBookingId: { in: [hostId, guestId] } } })) return null;
-      // No question for pre-bookings (operator, 2026-11-22): both passengers already chose «Попутчик»
-      // with their own arrival window, and the pair keeps both inside it — so the pair is confirmed
-      // at once and each hears only «confirmed, −30 %». Live rides still ask (the passenger in the car).
-      const group = await tx.shareGroup.create({ data: groupData('PREBOOK', h, g, plan, expiresAt, { routed, startAt, hostAnswer: 'YES', guestAnswer: 'YES' }) });
-      await recordEvent(tx, { eventType: 'share.proposed', aggregateType: 'share', aggregateId: group.id, aggregateVersion: 1, correlationId: hostId, payload: { mode: 'PREBOOK', extraMinHost: plan.extraHost, extraMinGuest: plan.extraGuest, by: fromBoard ? 'board' : 'auto' } });
-      const r = await finalizePrebookTx(tx, group.id);
-      return r.ok ? group.id : null;
+      const hostYes = !!h.shareTermsVersion || fromBoard?.byBookingId === h.id;
+      const guestYes = !!g.shareTermsVersion || fromBoard?.byBookingId === g.id;
+      const variants = hostYes && guestYes ? null : pairVariants(h, g, plan, startAt, range);
+      const firstStart = variants ? new Date(variants[0].startAt) : startAt;
+      // The answer window: 30 min, and at the latest 1 h before the first pickup.
+      const expiresAt = new Date(Math.min(now.getTime() + S().prebookAnswerMin * MIN, firstStart.getTime() - S().prebookAnswerBeforePickupMin * MIN));
+      if (expiresAt.getTime() - now.getTime() < 5 * MIN) return null;
+      const group = await tx.shareGroup.create({
+        data: { ...groupData('PREBOOK', h, g, plan, expiresAt, { routed, startAt, hostAnswer: hostYes ? 'YES' : undefined, guestAnswer: guestYes ? 'YES' : undefined }), ...(variants ? { variants: variants as unknown as Prisma.InputJsonValue } : {}) },
+      });
+      await recordEvent(tx, { eventType: 'share.proposed', aggregateType: 'share', aggregateId: group.id, aggregateVersion: 1, correlationId: hostId, payload: { mode: 'PREBOOK', extraMinHost: plan.extraHost, extraMinGuest: plan.extraGuest, by: fromBoard ? 'board' : 'auto', ask: variants ? [hostYes ? null : 'host', guestYes ? null : 'guest'].filter(Boolean) : [] } });
+      if (hostYes && guestYes) {
+        const r = await finalizePrebookTx(tx, group.id);
+        return r.ok ? group.id : null;
+      }
+      // Ask only the older booking's owner (both, if both are older).
+      for (const [b, other, yes, extra] of [[h, g, hostYes, plan.extraHost], [g, h, guestYes, plan.extraGuest]] as const) {
+        if (yes) continue;
+        await enqueuePassenger(tx, b.id, 'Co-rider found', proposalBody(other, extra, S().discountPct), { url: '/prebookings', tag: `share-p-${group.id}` });
+      }
+      return group.id;
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return null;

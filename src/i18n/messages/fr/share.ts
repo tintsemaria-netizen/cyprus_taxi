@@ -2,6 +2,23 @@ import type { Catalog } from '../../types';
 import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
+  terms: {
+    auto: 'Si une correspondance est trouvée, nous regroupons les trajets automatiquement.',
+    times: 'Arrivée {af}–{at} · Prise en charge {pf}–{pt}',
+    timesExact: 'Arrivée {af}–{at} · Prise en charge à {p}',
+    needWindow: 'Indiquez ci-dessous quand vous devez être sur place — nous afficherons la plage de prise en charge.',
+    extra: 'Jusqu’à {n} minutes de plus en route',
+    change: 'Modifier',
+    mode_all: 'Toute la plage',
+    mode_range: 'Réduire',
+    mode_exact: 'Heure exacte',
+    pickFrom: 'Prise en charge de',
+    pickTo: 'à',
+    pickExact: 'Prise en charge à',
+    inside: 'Dans {from}–{to}.',
+    prices: 'Avec co-passager {shared}. Sans partenaire, en cas d’annulation ou d’absence du co-passager, vous payez votre prix complet — {full}.',
+    noShow: 'Si vous ne venez pas, frais de {fee} (au plus le prix de la course).',
+  },
   booking: {
     stopBlocked: 'Impossible d’ajouter un arrêt à une réservation avec co-passager.',
     shareBlocked: 'La réservation avec co-passager ne fonctionne pas avec un arrêt.',
@@ -34,6 +51,10 @@ const share: Catalog<typeof en> = {
     luggage: "valises : {n}",
   },
   proposal: {
+    optPickup: 'Prise en charge {time}',
+    optArrive: 'Sur place vers {time}',
+    noneFits: 'Aucune ne convient',
+    choose: 'Choisir {time}',
     departEarly: 'Départ à {time} — {n} min plus tôt',
     title: "Un covoyageur va dans votre direction",
     titlePrebook: "Un covoyageur pour votre réservation",

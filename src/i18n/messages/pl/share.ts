@@ -2,6 +2,23 @@ import type { Catalog } from '../../types';
 import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
+  terms: {
+    auto: 'Jeśli znajdziemy dopasowanie, połączymy przejazdy automatycznie.',
+    times: 'Na miejscu {af}–{at} · Odbiór {pf}–{pt}',
+    timesExact: 'Na miejscu {af}–{at} · Odbiór o {p}',
+    needWindow: 'Ustaw niżej, kiedy musisz być na miejscu — pokażemy okno odbioru.',
+    extra: 'Do {n} dodatkowych minut w drodze',
+    change: 'Zmień',
+    mode_all: 'Całe okno',
+    mode_range: 'Zawęź',
+    mode_exact: 'Dokładna godzina',
+    pickFrom: 'Odbiór od',
+    pickTo: 'do',
+    pickExact: 'Odbiór o',
+    inside: 'W oknie {from}–{to}.',
+    prices: 'Ze współpasażerem {shared}. Bez pary, przy anulowaniu lub niestawieniu się współpasażera płacisz pełną cenę — {full}.',
+    noShow: 'Jeśli się nie zjawisz — opłata {fee} (nie więcej niż cena przejazdu).',
+  },
   booking: {
     stopBlocked: 'Do rezerwacji ze współpasażerem nie można dodać przystanku.',
     shareBlocked: 'Rezerwacja ze współpasażerem nie działa z przystankiem.',
@@ -34,6 +51,10 @@ const share: Catalog<typeof en> = {
     luggage: "walizki: {n}",
   },
   proposal: {
+    optPickup: 'Odbiór {time}',
+    optArrive: 'Na miejscu ok. {time}',
+    noneFits: 'Żaden nie pasuje',
+    choose: 'Wybierz {time}',
     departEarly: 'Wyjazd o {time} — {n} min wcześniej',
     title: "Współpasażer jedzie w Twoją stronę",
     titlePrebook: "Współpasażer do Twojej rezerwacji",

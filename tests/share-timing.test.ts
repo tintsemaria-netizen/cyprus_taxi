@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { prebookTiming } from '@/lib/share';
+import { prebookTiming, bestPrebookPlan, comparePairs, type LegFn } from '@/lib/share';
 
 // Ride-share pre-booking time window (2026-11-21): each passenger may leave up to N min later
 // (wait) and, now, up to N min EARLIER. The start keeps «nobody earlier» when that fits.
@@ -37,5 +37,25 @@ describe('prebookTiming', () => {
     expect(prebookTiming(at('13:00'), at('12:00'), 10, 0, 0, 20, 0)).toBeNull();
     expect(prebookTiming(at('13:00'), at('13:10'), 10, 0, 0)).not.toBeNull();
     expect(prebookTiming(at('13:00'), at('13:11'), 10, 0, 0)).toBeNull();
+  });
+});
+
+// TZ «Попутчик −30%» (2026-11-23): at most 15 extra minutes in the car per passenger vs riding alone.
+describe('extra-minutes limit and pair choice', () => {
+  const P = (id: number) => ({ lat: id, lng: 0 });
+  const pts = { Hp: P(1), Hd: P(2), Gp: P(3), Gd: P(4) };
+  const table = (gpHd: number): LegFn => (a, b) => {
+    const k = `${a.lat}-${b.lat}`;
+    const m: Record<string, number> = { '1-2': 30, '1-3': 5, '3-2': gpHd, '2-4': 1, '3-4': 40, '4-2': 50 };
+    return m[k] ?? 99;
+  };
+  it('15 extra minutes fits, 16 does not', () => {
+    const ok = bestPrebookPlan(pts, table(40), { hostMaxExtra: 15, guestMaxExtra: 15 });
+    expect(ok?.extraHost).toBe(15);
+    expect(bestPrebookPlan(pts, table(41), { hostMaxExtra: 15, guestMaxExtra: 15 })).toBeNull();
+  });
+  it('several fit: the smaller largest pickup shift wins first, then the smaller total detour', () => {
+    expect(comparePairs({ hostWait: 0, guestWait: -10, extraHost: 1, extraGuest: 1 }, { hostWait: 5, guestWait: -5, extraHost: 9, extraGuest: 9 })).toBeGreaterThan(0);
+    expect(comparePairs({ hostWait: 0, guestWait: -5, extraHost: 3, extraGuest: 2 }, { hostWait: 5, guestWait: 0, extraHost: 4, extraGuest: 4 })).toBeLessThan(0);
   });
 });
