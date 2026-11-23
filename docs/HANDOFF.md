@@ -2633,7 +2633,7 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Fixed during preview: page sent a double-JSON body (api() already stringifies) → would have marked all.
 - Screenshots /tmp/shots/red-popup.png, red-page.png, red-one.png, red-all.png. Next: «заливай» → merge to main.
 
-## 2026-11-23 — Admin menu in groups (branch `nav-groups`, NOT deployed — operator: «сперва сделай, дам знать»)
+## 2026-11-23 — Admin menu in groups — DEPLOYED (operator «заливай»)
 - StaffShell: 7 groups for ADMIN — Диспетчерская · Водители и машины (Заявки, Водители, Автомобили, Автопарки) · Клиенты ·
   Цены (Фикс. цены, Минимум предзаказа) · Отчёты (Аналитика, Надёжность) · Суперадмин (owner: Не ваши изменения, Бухгалтерия,
   Сотрудники) · Настройки (Настройки, Безопасность). Second row = tabs of the open group. Page URLs unchanged.
