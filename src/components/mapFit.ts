@@ -27,3 +27,10 @@ export function safePadding(pad: Pad, width: number, height: number, min = 40): 
   const [left, right] = fit(pad.left, pad.right, width);
   return { top, right, bottom, left };
 }
+
+/** The screen point the booking «centre pin» stands on (2026-11-23, operator): the middle of the visible
+ *  part of the map between the overlays — the same point a padded focus centres on. */
+export function pinPoint(pad: Pad | undefined, width: number, height: number): { x: number; y: number } {
+  const p = pad ? safePadding(pad, width, height) : { top: 0, right: 0, bottom: 0, left: 0 };
+  return { x: p.left + (width - p.left - p.right) / 2, y: p.top + (height - p.top - p.bottom) / 2 };
+}

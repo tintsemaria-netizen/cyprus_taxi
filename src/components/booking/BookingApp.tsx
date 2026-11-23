@@ -8,6 +8,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
+import { BRAND_PIN_SVG } from '@/components/carMarker';
+import { pinPoint } from '@/components/mapFit';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import type { Selected } from './PlacesInput';
 import { setNearHint } from '@/lib/nearHint';
@@ -519,14 +521,59 @@ export default function BookingApp() {
   // Phones open with the sheet collapsed so the map is visible; tablets/desktop keep the panel open.
   useEffect(() => { if (window.innerWidth < 640) setCollapsed(true); }, []);
 
+  // Where the map camera centres before a route is shown: the pickup (or the detected position), at
+  // street zoom. A pickup made by moving the map keeps the zoom the passenger chose, so a later
+  // re-centre (the sheet opening) stays put instead of jumping back or zooming.
+  const HOME_ZOOM = 15.49; // 2026-11-17: 30 % further out than 16 (16 + log2 0.7)
+  const dragPick = useRef<{ lat: number; lng: number } | null>(null);
+  const [camFocus, setCamFocus] = useState<{ lat: number; lng: number } | null>(null);
+  const [camZoom, setCamZoom] = useState(HOME_ZOOM);
+  useEffect(() => {
+    const p = pickup ?? myLoc;
+    if (!p) return;
+    if (pickup && dragPick.current && dragPick.current.lat === pickup.lat && dragPick.current.lng === pickup.lng) return;
+    setCamFocus({ lat: p.lat, lng: p.lng }); setCamZoom(HOME_ZOOM);
+  }, [pickup?.lat, pickup?.lng, myLoc?.lat, myLoc?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [pinLift, setPinLift] = useState(false);
+  const pickSeq = useRef(0);
+  async function pickAt(lat: number, lng: number, fromDrag: boolean) {
+    const seq = ++pickSeq.current;
+    dragPick.current = fromDrag ? { lat, lng } : null;
+    setPickup({ lat, lng, label: translate('en', 'booking.currentLocation') }); setPickupText('…'); setAutoPickup(false);
+    let label: string | null = null;
+    try { const r = await api<{ place: { label: string } | null }>(`/places/reverse?lat=${lat}&lng=${lng}`, { timeoutMs: 6000 }); label = r.place?.label ?? null; } catch { /* generic label */ }
+    if (seq !== pickSeq.current) return; // the map was moved again meanwhile
+    setPickup({ lat, lng, label: label ?? translate('en', 'booking.currentLocation') });
+    setPickupText(label ?? t('booking.currentLocation'));
+  }
+  function onCenterPick(p: { lat: number; lng: number; zoom: number }) {
+    setPinLift(false);
+    if (!centerModeRef.current) return;
+    const cur = pickupRef.current;
+    if (cur && Math.abs(cur.lat - p.lat) < 0.00003 && Math.abs(cur.lng - p.lng) < 0.00003) return; // ~3 m: not moved
+    setCamFocus({ lat: p.lat, lng: p.lng }); setCamZoom(p.zoom);
+    void pickAt(p.lat, p.lng, true);
+  }
+  // Centre pin (2026-11-23, operator): on the home screen (no destination yet) the IL-Y logo stays in the
+  // middle of the map and the map moves under it; where the finger lets go is the pickup.
+  const centerMode = step === 'form' && !dropoff && !picker && !!(pickup || myLoc);
   // No «you are here» person on the passenger's maps (2026-11-17): only the IL-Y pickup logo.
   const markers = useMemo<MapMarker[]>(() => {
     const m: MapMarker[] = [];
-    if (pickup) m.push({ id: 'p', lat: pickup.lat, lng: pickup.lng, kind: 'pickup', label: pickup.label });
+    if (pickup && !centerMode) m.push({ id: 'p', lat: pickup.lat, lng: pickup.lng, kind: 'pickup', label: pickup.label });
     if (stop && hasStop) m.push({ id: 's', lat: stop.lat, lng: stop.lng, kind: 'stop', label: stop.label });
     if (dropoff) m.push({ id: 'd', lat: dropoff.lat, lng: dropoff.lng, kind: 'dropoff', label: dropoff.label });
     return m;
-  }, [pickup, dropoff, stop, hasStop]);
+  }, [pickup, dropoff, stop, hasStop, centerMode]);
+  const centerModeRef = useRef(centerMode); centerModeRef.current = centerMode;
+  // The pin overlay stands on the same point a padded focus centres on.
+  const mapBoxRef = useRef<HTMLDivElement | null>(null);
+  const [mapBox, setMapBox] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const el = mapBoxRef.current; if (!el) return;
+    const ro = new ResizeObserver(() => setMapBox({ w: el.clientWidth, h: el.clientHeight }));
+    ro.observe(el); return () => ro.disconnect();
+  }, []);
 
   // The stop counts only once it has been chosen (an empty stop row is ignored).
   const viaStop = hasStop && stop ? stop : null;
@@ -1113,19 +1160,28 @@ export default function BookingApp() {
       <InstallPrompt app="passenger" className="z-20 mx-3 mt-2 sm:hidden" />
 
       <div className="relative flex-1">
-        <div className="absolute inset-0">
+        <div ref={mapBoxRef} className="absolute inset-0">
           {/* The full-screen picker is its own map; unmount this background map while it's
               open (frees the WebGL context and avoids two simultaneous map instances). */}
           {picker ? (
             <div className="h-full w-full bg-page" />
           ) : (
-            <AutoMapView markers={markers} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : myLoc} focusZoom={pickup && dropoff ? undefined : 15.49 /* 2026-11-17: 30 % further out than 16 (16 + log2 0.7) */} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} onUserMove={() => setMapMoved(true)} className="h-full w-full" />
+            <AutoMapView markers={markers} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : camFocus} focusZoom={pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
           )}
+          {centerMode && mapBox.w > 0 && (() => {
+            const pt = pinPoint(fitPadding, mapBox.w, mapBox.h);
+            return (
+              <div aria-hidden data-testid="center-pin" className="pointer-events-none absolute z-[5]" style={{ left: pt.x - 16, top: pt.y - 40, width: 32, height: 40 }}>
+                <div className="h-full w-full transition-transform duration-150" style={{ transform: pinLift ? 'translateY(-10px)' : 'none', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.55))' }} dangerouslySetInnerHTML={{ __html: BRAND_PIN_SVG }} />
+                <div className={`absolute left-1/2 top-full h-1.5 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/40 transition-opacity ${pinLift ? 'opacity-100' : 'opacity-0'}`} />
+              </div>
+            );
+          })()}
         </div>
 
         {mapMoved && myLoc && !picker && (
           <button type="button" aria-label={t('booking.picker.myLocation')} title={t('booking.picker.myLocation')}
-            onClick={() => { setMapMoved(false); setRecenterTick((n) => n + 1); }}
+            onClick={() => { setMapMoved(false); if (centerMode && myLoc) void pickAt(myLoc.lat, myLoc.lng, false); setRecenterTick((n) => n + 1); }}
             className="absolute bottom-6 end-6 z-20 hidden h-10 items-center gap-2 rounded-full border border-white/15 bg-[#10191C]/95 px-3.5 text-[13px] text-white shadow-lg sm:flex">
             <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden className="shrink-0"><circle cx="12" cy="12" r="6" /><path d="M12 3v5M12 16v5M3 12h5M16 12h5" /></svg><span>{t('booking.picker.myLocation')}</span>
           </button>
@@ -1135,7 +1191,7 @@ export default function BookingApp() {
             {mapMoved && myLoc && !picker && (
               <div className="flex shrink-0 justify-end px-3 pb-3 sm:hidden">
                 <button type="button" data-testid="map-my-location" aria-label={t('booking.picker.myLocation')} title={t('booking.picker.myLocation')}
-                  onClick={() => { setMapMoved(false); setRecenterTick((n) => n + 1); }}
+                  onClick={() => { setMapMoved(false); if (centerMode && myLoc) void pickAt(myLoc.lat, myLoc.lng, false); setRecenterTick((n) => n + 1); }}
                   className="pointer-events-auto flex h-10 items-center gap-2 rounded-full border border-white/15 bg-[#10191C]/95 px-3.5 text-[13px] text-white shadow-lg">
                   <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden className="shrink-0"><circle cx="12" cy="12" r="6" /><path d="M12 3v5M12 16v5M3 12h5M16 12h5" /></svg><span>{t('booking.picker.myLocation')}</span>
                 </button>

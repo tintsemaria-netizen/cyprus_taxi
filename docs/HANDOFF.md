@@ -2649,3 +2649,12 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   Plain pre-booking: «Во сколько подать машину?» — date + «Время подачи» → scheduledAt; check ≥ schedule.minMinutes
   (`booking.pickupAt.*`, 8 languages). Server unchanged (arrive window optional).
 - Tests 399 passed / 1 skipped. Screenshots /tmp/shots/pk-*.png. Browser check: plain pre-booking ordered (201, scheduledAt 09:30 Cyprus = 07:30Z).
+
+## 2026-11-24 — Passenger home: centre pin (branch `pin-on-map`, NOT deployed — shown to operator)
+- Home screen (no destination, no picker): the IL-Y logo is an overlay in the middle of the visible map (`pinPoint(fitPadding)` in
+  mapFit.ts, same point a padded focus centres on); the map moves under it; the pin lifts while dragging. When the user's own move
+  stops (finger up), the map reports the point under the pin (`onCenterPick` in GoogleMapView: DOM pointer/touch/wheel + 'idle';
+  MapView: 'moveend' with originalEvent) → pickup = that point, reverse-geocoded. Programmatic camera moves never pick.
+- The picked point and the user's zoom become the camera focus (no snap-back when the sheet opens). «Моё местоположение» resets the
+  pickup to the GPS position. With a destination the pin is a normal map marker again.
+- Checked locally (MapLibre, touch drag via CDP). NOT checked: the Google map path (needs the live key) — verify on the live site.
