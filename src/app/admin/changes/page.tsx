@@ -1,12 +1,11 @@
 'use client';
 
-// «Изменения» (2026-11-23, operator: «не подтверждение, а уведомление»): every change other admins
-// made, newest first; new ones are marked. Superadmin only. Opening the page marks them as read.
+// «Не ваши изменения» (2026-11-23, operator): every change other admins made, newest first; new ones
+// are marked and the menu item is red until this page is opened. Superadmin only, no push / sound.
 import { useCallback, useEffect, useState } from 'react';
-import { StaffShell, type Me } from '@/components/staff/StaffShell';
+import { StaffShell, CHANGES_SEEN, type Me } from '@/components/staff/StaffShell';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
-import { enablePush, pushSupported } from '@/lib/push-client';
 import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
 export const dynamic = 'force-dynamic';
@@ -25,25 +24,18 @@ function Changes({ me }: { me: Me }) {
     try {
       const r = await api<{ actions: Action[] }>('/admin/changes');
       setRows(r.actions);
-      if (r.actions.some((a) => !a.seen)) await api('/admin/changes', { method: 'POST' }).catch(() => null);
+      if (r.actions.some((a) => !a.seen)) { await api('/admin/changes', { method: 'POST' }).catch(() => null); window.dispatchEvent(new Event(CHANGES_SEEN)); }
     } catch (e) { setMsg(e instanceof ApiRequestError ? e.body.message : String(e)); }
   }, []);
   useEffect(() => { void load(); }, [load]);
   useRefreshOnReturn(load);
   if (!me.isOwner) return <div className="p-6 text-muted">403</div>;
 
-  async function push() {
-    const r = await enablePush('/staff/push');
-    setMsg(r.ok ? t('staff.changes.pushDone') : t('staff.changes.pushFail'));
-  }
 
   return (
     <div className="mx-auto max-w-4xl p-4" data-testid="changes">
       <h1 className="text-xl font-semibold">{t('staff.changes.title')}</h1>
       <p className="mt-1 text-sm text-muted">{t('staff.changes.sub')}</p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {pushSupported() && <button type="button" className="btn-ghost !min-h-[40px] !py-2 text-sm" onClick={() => void push()} data-testid="changes-push">{t('staff.changes.pushOn')}</button>}
-      </div>
       {msg && <p className="mt-2 text-sm text-muted">{msg}</p>}
       <div className="mt-3 space-y-2" data-testid="changes-list">
         {rows && rows.length === 0 && <div className="text-sm text-muted">{t('staff.changes.none')}</div>}

@@ -8,7 +8,7 @@ const staff: Catalog<typeof en> = {
   nav: {
     fleets: 'Автопарки', myFleet: 'Мой автопарк',
     dispatch: 'Диспетчерская', analytics: 'Аналитика', reliability: 'Надёжность', applications: 'Заявки',
-    passengers: 'Клиенты', drivers: 'Водители', vehicles: 'Автомобили', settings: 'Настройки', fixedPrices: 'Фикс. цены', minFares: 'Минимум предзаказа', accounting: 'Бухгалтерия', changes: 'Изменения', staff: 'Сотрудники', security: 'Безопасность',
+    passengers: 'Клиенты', drivers: 'Водители', vehicles: 'Автомобили', settings: 'Настройки', fixedPrices: 'Фикс. цены', minFares: 'Минимум предзаказа', accounting: 'Бухгалтерия', changes: 'Не ваши изменения', staff: 'Сотрудники', security: 'Безопасность',
   },
   role: { OWNER: 'Суперадмин', ADMIN: 'Администратор', DISPATCHER: 'Диспетчер', DRIVER: 'Водитель', FLEET_OWNER: 'Владелец автопарка' },
   status: {
@@ -441,13 +441,10 @@ const staff: Catalog<typeof en> = {
     confirmMfa: 'Сбросить двухфакторный вход для {login}?',
   },
   changes: {
-    title: 'Изменения',
-    sub: 'Всё, что меняли другие админы. О каждом изменении приходит уведомление (не чаще раза в 2 минуты от одного админа).',
+    title: 'Не ваши изменения',
+    sub: 'Что меняли другие админы: кто, когда и в каком разделе. Пока есть новые, пункт меню горит красным.',
     none: 'Пока никаких изменений.',
     markRead: 'Отметить всё прочитанным',
-    pushOn: '🔔 Включить уведомления на этом устройстве',
-    pushDone: 'Уведомления включены.',
-    pushFail: 'Не удалось включить уведомления на этом устройстве.',
     verb: { POST: 'добавил / выполнил', PUT: 'изменил', PATCH: 'изменил', DELETE: 'удалил' },
     area: { drivers: 'Водители', vehicles: 'Автомобили', fleets: 'Автопарки', fixedPrices: 'Фикс. цены', minFares: 'Минимум предзаказа', settings: 'Настройки', passengers: 'Клиенты', applications: 'Заявки', staff: 'Сотрудники', accounting: 'Бухгалтерия', dispatch: 'Диспетчерская', misc: 'Другое' },
     newMark: 'новое',

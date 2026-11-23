@@ -18,6 +18,7 @@ import { createStaffSession, verifyPassword } from '@/lib/auth';
 import * as staff from '@/app/api/v1/admin/staff/route';
 import * as staffOne from '@/app/api/v1/admin/staff/[id]/route';
 import * as changes from '@/app/api/v1/admin/changes/route';
+import * as changesCount from '@/app/api/v1/admin/changes/count/route';
 import * as minFares from '@/app/api/v1/admin/min-fares/route';
 import { areaOf } from '@/server/staff-log';
 
@@ -55,7 +56,7 @@ describe('superadmin', () => {
     expect((await changes.GET(new Request('http://localhost:3000/api/v1/admin/changes'))).status).toBe(403);
   });
 
-  it('a normal admin\'s change is logged and the owner notified once per 2 minutes; the owner\'s own are not', async () => {
+  it('a normal admin\'s change is logged — no push (operator: red section, no sound); the owner\'s own are not', async () => {
     await prisma.notificationOutbox.deleteMany({ where: { tag: 'staff-changes' } });
     await as(adminLogin);
     hdr.h = new Headers({ 'x-ily-mutation': 'POST /api/v1/admin/min-fares' });
@@ -63,9 +64,7 @@ describe('superadmin', () => {
     await minFares.POST(new Request('http://localhost:3000/api/v1/admin/min-fares', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }));
     expect(await prisma.staffAction.count({ where: { actorName: 'Nikos' } })).toBe(2);
     const owner = (await prisma.staffUser.findUnique({ where: { login: 'admin' } }))!;
-    const pushes = await prisma.notificationOutbox.findMany({ where: { audience: `STAFF:${owner.id}` } });
-    expect(pushes).toHaveLength(1);
-    expect(pushes[0].msg).toEqual({ k: 'staff.change', p: { name: 'Nikos' } });
+    expect(await prisma.notificationOutbox.count({ where: { audience: `STAFF:${owner.id}` } })).toBe(0);
     // A plain read is not a change; the owner's own changes are not logged.
     hdr.h = new Headers();
     await as(adminLogin);
@@ -77,9 +76,13 @@ describe('superadmin', () => {
     expect(await prisma.staffAction.count()).toBe(2);
     const list = await (await changes.GET(new Request('http://localhost:3000/api/v1/admin/changes'))).json();
     expect(list.unread).toBe(2);
+    expect((await (await changesCount.GET()).json()).unread).toBe(2);
     expect(list.actions[0]).toMatchObject({ actor: 'Nikos', area: 'minFares', method: 'POST' });
     await changes.POST();
     expect((await (await changes.GET(new Request('http://localhost:3000/api/v1/admin/changes'))).json()).unread).toBe(0);
+    expect((await (await changesCount.GET()).json()).unread).toBe(0);
+    await as(adminLogin);
+    expect((await changesCount.GET()).status).toBe(403);
   });
 
   it('switch off signs out; new password; the owner cannot touch himself', async () => {

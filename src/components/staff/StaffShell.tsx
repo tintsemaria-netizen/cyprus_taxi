@@ -20,11 +20,30 @@ export interface Me {
   mfa?: { eligible: boolean; enabled: boolean; setupRequired: boolean };
 }
 
+/** «Не ваши изменения» with something new: a red item (2026-11-23, operator — no sound, just red). */
+const ALERT = 'bg-danger font-semibold text-white';
+/** The change log page tells the menu it has been read. */
+export const CHANGES_SEEN = 'il-y:changes-seen';
+
 export function StaffShell({ roles, children }: { roles: Me['role'][]; children: (me: Me) => React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useT();
   const [me, setMe] = useState<Me | null>(null);
+  // New «Не ваши изменения» for the superadmin: checked every 30 s and when the app comes back.
+  const [unread, setUnread] = useState(0);
+  const isOwner = !!me?.isOwner;
+  useEffect(() => { setUnread(me?.unreadChanges ?? 0); }, [me?.unreadChanges]);
+  useEffect(() => {
+    if (!isOwner) return;
+    const check = () => { void api<{ unread: number }>('/admin/changes/count').then((r) => setUnread(r.unread)).catch(() => {}); };
+    const id = window.setInterval(check, 30_000);
+    const onVis = () => { if (document.visibilityState === 'visible') check(); };
+    const onSeen = () => setUnread(0);
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener(CHANGES_SEEN, onSeen);
+    return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', onVis); window.removeEventListener(CHANGES_SEEN, onSeen); };
+  }, [isOwner]);
   const [state, setState] = useState<'loading' | 'ok' | 'denied'>('loading');
   // (hooks before any early return) The driver page tells us when it shows a sub-screen that needs a back arrow.
   const [driverBack, setDriverBack] = useState(false);
@@ -74,7 +93,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
             ? [
                 // Superadmin first: the menu scrolls on narrow screens (2026-11-23).
                 ...(me.isOwner ? [
-                  { href: '/admin/changes', label: `${t('staff.nav.changes')}${me.unreadChanges ? ` (${me.unreadChanges})` : ''}` },
+                  { href: '/admin/changes', label: `${t('staff.nav.changes')}${unread ? ` (${unread})` : ''}`, alert: unread > 0 },
                   { href: '/admin/accounting', label: t('staff.nav.accounting') },
                   { href: '/admin/staff', label: t('staff.nav.staff') },
                 ] : []),
@@ -105,9 +124,10 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
               <a
                 key={n.href}
                 href={n.href}
-                className={`whitespace-nowrap rounded-[10px] px-2.5 py-1.5 text-sm ${pathname === n.href ? 'bg-elevated text-accent' : 'text-muted hover:text-ink'}`}
+                className={`whitespace-nowrap rounded-[10px] px-2.5 py-1.5 text-sm ${'alert' in n && n.alert ? ALERT : pathname === n.href ? 'bg-elevated text-accent' : 'text-muted hover:text-ink'}`}
+                data-testid={'alert' in n && n.alert ? 'nav-alert' : undefined}
               >
-                {n.label}
+                {'alert' in n && n.alert && <span className="me-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-white align-middle" />}{n.label}
               </a>
             ))}
           </nav>
@@ -131,8 +151,9 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
       {nav.length > 1 && (
         <nav className="flex gap-1 overflow-x-auto border-b border-edge bg-page px-3 py-1.5 xl:hidden">
           {nav.map((n) => (
-            <a key={n.href} href={n.href} className={`whitespace-nowrap rounded-[10px] px-3 py-1.5 text-sm ${pathname === n.href ? 'bg-elevated text-accent' : 'text-muted'}`}>
-              {n.label}
+            <a key={n.href} href={n.href} className={`whitespace-nowrap rounded-[10px] px-3 py-1.5 text-sm ${'alert' in n && n.alert ? ALERT : pathname === n.href ? 'bg-elevated text-accent' : 'text-muted'}`}
+              data-testid={'alert' in n && n.alert ? 'nav-alert' : undefined}>
+              {'alert' in n && n.alert && <span className="me-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-white align-middle" />}{n.label}
             </a>
           ))}
         </nav>
