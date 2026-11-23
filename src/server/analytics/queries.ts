@@ -121,7 +121,7 @@ export async function fareSummary(f: AnalyticsFilter): Promise<FareSummary> {
             count(DISTINCT aggregateId) AS trips,
             countIf(JSONExtractRaw(payload,'finalCents') != 'null' OR JSONExtractRaw(payload,'estimateCents') != 'null') AS knownFinal,
             countIf(JSONExtractRaw(payload,'finalCents') =  'null' AND JSONExtractRaw(payload,'estimateCents') = 'null') AS pendingFinal,
-            sumIf(if(JSONExtractRaw(payload,'finalCents') != 'null', JSONExtractInt(payload,'finalCents'), JSONExtractInt(payload,'estimateCents')) + JSONExtractInt(payload,'waitingCents'),
+            sumIf(if(JSONHas(payload,'totalCents') AND JSONExtractRaw(payload,'totalCents') != 'null', JSONExtractInt(payload,'totalCents'), if(JSONExtractRaw(payload,'finalCents') != 'null', JSONExtractInt(payload,'finalCents'), JSONExtractInt(payload,'estimateCents')) + JSONExtractInt(payload,'waitingCents')),
                   JSONExtractRaw(payload,'finalCents') != 'null' OR JSONExtractRaw(payload,'estimateCents') != 'null') AS recordedFinal
      FROM ${DB()}.domain_events
      WHERE ${scope(f, "eventType='fare.recorded'")}

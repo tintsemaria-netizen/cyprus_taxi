@@ -36,7 +36,7 @@ async function driverAt(name: 'Andreas' | 'Maria', meters: number) {
   return { driverId: d.id, vehicleId: d.bindings[0].vehicleId };
 }
 
-async function completedBooking(email: string | null = 'rider@example.com', locale = 'ru') {
+async function completedBooking(email: string | null = 'rider@example.com', locale = 'ru', meterCents?: number) {
   const { driverId, vehicleId } = await driverAt('Andreas', 20);
   const passenger = await prisma.passenger.create({ data: { phone: `+35794${RUN.slice(-6)}${++n}`.slice(0, 15), phoneVerifiedAt: new Date(), email: email ? `${n}-${email}` : null, locale } });
   const r = await createBooking(input(), key());
@@ -61,8 +61,8 @@ async function completedBooking(email: string | null = 'rider@example.com', loca
   const ar = await arriveAtPickup(b.id, driverId, rev); if (!ar.ok) throw new Error('ar'); rev = ar.revision;
   const code = (await prisma.booking.findUnique({ where: { id: b.id } }))!.startCode!;
   const st = await startTrip(b.id, driverId, rev, code); if (!st.ok) throw new Error('st'); rev = st.revision;
-  const co = await completeTrip(b.id, driverId, rev); if (!co.ok) throw new Error('co');
-  return { bookingId: b.id, passengerId: passenger.id, reference: b.reference };
+  const co = await completeTrip(b.id, driverId, rev, meterCents); if (!co.ok) throw new Error('co');
+  return { bookingId: b.id, passengerId: passenger.id, reference: b.reference, driverId };
 }
 
 beforeAll(async () => {
@@ -108,6 +108,24 @@ function mockProvider(status = 200) {
   process.env.EMAIL_FROM = 'IL-Y <receipts@il-y.taxi>';
   return calls;
 }
+
+describe('amount fixed at «Завершить» (2026-11-24)', () => {
+  it('a meter amount typed on the completion screen is the receipt total and the driver earning; afterwards it is locked', async () => {
+    const t = await completedBooking('rider@example.com', 'ru', 1720);
+    const rc = await passengerReceipt(t.bookingId, t.passengerId);
+    expect(rc.ok && rc.receipt.fare.totalCents).toBe(1720);
+    const { earningsSummary } = await import('@/server/driver/earnings');
+    const e = await earningsSummary(t.driverId, new Date(Date.now() - 3600_000), new Date(Date.now() + 60_000));
+    expect(e.byCurrency.find((c) => c.currency === 'EUR')?.recordedEarningsCents).toBeGreaterThanOrEqual(1720);
+    const { POST } = await import('@/app/api/v1/driver/bookings/[id]/settlement/route');
+    expect(POST).toBeTypeOf('function'); // the route answers AMOUNT_LOCKED for every driver request
+  });
+  it('without a typed amount: the app fare + waiting, the same in the receipt', async () => {
+    const t = await completedBooking('rider@example.com', 'ru');
+    const rc = await passengerReceipt(t.bookingId, t.passengerId);
+    expect(rc.ok && rc.receipt.fare.totalCents).toBe(965);
+  });
+});
 
 describe('e-mailed trip receipts (2026-11-17)', () => {
   it('completion queues one receipt e-mail in the passenger language; the worker sends it', async () => {

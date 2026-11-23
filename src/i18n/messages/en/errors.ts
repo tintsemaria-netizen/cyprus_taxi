@@ -2,6 +2,7 @@
 // server's English message (see tError in I18nProvider).
 const errors = {
   EXPIRY_REQUIRED: "Enter the document’s expiry date (in the future) to accept it.",
+  AMOUNT_LOCKED: "The amount was fixed when the ride was completed and cannot be changed.",
   ORDER_GONE: 'This ride was just taken or is no longer available.',
   DRIVER_BUSY: 'You already have an active trip or offer.',
   DRIVER_PROTECTED: 'You have a pre-booked ride soon, so you can’t take other rides now.',

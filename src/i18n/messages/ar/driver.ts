@@ -307,7 +307,7 @@ const driver: Catalog<typeof en> = {
     fareEstimate: "≈ {amount}",
     loadFailed: "تعذّر تحميل الرحلات المجدولة.",
   },
-  close: {
+  close: { edit: "العداد يُظهر مبلغاً آخر؟ تغيير", editLabel: "مبلغ العداد، €", editNote: "تحقّق: بعد الإنهاء لا يمكن تغيير المبلغ.", belowMin: "ليس أقل من الحد الأدنى للحجز المسبق: {amount}",
     prebookMin: 'الحجز المسبق — {zone}: {amount} على الأقل. إذا أظهر العداد أقل، يدفع الراكب {amount}.',
     title: "تكلفة الرحلة",
     subtitle: "تحقق من المبلغ مع {name} قبل الإنهاء.",

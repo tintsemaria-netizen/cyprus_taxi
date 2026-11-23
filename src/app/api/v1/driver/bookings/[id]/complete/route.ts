@@ -8,10 +8,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const ctx = await requireDriver();
   if (!isDriverCtx(ctx)) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();
   const { id } = await params;
-  let body: { expectedRevision?: number };
+  let body: { expectedRevision?: number; meterCents?: number };
   try { body = await req.json(); } catch { return Errors.validation({ _: 'Invalid JSON body.' }); }
   if (typeof body.expectedRevision !== 'number') return Errors.validation({ expectedRevision: 'Required.' });
-  const r = await completeTrip(id, ctx.driver.id, body.expectedRevision);
+  const r = await completeTrip(id, ctx.driver.id, body.expectedRevision, typeof body.meterCents === 'number' ? body.meterCents : null);
   if (!r.ok) return apiError(r.status, r.code, r.message);
   return apiOk({ ok: true, status: r.status, revision: r.revision });
 }

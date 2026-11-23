@@ -307,7 +307,7 @@ const driver: Catalog<typeof en> = {
     fareEstimate: "≈ {amount}",
     loadFailed: "Nie udało się wczytać zaplanowanych przejazdów.",
   },
-  close: {
+  close: { edit: "Taksometr pokazuje inną kwotę? Zmień", editLabel: "Kwota z taksometru, €", editNote: "Sprawdź: po zakończeniu kwoty nie można zmienić.", belowMin: "Nie mniej niż minimum rezerwacji: {amount}",
     prebookMin: 'Rezerwacja — {zone}: minimum {amount}. Jeśli taksometr pokaże mniej, pasażer płaci {amount}.',
     title: "Koszt przejazdu",
     subtitle: "Sprawdź kwotę z {name} przed zakończeniem.",

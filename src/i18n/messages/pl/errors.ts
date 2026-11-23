@@ -3,6 +3,7 @@ import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
   EXPIRY_REQUIRED: "Podaj przyszłą datę ważności, aby przyjąć dokument.",
+  AMOUNT_LOCKED: "Kwota została ustalona przy zakończeniu przejazdu i nie można jej zmienić.",
   ORDER_GONE: "Ten przejazd został właśnie przyjęty lub nie jest już dostępny.",
   DRIVER_BUSY: "Masz już aktywny przejazd lub ofertę.",
   DRIVER_PROTECTED: "Wkrótce masz zarezerwowany przejazd, więc nie możesz teraz przyjmować innych.",

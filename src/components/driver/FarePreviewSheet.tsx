@@ -11,10 +11,15 @@ interface Preview { gpsMeter?: { totalCents: number; totalKm: number } | null; e
 // Before the final «Завершить» (2026-11-15): show the driver what the trip costs — the total, with
 // any pickup / stop waiting listed above it (2026-11-17: no separate estimate line, no subtitle).
 // Only «Завершить окончательно» completes the ride; «Назад» returns to navigation.
-export function FarePreviewSheet({ bookingId, passengerName: _passengerName, onConfirm, onCancel }: { bookingId: string; passengerName: string; onConfirm: () => void; onCancel: () => void }) {
+export function FarePreviewSheet({ bookingId, passengerName: _passengerName, onConfirm, onCancel }: { bookingId: string; passengerName: string; onConfirm: (meterCents?: number) => void; onCancel: () => void }) {
   const { t, fmt, locale } = useT();
   const [p, setP] = useState<Preview | null>(null);
   const [err, setErr] = useState(false);
+  // Operator 2026-11-24: a meter ride's amount can be changed ONLY here, before «Завершить»; then it is fixed.
+  const [edit, setEdit] = useState(false);
+  const [amount, setAmount] = useState('');
+  const typed = amount ? Math.round(parseFloat(amount.replace(',', '.')) * 100) : null;
+  const typedBad = typed != null && (!Number.isFinite(typed) || typed < 0 || (p?.minCents != null && typed < p.minCents));
   useEffect(() => {
     api<Preview>(`/driver/bookings/${bookingId}/fare-preview`).then(setP).catch(() => setErr(true));
   }, [bookingId]);
@@ -32,7 +37,16 @@ export function FarePreviewSheet({ bookingId, passengerName: _passengerName, onC
           {p && (
             <>
               {/* Only the total (2026-11-17): waiting is included in it, not listed. */}
-              <Line k={t('driver.close.total')} v={fmt.money(p.totalCents)} strong />
+              <Line k={t('driver.close.total')} v={fmt.money(typed != null && !typedBad ? typed : p.totalCents)} strong />
+              {!p.upfront && !edit && <button type="button" className="text-sm font-semibold text-accent underline" onClick={() => setEdit(true)} data-testid="fare-edit">{t('driver.close.edit')}</button>}
+              {!p.upfront && edit && (
+                <div className="text-start" data-testid="fare-edit-box">
+                  <label className="text-xs text-muted" htmlFor="fare-amount">{t('driver.close.editLabel')}</label>
+                  <input id="fare-amount" inputMode="decimal" autoFocus value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ''))} placeholder={(p.totalCents / 100).toFixed(2)}
+                    className={`mt-1 w-full rounded-[10px] border bg-elevated px-3 py-2 text-lg tabular-nums ${typedBad ? 'border-danger' : 'border-edge'}`} data-testid="fare-amount" />
+                  <p className={`mt-1 text-xs ${typedBad ? 'text-danger' : 'text-muted'}`}>{typedBad && p.minCents != null ? t('driver.close.belowMin', { amount: fmt.money(p.minCents) }) : t('driver.close.editNote')}</p>
+                </div>
+              )}
               {/* GPS taximeter for comparison with the car's meter (2026-11-19; not charged). */}
               {p.minCents != null && <p className="rounded-[10px] border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-ink" data-testid="prebook-min">{t('driver.close.prebookMin', { amount: fmt.money(p.minCents), zone: p.minZone ?? '' })}</p>}
               {p.gpsMeter && <Line k={`${t('driver.gpsMeter.preview')} · ${t('driver.gpsMeter.km', { km: p.gpsMeter.totalKm.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })}`} v={fmt.money(p.gpsMeter.totalCents)} />}
@@ -40,7 +54,7 @@ export function FarePreviewSheet({ bookingId, passengerName: _passengerName, onC
           )}
         </div>
         {/* Red, like «Завершить поездку» on the navigation screen (2026-11-17). */}
-        <button className="relative mx-auto mt-4 block h-[53px] w-[65%] rounded-full bg-[#7A1E1E] text-[16px] font-bold text-white" onClick={onConfirm}><EdgeShine />{t('driver.close.confirm')}</button>
+        <button className="relative mx-auto mt-4 block h-[53px] w-[65%] rounded-full bg-[#7A1E1E] text-[16px] font-bold text-white" disabled={typedBad} onClick={() => onConfirm(typed != null && !typedBad ? typed : undefined)}><EdgeShine />{t('driver.close.confirm')}</button>
       </div>
     </div>
   );

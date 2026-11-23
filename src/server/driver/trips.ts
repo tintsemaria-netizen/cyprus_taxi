@@ -107,7 +107,7 @@ export async function driverTripDetail(driverId: string, bookingId: string): Pro
   }
 
   // Upfront prices are fixed and cannot be settled by the driver.
-  const canSettle = completed && asg.booking.fare?.finalCents == null; // regulated meter → driver settles
+  const canSettle = false; // operator 2026-11-24: the amount is fixed at «Завершить»; nothing can be changed afterwards
 
   return {
     bookingId, reference: asg.booking.reference, at: asg.assignedAt.toISOString(),

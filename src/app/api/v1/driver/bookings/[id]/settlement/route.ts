@@ -1,6 +1,6 @@
 import { apiOk, apiError, Errors } from '@/lib/http';
 import { requireDriver, isDriverCtx } from '@/lib/driver-ctx';
-import { reportSettlement, currentSettlement, settlementHistory } from '@/server/driver/settlement';
+import { currentSettlement, settlementHistory } from '@/server/driver/settlement';
 import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -18,20 +18,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   return apiOk({ current: await currentSettlement(id), history: await settlementHistory(id) });
 }
 
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+// Operator 2026-11-24: the amount is fixed when the driver presses «Завершить» (he may change a meter
+// ride's amount on that screen only). After completion nothing can be changed.
+export async function POST() {
   const ctx = await requireDriver();
   if (!isDriverCtx(ctx)) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();
-  const { id } = await params;
-  let body: { reportedFinalCents?: number; paymentReceived?: boolean; note?: string; correctionReason?: string; expectedRevision?: number };
-  try { body = await req.json(); } catch { return Errors.validation({ _: 'Invalid JSON body.' }); }
-  if (typeof body.reportedFinalCents !== 'number') return Errors.validation({ reportedFinalCents: 'Required (integer cents).' });
-  const r = await reportSettlement(ctx.driver.id, id, {
-    reportedFinalCents: body.reportedFinalCents,
-    paymentReceived: body.paymentReceived,
-    note: body.note,
-    correctionReason: body.correctionReason,
-    expectedRevision: body.expectedRevision,
-  });
-  if (!r.ok) return apiError(r.status, r.code, r.message);
-  return apiOk({ ok: true, settlement: r.settlement });
+  return apiError(409, 'AMOUNT_LOCKED', 'The amount was fixed when the ride was completed and cannot be changed.');
 }

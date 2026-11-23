@@ -558,7 +558,7 @@ export function DriverNavigation(props: {
       )}
       {ask === 'complete' && (
         <FarePreviewSheet bookingId={trip.bookingId} passengerName={trip.passengerName}
-          onConfirm={() => { setAsk(null); props.onTripAction('complete', {}, { stopGps: true }); }} onCancel={() => setAsk(null)} />
+          onConfirm={(meterCents) => { setAsk(null); props.onTripAction('complete', meterCents != null ? { meterCents } : {}, { stopGps: true }); }} onCancel={() => setAsk(null)} />
       )}
       {ask === 'release' && (
         <ConfirmSheet title={t('driver.trip.releaseTitle')} body={t('driver.trip.releaseBody')} confirmLabel={t('driver.trip.releaseConfirm')} danger

@@ -1,6 +1,7 @@
 import { meterWaitingCents } from '@/lib/tariff';
 import { isFixedPrice } from '@/lib/price-type';
 import { enqueueReceiptEmail } from '@/server/email/receipts';
+import { completedTotalCents } from '@/lib/fare-total';
 import { randomInt } from 'crypto';
 import { Prisma, Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
@@ -83,6 +84,7 @@ async function finalizeCompletion(
   b: { id: string; fareCents: number | null; priceType: string | null; fareBreakdown: string | null },
   a: { id: string; driverId: string },
   actor: ActorRef,
+  meterCents: number | null = null,
 ): Promise<LifeResult> {
   const w = await tx.waitingSession.findUnique({ where: { bookingId: b.id } });
   // Paid waiting at the intermediate stop (2026-11-15) is added on top of pickup waiting.
@@ -115,6 +117,10 @@ async function finalizeCompletion(
   }
   await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason: 'completed', activeBookingId: null, activeDriverId: null, activeVehicleId: null } });
   // A shared ride's other leg may still be in the car: it takes over and the driver stays busy.
+  // The amount the driver typed on the completion screen (meter ride): recorded once, final from now on.
+  if (meterCents != null && !isUpfront && !(await tx.driverSettlement.findFirst({ where: { bookingId: b.id }, select: { id: true } }))) {
+    await tx.driverSettlement.create({ data: { bookingId: b.id, driverId: a.driverId, assignmentId: a.id, reportedFinalCents: meterCents, currency: config.currency, paymentReceived: false, note: 'entered at completion', revision: 1, createdByType: 'DRIVER', createdById: a.driverId } });
+  }
   await afterLegEndedTx(tx, a);
   const u = await tx.booking.update({ where: { id: b.id }, data: { status: 'COMPLETED', revision: { increment: 1 } } });
   await legCompletedTx(tx, b.id);
@@ -129,7 +135,8 @@ async function finalizeCompletion(
   });
   await recordEvent(tx, {
     eventType: 'fare.recorded', aggregateType: 'fare', aggregateId: b.id, aggregateVersion: 1, correlationId: b.id,
-    payload: { bookingId: b.id, priceType, currency: config.currency, estimateCents: b.fareCents ?? null, waitingCents, finalCents, paymentMethod: 'CASH_TO_DRIVER', paymentStatus: 'PENDING' },
+    // totalCents = the amount fixed at completion (src/lib/fare-total.ts), what admin analytics sums.
+    payload: { bookingId: b.id, priceType, currency: config.currency, estimateCents: b.fareCents ?? null, waitingCents, finalCents, totalCents: completedTotalCents({ priceType, estimateCents: b.fareCents ?? null, waitingCents, finalCents }, meterCents), paymentMethod: 'CASH_TO_DRIVER', paymentStatus: 'PENDING' },
   });
   return ok(u.status, u.revision);
 }
@@ -173,7 +180,7 @@ export async function startTrip(bookingId: string, driverId: string, expectedRev
 }
 
 // IN_PROGRESS → COMPLETED. Writes the one immutable Fare record and frees the driver.
-export async function completeTrip(bookingId: string, driverId: string, expectedRevision: number): Promise<LifeResult> {
+export async function completeTrip(bookingId: string, driverId: string, expectedRevision: number, meterCents?: number | null): Promise<LifeResult> {
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
     const b = await tx.booking.findUnique({ where: { id: bookingId } });
@@ -182,7 +189,14 @@ export async function completeTrip(bookingId: string, driverId: string, expected
     if (b.status !== 'IN_PROGRESS') return err(409, 'BAD_STATE', 'Only an in-progress trip can be completed.');
     const a = await activeAssignmentFor(tx, bookingId, driverId);
     if (!a) return err(403, 'FORBIDDEN', 'Not your assignment.');
-    return finalizeCompletion(tx, b, a, { type: 'DRIVER', id: driverId });
+    // The driver may change the amount ONLY here, before «Завершить» (operator 2026-11-24) — a meter
+    // ride only (a fixed price stays), not below the pre-booking minimum. Afterwards it is locked.
+    if (meterCents != null) {
+      if (isFixedPrice(b.priceType)) return err(409, 'UPFRONT_FIXED', 'This ride has a fixed price.');
+      if (!Number.isInteger(meterCents) || meterCents < 0 || meterCents > 100_000_00) return err(422, 'BAD_AMOUNT', 'Enter a valid amount.');
+      if (b.fareMinCents != null && meterCents < b.fareMinCents) return err(422, 'BELOW_MINIMUM', `Pre-booking minimum here: at least €${(b.fareMinCents / 100).toFixed(2)}.`);
+    }
+    return finalizeCompletion(tx, b, a, { type: 'DRIVER', id: driverId }, meterCents ?? null);
   });
 }
 
