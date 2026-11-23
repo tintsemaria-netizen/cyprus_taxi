@@ -209,6 +209,12 @@ const booking: Catalog<typeof en> = {
     myRides: "Meine Fahrten",
     open: "Vorbestellung öffnen",
   },
+  pickupAt: {
+    title: 'Wann soll der Wagen Sie abholen?',
+    time: 'Abholzeit',
+    hint: 'Wählen Sie, wann der Wagen bei Ihnen sein soll.',
+    tooSoon: 'Abholung frühestens in {n} Min.',
+  },
   arrive: {
     modePickup: 'Abholung um',
     modeArrive: 'Dort sein',

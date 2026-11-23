@@ -2643,3 +2643,9 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Phone: the open group/tab is scrolled into view.
 - Tests 397 passed / 1 skipped (new tests/staff-alerts.db.test.ts). Screenshots /tmp/shots/grp-*.png.
 - Dev DB has two preview applications (ids pv-ap1, pv-ap2) — local only.
+
+## 2026-11-23 — Pre-booking time: plain П vs ПП (branch `pickup-time`, NOT deployed — shown to operator)
+- BookingApp: «Когда вам нужно быть на месте? / не раньше / не позже» only when «Попутчик» is on (`arriveOn = arriveMode && shareOn`).
+  Plain pre-booking: «Во сколько подать машину?» — date + «Время подачи» → scheduledAt; check ≥ schedule.minMinutes
+  (`booking.pickupAt.*`, 8 languages). Server unchanged (arrive window optional).
+- Tests 399 passed / 1 skipped. Screenshots /tmp/shots/pk-*.png. Not yet run: ordering a plain pre-booking end-to-end in the browser.

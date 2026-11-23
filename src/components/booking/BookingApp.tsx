@@ -70,6 +70,9 @@ export default function BookingApp() {
   // Pre-booking = «Быть на месте с … до …» only (2026-11-22, operator: no «Подача в / Быть на месте» tabs —
   // one window, like the ride-share box). The pickup is computed from the window.
   const [arriveMode, setArriveMode] = useState(true);
+  // Plain pre-booking: «Во сколько подать машину?» — day + one time (Cyprus wall clock).
+  const [pickDay, setPickDay] = useState('');
+  const [pickT, setPickT] = useState('');
   const [arriveDay, setArriveDay] = useState('');
   const [arriveFromT, setArriveFromT] = useState('');
   const [arriveToT, setArriveToT] = useState('');
@@ -535,6 +538,9 @@ export default function BookingApp() {
   const [stopWarn, setStopWarn] = useState(false);
   useEffect(() => { if (!stopWarn) return; const id = setTimeout(() => setStopWarn(false), 4000); return () => clearTimeout(id); }, [stopWarn]);
   const shareOn = shareAllowed && shareOpts.on;
+  // Pre-booking time (2026-11-23, operator): the «быть на месте с … до …» window only with «Попутчик»;
+  // a plain pre-booking asks one thing — what time the car should come.
+  const arriveOn = arriveMode && shareOn;
   const effPax = shareOn ? shareOpts.adults + shareOpts.children : 1;
   const effBags = shareOn ? shareOpts.bags : 0;
   // Real driving route (distance + trip duration + geometry) between the two stops.
@@ -680,12 +686,13 @@ export default function BookingApp() {
     if (passenger && !passenger.guest && !name.trim()) e.name = t('booking.validation.name');
     // Email-only accounts have no verified phone: the contact number is entered per booking.
     if (passenger && !passenger.guest && !passenger.phone && !/^\+?[\d\s()-]{7,20}$/.test(phone.trim())) e.phone = t('booking.validation.phone');
-    if (when === 'SCHEDULE' && arriveMode) {
+    if (when === 'SCHEDULE' && arriveOn) {
       const w = arriveWindow();
       if (!w) e.scheduledAt = t('booking.arrive.needTimes');
       else if (w.width < 15 || w.width > 180) e.scheduledAt = t('booking.arrive.badWidth');
       else if (route?.min == null) e.scheduledAt = t('booking.arrive.needRoute');
     } else if (when === 'SCHEDULE' && !scheduledAt) e.scheduledAt = t('booking.validation.scheduledAt');
+    else if (when === 'SCHEDULE' && scheduledAt < scheduleMin) e.scheduledAt = t('booking.pickupAt.tooSoon', { n: cfg?.schedule.minMinutes ?? 30 });
     if (!e.scheduledAt && shareTooSoon) e.scheduledAt = t('share.booking.tooSoon', { h: shareMinH });
     if (effPax < 1 || effPax > maxPax) e.pax = tp('booking.validation.paxRange', maxPax);
     setErrors(e);
@@ -748,7 +755,7 @@ export default function BookingApp() {
         when,
         // Send the raw wall-clock string; the server interprets it as Europe/Nicosia.
         scheduledAt: when === 'SCHEDULE' ? scheduledAt : undefined,
-        ...(when === 'SCHEDULE' && arriveMode && arriveDay && arriveFromT && arriveToT ? { arriveFrom: `${arriveDay}T${arriveFromT}`, arriveBy: `${arriveDay}T${arriveToT}` } : {}),
+        ...(when === 'SCHEDULE' && arriveOn && arriveDay && arriveFromT && arriveToT ? { arriveFrom: `${arriveDay}T${arriveFromT}`, arriveBy: `${arriveDay}T${arriveToT}` } : {}),
         scheduleOffsetMin: when === 'SCHEDULE' ? effOffset : undefined,
         vClass,
         passengerCount: effPax,
@@ -863,7 +870,7 @@ export default function BookingApp() {
   };
   const arriveCalc = (() => {
     const w = arriveWindow();
-    if (when !== 'SCHEDULE' || !arriveMode || !w || w.width < 15 || w.width > 180 || route?.min == null) return null;
+    if (when !== 'SCHEDULE' || !arriveOn || !w || w.width < 15 || w.width > 180 || route?.min == null) return null;
     const drive = Math.ceil(route.min) + ARRIVE_MARGIN_MIN;
     return { leaveFrom: wall(w.from - drive), leaveBy: wall(w.to - drive), drive };
   })();
@@ -885,9 +892,9 @@ export default function BookingApp() {
   // The pickup sent with the order = the LATEST departure of the interval; a co-rider may make it earlier.
   const pickupTarget = arriveCalc ? (shareOn && pickRange ? pickRange.to : arriveCalc.leaveBy) : null;
   useEffect(() => {
-    if (arriveMode && pickupTarget && scheduledAt !== pickupTarget) { setScheduledAt(pickupTarget); setScheduleOffsetMin(undefined); }
+    if (arriveOn && pickupTarget && scheduledAt !== pickupTarget) { setScheduledAt(pickupTarget); setScheduleOffsetMin(undefined); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [arriveMode, pickupTarget]);
+  }, [arriveOn, pickupTarget]);
 
   const classes = cfg?.classes ?? [
     { key: 'COMFORT' as const, label: 'Comfort', maxPassengers: 4 },
@@ -904,6 +911,7 @@ export default function BookingApp() {
   const shareTooSoon = when === 'SCHEDULE' && shareOn && !!scheduledAt && scheduledAt < shareMinWall;
   useEffect(() => {
     if (when === 'SCHEDULE' && !arriveDay) setArriveDay(scheduleMin.slice(0, 10));
+    if (when === 'SCHEDULE' && !pickDay) setPickDay(scheduleMin.slice(0, 10));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [when]);
   useEffect(() => {
@@ -923,6 +931,12 @@ export default function BookingApp() {
       .catch(() => setFlash(t('share.board.joinFailed', { reason: t('errors.BOOKING_GONE') })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!cfg]);
+  useEffect(() => {
+    if (when !== 'SCHEDULE' || arriveOn) return;
+    const v = pickDay && /^\d{2}:\d{2}$/.test(pickT) ? `${pickDay}T${pickT}` : '';
+    if (v !== scheduledAt) { setScheduledAt(v); setScheduleOffsetMin(undefined); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [when, arriveOn, pickDay, pickT]);
   const arriveBadWidth = (() => { const w = arriveWindow(); return !!w && (w.width < 15 || w.width > 180); })();
   // «Попутчик −30%» terms inside the co-rider box (TZ 2026-11-23): automatic pairing, arrival + pickup interval,
   // +15 min limit, «Изменить» to narrow it or pick an exact time. Prices are on the class step, next to «Заказать».
@@ -937,6 +951,19 @@ export default function BookingApp() {
       <p className="mt-1 text-xs">{t('share.terms.extra', { n: cfg?.share?.termsMaxExtraMin ?? 15 })}</p>
       <p className="mt-1 text-xs">{t('share.terms.board')}</p>
       <p className="mt-1.5 text-xs text-muted" data-testid="share-min-note">{t('share.booking.minNote', { h: shareMinH })}</p>
+    </div>
+  );
+  const pickupBox = (
+    <div data-testid="pickup-time">
+      {!pickT && <p className="mb-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium text-ink" data-testid="pickup-hint">{t('booking.pickupAt.hint')}</p>}
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-2">
+        <label className="block min-w-0">
+          <span className="label">{t('booking.arrive.day')}</span>
+          <input type="date" className="field mt-1 block w-full min-w-0 max-w-full appearance-none !min-h-[44px] !px-2 !py-2 text-center text-base" value={pickDay} min={scheduleMin.slice(0, 10)} onChange={(e) => setPickDay(e.target.value)} data-testid="pickup-day" />
+        </label>
+        <TimeBox label={t('booking.pickupAt.time')} testid="pickup-at" value={pickT} onChange={setPickT} bad={!!errors.scheduledAt} />
+      </div>
+      {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
     </div>
   );
   const arriveBox = (
@@ -1344,11 +1371,11 @@ export default function BookingApp() {
                           <ShareBookingOptions value={shareOpts} onChange={setShareOpts} pct={cfg.share.discountPct} maxPeople={maxPax} prebook blockMsg={viaStop && shareRouteOk ? t('share.booking.shareBlocked') : null} arrive={shareOn ? shareTermsBox : undefined} disabled={!shareAllowed && !(viaStop && shareRouteOk)} />
                         </div>
                       )}
-                      {/* «Когда вам нужно быть на месте?» under the «Попутчик» switch (2026-11-22, operator), with or without a co-rider. */}
+                      {/* Under the «Попутчик» switch: with a co-rider «Когда вам нужно быть на месте?» (window); without — «Во сколько подать машину?» (2026-11-23, operator). */}
                       {when === 'SCHEDULE' && (
                         <div className="mb-3 rounded-[12px] border border-edge bg-elevated px-3 py-2.5" data-testid="schedule-arrive">
-                          <p className="label mb-1">{t('share.booking.arriveTitle')}</p>
-                          {arriveBox}
+                          <p className="label mb-1">{arriveOn ? t('share.booking.arriveTitle') : t('booking.pickupAt.title')}</p>
+                          {arriveOn ? arriveBox : pickupBox}
                         </div>
                       )}
                       {when === 'SCHEDULE' && (

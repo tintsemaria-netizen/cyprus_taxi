@@ -201,6 +201,12 @@ const booking: Catalog<typeof en> = {
     myRides: 'Мои поездки',
     open: 'Открыть предзаказ',
   },
+  pickupAt: {
+    title: 'Во сколько подать машину?',
+    time: 'Время подачи',
+    hint: 'Укажите, во сколько машина должна быть у вас.',
+    tooSoon: 'Подача — не раньше чем через {n} мин.',
+  },
   arrive: {
     modePickup: 'Подача в',
     modeArrive: 'Быть на месте',

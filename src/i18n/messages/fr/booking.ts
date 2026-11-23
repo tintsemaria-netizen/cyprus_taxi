@@ -209,6 +209,12 @@ const booking: Catalog<typeof en> = {
     myRides: "Mes courses",
     open: "Ouvrir la réservation",
   },
+  pickupAt: {
+    title: 'À quelle heure la voiture doit-elle venir vous chercher ?',
+    time: 'Heure de prise en charge',
+    hint: 'Choisissez quand la voiture doit être chez vous.',
+    tooSoon: 'Prise en charge au plus tôt dans {n} min.',
+  },
   arrive: {
     modePickup: 'Prise en charge à',
     modeArrive: 'Être sur place',
