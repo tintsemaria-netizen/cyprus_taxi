@@ -1,5 +1,15 @@
 # Session handoff
 
+## 2026-11-23 — «Бухгалтерия» for the owner (branch `accounting`, NOT deployed — shown)
+
+- Operator: «бухгалтерия для меня в суперадмине; только я; только евро; начинай» (manual entries + reports first; driver subscriptions join automatically once they exist).
+- Owner = `StaffUser.isOwner` (an ADMIN). Migration `20261123120000_accounting` marks the OLDEST active ADMIN (the bootstrap admin) as owner; move it on the server with `npm run owner:set -- <login>` (scripts/owner-set.ts, exactly one owner). Not editable from the UI. /auth/me returns `isOwner`; the staff menu shows «Бухгалтерия» only to him. Other admins / dispatchers get 403 on every accounting API.
+- Data: `LedgerEntry` (INCOME/EXPENSE, day, cents, category, counterparty, method, note, receipt, soft delete) and `LedgerRecurring` (MONTH/YEAR, nextDay; booked idempotently when the page is opened — unique (recurringId, day), conditional nextDay move).
+- src/server/accounting.ts: requireOwner, periodRange (month / quarter / year, prev / next), accountingView (totals, profit, 15 % tax «for information», by category, VAT turnover of 12 months vs 15 600 €, drivers' totals through the SHARED `earningsSummary` summed over all drivers), CSV export (Excel, BOM). Receipts: private store under `ledger/` (same magic-byte checks); the KYC orphan sweep now keeps ledger receipts.
+- API /api/v1/admin/accounting (GET, POST), /entries/[id] (PATCH, DELETE), /entries/[id]/receipt (POST, GET), /recurring (POST), /recurring/[id] (DELETE), /export.
+- Page /admin/accounting (en/ru texts; other languages use English as for all staff pages). Hint to turn on 2FA if off. Staff top menu now scrolls instead of overlapping the language / sign-out buttons (it overflowed at 1280 px).
+- Tests: tests/accounting.db.test.ts (owner only, figures, recurring incl. month end, VAT/periods, receipts + sweep). Suite 381 passed / 1 skipped. Seed marks the demo admin as owner. Screens /tmp/shots/acc-*.png.
+
 ## 2026-11-23 — Booking map zoomed out to the Middle East (branch `map-pad`, deployed 2026-11-23)
 
 - Operator screenshot: «Выберите класс» with «Попутчик» on → the map behind showed Iraq / Afghanistan. Cause: the sheet covers almost the whole map; the bottom padding (`reviewH + 24`) left a few px or less, and Google `fitBounds` then zooms out to the world.

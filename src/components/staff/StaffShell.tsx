@@ -9,6 +9,8 @@ import { useT } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 
 export interface Me {
+  /** The business owner sees «Бухгалтерия» (2026-11-23). */
+  isOwner?: boolean;
   id: string;
   role: 'ADMIN' | 'DISPATCHER' | 'DRIVER' | 'FLEET_OWNER';
   displayName: string;
@@ -79,6 +81,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
                 { href: '/admin/fixed-prices', label: t('staff.nav.fixedPrices') },
                 { href: '/admin/min-fares', label: t('staff.nav.minFares') },
                 { href: '/admin/settings', label: t('staff.nav.settings') },
+                ...(me.isOwner ? [{ href: '/admin/accounting', label: t('staff.nav.accounting') }] : []),
               ]
             : []),
           { href: '/staff/security', label: t('staff.nav.security') },
@@ -91,7 +94,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
           {/* Driver sub-screens (pre-bookings, free orders, 2026-11-19): ‹ back to the map, left of the logo. */}
           {me.role === 'DRIVER' && driverBack && <BackArrow className="-ms-2 -me-3" onBack={() => window.dispatchEvent(new Event('il-y:driver-back'))} />}
           <a href="/dispatch" className="shrink-0"><Logo className="h-6" /></a>
-          <nav className="hidden items-center gap-1 xl:flex">
+          <nav className="hidden min-w-0 items-center gap-1 overflow-x-auto xl:flex">
             {nav.map((n) => (
               <a
                 key={n.href}

@@ -52,6 +52,9 @@ model StaffUser {
   totpPendingSecret String?
   totpEnabledAt     DateTime?
   totpLastStep      Int?
+  // The business owner (2026-11-23, operator: «только я»): an ADMIN who also sees «Бухгалтерия».
+  // Never set from the admin UI — only by the migration / `npm run owner:set`.
+  isOwner           Boolean   @default(false)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -1045,4 +1048,60 @@ model ShareGroup {
   @@index([status, expiresAt])
   @@index([guestBookingId])
   @@index([hostBookingId])
+}
+
+// Owner's bookkeeping (2026-11-23, operator): income and expenses in euro, entered by hand for now
+// (driver subscriptions / commission will be added automatically later), with receipts and
+// recurring items (Apple, server, domain …). Only the owner (StaffUser.isOwner) sees it.
+enum LedgerKind {
+  INCOME
+  EXPENSE
+}
+
+enum LedgerEvery {
+  MONTH
+  YEAR
+}
+
+model LedgerEntry {
+  id           String     @id @default(uuid())
+  kind         LedgerKind
+  /// Calendar day of the payment (Cyprus date), stored as midnight UTC of that day.
+  day          DateTime   @db.Date
+  amountCents  Int
+  category     String
+  counterparty String?
+  method       String?
+  note         String?
+  receiptKey   String?
+  receiptMime  String?
+  recurringId  String?
+  createdById  String
+  deletedAt    DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  recurring LedgerRecurring? @relation(fields: [recurringId], references: [id])
+
+  @@unique([recurringId, day])
+  @@index([day])
+}
+
+model LedgerRecurring {
+  id           String      @id @default(uuid())
+  kind         LedgerKind
+  amountCents  Int
+  category     String
+  counterparty String?
+  method       String?
+  note         String?
+  every        LedgerEvery
+  /// The next day an entry is due (materialised when the owner opens the page).
+  nextDay      DateTime    @db.Date
+  active       Boolean     @default(true)
+  createdById  String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  entries LedgerEntry[]
 }

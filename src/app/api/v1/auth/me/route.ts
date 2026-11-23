@@ -16,6 +16,7 @@ export async function GET() {
   }
   return apiOk({
     id: ctx.user.id, role: ctx.user.role, displayName: ctx.user.displayName, driverId,
+    isOwner: ctx.user.role === 'ADMIN' && ctx.user.isOwner, // «Бухгалтерия» (2026-11-23)
     fleet: ctx.user.role === 'FLEET_OWNER' || ctx.user.role === 'DRIVER' ? await ownedFleet(ctx.user.id) : null,
     mfa: { eligible: isPrivileged(ctx.user), enabled: !!ctx.user.totpEnabledAt, setupRequired: mfaSetupRequired(ctx.user) },
   });
