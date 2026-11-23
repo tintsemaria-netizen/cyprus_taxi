@@ -78,7 +78,7 @@ describe('driver settlement', () => {
     if (corrected.ok) expect(corrected.settlement.revision).toBe(2);
   });
 
-  it('earnings count a known final; a trip with no settlement is pending, not zero income', async () => {
+  it('earnings count the amount fixed at «Завершить» (2026-11-24); only a trip with no amount at all is pending', async () => {
     const { driverId, vehicleId } = await driverAndVehicle('Andreas');
     const settled = await completedTrip(driverId, vehicleId);
     const pendingTrip = await completedTrip(driverId, vehicleId);
@@ -89,7 +89,9 @@ describe('driver settlement', () => {
     const sum = await earningsSummary(driverId, from, to);
     const eur = sum.byCurrency.find((c) => c.currency === 'EUR')!;
     expect(eur.recordedEarningsCents).toBeGreaterThanOrEqual(2500);
-    expect(eur.pendingFinalTrips).toBeGreaterThanOrEqual(1); // the un-settled completed trip
-    void pendingTrip;
+    const pf = await prisma.fare.findUniqueOrThrow({ where: { bookingId: pendingTrip } });
+    const fixedAtCompletion = pf.estimateCents ?? pf.finalCents;
+    if (fixedAtCompletion != null) expect(eur.recordedEarningsCents).toBeGreaterThanOrEqual(2500 + fixedAtCompletion + pf.waitingCents);
+    else expect(eur.pendingFinalTrips).toBeGreaterThanOrEqual(1);
   });
 });
