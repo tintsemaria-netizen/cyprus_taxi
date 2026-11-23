@@ -193,6 +193,12 @@ const booking = {
     myRides: 'My rides',
     open: 'Open pre-booking',
   },
+  pickupAt: {
+    title: 'What time should the car pick you up?',
+    time: 'Pickup time',
+    hint: 'Choose when the car should be at your door.',
+    tooSoon: 'Pickup can be no sooner than in {n} min.',
+  },
   arrive: {
     modePickup: 'Pickup at',
     modeArrive: 'Be there',

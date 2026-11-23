@@ -209,6 +209,12 @@ const booking: Catalog<typeof en> = {
     myRides: "הנסיעות שלי",
     open: "פתיחת ההזמנה מראש",
   },
+  pickupAt: {
+    title: 'באיזו שעה הרכב צריך לאסוף אותך?',
+    time: 'שעת איסוף',
+    hint: 'בחרו מתי הרכב צריך להיות אצלכם.',
+    tooSoon: 'האיסוף אפשרי לכל המוקדם בעוד {n} דק׳.',
+  },
   arrive: {
     modePickup: 'איסוף ב-',
     modeArrive: 'להגיע עד',
