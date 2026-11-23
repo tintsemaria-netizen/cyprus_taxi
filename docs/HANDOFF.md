@@ -8,6 +8,7 @@
 - Admin «Надёжность» → «Состояние системы» (en/ru notes). Production switches (no test OTP, forced staff MFA, boot refusal) are REPORT-ONLY: live APP_ENV unknown, no Twilio.
 - NOT ported (conflict with current work or needs a decision): receipt e-mail skip without provider (11-17 design keeps them waiting), meter receipt hold + one-total rule (§6, touches earnings/bookkeeping), deploy abort on failed backup (server backup state unknown), mandatory SMS, commission, SHARE_ENABLED default off.
 - Prod public config shows demoMode: true (DEMO_MODE on the server) — operator to check.
+- Operator decisions 2026-11-24: BEFORE connecting a receipt e-mail provider, clear the waiting queue (mark PENDING/RETRY ReceiptEmail rows SKIPPED, reason «queue cleared before provider») so no old receipts are sent. ClamAV: later. Live server shows APP_ENV=beta, SMS test codes with an EMPTY allow-list, no ClamAV, no e-mail provider, push + Google OK, staff 2FA not enforced, DEMO_MODE on.
 
 ## 2026-11-23 — «Попутчик в дороге» (deployed 2026-11-23 ~23:10)
 - LIVE co-rider: the passenger in the car is NOT asked (hostAnswer YES at creation), no question push.
