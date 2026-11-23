@@ -33,6 +33,7 @@ const errors: Catalog<typeof en> = {
   NOT_RETRYABLE: "Dla tego przejazdu nie można ponownie szukać kierowcy.",
   NO_FRESH_GPS: "Twoja lokalizacja jest nieaktualna. Włącz udostępnianie lokalizacji i spróbuj ponownie.",
   NO_RECEIPT: "Paragon jest dostępny po zakończeniu przejazdu.",
+  OFF_ISLAND: 'Działamy tylko na wyspie Cypr. Wybierz punkt na lądzie.',
   NO_ROUTE: "Samochód nie dojedzie do tego punktu. Wybierz adres przy drodze.",
   OFFER_EXPIRED: "Ta oferta wygasła.",
   OFFER_GONE: "Ta oferta nie jest już dostępna.",

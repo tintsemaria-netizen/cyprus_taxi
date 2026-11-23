@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { apiOk, Errors } from '@/lib/http';
+import { onCyprusIsland } from '@/lib/cyprus-island';
+import { apiOk, apiError, Errors } from '@/lib/http';
 import { getPassenger } from '@/server/passenger';
 import { prisma } from '@/lib/db';
 
@@ -39,6 +40,7 @@ export async function PUT(req: Request) {
   if (typeof label !== 'string' || !label.trim() || typeof lat !== 'number' || typeof lng !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lng)) {
     return Errors.validation({ place: 'Choose an address.' });
   }
+  if (!onCyprusIsland({ lat, lng })) return apiError(422, 'OFF_ISLAND', 'The point is not on the island of Cyprus.', { place: 'Not on Cyprus.' });
   const custom = kind === 'CUSTOM' || isCustom(kind);
   const name = custom ? String(body.name ?? '').trim().slice(0, 40) : null;
   if (custom && !name) return Errors.validation({ name: 'Enter a name.' });

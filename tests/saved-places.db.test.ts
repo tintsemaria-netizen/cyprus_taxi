@@ -46,7 +46,7 @@ describe('saved places', () => {
     expect(all[0]).toMatchObject({ id: r.id, name: 'Мама дом', label: 'Molos 5' });
     await put({ kind: r.id, place: null });
     expect((await get()).custom.map((c) => c.name)).toEqual(['Спортзал']);
-    expect((await put({ kind: 'C_00000000-0000-0000-0000-000000000000', name: 'Z', place: { label: 'Z', lat: 34, lng: 33 } })).status).toBe(404);
+    expect((await put({ kind: 'C_00000000-0000-0000-0000-000000000000', name: 'Z', place: { label: 'Z', lat: 34.7, lng: 33 } })).status).toBe(404);
   });
 });
 

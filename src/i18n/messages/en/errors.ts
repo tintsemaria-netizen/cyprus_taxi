@@ -32,6 +32,7 @@ const errors = {
   NOT_RETRYABLE: 'This ride cannot be searched again.',
   NO_FRESH_GPS: 'Your location is not up to date. Turn on location sharing and try again.',
   NO_RECEIPT: 'A receipt is available after the ride is completed.',
+  OFF_ISLAND: 'We only operate on the island of Cyprus. Choose a point on land.',
   NO_ROUTE: 'A car cannot reach this point. Choose an address by a road.',
   OFFER_EXPIRED: 'This offer has expired.',
   OFFER_GONE: 'This offer is no longer available.',

@@ -2673,3 +2673,13 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Operator: on a fast flick the logo lands a little to the left of its shadow (real iPhone; not reproducible in emulation — no inertia there).
 - Cause candidate: after the pick, GoogleMapView.centerPointAt re-centred in two steps (moveCamera to the middle + animated panBy back).
   Now one exact moveCamera via the projection, and nothing at all if the camera is already there. Needs a real-iPhone check after deploy.
+
+## 2026-11-24 — Only on the island of Cyprus (branch `island-only`, NOT deployed — shown to operator)
+- `src/lib/cyprus-island.ts`: island polygon (Natural Earth 10 m land, public domain, +~0.9 km sea margin for harbours/marinas,
+  173 pts) + `onCyprusIsland()`. Whole island incl. the north. Separate from the admin service area (still checked after).
+- Server, error `OFF_ISLAND` (422, 8 languages in errors.ts): booking create (pickup/stop/dropoff), /quote, /tracking/stop,
+  saved places PUT, /places/details; /places/search drops results with coordinates off the island.
+- Client: home centre pin let go off the island → red note over the logo, map slides back to the last pickup; map pickers
+  (Google + MapLibre) → red line, confirm disabled; RouteEditor / PlacesInput → red line «OFF_ISLAND», nothing selected;
+  a GPS position off the island is ignored (island view, no auto pickup).
+- Tests 421 passed / 1 skipped (new: cyprus-island.test.ts, off-island.db.test.ts; saved-places fixture moved from the sea to land).

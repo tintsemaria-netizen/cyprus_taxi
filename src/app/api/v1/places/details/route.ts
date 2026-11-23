@@ -1,4 +1,5 @@
-import { apiOk, Errors, clientIp } from '@/lib/http';
+import { apiOk, apiError, Errors, clientIp } from '@/lib/http';
+import { onCyprusIsland } from '@/lib/cyprus-island';
 import { rateLimit } from '@/lib/rate-limit';
 import { config } from '@/lib/config';
 import { googleConfigured, googlePlaceDetails } from '@/server/google';
@@ -20,6 +21,8 @@ export async function GET(req: Request) {
 
   try {
     const place = await googlePlaceDetails(placeId, session);
+    // Only on the island of Cyprus (2026-11-24, operator).
+    if (place && !onCyprusIsland(place)) return apiError(422, 'OFF_ISLAND', 'The point is not on the island of Cyprus.');
     return apiOk({ place });
   } catch {
     return apiOk({ place: null, unavailable: true });
