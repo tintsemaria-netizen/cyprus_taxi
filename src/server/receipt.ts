@@ -1,5 +1,6 @@
 import { isFixedPrice } from '@/lib/price-type';
 import { prisma } from '@/lib/db';
+import { completedTotalCents } from '@/lib/fare-total';
 
 // Passenger-facing ride receipt (Task 020 follow-on). Built from the IMMUTABLE Fare written once
 // at completion — never recomputed. Under regulated metering the final amount is metered in the
@@ -155,7 +156,8 @@ export async function buildReceipt(bookingId: string, passengerId?: string): Pro
         estimateCents: b.fare.estimateCents,
         waitingCents: b.fare.waitingCents,
         finalCents: b.fare.finalCents,
-        totalCents: isUpfront ? (b.fare.finalCents != null ? b.fare.finalCents + b.fare.waitingCents : null) : b.fare.estimateCents != null ? b.fare.estimateCents + b.fare.waitingCents : null,
+        // The amount fixed at «Завершить», waiting included (src/lib/fare-total.ts); a driver's correction replaces it.
+        totalCents: completedTotalCents(b.fare, (await prisma.driverSettlement.findFirst({ where: { bookingId }, orderBy: { revision: 'desc' }, select: { reportedFinalCents: true } }))?.reportedFinalCents),
         lines: parseLines(b.fareBreakdown),
         note,
         paymentMethod: b.fare.paymentMethod,

@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-24 — one completed-ride amount with waiting (branch `ride-total`, LOCAL, not pushed)
+- Operator: the price is fixed when the driver presses «Завершить» (he is shown the sum to collect); it then goes on unchanged. Waiting counts everywhere.
+- `src/lib/fare-total.ts` `completedTotalCents`: fixed → price + waiting; meter → app fare + waiting; a driver's later correction of a meter ride replaces it. Used by: receipt + e-mail, ride history, `resolveFinal` (driver earnings, today card, analytics, trip list, admin per-driver, fleet, bookkeeping `driversTotal`), admin analytics (ClickHouse fare.recorded: final or estimate + waiting).
+- Meter rides are no longer «pending» until the driver types a meter amount. Commission: 0 % (operator).
+- An earlier idea («≈ until the driver enters the meter amount») was dropped — it contradicted this flow.
+
 ## 2026-11-23 — launch fixes, safe part ported (branch `launch-safe`, deployed ~23:55)
 - Per-phone code limit 10 wrong codes / 10 min (correct code refunded: `refundRateLimit`); sign-in/code limiter fails closed on storage error.
 - Licence front, taxi licence, insurance, roadworthiness need a future expiry to accept/approve (admin dialog makes the date required).

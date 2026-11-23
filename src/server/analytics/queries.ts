@@ -113,14 +113,16 @@ export interface FareSummary {
   note: string;
 }
 export async function fareSummary(f: AnalyticsFilter): Promise<FareSummary> {
-  // From fare.recorded events. finalCents may be null (regulated meter settled with the driver):
-  // count those as pending, NEVER as zero income, and NEVER sum the estimate as paid.
+  // From fare.recorded events (operator 2026-11-24): the amount fixed at «Завершить» — the fixed price or
+  // the app's fare — plus recorded waiting, the same rule as src/lib/fare-total.ts. A ride with neither is
+  // pending. (A driver's later correction of a meter ride is not in these events; the driver reports have it.)
   const rows = await chSelect<{ currency: string; trips: string; knownFinal: string; pendingFinal: string; recordedFinal: string }>(
     `SELECT JSONExtractString(payload,'currency') AS currency,
             count(DISTINCT aggregateId) AS trips,
-            countIf(JSONExtractRaw(payload,'finalCents') != 'null') AS knownFinal,
-            countIf(JSONExtractRaw(payload,'finalCents') =  'null') AS pendingFinal,
-            sumIf(JSONExtractInt(payload,'finalCents'), JSONExtractRaw(payload,'finalCents') != 'null') AS recordedFinal
+            countIf(JSONExtractRaw(payload,'finalCents') != 'null' OR JSONExtractRaw(payload,'estimateCents') != 'null') AS knownFinal,
+            countIf(JSONExtractRaw(payload,'finalCents') =  'null' AND JSONExtractRaw(payload,'estimateCents') = 'null') AS pendingFinal,
+            sumIf(if(JSONExtractRaw(payload,'finalCents') != 'null', JSONExtractInt(payload,'finalCents'), JSONExtractInt(payload,'estimateCents')) + JSONExtractInt(payload,'waitingCents'),
+                  JSONExtractRaw(payload,'finalCents') != 'null' OR JSONExtractRaw(payload,'estimateCents') != 'null') AS recordedFinal
      FROM ${DB()}.domain_events
      WHERE ${scope(f, "eventType='fare.recorded'")}
      GROUP BY currency`,
@@ -133,7 +135,7 @@ export async function fareSummary(f: AnalyticsFilter): Promise<FareSummary> {
       knownFinalTrips: Number(r.knownFinal),
       pendingFinalTrips: Number(r.pendingFinal),
     })),
-    note: 'Recorded final fares only, grouped by currency. Trips with an unknown metered amount are counted as pending, not zero. Estimates are never counted as income. Currencies are never summed together.',
+    note: 'Amounts fixed when the driver completed the ride, waiting included, grouped by currency. Currencies are never summed together.',
   };
 }
 

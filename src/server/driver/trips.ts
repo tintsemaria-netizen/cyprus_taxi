@@ -40,7 +40,7 @@ export async function listDriverTrips(driverId: string, opts: { from?: Date; to?
     ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
     select: {
       id: true, assignedAt: true, endedAt: true, reason: true, bookingId: true,
-      booking: { select: { reference: true, status: true, pickupLabel: true, dropoffLabel: true, vClass: true, passengerCount: true, fareCents: true, fare: { select: { finalCents: true, currency: true, paymentStatus: true } } } },
+      booking: { select: { reference: true, status: true, pickupLabel: true, dropoffLabel: true, vClass: true, passengerCount: true, fareCents: true, fare: { select: { priceType: true, estimateCents: true, waitingCents: true, finalCents: true, currency: true, paymentStatus: true } } } },
     },
   });
   const hasMore = rows.length > limit;
@@ -88,7 +88,7 @@ export async function driverTripDetail(driverId: string, bookingId: string): Pro
   // Authorize by the driver's OWN assignment (most recent for this booking).
   const asg = await prisma.assignment.findFirst({
     where: { driverId, bookingId }, orderBy: { assignedAt: 'desc' },
-    select: { id: true, assignedAt: true, endedAt: true, reason: true, booking: { select: { reference: true, status: true, pickupLabel: true, dropoffLabel: true, vClass: true, passengerCount: true, fareCents: true, fareBreakdown: true, fare: { select: { finalCents: true, currency: true, paymentStatus: true } } } } },
+    select: { id: true, assignedAt: true, endedAt: true, reason: true, booking: { select: { reference: true, status: true, pickupLabel: true, dropoffLabel: true, vClass: true, passengerCount: true, fareCents: true, fareBreakdown: true, fare: { select: { priceType: true, estimateCents: true, waitingCents: true, finalCents: true, currency: true, paymentStatus: true } } } } },
   });
   if (!asg) return null;
   const ds = driverStatus(asg.reason, asg.endedAt, asg.booking.status);
