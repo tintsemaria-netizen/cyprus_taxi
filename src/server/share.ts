@@ -163,7 +163,7 @@ export async function tryLiveShare(guestId: string, now: Date = new Date()): Pro
 /** At most this many co-rider cars get the same newcomer at once. */
 const LIVE_MAX_OFFERS = 5;
 /** Two drivers who say yes within this of each other count as «at the same time» (operator 2026-11-23). */
-export const LIVE_SAME_TIME_SEC = 5;
+export const LIVE_SAME_TIME_SEC = 1;
 type LiveOffer = { hostId: string; driverId: string; plan: SharePlan; routed: boolean };
 
 // «Быть на месте до …» (2026-11-22): a co-rider picked up on the way must never make a host with an
@@ -330,8 +330,11 @@ export async function answerShare(groupId: string, party: ShareParty, accept: bo
     return g2.mode === 'LIVE' ? { ok: true, status: 'WAITING' } : finalizePrebookTx(tx, g2.id);
   });
   if (res.ok && res.status === 'WAITING') {
-    // Nobody else can still answer → settle now; otherwise the worker settles within LIVE_SAME_TIME_SEC.
+    // Nobody else can still answer → settle now; otherwise in LIVE_SAME_TIME_SEC (1 s) — a timer here,
+    // and the worker (every 2 s) as the safety net.
     await decideLive(pre.guestBookingId, now);
+    const t = setTimeout(() => { decideLive(pre.guestBookingId).catch(() => { /* the worker settles it */ }); }, LIVE_SAME_TIME_SEC * 1000 + 100);
+    t.unref?.();
     const after = await prisma.shareGroup.findUnique({ where: { id: groupId }, select: { status: true } });
     return { ok: true, status: after?.status === 'PROPOSED' ? 'WAITING' : after?.status ?? 'WAITING' };
   }

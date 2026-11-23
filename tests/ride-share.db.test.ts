@@ -240,11 +240,11 @@ describe('live ride-share', () => {
     const [better, worse] = offers;
     await prisma.shareGroup.update({ where: { id: better.id }, data: { extraMinHost: 2 } });
     await prisma.shareGroup.update({ where: { id: worse.id }, data: { extraMinHost: 9 } });
-    // The worse one says yes first, the better one 2 s later → still «at the same time».
+    // The worse one says yes first, the better one 0.5 s later → still «at the same time» (1 s).
     const t0 = new Date();
     expect(await answerShare(worse.id, { kind: 'DRIVER', driverId: worse.driverId! }, true, t0)).toEqual({ ok: true, status: 'WAITING' });
-    expect(await tryLiveShare(guest.id, new Date(t0.getTime() + 1000))).toBe(true); // waiting, no ordinary car
-    const r = await answerShare(better.id, { kind: 'DRIVER', driverId: better.driverId! }, true, new Date(t0.getTime() + 2000));
+    expect(await tryLiveShare(guest.id, new Date(t0.getTime() + 300))).toBe(true); // waiting, no ordinary car
+    const r = await answerShare(better.id, { kind: 'DRIVER', driverId: better.driverId! }, true, new Date(t0.getTime() + 500));
     expect(r).toEqual({ ok: true, status: 'ACCEPTED' }); // nobody else can answer → settled now
     const [gb, gw] = await Promise.all([prisma.shareGroup.findUniqueOrThrow({ where: { id: better.id } }), prisma.shareGroup.findUniqueOrThrow({ where: { id: worse.id } })]);
     expect([gb.status, gw.status]).toEqual(['ACCEPTED', 'CANCELED']);
@@ -263,7 +263,7 @@ describe('live ride-share', () => {
     const [o1] = await prisma.shareGroup.findMany({ where: { guestBookingId: guest.id, status: 'PROPOSED' } });
     const t0 = new Date();
     expect((await answerShare(o1.id, { kind: 'DRIVER', driverId: o1.driverId! }, true, t0)).status).toBe('WAITING');
-    expect(await tryLiveShare(guest.id, new Date(t0.getTime() + 6000))).toBe(true); // settled by the worker
+    expect(await tryLiveShare(guest.id, new Date(t0.getTime() + 1500))).toBe(true); // settled after 1 s
     expect((await prisma.shareGroup.findUniqueOrThrow({ where: { id: o1.id } })).status).toBe('ACCEPTED');
     expect(await prisma.shareGroup.count({ where: { guestBookingId: guest.id, status: 'PROPOSED' } })).toBe(0);
     // Another newcomer: nobody answers within 60 s → ordinary search, not offered again.

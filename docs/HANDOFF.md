@@ -3,7 +3,7 @@
 ## 2026-11-23 — «Попутчик в дороге» (branch `share-live`, LOCAL, not pushed)
 - LIVE co-rider: the passenger in the car is NOT asked (hostAnswer YES at creation), no question push.
 - The newcomer is offered to EVERY fitting co-rider car at once (≤5, `proposeLiveAll`), 60 s (SHARE_ANSWER_SEC). LIVE proposals keep activeGuestBookingId NULL; only the winner gets it in finalizeLiveTx (unique → one car).
-- `decideLive`: yeses within LIVE_SAME_TIME_SEC (5 s) of the first count as simultaneous → fewest extra minutes for the in-car passenger, then earlier yes. Others CANCELED + driver push `share.taken`. Settled in answerShare when nobody else can answer, else by the worker (tryLiveShare / expireShares).
+- `decideLive`: yeses within LIVE_SAME_TIME_SEC (1 s; a 1-s timer settles, the worker is the safety net) of the first count as simultaneous → fewest extra minutes for the in-car passenger, then earlier yes. Others CANCELED + driver push `share.taken`. Settled in answerShare when nobody else can answer, else by the worker (tryLiveShare / expireShares).
 - One round only: nobody takes it → ordinary search.
 - Not offered if the in-car passenger would exceed his extra minutes or arrive later than «быть на месте» − 10 min.
 - After acceptance: one push each — `share.liveHost` {etaT, payC}, `share.liveGuest` {pickT, etaT, payC} (sw.js, 8 languages).
