@@ -82,9 +82,7 @@ describe('ride-share road time', () => {
     // Road time = 3× the estimate, so the host's arrival is about 3× the direct estimate.
     const arr = g.arrivals as { host: number; guest: number; end: number };
     expect(arr.host).toBeGreaterThanOrEqual(approxLegMin(lca, nicosia) * 3 - 1);
-    const tv = (await trackingView(host.id))!.shareProposal!;
-    expect(tv.approx).toBe(false);
-    expect(new Date(tv.arriveAt!).getTime()).toBe(g.createdAt.getTime() + arr.host * 60_000);
+    expect((await trackingView(host.id))!.shareProposal ?? null).toBeNull(); // the passenger in the car is not asked (2026-11-23)
     const dv = await driverCurrentTrip(d.id);
     expect(dv.shareProposal?.endAt).toBe(new Date(g.createdAt.getTime() + arr.end * 60_000).toISOString());
     expect(dv.shareProposal?.stops.map((s) => `${s.kind}:${s.who}`)).toContain('dropoff:guest');

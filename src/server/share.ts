@@ -13,9 +13,11 @@ import { stopSearchTx } from '@/server/dispatch/search';
 //
 // Rules agreed with the operator (2026-11-19):
 //  - airport / intercity trips only; at most two bookings in one car;
-//  - LIVE: a new opted-in booking that fits a running opted-in trip is proposed to the passenger
-//    already in that car and to the driver (the newcomer opted in when ordering). Both must say
-//    yes within config.share.answerSec; silence = no. The car's seats and boot must fit everyone,
+//  - LIVE (operator 2026-11-23, «Попутчик в дороге»): a new opted-in booking that fits a running opted-in
+//    trip — inside the in-car passenger's own terms (≤ their extra minutes, «быть на месте» with a 10-min
+//    buffer) — is offered to the DRIVER only, for config.share.answerSec (90 s); silence = no. The
+//    passenger in the car is not asked: only after the driver takes it both passengers get ONE
+//    notification (arrival, amount). If it would not fit their terms, it is not offered at all. The car's seats and boot must fit everyone,
 //    and neither passenger's extra time may exceed the limit they chose when ordering;
 //  - PREBOOK: two opted-in pre-bookings that fit are proposed to both passengers (no names, phones
 //    or addresses — only people, children and suitcases); once both agree, the pair is one order on
@@ -161,7 +163,8 @@ export async function tryLiveShare(guestId: string, now: Date = new Date()): Pro
 function hostArrivesInTime(h: { arriveBy: Date | null; scheduledAt: Date | null; status: string }, plan: SharePlan, now: Date, slackMin = 0): boolean {
   if (!h.arriveBy) return true;
   const start = h.status === 'IN_PROGRESS' ? now.getTime() : Math.max(now.getTime(), h.scheduledAt?.getTime() ?? 0);
-  return start + plan.arrive.host * MIN <= h.arriveBy.getTime() + slackMin * MIN;
+  // With the same 10-minute buffer as pre-bookings: no risk of being late (operator 2026-11-23).
+  return start + plan.arrive.host * MIN <= h.arriveBy.getTime() + (slackMin - ARRIVE_BUFFER_MIN) * MIN;
 }
 
 async function proposeLive(hostId: string, guestId: string, driverId: string, plan: SharePlan, routed: boolean, now: Date): Promise<boolean> {
@@ -174,7 +177,8 @@ async function proposeLive(hostId: string, guestId: string, driverId: string, pl
       // The guest may not be offered to a driver at the same time.
       if (await tx.driverOffer.findFirst({ where: { activeBookingId: guestId } })) return false;
       const expiresAt = new Date(now.getTime() + S().answerSec * 1000);
-      const group = await tx.shareGroup.create({ data: groupData('LIVE', h, g, plan, expiresAt, { driverId, guestAnswer: 'YES', routed }) });
+      // The passenger in the car agreed to these terms when ordering: not asked (operator 2026-11-23).
+      const group = await tx.shareGroup.create({ data: groupData('LIVE', h, g, plan, expiresAt, { driverId, guestAnswer: 'YES', hostAnswer: 'YES', routed }) });
       // Give the newcomer's normal search the answer time back, so a "no" still leaves time to search.
       const job = await tx.dispatchJob.findUnique({ where: { bookingId: guestId } });
       if (job) await tx.dispatchJob.update({ where: { id: job.id }, data: { deadlineAt: new Date(Math.max(now.getTime(), job.deadlineAt.getTime()) + S().answerSec * 1000) } });
@@ -182,7 +186,6 @@ async function proposeLive(hostId: string, guestId: string, driverId: string, pl
       await tx.bookingEvent.create({ data: { bookingId: guestId, type: 'SHARE_PROPOSED', actorType: 'SYSTEM', reason: `joins ${h.reference}` } });
       await recordEvent(tx, { eventType: 'share.proposed', aggregateType: 'share', aggregateId: group.id, aggregateVersion: 1, correlationId: guestId, payload: { mode: 'LIVE', driverPseudo: driverPseudo(driverId), extraMinHost: plan.extraHost, extraMinGuest: plan.extraGuest } });
       // No prices in notifications (operator, 2026-11-22): the passenger sees «−30 %», the driver «+N % earnings».
-      await enqueuePassenger(tx, hostId, 'A co-rider wants to join', proposalBody(g, plan.extraHost, group.discountPct), { tag: `share-p-${group.id}`, url: '/track' });
       await enqueueDriver(tx, driverId, 'Co-rider on your route', driverProposalBody(plan.extraDriver, earningsUpPct(group.hostCents + group.guestCents, h.fareCents ?? 0)), { tag: `share-d-${group.id}` });
       return true;
     });
@@ -340,8 +343,15 @@ async function finalizeLiveTx(tx: Tx, groupId: string): Promise<ShareResult> {
   await tx.bookingEvent.create({ data: { bookingId: host.id, type: 'SHARE_JOINED', actorType: 'SYSTEM', reason: `co-rider ${guest.reference}` } });
   await tx.shareGroup.update({ where: { id: g.id }, data: { status: 'ACCEPTED', decidedAt: new Date() } });
   await recordEvent(tx, { eventType: 'share.accepted', aggregateType: 'share', aggregateId: g.id, aggregateVersion: 2, correlationId: guest.id, payload: { mode: 'LIVE', driverPseudo: driverPseudo(hostAsg.driverId) } });
-  await enqueuePassenger(tx, guest.id, 'Driver assigned — shared ride', `You share the car with a co-rider: −${g.discountPct}%.`, { msg: { k: 'share.joinGuest', p: { pct: g.discountPct } } });
-  await enqueuePassenger(tx, host.id, 'Co-rider joins', `Your ride is now −${g.discountPct}%.`, { msg: { k: 'share.joinHost', p: { pct: g.discountPct } } });
+  // ONE notification each, only now that the driver took it (operator 2026-11-23): arrival and the amount.
+  const arr = (g.arrivals ?? {}) as { host?: number; guest?: number; guestPickup?: number };
+  const now = Date.now();
+  const at = (m: number | undefined) => new Date(now + (m ?? 0) * MIN).toISOString();
+  const eur = (c: number) => `€${(c / 100).toFixed(2)}`;
+  await enqueuePassenger(tx, guest.id, 'Driver assigned — shared ride', `Pickup about ${at(arr.guestPickup).slice(11, 16)} UTC. You pay ${eur(g.guestCents)}.`,
+    { url: '/track', msg: { k: 'share.liveGuest', p: { pickT: at(arr.guestPickup), etaT: at(arr.guest), payC: g.guestCents } } });
+  await enqueuePassenger(tx, host.id, 'A co-rider joins your ride', `You arrive about ${at(arr.host).slice(11, 16)} UTC. You pay ${eur(g.hostCents)}.`,
+    { url: '/track', msg: { k: 'share.liveHost', p: { etaT: at(arr.host), payC: g.hostCents } } });
   return { ok: true, status: 'ACCEPTED' };
 }
 

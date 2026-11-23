@@ -118,7 +118,7 @@ describe('ride-share pure rules', () => {
 });
 
 describe('live ride-share', () => {
-  it('proposes a co-rider to the passenger in the car and the driver; both yes → same car, 30 % off each', async () => {
+  it('«Попутчик в дороге» (2026-11-23): only the driver is asked (90 s); after «yes» each passenger gets ONE notification; same car, 30 % off each', async () => {
     const d = await driver('Andreas');
     const host = await hostOnTrip(d, { pax: 2, bags: 2 });
     const guest = await booking(lcaNear, limCentre, { pax: 1, kids: 0, bags: 1 });
@@ -129,18 +129,23 @@ describe('live ride-share', () => {
     expect(g.guestAnswer).toBe('YES'); // opted in when ordering — not asked again
     expect(g.hostCents).toBe(4200);
 
-    // The passenger in the car sees the proposal with counts only (no name/phone/address).
-    const tv = (await trackingView(host.id))!;
-    expect(tv.shareProposal).toMatchObject({ groupId: g.id, newFareCents: 4200, fullFareCents: 6000, coRider: { adults: 1, children: 0, luggage: 1 } });
-    expect(JSON.stringify(tv.shareProposal)).not.toContain(guest.passengerName);
+    // The passenger in the car is NOT asked and hears nothing yet.
+    expect(g.hostAnswer).toBe('YES');
+    expect(Math.round((g.expiresAt.getTime() - g.createdAt.getTime()) / 1000)).toBe(90);
+    expect((await trackingView(host.id))!.shareProposal ?? null).toBeNull();
+    expect(await prisma.notificationOutbox.count({ where: { audience: { startsWith: 'PASSENGER:' } } })).toBe(0);
     // The driver sees "was → now" and the extra minutes.
     const dv = await driverCurrentTrip(d.driverId);
     expect(dv.shareProposal).toMatchObject({ groupId: g.id, earningsWasCents: 6000, earningsNowCents: 8400 });
 
     // While waiting, the worker makes no driver offer for the guest.
     expect(await tryLiveShare(guest.id)).toBe(true);
-    expect(await answerShare(g.id, { kind: 'PASSENGER', bookingId: host.id }, true)).toEqual({ ok: true, status: 'PROPOSED' });
     expect(await answerShare(g.id, { kind: 'DRIVER', driverId: d.driverId }, true)).toEqual({ ok: true, status: 'ACCEPTED' });
+    const pushes = await prisma.notificationOutbox.findMany({ where: { audience: { in: [`PASSENGER:${host.id}`, `PASSENGER:${guest.id}`] } } });
+    expect(pushes).toHaveLength(2);
+    const by = Object.fromEntries(pushes.map((n) => [n.audience, n.msg as { k: string; p: Record<string, unknown> }]));
+    expect(by[`PASSENGER:${host.id}`]).toMatchObject({ k: 'share.liveHost', p: { payC: 4200 } });
+    expect(by[`PASSENGER:${guest.id}`]).toMatchObject({ k: 'share.liveGuest', p: { payC: 4200 } });
 
     const [h2, g2] = await Promise.all([fresh(host.id), fresh(guest.id)]);
     expect(g2.status).toBe('EN_ROUTE');
@@ -230,8 +235,9 @@ describe('live ride-share', () => {
     const guest = await booking(lcaNear, limCentre);
     await tryLiveShare(guest.id);
     const g = (await prisma.shareGroup.findFirst({ where: { guestBookingId: guest.id } }))!;
-    expect(await answerShare(g.id, { kind: 'PASSENGER', bookingId: host.id }, false)).toEqual({ ok: true, status: 'DECLINED' });
+    expect(await answerShare(g.id, { kind: 'DRIVER', driverId: d.driverId }, false)).toEqual({ ok: true, status: 'DECLINED' });
     expect((await fresh(host.id)).fareCents).toBe(6000);
+    expect(await prisma.notificationOutbox.count({ where: { audience: `PASSENGER:${host.id}` } })).toBe(0); // he never heard of it
     expect((await fresh(guest.id)).status).toBe('SEARCHING');
     expect(await tryLiveShare(guest.id)).toBe(false);
 

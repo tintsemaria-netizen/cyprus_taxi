@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-23 — «Попутчик в дороге» (branch `share-live`, LOCAL, not pushed)
+- LIVE co-rider: only the driver is asked, 90 s (SHARE_ANSWER_SEC default 90); passenger in the car not asked (hostAnswer YES at creation), no question push.
+- Not offered at all if the in-car passenger would exceed his extra minutes or arrive later than «быть на месте» − 10 min.
+- After the driver's «yes»: one push each — `share.liveHost` {etaT, payC}, `share.liveGuest` {pickT, etaT, payC} (sw.js, 8 languages). Driver «no»/silence: nobody hears anything, newcomer keeps searching.
+- vitest 385/386.
+
 ## 2026-11-23 — Superadmin: staff management + change log with notifications (deployed)
 
 - Operator: «нынешний админ — суперадмин, следующие — просто админы; сделай и залей, по ходу будем менять; не подтверждение, а уведомление — все изменения с уведомлением суперадмину».
