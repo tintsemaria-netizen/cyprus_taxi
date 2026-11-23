@@ -40,7 +40,7 @@ export function FarePreviewSheet({ bookingId, passengerName: _passengerName, onC
             <>
               {/* Only the total (2026-11-17): waiting is included in it, not listed. */}
               <Line k={t('driver.close.total')} v={fmt.money(typed != null && !typedBad ? typed : p.totalCents)} strong />
-              {!p.upfront && step === 0 && <button type="button" className="text-sm text-muted underline underline-offset-2" onClick={() => setStep(1)} data-testid="fare-questions">{t('driver.close.questions')}</button>}
+              {!p.upfront && step === 0 && <button type="button" className="text-sm text-accent/60 underline underline-offset-2" onClick={() => setStep(1)} data-testid="fare-questions">{t('driver.close.questions')}</button>}
               {!p.upfront && step === 1 && <button type="button" className="mx-auto block rounded-full border border-accent px-4 py-2 text-sm font-semibold text-accent" onClick={() => setStep(2)} data-testid="fare-edit">{t('driver.close.changePrice')}</button>}
               {!p.upfront && edit && (
                 <div className="text-start" data-testid="fare-edit-box">
