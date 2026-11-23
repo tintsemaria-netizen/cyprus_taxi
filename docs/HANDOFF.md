@@ -1,6 +1,6 @@
 # Session handoff
 
-## 2026-11-23 — «Попутчик в дороге» (branch `share-live`, LOCAL, not pushed)
+## 2026-11-23 — «Попутчик в дороге» (deployed 2026-11-23 ~23:10)
 - LIVE co-rider: the passenger in the car is NOT asked (hostAnswer YES at creation), no question push.
 - The newcomer is offered to EVERY fitting co-rider car at once (≤5, `proposeLiveAll`), 60 s (SHARE_ANSWER_SEC). LIVE proposals keep activeGuestBookingId NULL; only the winner gets it in finalizeLiveTx (unique → one car).
 - `decideLive`: yeses within LIVE_SAME_TIME_SEC (1 s; a 1-s timer settles, the worker is the safety net) of the first count as simultaneous → fewest extra minutes for the in-car passenger, then earlier yes. Others CANCELED + driver push `share.taken`. Settled in answerShare when nobody else can answer, else by the worker (tryLiveShare / expireShares).
@@ -28,13 +28,13 @@
 - API /api/v1/admin/accounting (GET, POST), /entries/[id] (PATCH, DELETE), /entries/[id]/receipt (POST, GET), /recurring (POST), /recurring/[id] (DELETE), /export.
 - Page /admin/accounting (en/ru texts; other languages use English as for all staff pages). Hint to turn on 2FA if off. Staff top menu now scrolls instead of overlapping the language / sign-out buttons (it overflowed at 1280 px).
 - Tests: tests/accounting.db.test.ts (owner only, figures, recurring incl. month end, VAT/periods, receipts + sweep). Suite 381 passed / 1 skipped. Seed marks the demo admin as owner. Screens /tmp/shots/acc-*.png.
-## 2026-11-23 (evening) — share-v2 simplified by the operator (LOCAL, not pushed)
+## 2026-11-23 (evening) — share-v2 simplified by the operator (deployed 2026-11-23 22:05)
 - Auto: pairs only by «быть на месте» windows; route first, then the latest start so the later arrival is ~10 min (ARRIVE_BUFFER_MIN) before the end of the common part; ≤15 extra min each. Old bookings (no terms version) are NOT auto-paired.
 - Board: shows rides within ±1 h of my window (BOARD_REACH_MIN); «Поехать вместе» = I adapt to their time; if outside my window → confirm dialog («Ваше указанное время… не пересекаются. Вы уверены…»), then «Вы будете на месте около …»; my window is widened to what I agreed.
 - After a ПП booking the board opens (/share-board?booked=REF) with a banner. Pickup-interval editor removed from the form.
 - vitest 385/386, build OK.
 
-## 2026-11-23 (later) — share-v2 review fixes (LOCAL, not pushed)
+## 2026-11-23 (later) — share-v2 review fixes (deployed with share-v2)
 - One booking end to end (CY-SDFX-6VM9, exact pickup 11:30): stays 11:30 after pairing, at the driver and in the push; receipt 35,20 €. Earlier 12:15 screenshot was a DIFFERENT booking that I had turned into an «old» one in the test DB with +30 min allowance.
 - Class step with «Попутчик»: no range; card shows the co-rider price; box «С попутчиком X / Без попутчика (≈ по счётчику) Y» + when each applies.
 - Driver pair detail: «Итого за поездку» next to «Взять поездку».
