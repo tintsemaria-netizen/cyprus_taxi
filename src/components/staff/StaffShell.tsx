@@ -12,6 +12,7 @@ export interface Me {
   /** The business owner — superadmin: «Бухгалтерия», «Сотрудники», «Изменения» (2026-11-23). */
   isOwner?: boolean;
   unreadChanges?: number;
+  pendingApplications?: number;
   id: string;
   role: 'ADMIN' | 'DISPATCHER' | 'DRIVER' | 'FLEET_OWNER';
   displayName: string;
@@ -24,6 +25,11 @@ export interface Me {
 const ALERT = 'bg-danger font-semibold text-white';
 /** The change log page tells the menu it has been read. */
 export const CHANGES_SEEN = 'il-y:changes-seen';
+/** An application page tells the menu to re-count waiting applications. */
+export const APPS_CHANGED = 'il-y:apps-changed';
+interface Tab { href: string; label: string; alert?: boolean }
+interface Group { key: string; label: string; tabs: Tab[]; alert?: boolean }
+const isOn = (path: string, href: string) => path === href || path.startsWith(href + '/');
 interface ChangeLast { id: string; actor: string; method: string; area: string }
 
 export function StaffShell({ roles, children }: { roles: Me['role'][]; children: (me: Me) => React.ReactNode }) {
@@ -31,18 +37,21 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
   const pathname = usePathname();
   const { t } = useT();
   const [me, setMe] = useState<Me | null>(null);
-  // «Не ваши изменения» for the superadmin (2026-11-23, operator): checked every 10 s and when the app
-  // comes back. A new change pops up a silent banner; the item stays red until each change is checked.
+  // Red menu (2026-11-23, operator): «Заявки» while driver applications wait (every admin) and
+  // «Не ваши изменения» until each change is checked (owner). Checked every 10 s and when the app comes
+  // back; a new change also pops up a silent banner for the owner.
   const [unread, setUnread] = useState(0);
+  const [pendingApps, setPendingApps] = useState(0);
   const [popup, setPopup] = useState<ChangeLast | null>(null);
-  const isOwner = !!me?.isOwner;
-  useEffect(() => { setUnread(me?.unreadChanges ?? 0); }, [me?.unreadChanges]);
+  const isAdmin = me?.role === 'ADMIN';
+  useEffect(() => { setUnread(me?.unreadChanges ?? 0); setPendingApps(me?.pendingApplications ?? 0); }, [me?.unreadChanges, me?.pendingApplications]);
   useEffect(() => {
-    if (!isOwner) return;
+    if (!isAdmin) return;
     let lastId: string | null | undefined; // undefined = first check: no pop-up for what was already there
     const check = () => {
-      void api<{ unread: number; last: ChangeLast | null }>('/admin/changes/count').then((r) => {
-        setUnread(r.unread);
+      void api<{ applications: number; changes: number; last: ChangeLast | null }>('/admin/alerts').then((r) => {
+        setUnread(r.changes);
+        setPendingApps(r.applications);
         if (lastId !== undefined && r.last && r.last.id !== lastId && window.location.pathname !== '/admin/changes') setPopup(r.last);
         lastId = r.last?.id ?? null;
       }).catch(() => {});
@@ -51,10 +60,12 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
     const id = window.setInterval(check, 10_000);
     const onVis = () => { if (document.visibilityState === 'visible') check(); };
     const onSeen = (e: Event) => { setUnread((e as CustomEvent<number>).detail ?? 0); setPopup(null); };
+    const onApps = () => check();
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener(CHANGES_SEEN, onSeen);
-    return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', onVis); window.removeEventListener(CHANGES_SEEN, onSeen); };
-  }, [isOwner]);
+    window.addEventListener(APPS_CHANGED, onApps);
+    return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', onVis); window.removeEventListener(CHANGES_SEEN, onSeen); window.removeEventListener(APPS_CHANGED, onApps); };
+  }, [isAdmin]);
   const [state, setState] = useState<'loading' | 'ok' | 'denied'>('loading');
   // (hooks before any early return) The driver page tells us when it shows a sub-screen that needs a back arrow.
   const [driverBack, setDriverBack] = useState(false);
@@ -89,39 +100,67 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
     router.replace(me?.role === 'DRIVER' ? '/driver/login' : '/staff/login');
   }
 
+  // Narrow screens: the open section and tab are scrolled into view in their menu rows.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (state !== 'ok') return;
+    document.querySelectorAll<HTMLElement>('nav [data-current]').forEach((el) => {
+      const row = el.parentElement;
+      if (row && row.scrollWidth > row.clientWidth) row.scrollLeft = el.offsetLeft - (row.clientWidth - el.offsetWidth) / 2;
+    });
+  }, [state, pathname]);
+
   if (state !== 'ok' || !me) {
     return <div className="flex h-[100dvh] items-center justify-center text-muted">{t('staff.loading')}</div>;
   }
 
-  const nav =
+  // Menu groups (2026-11-23, operator): related pages are one section with tabs inside. Page addresses
+  // are unchanged. A group with something waiting is red, and so is the tab inside it.
+  const one = (href: string, label: string): Group => ({ key: href, label, tabs: [{ href, label }] });
+  const groups: Group[] =
     me.role === 'DRIVER'
-      ? [{ href: '/driver', label: t('common.myTrip') }, ...(me.fleet ? [{ href: '/fleet', label: t('staff.nav.myFleet') }] : [])]
+      ? [one('/driver', t('common.myTrip')), ...(me.fleet ? [one('/fleet', t('staff.nav.myFleet'))] : [])]
       : me.role === 'FLEET_OWNER'
-      ? [{ href: '/fleet', label: t('staff.nav.myFleet') }, { href: '/staff/security', label: t('staff.nav.security') }]
+      ? [one('/fleet', t('staff.nav.myFleet')), one('/staff/security', t('staff.nav.security'))]
+      : me.role !== 'ADMIN'
+      ? [one('/dispatch', t('staff.nav.dispatch')), one('/staff/security', t('staff.nav.security'))]
       : [
-          { href: '/dispatch', label: t('staff.nav.dispatch') },
-          ...(me.role === 'ADMIN'
-            ? [
-                // Superadmin first: the menu scrolls on narrow screens (2026-11-23).
-                ...(me.isOwner ? [
-                  { href: '/admin/changes', label: `${t('staff.nav.changes')}${unread ? ` (${unread})` : ''}`, alert: unread > 0 },
-                  { href: '/admin/accounting', label: t('staff.nav.accounting') },
-                  { href: '/admin/staff', label: t('staff.nav.staff') },
-                ] : []),
-                { href: '/admin/analytics', label: t('staff.nav.analytics') },
-                { href: '/admin/reliability', label: t('staff.nav.reliability') },
-                { href: '/admin/applications', label: t('staff.nav.applications') },
-                { href: '/admin/passengers', label: t('staff.nav.passengers') },
-                { href: '/admin/drivers', label: t('staff.nav.drivers') },
-                { href: '/admin/fleets', label: t('staff.nav.fleets') },
-                { href: '/admin/vehicles', label: t('staff.nav.vehicles') },
-                { href: '/admin/fixed-prices', label: t('staff.nav.fixedPrices') },
-                { href: '/admin/min-fares', label: t('staff.nav.minFares') },
-                { href: '/admin/settings', label: t('staff.nav.settings') },
-              ]
-            : []),
-          { href: '/staff/security', label: t('staff.nav.security') },
+          one('/dispatch', t('staff.nav.dispatch')),
+          { key: 'drivers', label: t('staff.nav.groupDrivers'), alert: pendingApps > 0, tabs: [
+            { href: '/admin/applications', label: `${t('staff.nav.applications')}${pendingApps ? ` (${pendingApps})` : ''}`, alert: pendingApps > 0 },
+            { href: '/admin/drivers', label: t('staff.nav.drivers') },
+            { href: '/admin/vehicles', label: t('staff.nav.vehicles') },
+            { href: '/admin/fleets', label: t('staff.nav.fleets') },
+          ] },
+          one('/admin/passengers', t('staff.nav.passengers')),
+          { key: 'prices', label: t('staff.nav.groupPrices'), tabs: [
+            { href: '/admin/fixed-prices', label: t('staff.nav.fixedPrices') },
+            { href: '/admin/min-fares', label: t('staff.nav.minFares') },
+          ] },
+          { key: 'reports', label: t('staff.nav.groupReports'), tabs: [
+            { href: '/admin/analytics', label: t('staff.nav.analytics') },
+            { href: '/admin/reliability', label: t('staff.nav.reliability') },
+          ] },
+          ...(me.isOwner ? [{ key: 'owner', label: t('staff.nav.groupOwner'), alert: unread > 0, tabs: [
+            { href: '/admin/changes', label: `${t('staff.nav.changes')}${unread ? ` (${unread})` : ''}`, alert: unread > 0 },
+            { href: '/admin/accounting', label: t('staff.nav.accounting') },
+            { href: '/admin/staff', label: t('staff.nav.staff') },
+          ] }] : []),
+          { key: 'settings', label: t('staff.nav.groupSettings'), tabs: [
+            { href: '/admin/settings', label: t('staff.nav.settings') },
+            { href: '/staff/security', label: t('staff.nav.security') },
+          ] },
         ];
+  const current = groups.find((g) => g.tabs.some((x) => isOn(pathname, x.href)));
+  const groupCount = (g: Group) => (g.key === 'drivers' ? pendingApps : g.key === 'owner' ? unread : 0);
+  const pill = (active: boolean, alert?: boolean) => (alert ? ALERT : active ? 'bg-elevated text-accent' : 'text-muted hover:text-ink');
+  const dot = <span className="me-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-white align-middle" />;
+  const groupLink = (g: Group, cls: string) => (
+    <a key={g.key} href={g.tabs[0].href} className={`whitespace-nowrap rounded-[10px] text-sm ${cls} ${pill(current === g, g.alert)}`}
+      data-testid={g.alert ? 'nav-alert' : undefined} data-group={g.key} data-current={current === g ? '' : undefined}>
+      {g.alert && dot}{g.label}{g.alert && g.tabs.length > 1 && groupCount(g) ? ` (${groupCount(g)})` : ''}
+    </a>
+  );
 
   return (
     <div className="flex min-h-[100dvh] flex-col">
@@ -131,16 +170,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
           {me.role === 'DRIVER' && driverBack && <BackArrow className="-ms-2 -me-3" onBack={() => window.dispatchEvent(new Event('il-y:driver-back'))} />}
           <a href="/dispatch" className="shrink-0"><Logo className="h-6" /></a>
           <nav className="hidden min-w-0 items-center gap-1 overflow-x-auto xl:flex">
-            {nav.map((n) => (
-              <a
-                key={n.href}
-                href={n.href}
-                className={`whitespace-nowrap rounded-[10px] px-2.5 py-1.5 text-sm ${'alert' in n && n.alert ? ALERT : pathname === n.href ? 'bg-elevated text-accent' : 'text-muted hover:text-ink'}`}
-                data-testid={'alert' in n && n.alert ? 'nav-alert' : undefined}
-              >
-                {'alert' in n && n.alert && <span className="me-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-white align-middle" />}{n.label}
-              </a>
-            ))}
+            {groups.map((g) => groupLink(g, 'px-2.5 py-1.5'))}
           </nav>
         </div>
         <div className="flex items-center gap-3">
@@ -158,13 +188,19 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
           )}
         </div>
       </header>
-      {/* mobile nav */}
-      {nav.length > 1 && (
+      {/* mobile nav: the groups */}
+      {groups.length > 1 && (
         <nav className="flex gap-1 overflow-x-auto border-b border-edge bg-page px-3 py-1.5 xl:hidden">
-          {nav.map((n) => (
-            <a key={n.href} href={n.href} className={`whitespace-nowrap rounded-[10px] px-3 py-1.5 text-sm ${'alert' in n && n.alert ? ALERT : pathname === n.href ? 'bg-elevated text-accent' : 'text-muted'}`}
-              data-testid={'alert' in n && n.alert ? 'nav-alert' : undefined}>
-              {'alert' in n && n.alert && <span className="me-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-white align-middle" />}{n.label}
+          {groups.map((g) => groupLink(g, 'px-3 py-1.5'))}
+        </nav>
+      )}
+      {/* tabs inside the current group (phone and computer) */}
+      {current && current.tabs.length > 1 && (
+        <nav className="flex gap-1 overflow-x-auto border-b border-edge bg-surface/40 px-3 py-1.5 xl:px-4" data-testid="nav-tabs">
+          {current.tabs.map((x) => (
+            <a key={x.href} href={x.href} className={`whitespace-nowrap rounded-full px-3 py-1 text-[13px] ${x.alert ? ALERT : isOn(pathname, x.href) ? 'bg-accent font-semibold text-[#0b0f10]' : 'text-muted hover:text-ink'}`}
+              data-testid={x.alert ? 'tab-alert' : undefined} data-current={isOn(pathname, x.href) ? '' : undefined}>
+              {x.alert && dot}{x.label}
             </a>
           ))}
         </nav>

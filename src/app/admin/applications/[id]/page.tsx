@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { StaffShell } from '@/components/staff/StaffShell';
+import { StaffShell, APPS_CHANGED } from '@/components/staff/StaffShell';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useDialog } from '@/components/useDialog';
 import { useT } from '@/i18n/I18nProvider';
@@ -33,7 +33,7 @@ function Detail() {
 
   async function act(path: string, body?: unknown) {
     setBusy(true); setBanner(null);
-    try { await api(`/admin/applications/${id}/${path}`, { method: 'POST', body: body ?? {} }); await load(); }
+    try { await api(`/admin/applications/${id}/${path}`, { method: 'POST', body: body ?? {} }); await load(); window.dispatchEvent(new Event(APPS_CHANGED)); }
     catch (e) { if (e instanceof ApiRequestError) setBanner(e.body.message); } finally { setBusy(false); }
   }
   const EXPIRY_SLOTS = ['licence_front', 'licence_back', 'taxi_licence', 'insurance', 'roadworthiness', 'vehicle_reg', 'right_to_work', 'passport', 'id_front'];
