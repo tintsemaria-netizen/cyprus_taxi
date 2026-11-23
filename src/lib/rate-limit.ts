@@ -35,6 +35,17 @@ export async function rateLimit(
   }
 }
 
+/**
+ * Give one attempt back (2026-11-23): the per-phone code limit counts only WRONG codes. Every attempt is
+ * counted first (so a burst of parallel guesses is still counted in full), and a correct code returns its
+ * count — an operator signing in and out while testing never blocks his own number.
+ */
+export async function refundRateLimit(bucket: string, identifier: string): Promise<void> {
+  const key = `${bucket}:${identifier}`;
+  try { await prisma.$executeRaw`UPDATE "RateLimitBucket" SET "count" = GREATEST("count" - 1, 0) WHERE "key" = ${key}`; }
+  catch { /* the window simply ends on its own */ }
+}
+
 export async function pruneRateLimits(now: Date = new Date()): Promise<number> {
   const r = await prisma.rateLimitBucket.deleteMany({ where: { resetAt: { lt: now } } });
   return r.count;

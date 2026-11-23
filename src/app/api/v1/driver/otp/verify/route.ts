@@ -1,7 +1,7 @@
 import { apiOk, apiError, Errors, clientIp } from '@/lib/http';
 import { config } from '@/lib/config';
 import { prisma } from '@/lib/db';
-import { rateLimit } from '@/lib/rate-limit';
+import { rateLimit, refundRateLimit } from '@/lib/rate-limit';
 import { normalizePhone } from '@/server/applicant';
 import { checkOtp } from '@/server/sms';
 import { createStaffSession } from '@/lib/auth';
@@ -17,9 +17,11 @@ export async function POST(req: Request) {
   const rl = await rateLimit('otp-verify', clientIp(req, config.trustedProxyHops), 20, 600);
   if (!rl.ok) return Errors.throttled(rl.retryAfter);
   // Launch fixes §3: also per phone — spreading guesses over many IPs cannot beat the limit.
+  // Only wrong codes count (2026-11-23): a correct one is refunded below.
   const rlp = await rateLimit('otp-verify-phone', phone, 10, 600);
   if (!rlp.ok) return Errors.throttled(rlp.retryAfter);
   if (!(await checkOtp(phone, body.code))) return apiError(401, 'BAD_CODE', 'Incorrect or expired code.');
+  await refundRateLimit('otp-verify-phone', phone);
   const user = await prisma.staffUser.findUnique({ where: { login: phone } });
   const driver = user ? await prisma.driver.findUnique({ where: { userId: user.id } }) : null;
   if (!user || user.role !== 'DRIVER' || !user.active || !driver) {

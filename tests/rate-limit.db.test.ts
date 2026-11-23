@@ -6,7 +6,7 @@ const dbName = (() => {
 })();
 
 import { prisma } from '@/lib/db';
-import { rateLimit, pruneRateLimits } from '@/lib/rate-limit';
+import { rateLimit, pruneRateLimits, refundRateLimit } from '@/lib/rate-limit';
 
 beforeAll(async () => {
   if (!dbName.endsWith('_test')) throw new Error(`Refusing: DB name must end in _test (got "${dbName}").`);
@@ -24,6 +24,13 @@ describe('atomic rate limiter (2026-10-01 audit Stage 1.1)', () => {
     expect(results.filter((r) => !r.ok).every((r) => r.retryAfter >= 1)).toBe(true);
     const row = await prisma.rateLimitBucket.findUnique({ where: { key: 'burst:203.0.113.9' } });
     expect(row!.count).toBe(30);
+  });
+
+  it('2026-11-23: per-phone code limit counts only wrong codes (a correct one is refunded)', async () => {
+    const id = `+3579900${Date.now() % 100000}`;
+    for (let i = 0; i < 15; i++) { expect((await rateLimit('otp-verify-phone', id, 10, 600)).ok).toBe(true); await refundRateLimit('otp-verify-phone', id); }
+    for (let i = 0; i < 10; i++) expect((await rateLimit('otp-verify-phone', id, 10, 600)).ok).toBe(true);
+    expect((await rateLimit('otp-verify-phone', id, 10, 600)).ok).toBe(false); // the 11th wrong code
   });
 
   it('an expired window resets to 1 and old buckets are pruned', async () => {

@@ -1,5 +1,14 @@
 # Session handoff
 
+## 2026-11-23 — launch fixes, safe part ported (branch `launch-safe`, deployed ~23:55)
+- Per-phone code limit 10 wrong codes / 10 min (correct code refunded: `refundRateLimit`); sign-in/code limiter fails closed on storage error.
+- Licence front, taxi licence, insurance, roadworthiness need a future expiry to accept/approve (admin dialog makes the date required).
+- Scan states CLEAN/INFECTED/ERROR/UNAVAILABLE; maintenance rescans pending documents.
+- Driver told when a ride is taken off him: `drv.rideRemoved`, `drv.rideLostGps`, `drv.tripStopped` (sw.js 8 langs) + in-app line `driver.rideRemoved`.
+- Admin «Надёжность» → «Состояние системы» (en/ru notes). Production switches (no test OTP, forced staff MFA, boot refusal) are REPORT-ONLY: live APP_ENV unknown, no Twilio.
+- NOT ported (conflict with current work or needs a decision): receipt e-mail skip without provider (11-17 design keeps them waiting), meter receipt hold + one-total rule (§6, touches earnings/bookkeeping), deploy abort on failed backup (server backup state unknown), mandatory SMS, commission, SHARE_ENABLED default off.
+- Prod public config shows demoMode: true (DEMO_MODE on the server) — operator to check.
+
 ## 2026-11-23 — «Попутчик в дороге» (deployed 2026-11-23 ~23:10)
 - LIVE co-rider: the passenger in the car is NOT asked (hostAnswer YES at creation), no question push.
 - The newcomer is offered to EVERY fitting co-rider car at once (≤5, `proposeLiveAll`), 60 s (SHARE_ANSWER_SEC). LIVE proposals keep activeGuestBookingId NULL; only the winner gets it in finalizeLiveTx (unique → one car).
