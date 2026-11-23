@@ -200,7 +200,7 @@ const booking = {
     from: 'Not before',
     to: 'Not later than',
     leave: 'Pickup approx. {from}–{to} (road ~{n} min incl. margin)',
-    hint: "Choose when you need to be there — we'll show the pickup time.",
+    hint: "Enter the ARRIVAL time — when you need to be there, not when to leave. We work out the pickup time.",
     needRoute: "Enter the destination — we'll work out the pickup time.",
     needTimes: 'Choose both times.',
     badWidth: 'The window must be 15 min to 3 h.',

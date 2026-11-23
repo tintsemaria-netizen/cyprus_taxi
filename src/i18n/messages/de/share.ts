@@ -158,6 +158,8 @@ const share: Catalog<typeof en> = {
     LIMASSOL: 'Limassol',
   },
   board: {
+    atPlace: "dort",
+    atPickup: "Abholung",
     booked: "Fahrt gebucht. Wählen Sie einen Mitfahrer oder warten Sie — wir verbinden Sie, wenn wir einen finden.",
     youArrive: "Sie sind ca. {time} da",
     doneAt: "Fahrt geteilt. Sie sind ca. {time} da.",
@@ -175,7 +177,7 @@ const share: Catalog<typeof en> = {
     joinFailed: 'Nicht gesendet ({reason}). Wir suchen automatisch weiter.',
     cancelJoin: 'Nicht anschließen',
     title: 'Mitfahrer-Board',
-    subtitle: 'Vorbestellungen mit Mitfahrer, die noch keinen Partner haben. Wählen Sie eine und fahren Sie zu deren Zeit gemeinsam — das Paar ist sofort bestätigt. Bleiben bis {h} Std. vor Abholung; wir suchen auch automatisch weiter.',
+    subtitle: "Fahrten mit Mitfahrer, die noch keinen Partner haben. Groß: wann der Fahrgast DORT SEIN muss, nicht die Abfahrtszeit. Wählen Sie einen Mitfahrer — wir verbinden sofort. Sonst sucht das System selbst.",
     noMine: 'Für das Board bitte eine Fahrt (mehr als {h} Std. im Voraus) mit «Mitfahrer» vorbestellen.',
     book: 'Fahrt vorbestellen',
     yours: 'Ihre Fahrten',

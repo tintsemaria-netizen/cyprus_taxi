@@ -158,6 +158,8 @@ const share: Catalog<typeof en> = {
     LIMASSOL: 'Limassol',
   },
   board: {
+    atPlace: "sur place",
+    atPickup: "départ",
     booked: "Trajet réservé. Choisissez un covoyageur ou patientez — nous vous associerons si nous en trouvons.",
     youArrive: "Vous arrivez vers {time}",
     doneAt: "Trajet partagé. Vous serez sur place vers {time}.",
@@ -175,7 +177,7 @@ const share: Catalog<typeof en> = {
     joinFailed: 'Non envoyé ({reason}). Nous continuons à chercher automatiquement.',
     cancelJoin: 'Ne pas rejoindre',
     title: 'Tableau des covoyageurs',
-    subtitle: 'Réservations avec covoyageur encore sans partenaire. Choisissez-en une et voyagez ensemble à leur heure — le duo est confirmé tout de suite. Elles restent ici jusqu’à {h} h avant ; nous cherchons aussi automatiquement.',
+    subtitle: "Trajets avec covoyageur encore sans partenaire. En gros : l’heure où la personne doit ÊTRE SUR PLACE, pas l’heure de départ. Choisissez un covoyageur — on vous associe tout de suite. Sinon, le système cherche lui-même.",
     noMine: 'Pour utiliser le tableau, réservez une course (plus de {h} h à l’avance) avec «Covoyageur».',
     book: 'Réserver une course',
     yours: 'Vos courses',

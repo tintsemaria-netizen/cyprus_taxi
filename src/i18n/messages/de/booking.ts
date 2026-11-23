@@ -216,7 +216,7 @@ const booking: Catalog<typeof en> = {
     from: 'Nicht vor',
     to: 'Nicht nach',
     leave: 'Abholung ca. {from}–{to} (Fahrt ~{n} Min. inkl. Puffer)',
-    hint: 'Wählen Sie, wann Sie dort sein müssen — wir zeigen die Abholzeit.',
+    hint: "Geben Sie die ANKUNFTSZEIT an — wann Sie dort sein müssen, nicht wann Sie losfahren. Die Abholzeit berechnen wir.",
     needRoute: 'Ziel eingeben — wir berechnen die Abholzeit.',
     needTimes: 'Bitte beide Zeiten wählen.',
     badWidth: 'Zeitfenster: 15 Min. bis 3 Std.',

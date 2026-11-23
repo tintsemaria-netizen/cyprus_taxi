@@ -156,6 +156,8 @@ const share = {
     LIMASSOL: 'Limassol',
   },
   board: {
+    atPlace: "be there",
+    atPickup: "pickup",
     booked: "Ride booked. Pick a co-rider, or wait — we will pair you if we find one.",
     youArrive: "You arrive about {time}",
     doneAt: "Ride shared. You will be there about {time}.",
@@ -173,7 +175,7 @@ const share = {
     joinFailed: 'Could not send it to that co-rider ({reason}). We keep looking for a co-rider automatically.',
     cancelJoin: 'Don’t join',
     title: 'Share board',
-    subtitle: 'Co-rider pre-bookings without a pair yet. Choose one and ride together at their time — the pair is confirmed at once. Rides stay here until {h} h before pickup; we keep looking for a pair automatically too.',
+    subtitle: "Co-rider rides that have no pair yet. In large type: when the passenger needs to BE THERE, not the departure time. Pick a co-rider and we pair you at once. If you don’t, the system looks for a pair itself.",
     noMine: 'To use the board, pre-book a ride (more than {h} h ahead) with «Co-rider» switched on.',
     book: 'Pre-book a ride',
     yours: 'Your rides',

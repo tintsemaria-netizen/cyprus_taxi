@@ -216,7 +216,7 @@ const booking: Catalog<typeof en> = {
     from: 'Pas avant',
     to: 'Pas après',
     leave: 'Prise en charge vers {from}–{to} (trajet ~{n} min avec marge)',
-    hint: 'Indiquez quand vous devez être sur place — nous afficherons l’heure de départ.',
+    hint: "Indiquez l’heure d’ARRIVÉE — quand vous devez être sur place, pas l’heure de départ. Nous calculons l’heure de prise en charge.",
     needRoute: 'Indiquez la destination — nous calculerons l’heure de départ.',
     needTimes: 'Choisissez les deux heures.',
     badWidth: 'Fenêtre : de 15 min à 3 h.',

@@ -40,9 +40,17 @@ export default function Page() {
   useEffect(() => { load(); const iv = setInterval(load, 30_000); return () => clearInterval(iv); }, [load]);
   useRefreshOnReturn(load); // resumed app: fresh data at once (2026-11-22)
 
+  // Large: the ARRIVAL window («на месте»), not the departure (operator 2026-11-23); no window → the pickup time, labelled.
+  const bigTime = (r: Ride) => (
+    <span className="shrink-0 text-end leading-tight" data-testid="board-time">
+      <span className="block text-[11px] font-semibold uppercase text-accent">{r.arrive ? t('share.board.atPlace') : t('share.board.atPickup')}</span>
+      <span className="block text-lg font-bold tabular-nums">{r.arrive ? `${fmt.time(r.arrive.from)}–${fmt.time(r.arrive.by)}` : fmt.time(r.at)}</span>
+      <span className="block text-xs text-muted">{fmt.date(r.arrive?.from ?? r.at)}</span>
+    </span>
+  );
   const zone = (k: string) => t(`share.zones.${k}` as 'share.zones.LCA');
   const people = (r: Ride) => [t('share.who.adults', { n: r.adults }), r.children ? t('share.who.children', { n: r.children }) : null, t('share.who.luggage', { n: r.bags })].filter(Boolean).join(' · ');
-  const flex = (r: Ride) => (r.arrive ? `🏁 ${t('rides.prebookings.arrive', { from: fmt.time(r.arrive.from), to: fmt.time(r.arrive.by) })}` : !r.early && !r.wait ? t('share.board.onTime') : t('share.board.flex', { e: r.early, w: r.wait }));
+  const flex = (r: Ride) => (r.arrive ? '' : !r.early && !r.wait ? t('share.board.onTime') : t('share.board.flex', { e: r.early, w: r.wait }));
 
   // Operator 2026-11-23: the one who taps adapts to the other's time. If that is outside his own window,
   // ask first («Вы уверены…»); afterwards show when he will be there.
@@ -92,10 +100,10 @@ export default function Page() {
                 <div key={r.id} className="card border-2 border-accent p-3">
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-semibold">{zone(r.from)} → {zone(r.to)}</span>
-                    <span className="shrink-0 text-end leading-tight"><span className="block text-lg font-bold tabular-nums">{fmt.time(r.at)}</span><span className="block text-xs text-muted">{fmt.date(r.at)}</span></span>
+                    {bigTime(r)}
                   </div>
                   <div className="mt-1 text-xs text-muted">{r.fromArea} → {r.toArea}</div>
-                  <div className="mt-1 text-xs text-muted">{people(r)} · {flex(r)}</div>
+                  <div className="mt-1 text-xs text-muted">{[people(r), flex(r)].filter(Boolean).join(' · ')}</div>
                   <div className={`mt-2 text-xs ${r.waiting ? 'text-warn' : 'text-muted'}`}>
                     {r.waiting ? t('share.board.waiting', { time: fmt.time(r.waiting.until) }) : t('share.board.searching')}
                   </div>
@@ -114,10 +122,10 @@ export default function Page() {
                     <div key={r.id} className="card p-3" data-testid="board-ride">
                       <div className="flex items-start justify-between gap-2">
                         <span className="font-semibold">{zone(r.from)} → {zone(r.to)}</span>
-                        <span className="shrink-0 text-end leading-tight"><span className="block text-lg font-bold tabular-nums">{fmt.time(r.at)}</span><span className="block text-xs text-muted">{fmt.date(r.at)}</span></span>
+                        {bigTime(r)}
                       </div>
                       <div className="mt-1 text-xs text-muted">{r.fromArea} → {r.toArea}</div>
-                      <div className="mt-1 text-xs text-muted">{people(r)} · {flex(r)}</div>
+                      <div className="mt-1 text-xs text-muted">{[people(r), flex(r)].filter(Boolean).join(' · ')}</div>
                       <div className="mt-2 flex items-center justify-between gap-2 text-sm">
                         <span className={r.myOutside ? 'font-semibold text-warn' : 'text-muted'} data-testid="board-my-arrive">
                           {r.myArriveAt ? t('share.board.youArrive', { time: fmt.time(r.myArriveAt) }) : shift === 0 ? t('share.board.noShift') : shift > 0 ? t('share.board.later', { n: shift }) : t('share.board.earlier', { n: -shift })}
@@ -147,10 +155,10 @@ export default function Page() {
                 <div key={r.id} className="card p-3" data-testid="board-all-ride">
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-semibold">{zone(r.from)} → {zone(r.to)}</span>
-                    <span className="shrink-0 text-end leading-tight"><span className="block text-lg font-bold tabular-nums">{fmt.time(r.at)}</span><span className="block text-xs text-muted">{fmt.date(r.at)}</span></span>
+                    {bigTime(r)}
                   </div>
                   <div className="mt-1 text-xs text-muted">{r.fromArea} → {r.toArea}{r.vClass ? ` · ${r.vClass === 'XL' ? 'XL' : 'Comfort'}` : ''}</div>
-                  <div className="mt-1 text-xs text-muted">{people(r)} · {flex(r)}</div>
+                  <div className="mt-1 text-xs text-muted">{[people(r), flex(r)].filter(Boolean).join(' · ')}</div>
                   <a href={`/?join=${r.id}`} className="btn-primary mt-2 flex w-full items-center justify-center" data-testid="board-join">{t('share.board.join')}</a>
                 </div>
               ))}
