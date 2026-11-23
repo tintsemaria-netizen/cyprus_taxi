@@ -2,6 +2,7 @@ import type { Catalog } from '../../types';
 import type en from '../en/driver';
 
 const driver: Catalog<typeof en> = {
+  rideRemoved: "Diese Fahrt wurde Ihnen entzogen (storniert oder an einen anderen Fahrer vergeben) — nicht zur Abholung fahren.",
   units: {
     kmShort: "km",
     mShort: "m",

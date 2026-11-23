@@ -9,7 +9,7 @@ import { computeFreshness } from '@/lib/freshness';
 import { haversineMeters } from '@/lib/geo';
 import { isAirportPoint } from '@/lib/airports';
 import { startSearchTx } from './search';
-import { enqueuePassenger, enqueuePassengerDriverNews } from '@/server/push';
+import { enqueueDriver, enqueuePassenger, enqueuePassengerDriverNews } from '@/server/push';
 import { recordEvent, driverPseudo } from '@/server/events';
 import { afterLegEndedTx, legCompletedTx, leaveShareTx, noShowFeeCents } from '@/server/share';
 import { gpsMeterFor } from '@/server/gps-meter';
@@ -314,6 +314,8 @@ export async function rematchBooking(
   await tx.bookingEvent.create({ data: { bookingId, type: 'REMATCH', actorType, actorId: actorType === 'DRIVER' ? excludeDriverId : undefined, afterStatus: 'SEARCHING', reason } });
   await recordEvent(tx, { eventType: 'booking.rematch', aggregateType: 'booking', aggregateId: bookingId, aggregateVersion: ub.revision, correlationId: bookingId, payload: { bookingId, status: 'SEARCHING', actorType, excludeDriverPseudo: driverPseudo(excludeDriverId), reason } });
   await enqueuePassengerDriverNews(tx, bookingId, 'change', 'Finding you another driver', 'Your previous driver became unavailable — we’re matching you again.', { k: 'ride.rematchUnavailable' });
+  // Launch fixes §5 (ported 2026-11-23): the driver who lost it to the system (no GPS) is told why. A driver who cancelled himself already knows.
+  if (actorType === 'SYSTEM') await enqueueDriver(tx, excludeDriverId, 'Ride reassigned', 'No location from your phone for too long — the ride was given to another driver.', { tag: `lost-${bookingId}`, dedupeKey: `lost-${bookingId}-${ub.revision}`, msg: { k: 'drv.rideLostGps' } });
 }
 
 // Driver cancels before pickup → automatic rematch (not a terminal cancel).

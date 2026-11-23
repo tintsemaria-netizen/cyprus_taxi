@@ -139,8 +139,19 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   const retryTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const statusRef = useRef<string | null>(null);
+  // Launch fixes §5 (ported 2026-11-23): a pre-pickup ride that disappears without the driver's own action
+  // (no GPS, dispatch took it off, passenger cancelled) gets a line of explanation instead of a silent gap.
+  const prevTripRef = useRef<{ bookingId: string; status: string } | null>(null);
+  const ownActionRef = useRef<string | null>(null);
+  const tRef = useRef(t); tRef.current = t;
   const load = useCallback(async () => {
-    try { const d = await api<CurrentTrip>('/driver/current-trip'); statusRef.current = d.trip?.status ?? null; setData(d); }
+    try {
+      const d = await api<CurrentTrip>('/driver/current-trip');
+      const prev = prevTripRef.current;
+      if (prev && !d.trip && ['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(prev.status) && ownActionRef.current !== prev.bookingId) setBanner(tRef.current('driver.rideRemoved'));
+      prevTripRef.current = d.trip ? { bookingId: d.trip.bookingId, status: d.trip.status } : null;
+      statusRef.current = d.trip?.status ?? null; setData(d);
+    }
     catch (e) { if (e instanceof ApiRequestError) setBanner(tErrRef.current(e)); }
   }, []);
   const loadDash = useCallback(async () => {
@@ -354,6 +365,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   async function tripAction(path: string, body: Record<string, unknown>, opts?: { stopGps?: boolean }) {
     if (!data?.trip) return;
     const done = data.trip;
+    ownActionRef.current = done.bookingId; // the driver's own action — no «ride removed» line
     try {
       await api(`/driver/bookings/${done.bookingId}/${path}`, { method: 'POST', body: { expectedRevision: done.revision, ...body } });
       if (path === 'complete') setRateFor({ bookingId: done.bookingId, name: done.passengerName }); // then rate the passenger

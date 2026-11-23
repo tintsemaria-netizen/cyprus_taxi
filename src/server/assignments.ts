@@ -197,6 +197,8 @@ export async function unassignBooking(params: {
     });
     await recordEvent(tx, { eventType: 'booking.unassigned', aggregateType: 'booking', aggregateId: booking.id, aggregateVersion: updated.revision, correlationId: booking.id, payload: { bookingId: booking.id, status: next, actorType: 'STAFF', reason: params.reason ?? null } });
     if (next === 'SEARCHING') await enqueuePassengerDriverNews(tx, booking.id, 'change', 'Finding you another driver', 'Your driver was changed — we’re matching you again.', { k: 'ride.rematchChanged' });
+    // Launch fixes §5 (ported 2026-11-23): the driver who lost the ride is told, in his language.
+    if (prior) await enqueueDriver(tx, prior.driverId, 'Ride removed', 'Dispatch took this ride off you. Do not go to the pickup.', { tag: `lost-${booking.id}`, dedupeKey: `lost-${booking.id}-${updated.revision}`, msg: { k: 'drv.rideRemoved' } });
     return { revision: updated.revision, status: updated.status };
   });
 }
@@ -220,7 +222,8 @@ export async function reassignBooking(params: {
     // the transaction rolls back and the old assignment/driver/revision are preserved.
     const { driver, vehicle } = await validateCandidate(tx, booking, params.driverId, params.vehicleId, params.acknowledgeNoGps, booking.id);
 
-    await endActiveAssignment(tx, booking.id, params.reason || 'reassigned');
+    const old = await endActiveAssignment(tx, booking.id, params.reason || 'reassigned');
+    if (old && old.driverId !== driver.id) await enqueueDriver(tx, old.driverId, 'Ride removed', 'Dispatch gave this ride to another driver. Do not go to the pickup.', { tag: `lost-${booking.id}`, msg: { k: 'drv.rideRemoved' } });
     await createAssignment(tx, booking, driver, vehicle, params.actorId, params.reason);
 
     const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: 'ASSIGNED', revision: { increment: 1 } } });
@@ -313,8 +316,9 @@ export async function terminateBooking(params: {
     if (!booking) throw notFound();
     if (booking.revision !== params.expectedRevision) throw conflict();
     if (booking.status !== 'IN_PROGRESS') throw conflict('Only in-progress trips can be terminated.');
-    await endActiveAssignment(tx, booking.id, 'terminated: ' + params.reason);
+    const old = await endActiveAssignment(tx, booking.id, 'terminated: ' + params.reason);
     const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: 'CANCELED', revision: { increment: 1 } } });
+    if (old) await enqueueDriver(tx, old.driverId, 'Trip stopped', 'Dispatch stopped this trip.', { tag: `lost-${booking.id}`, msg: { k: 'drv.tripStopped' } });
     await tx.bookingEvent.create({
       data: { bookingId: booking.id, type: 'TERMINATED', actorType: 'STAFF', actorId: params.actorId, beforeStatus: 'IN_PROGRESS', afterStatus: 'CANCELED', reason: params.reason },
     });

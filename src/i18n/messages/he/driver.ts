@@ -2,6 +2,7 @@ import type { Catalog } from '../../types';
 import type en from '../en/driver';
 
 const driver: Catalog<typeof en> = {
+  rideRemoved: "הנסיעה הוסרה ממך (בוטלה או הועברה לנהג אחר) — אין צורך לנסוע לאיסוף.",
   units: {
     kmShort: "ק״מ",
     mShort: "מ׳",

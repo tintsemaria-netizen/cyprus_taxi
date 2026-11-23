@@ -157,6 +157,10 @@ describe('M3 trip lifecycle', () => {
     await prisma.latestDriverLocation.update({ where: { driverId: t.driverId }, data: { sampledAt: new Date(Date.now() - 10 * 60 * 1000), receivedAt: new Date(Date.now() - 10 * 60 * 1000) } });
     await runOnce();
     expect((await prisma.booking.findUnique({ where: { id: t.bookingId } }))!.status).toBe('SEARCHING');
+    // The driver who lost it is told why, in his language (launch fixes §5, ported 2026-11-23).
+    const u = await prisma.driver.findUniqueOrThrow({ where: { id: t.driverId }, select: { userId: true } });
+    const lost = await prisma.notificationOutbox.findFirst({ where: { audience: `DRIVER:${u.userId}`, tag: `lost-${t.bookingId}` } });
+    expect((lost?.msg as { k: string } | null)?.k).toBe('drv.rideLostGps');
 
     // Now an IN_PROGRESS trip with stale GPS must NOT be rematched.
     const t2 = await assignedBooking('Maria', 20);

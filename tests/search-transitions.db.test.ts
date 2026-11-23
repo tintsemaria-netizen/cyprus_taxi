@@ -145,6 +145,10 @@ describe('search transitions keep the worker able to progress every ride', () =>
     const job = await prisma.dispatchJob.findUnique({ where: { bookingId: b.id } });
     expect(job).not.toBeNull();
     expect(job!.triedDriverIds).toContain(driverId);
+    // The released driver gets a notice in his language (launch fixes §5, ported 2026-11-23).
+    const u2 = await prisma.driver.findUniqueOrThrow({ where: { id: driverId }, select: { userId: true } });
+    const n2 = await prisma.notificationOutbox.findFirst({ where: { audience: `DRIVER:${u2.userId}`, tag: `lost-${b.id}` } });
+    expect((n2?.msg as { k: string } | null)?.k).toBe('drv.rideRemoved');
   });
 
   it('the worker repairs a SEARCHING booking that has no dispatch job', async () => {

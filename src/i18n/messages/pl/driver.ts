@@ -2,6 +2,7 @@ import type { Catalog } from '../../types';
 import type en from '../en/driver';
 
 const driver: Catalog<typeof en> = {
+  rideRemoved: "Ten przejazd został ci odebrany (odwołany lub przekazany innemu kierowcy) — nie jedź na odbiór.",
   units: {
     kmShort: "km",
     mShort: "m",

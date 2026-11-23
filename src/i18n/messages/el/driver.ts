@@ -2,6 +2,7 @@ import type { Catalog } from '../../types';
 import type en from '../en/driver';
 
 const driver: Catalog<typeof en> = {
+  rideRemoved: "Η διαδρομή αφαιρέθηκε από εσάς (ακυρώθηκε ή δόθηκε σε άλλον οδηγό) — δεν χρειάζεται να πάτε στην παραλαβή.",
   units: {
     kmShort: 'χλμ',
     mShort: 'μ',
