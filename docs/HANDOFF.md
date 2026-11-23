@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-23 — Booking map zoomed out to the Middle East (branch `map-pad`, deployed 2026-11-23)
+
+- Operator screenshot: «Выберите класс» with «Попутчик» on → the map behind showed Iraq / Afghanistan. Cause: the sheet covers almost the whole map; the bottom padding (`reviewH + 24`) left a few px or less, and Google `fitBounds` then zooms out to the world.
+- Fix: `safePadding()` (src/components/mapFit.ts) keeps ≥ 40 px of the map free (trims the larger side first) — used by every fit / centre in GoogleMapView (fit, single point, focus, keep-in-view) and MapView (fitBounds, easeTo). Google fit also never zooms out past zoom 8 (whole Cyprus).
+- Locally (MapLibre) the class step looks the same as before; the Google case could not be reproduced locally (the key works only on the live domain) — verify on the phone after deploy. Test: tests/map-padding.test.ts.
+- OPEN (operator idea 03:14, waiting for his answers): replace the «крюк» choice for a NOW ride with «Когда готовы выехать, чтобы найти попутчика (−30%)?» — Сейчас · до 15 · 30 · 45 мин · 1 час. Questions asked: no co-rider in time → send a normal taxi at full price?; automatic in-car extra limit (e.g. 15 min) instead of asking?; −30% only when found?
+
 ## 2026-11-23 (01:45) — Minimum fixed at booking, stop rules, red bubble — deployed
 
 - Pre-booking minimum is snapshotted: `Quote.minCents/minZone` → `Booking.fareMinCents/fareMinZone` (migration `20261123010000_min_snapshot`; backfill = bookings whose breakdown has a `prebookMin` line, zone «Район Никосии»). Driver offer, free orders, pre-booking board, close sheet, settlement and stop re-pricing read the booking's own minimum — admin price changes / switching areas apply to NEW bookings only (operator).
