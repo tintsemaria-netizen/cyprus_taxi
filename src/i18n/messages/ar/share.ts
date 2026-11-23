@@ -3,6 +3,8 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   terms: {
+    arrive: "الوصول {af}–{at}",
+    board: "بعد الحجز ستفتح اللوحة — يمكنك اختيار راكب مشارك بنفسك.",
     auto: 'إذا وُجد تطابق نجمع الرحلتين تلقائيًا.',
     times: 'الوصول {af}–{at} · الاستلام {pf}–{pt}',
     timesExact: 'الوصول {af}–{at} · الاستلام {p}',
@@ -156,6 +158,13 @@ const share: Catalog<typeof en> = {
     LIMASSOL: 'ليماسول',
   },
   board: {
+    booked: "تم الحجز. اختر راكباً مشاركاً أو انتظر — سنجمعكما إن وجدنا.",
+    youArrive: "ستصل نحو {time}",
+    doneAt: "تم دمج الرحلة. ستصل نحو {time}.",
+    outsideQ: "وقت وصولك {from}–{to} و{time} لا يتداخلان. هل أنت متأكد أنك تريد الوصول نحو {time}؟",
+    outsideQ2: "ستصل نحو {time}، خارج وقتك. متابعة؟",
+    outsideNo: "لا",
+    outsideYes: "نعم، نسافر معاً",
     joinMismatch: 'يجب أن يكون المسار نفسه: الصعود والنزول في هذه الأماكن.',
     driverOnly: 'لوحة الرفاق للركاب فقط. يرى السائقون الحجوزات في تطبيق السائق.',
     noMineOpen: 'اختر رحلة أدناه — أو احجز رحلتك مع رفيق.',

@@ -3,6 +3,8 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   terms: {
+    arrive: "Sur place {af}–{at}",
+    board: "Après la réservation, le tableau s’ouvre — vous pouvez choisir un covoyageur vous-même.",
     auto: 'Si une correspondance est trouvée, nous regroupons les trajets automatiquement.',
     times: 'Arrivée {af}–{at} · Prise en charge {pf}–{pt}',
     timesExact: 'Arrivée {af}–{at} · Prise en charge à {p}',
@@ -156,6 +158,13 @@ const share: Catalog<typeof en> = {
     LIMASSOL: 'Limassol',
   },
   board: {
+    booked: "Trajet réservé. Choisissez un covoyageur ou patientez — nous vous associerons si nous en trouvons.",
+    youArrive: "Vous arrivez vers {time}",
+    doneAt: "Trajet partagé. Vous serez sur place vers {time}.",
+    outsideQ: "Votre heure d’arrivée {from}–{to} et {time} ne se recoupent pas. Voulez-vous vraiment arriver vers {time} ?",
+    outsideQ2: "Vous arriveriez vers {time}, hors de votre créneau. Continuer ?",
+    outsideNo: "Non",
+    outsideYes: "Oui, partager",
     joinMismatch: 'Le trajet doit être le même : prise en charge et dépose dans ces lieux.',
     driverOnly: 'Le tableau est réservé aux passagers. Les chauffeurs voient les réservations dans l’app chauffeur.',
     noMineOpen: 'Choisissez un trajet ci-dessous — ou réservez le vôtre avec co-passager.',

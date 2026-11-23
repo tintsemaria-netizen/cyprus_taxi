@@ -3,6 +3,8 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   terms: {
+    arrive: "Być na miejscu {af}–{at}",
+    board: "Po zamówieniu otworzy się tablica — współpasażera możesz wybrać sam.",
     auto: 'Jeśli znajdziemy dopasowanie, połączymy przejazdy automatycznie.',
     times: 'Na miejscu {af}–{at} · Odbiór {pf}–{pt}',
     timesExact: 'Na miejscu {af}–{at} · Odbiór o {p}',
@@ -156,6 +158,13 @@ const share: Catalog<typeof en> = {
     LIMASSOL: 'Limassol',
   },
   board: {
+    booked: "Przejazd zamówiony. Wybierz współpasażera albo poczekaj — połączymy, jeśli znajdziemy.",
+    youArrive: "Będziesz na miejscu ok. {time}",
+    doneAt: "Przejazd połączony. Będziesz na miejscu ok. {time}.",
+    outsideQ: "Twój czas przyjazdu {from}–{to} i {time} się nie pokrywają. Czy na pewno chcesz być na miejscu ok. {time}?",
+    outsideQ2: "Będziesz na miejscu ok. {time}, poza twoim czasem. Kontynuować?",
+    outsideNo: "Nie",
+    outsideYes: "Tak, jedziemy razem",
     joinMismatch: 'Trasa musi być ta sama: odbiór i wysiadka w tych miejscach.',
     driverOnly: 'Tablica jest dla pasażerów. Kierowcy widzą rezerwacje w aplikacji kierowcy.',
     noMineOpen: 'Wybierz przejazd poniżej — albo zamów własny ze współpasażerem.',

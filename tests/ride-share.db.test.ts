@@ -8,7 +8,7 @@ import { config } from '@/lib/config';
 import { createBooking } from '@/server/bookings';
 import { assignBooking, changeStatus } from '@/server/assignments';
 import { arriveAtPickup, startTrip, completeTrip, driverShareNoShow } from '@/server/dispatch/lifecycle';
-import { tryLiveShare, answerShare, expireShares, matchPrebookings } from '@/server/share';
+import { tryLiveShare, answerShare, expireShares, matchPrebookings, fitPair, proposePrebook } from '@/server/share';
 import { scheduledBoard, claimScheduled, runPreassignments } from '@/server/dispatch/preassign';
 import { driverCurrentTrip, trackingView } from '@/server/views';
 import { isShareRoute, sharedCents, bestSharePlan, approxLegMin } from '@/lib/share';
@@ -406,10 +406,18 @@ describe('pre-booked ride-share', () => {
   });
 
   // ---- TZ «Попутчик −30%» 2026-11-23, release checks ----
+  /** The new passenger picks the older booking (as on the board): only the older owner answers. */
+  async function proposeOld(newId: string, oldId: string) {
+    const [n, o] = await Promise.all([fresh(newId), fresh(oldId)]);
+    const f = fitPair(n, o, approxLegMin, 0, n.id)!;
+    expect(f).not.toBeNull();
+    expect(await proposePrebook(f.host.id, f.guest.id, f.plan, f.timing.startAt, false, new Date(), { byBookingId: n.id }, f.timing)).not.toBeNull();
+  }
   it('TZ: an OLD booking paired with a new one — only the old owner answers, with pickup options; repeated tap; two drivers at once; one driver, own payment each', async () => {
     const a = await scheduled(lca, marina, 300, { old: true, pax: 2, bags: 2, wait: 30, early: 30 }); // booked before the terms
     const b = await scheduled(lcaNear, limCentre, 310, { pax: 1, kids: 0, bags: 1, fare: 5000 });
-    expect(await matchPrebookings()).toBe(1);
+    expect(await matchPrebookings()).toBe(0); // older bookings are not paired automatically (operator 2026-11-23)
+    await proposeOld(b.id, a.id); // the new passenger chose it on the board
     const g = (await prisma.shareGroup.findFirst({ where: { OR: [{ hostBookingId: a.id }, { guestBookingId: a.id }] } }))!;
     const aIsHost = g.hostBookingId === a.id;
     expect(g.status).toBe('PROPOSED');
@@ -472,17 +480,18 @@ describe('pre-booked ride-share', () => {
   it('TZ: an OLD booking whose owner says no (or stays silent) keeps the full price; the pair is not made', async () => {
     const a = await scheduled(lca, marina, 300, { old: true, wait: 30, early: 30 });
     const b = await scheduled(lcaNear, limCentre, 310);
-    expect(await matchPrebookings()).toBe(1);
+    expect(await matchPrebookings()).toBe(0);
+    await proposeOld(b.id, a.id);
     const g = (await prisma.shareGroup.findFirst({ where: { OR: [{ hostBookingId: a.id }, { guestBookingId: a.id }] } }))!;
     expect((await answerShare(g.id, { kind: 'PASSENGER', bookingId: a.id }, false)).ok).toBe(true);
     expect((await prisma.shareGroup.findUniqueOrThrow({ where: { id: g.id } })).status).toBe('DECLINED');
     expect([(await fresh(a.id)).fareCents, (await fresh(b.id)).fareCents]).toEqual([6000, 6000]);
     expect([(await fresh(a.id)).scheduledAt!.getTime(), (await fresh(b.id)).scheduledAt!.getTime()]).toEqual([a.scheduledAt!.getTime(), b.scheduledAt!.getTime()]);
-    expect(await matchPrebookings()).toBe(0); // the same two are not proposed again
+    expect(await matchPrebookings()).toBe(0);
     // Silence: a second old booking, the answer time passes.
     const c = await scheduled(lca, marina, 400, { old: true, wait: 30, early: 30 });
     const d = await scheduled(lcaNear, limCentre, 410);
-    expect(await matchPrebookings()).toBe(1);
+    await proposeOld(d.id, c.id);
     const g2 = (await prisma.shareGroup.findFirst({ where: { OR: [{ hostBookingId: c.id }, { guestBookingId: c.id }] } }))!;
     await expireShares(new Date(g2.expiresAt.getTime() + 1000));
     expect((await prisma.shareGroup.findUniqueOrThrow({ where: { id: g2.id } })).status).toBe('EXPIRED');

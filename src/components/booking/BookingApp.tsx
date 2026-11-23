@@ -770,6 +770,8 @@ export default function BookingApp() {
       if (when === 'SCHEDULE') {
         // Pre-booking: confirm here instead of jumping to tracking, so another ride can be ordered.
         setDoneAt(scheduledAt); setStep('scheduled'); setSubmitting(false);
+        // Operator 2026-11-23: after a co-rider pre-booking the board opens at once — choose a co-rider yourself.
+        if (shareOn && !join) { router.push(`/share-board?booked=${encodeURIComponent((res as unknown as { reference?: string }).reference ?? '')}`); return; }
         if (join && shareOn) {
           const myId = (res as unknown as { bookingId?: string }).bookingId;
           setJoinResult(null);
@@ -928,39 +930,12 @@ export default function BookingApp() {
   const shareTermsBox = (
     <div className="rounded-[12px] border border-accent/40 bg-accent/10 px-3 py-2.5" data-testid="share-terms">
       <p className="text-[13px] font-semibold text-accent">{t('share.terms.auto')}</p>
-      {arriveCalc && pickRange ? (
-        <p className="mt-1 text-[15px] font-bold leading-snug" data-testid="share-terms-times">
-          {pickRange.exact
-            ? t('share.terms.timesExact', { af: fmt.clock(arriveFromT), at: fmt.clock(arriveToT), p: clk(pickRange.to) })
-            : t('share.terms.times', { af: fmt.clock(arriveFromT), at: fmt.clock(arriveToT), pf: clk(pickRange.from), pt: clk(pickRange.to) })}
-        </p>
+      {/* Simple (operator 2026-11-23): the window, the 15-minute limit and the board — no pickup editor. */}
+      {arriveCalc ? (
+        <p className="mt-1 text-[15px] font-bold leading-snug" data-testid="share-terms-times">{t('share.terms.arrive', { af: fmt.clock(arriveFromT), at: fmt.clock(arriveToT) })}</p>
       ) : <p className="mt-1 text-xs text-muted">{t('share.terms.needWindow')}</p>}
-      <p className="mt-1 text-xs">
-        {t('share.terms.extra', { n: cfg?.share?.termsMaxExtraMin ?? 15 })}
-        {arriveCalc && <> · <button type="button" className="font-semibold text-accent" onClick={() => setPickEdit((v) => !v)} data-testid="share-terms-change">{t('share.terms.change')}</button></>}
-      </p>
-      {pickEdit && arriveCalc && (
-        <div className="mt-2 rounded-[10px] border border-edge bg-page/60 p-2.5" data-testid="share-terms-editor">
-          <div className="flex flex-wrap gap-1.5">
-            {(['all', 'range', 'exact'] as const).map((m) => (
-              <button key={m} type="button" onClick={() => setPickNarrow({ mode: m, from: m === 'all' ? '' : pickNarrow.from, to: m === 'all' ? '' : pickNarrow.to })}
-                className={`chip !py-1 text-xs ${pickNarrow.mode === m ? '!border-accent text-accent' : ''}`} data-testid={`pick-${m}`}>{t(`share.terms.mode_${m}` as 'share.terms.mode_all')}</button>
-            ))}
-          </div>
-          {pickNarrow.mode === 'range' && (
-            <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
-              <TimeBox label={t('share.terms.pickFrom')} testid="pick-from" value={pickNarrow.from} onChange={(v) => setPickNarrow({ ...pickNarrow, from: v })} bad={!!pickRange?.bad} />
-              <TimeBox label={t('share.terms.pickTo')} testid="pick-to" value={pickNarrow.to} onChange={(v) => setPickNarrow({ ...pickNarrow, to: v })} bad={!!pickRange?.bad} />
-            </div>
-          )}
-          {pickNarrow.mode === 'exact' && (
-            <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
-              <TimeBox label={t('share.terms.pickExact')} testid="pick-exact-time" value={pickNarrow.from} onChange={(v) => setPickNarrow({ ...pickNarrow, from: v, to: v })} bad={!!pickRange?.bad} />
-            </div>
-          )}
-          <p className={`mt-1.5 text-xs ${pickRange?.bad ? 'text-danger' : 'text-muted'}`}>{t('share.terms.inside', { from: clk(arriveCalc.leaveFrom), to: clk(arriveCalc.leaveBy) })}</p>
-        </div>
-      )}
+      <p className="mt-1 text-xs">{t('share.terms.extra', { n: cfg?.share?.termsMaxExtraMin ?? 15 })}</p>
+      <p className="mt-1 text-xs">{t('share.terms.board')}</p>
       <p className="mt-1.5 text-xs text-muted" data-testid="share-min-note">{t('share.booking.minNote', { h: shareMinH })}</p>
     </div>
   );

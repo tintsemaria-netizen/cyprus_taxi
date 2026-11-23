@@ -1,6 +1,8 @@
 // Ride-share «Попутчик» (Task 022): airport/intercity, at most two bookings in one car.
 const share = {
   terms: {
+    arrive: "Be there {af}–{at}",
+    board: "After booking the board opens — you can pick a co-rider yourself.",
     auto: 'If a match is found, we pair the rides automatically.',
     times: 'Arrive {af}–{at} · Pickup {pf}–{pt}',
     timesExact: 'Arrive {af}–{at} · Pickup at {p}',
@@ -154,6 +156,13 @@ const share = {
     LIMASSOL: 'Limassol',
   },
   board: {
+    booked: "Ride booked. Pick a co-rider, or wait — we will pair you if we find one.",
+    youArrive: "You arrive about {time}",
+    doneAt: "Ride shared. You will be there about {time}.",
+    outsideQ: "Your arrival time {from}–{to} and {time} do not overlap. Are you sure you want to arrive about {time}?",
+    outsideQ2: "You would arrive about {time}, outside your time. Continue?",
+    outsideNo: "No",
+    outsideYes: "Yes, ride together",
     joinMismatch: 'Your route must go the same way: pickup and drop-off in these places.',
     driverOnly: 'The share board is for passengers. Drivers see pre-bookings in the driver app.',
     noMineOpen: 'Choose a ride below and go together — or book your own ride with a co-rider and it will appear here too.',

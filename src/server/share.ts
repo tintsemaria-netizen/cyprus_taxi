@@ -403,28 +403,58 @@ export async function expireShares(now: Date = new Date()): Promise<number> {
 // PREBOOK: match two pre-bookings
 // ---------------------------------------------------------------------------------------------
 
-type PairInput = ShareBooking & { arriveFrom?: Date | null; arriveBy?: Date | null };
-export type PairFit<T extends PairInput> = { host: T; guest: T; timing: NonNullable<ReturnType<typeof prebookTiming>>; plan: SharePlan };
+type PairInput = ShareBooking & { id: string; arriveFrom?: Date | null; arriveBy?: Date | null };
+export interface PairTiming { startAt: Date; lo: Date; hi: Date; hostWait: number; guestWait: number }
+export type PairFit<T extends PairInput> = { host: T; guest: T; timing: PairTiming; plan: SharePlan };
+
+/** Arrive this much before the end of a passenger's «быть на месте» window (operator 2026-11-23: «чуть запас»). */
+export const ARRIVE_BUFFER_MIN = 10;
+/** The share board shows rides whose window is within this of mine; joining one may move me up to this far (operator 2026-11-23). */
+export const BOARD_REACH_MIN = 60;
 
 /**
- * The best way two co-rider pre-bookings can ride together (TZ 2026-11-23), or null. Each passenger keeps
- * their own conditions: pickup inside their interval (booked time, earlier by `shareEarlyMin`, later by
- * `shareWaitMin`), at most `shareMaxExtraMin` extra minutes in the car, arrival inside their window.
- * Either can be picked up first; the better one wins by `comparePairs` (smaller largest pickup shift,
- * then smaller total detour). `slack` loosens every limit for the quick straight-line pre-filter.
+ * The start time window for a plan. With «быть на месте» windows (operator 2026-11-23) the whole route is
+ * computed first, then the start is set so that each passenger arrives inside their own window, the later
+ * one about ARRIVE_BUFFER_MIN before its end — the latest start that keeps everyone in. A passenger
+ * without a window keeps their pickup interval instead. `flexId` = the passenger who chose this pair on the
+ * board and agreed to the other's time: they may arrive up to BOARD_REACH_MIN outside their own window.
  */
-export function fitPair<T extends PairInput>(a: T, b: T, leg: LegFn, slack = 0): PairFit<T> | null {
+function startRange(h: PairInput, g: PairInput, pl: SharePlan, slack: number, flexId?: string): { lo: number; hi: number } | null {
+  let lo = -Infinity, hi = Infinity;
+  const rows: [PairInput, number, number][] = [[h, pl.arrive.host, 0], [g, pl.arrive.guest, pl.arrive.guestPickup]];
+  for (const [b, arr, pick] of rows) {
+    if (b.arriveFrom && b.arriveBy) {
+      const flex = b.id === flexId ? BOARD_REACH_MIN : 0;
+      lo = Math.max(lo, b.arriveFrom.getTime() - (5 + flex + slack) * MIN - arr * MIN); // ≤5 min early is fine
+      hi = Math.min(hi, b.arriveBy.getTime() + (flex ? flex : -ARRIVE_BUFFER_MIN + slack) * MIN - arr * MIN);
+    } else {
+      const flex = b.id === flexId ? BOARD_REACH_MIN : 0;
+      lo = Math.max(lo, b.scheduledAt!.getTime() - (earlyMin(b) + flex + slack) * MIN - pick * MIN);
+      hi = Math.min(hi, b.scheduledAt!.getTime() + (waitMin(b) + flex + slack) * MIN - pick * MIN);
+    }
+  }
+  return lo <= hi ? { lo, hi } : null;
+}
+
+/**
+ * The best way two co-rider pre-bookings can ride together, or null. Each passenger: at most
+ * `shareMaxExtraMin` extra minutes in the car, arrival inside their own window (with the buffer).
+ * Either can be picked up first; the better one wins by `comparePairs` (the larger of the two
+ * «how far before the end of my window» first, then the smaller total detour). `slack` loosens every
+ * limit for the quick straight-line pre-filter.
+ */
+export function fitPair<T extends PairInput>(a: T, b: T, leg: LegFn, slack = 0, flexId?: string): PairFit<T> | null {
   let best: PairFit<T> | null = null;
   for (const [h, g] of [[a, b], [b, a]] as const) {
     const pts = { Hp: pt(h.pickupLat, h.pickupLng), Hd: pt(h.dropoffLat, h.dropoffLng), Gp: pt(g.pickupLat, g.pickupLng), Gd: pt(g.dropoffLat, g.dropoffLng) };
-    const timing = prebookTiming(h.scheduledAt!, g.scheduledAt!, leg(pts.Hp, pts.Gp), waitMin(h) + slack, waitMin(g) + slack, earlyMin(h) + slack, earlyMin(g) + slack);
-    if (!timing) continue;
-    const start = timing.startAt.getTime();
-    const plan = bestPrebookPlan(pts, leg, {
-      hostMaxExtra: maxExtra(h) + slack, guestMaxExtra: maxExtra(g) + slack,
-      accept: (pl) => arrivalFits(h, new Date(start + pl.arrive.host * MIN), slack * 2) && arrivalFits(g, new Date(start + pl.arrive.guest * MIN), slack * 2),
-    });
+    const plan = bestPrebookPlan(pts, leg, { hostMaxExtra: maxExtra(h) + slack, guestMaxExtra: maxExtra(g) + slack, accept: (pl) => !!startRange(h, g, pl, slack, flexId) });
     if (!plan) continue;
+    const r = startRange(h, g, plan, slack, flexId)!;
+    // The latest start (arrive near the end, with the buffer), on a whole minute when that stays inside.
+    const startAt = new Date(Math.floor(r.hi / MIN) * MIN >= r.lo ? Math.floor(r.hi / MIN) * MIN : r.hi);
+    // «Shift» for the choice: how far before the end of the window each arrives (pickup-based: from the booked time).
+    const shift = (x: PairInput, arr: number, pick: number) => x.id === flexId ? 0 : x.arriveBy ? Math.round((x.arriveBy.getTime() - startAt.getTime()) / MIN - arr) : Math.round((startAt.getTime() + pick * MIN - x.scheduledAt!.getTime()) / MIN);
+    const timing: PairTiming = { startAt, lo: new Date(r.lo), hi: new Date(r.hi), hostWait: shift(h, plan.arrive.host, 0), guestWait: shift(g, plan.arrive.guest, plan.arrive.guestPickup) };
     const cand = { host: h, guest: g, timing, plan };
     if (!best || comparePairs({ ...timing, ...plan }, { ...best.timing, ...best.plan }) < 0) best = cand;
   }
@@ -445,7 +475,8 @@ export async function matchPrebookings(now: Date = new Date()): Promise<number> 
     orderBy: { scheduledAt: 'asc' },
     take: 60,
   });
-  const cands = rows.filter(shareCapable);
+  // Older bookings (no terms version) are not paired automatically: they ride as booked (operator 2026-11-23).
+  const cands = rows.filter(shareCapable).filter((r) => !!r.shareTermsVersion);
   if (cands.length < 2) return 0;
   const pastPairs = await prisma.shareGroup.findMany({
     where: { mode: 'PREBOOK', OR: [{ hostBookingId: { in: cands.map((c) => c.id) } }, { guestBookingId: { in: cands.map((c) => c.id) } }] },

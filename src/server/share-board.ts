@@ -10,8 +10,8 @@
 // Privacy: no names, phones or exact addresses — only the district, time, people and bags.
 import { prisma } from '@/lib/db';
 import { getSettings } from '@/lib/settings';
-import { approxLegMin, shareFits, shareZone, sharedCents, type LegFn } from '@/lib/share';
-import { shareCapable, planWithRoads, proposePrebook, fitPair } from '@/server/share';
+import { approxLegMin, arrivalFits, shareFits, shareZone, sharedCents, type LegFn } from '@/lib/share';
+import { shareCapable, planWithRoads, proposePrebook, fitPair, BOARD_REACH_MIN } from '@/server/share';
 import { approxLabel } from '@/server/share-detail';
 import { config } from '@/lib/config';
 
@@ -54,6 +54,8 @@ export interface BoardRide {
   arrive: { from: string; by: string } | null;
   /** For another passenger's ride: the price of MY matching ride if we pair (and its full price). */
   myBookingId?: string; myFullCents?: number; mySharedCents?: number; myShiftMin?: number;
+  /** When I would be there if we ride together; `myOutside` = not inside my own window (operator 2026-11-23: ask first). */
+  myArriveAt?: string; myOutside?: boolean;
 }
 export interface BoardView {
   hideHours: number; mine: (BoardRide & { waiting: { until: string } | null })[]; others: BoardRide[];
@@ -80,10 +82,22 @@ function view(r: Ride, mine: boolean): BoardRide {
  * moved to the other's time. `myShiftMin` = my pickup minus my booked time (negative = earlier).
  */
 function boardPair(me: Ride, them: Ride, leg: LegFn = approxLegMin) {
-  const f = fitPair(me, them, leg);
+  // Operator 2026-11-23: the one who taps «Ехать вместе» adapts to the other's time (up to BOARD_REACH_MIN
+  // outside their own window); the other keeps their window. The whole route is computed first.
+  const f = fitPair(me, them, leg, 0, me.id);
   if (!f) return null;
-  const myPickup = me === f.host ? f.timing.startAt.getTime() : f.timing.startAt.getTime() + f.plan.arrive.guestPickup * MIN;
-  return { ...f, myShiftMin: Math.round((myPickup - me.scheduledAt!.getTime()) / MIN) };
+  const start = f.timing.startAt.getTime();
+  const isHost = f.host.id === me.id;
+  const myPickup = isHost ? start : start + f.plan.arrive.guestPickup * MIN;
+  const myArrive = new Date(start + (isHost ? f.plan.arrive.host : f.plan.arrive.guest) * MIN);
+  const myOutside = !!(me.arriveFrom && me.arriveBy) && !arrivalFits(me, myArrive);
+  return { ...f, myShiftMin: Math.round((myPickup - me.scheduledAt!.getTime()) / MIN), myArrive, myOutside };
+}
+/** Arrival windows within BOARD_REACH_MIN of each other (no windows: pickup times within that). */
+function near(a: Ride, b: Ride): boolean {
+  const R = BOARD_REACH_MIN * MIN;
+  if (a.arriveFrom && a.arriveBy && b.arriveFrom && b.arriveBy) return b.arriveFrom.getTime() <= a.arriveBy.getTime() + R && b.arriveBy.getTime() >= a.arriveFrom.getTime() - R;
+  return Math.abs(a.scheduledAt!.getTime() - b.scheduledAt!.getTime()) <= R + 60 * MIN;
 }
 
 /** A driver (same phone as a driver account) does not use the passenger board (operator question 2026-11-22). */
@@ -130,22 +144,24 @@ export async function shareBoard(passengerId: string, now: Date = new Date()): P
       if (mz.from !== oz.from || mz.to !== oz.to || m.vClass !== o.vClass) continue;
       const seats = settings.classes.find((c) => c.key === m.vClass)?.maxPassengers ?? 4;
       if (!shareFits(m, o, seats, S().luggage[m.vClass])) continue;
+      if (!near(m, o)) continue; // the board shows ±1 h around my window
       const p = boardPair(m, o);
-      if (!p) continue; // outside one of the two passengers' terms
-      others.push({ ...view(o, false), myBookingId: m.id, myFullCents: m.fareCents!, mySharedCents: sharedCents(m.fareCents!, S().discountPct), myShiftMin: p.myShiftMin });
+      if (!p) continue;
+      others.push({ ...view(o, false), myBookingId: m.id, myFullCents: m.fareCents!, mySharedCents: sharedCents(m.fareCents!, S().discountPct), myShiftMin: p.myShiftMin, myArriveAt: p.myArrive.toISOString(), myOutside: p.myOutside });
       break;
     }
   }
   const shown = new Set(others.map((o) => o.id));
-  const all = open.filter((o) => o.passengerId !== passengerId && !shown.has(o.id)).slice(0, 60).map((o) => view(o, false));
+  // With rides of my own: only those around my windows (±1 h, operator 2026-11-23); without: every open ride («Поехать с ним»).
+  const all = open.filter((o) => o.passengerId !== passengerId && !shown.has(o.id) && (mineOpen.length === 0 || mineOpen.some((m) => near(m, o)))).slice(0, 60).map((o) => view(o, false));
   return { hideHours, mine, others, all };
 }
 
-export type BoardResult = { ok: true; proposalId: string } | { ok: false; status: number; code: string; message: string };
+export type BoardResult = { ok: true; proposalId: string; arriveAt: string } | { ok: false; status: number; code: string; message: string; arriveAt?: string };
 const fail = (status: number, code: string, message: string): BoardResult => ({ ok: false, status, code, message });
 
 /** «Поехать вместе»: propose a pair at the other passenger's time; my answer counts as «yes». */
-export async function proposeFromBoard(passengerId: string, myBookingId: string, otherBookingId: string, now: Date = new Date()): Promise<BoardResult> {
+export async function proposeFromBoard(passengerId: string, myBookingId: string, otherBookingId: string, now: Date = new Date(), confirmOutside = false): Promise<BoardResult> {
   if (myBookingId === otherBookingId) return fail(422, 'SAME_RIDE', 'Choose another passenger’s ride.');
   const open = await openRides(now, { id: { in: [myBookingId, otherBookingId] } });
   const me = open.find((r) => r.id === myBookingId);
@@ -161,10 +177,17 @@ export async function proposeFromBoard(passengerId: string, myBookingId: string,
   const declined = await prisma.shareGroup.findFirst({ where: { OR: [{ hostBookingId: me.id, guestBookingId: them.id }, { hostBookingId: them.id, guestBookingId: me.id }], status: 'DECLINED' } });
   if (declined) return fail(409, 'DECLINED_BEFORE', 'This passenger already said no to riding together.');
   // Same terms as the automatic search, then road times with the traffic expected at that time.
-  if (!boardPair(me, them)) return fail(422, 'TOO_FAR', 'The pickup times or the detour do not fit both of you.');
-  const { result, routed } = await planWithRoads((leg) => fitPair(me, them, leg), me.scheduledAt);
-  if (!result) return fail(422, 'TOO_FAR', 'The pickup times or the detour do not fit both of you.');
-  const id = await proposePrebook(result.host.id, result.guest.id, result.plan, result.timing.startAt, routed, now, { byBookingId: me.id }, result.timing);
+  if (!near(me, them) || !boardPair(me, them)) return fail(422, 'TOO_FAR', 'The times or the detour do not fit.');
+  const { result: p, routed } = await planWithRoads((leg) => boardPair(me, them, leg), me.scheduledAt);
+  if (!p) return fail(422, 'TOO_FAR', 'The times or the detour do not fit.');
+  // Arriving outside my own window: only after I confirmed it (operator 2026-11-23).
+  if (p.myOutside && !confirmOutside) return { ok: false, status: 409, code: 'OUTSIDE_WINDOW', message: 'You would arrive outside your window.', arriveAt: p.myArrive.toISOString() };
+  const id = await proposePrebook(p.host.id, p.guest.id, p.plan, p.timing.startAt, routed, now, { byBookingId: me.id }, p.timing);
   if (!id) return fail(409, 'BUSY', 'One of the rides already has a proposal — try again later.');
-  return { ok: true, proposalId: id };
+  if (p.myOutside && me.arriveFrom && me.arriveBy) {
+    // He agreed to the new time: his window now covers it, so later checks do not flag his own choice.
+    const at = p.myArrive.getTime();
+    await prisma.booking.update({ where: { id: me.id }, data: { arriveFrom: new Date(Math.min(me.arriveFrom.getTime(), at - 10 * MIN)), arriveBy: new Date(Math.max(me.arriveBy.getTime(), at + 10 * MIN)) } });
+  }
+  return { ok: true, proposalId: id, arriveAt: p.myArrive.toISOString() };
 }

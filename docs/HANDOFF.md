@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-23 (evening) — share-v2 simplified by the operator (LOCAL, not pushed)
+- Auto: pairs only by «быть на месте» windows; route first, then the latest start so the later arrival is ~10 min (ARRIVE_BUFFER_MIN) before the end of the common part; ≤15 extra min each. Old bookings (no terms version) are NOT auto-paired.
+- Board: shows rides within ±1 h of my window (BOARD_REACH_MIN); «Поехать вместе» = I adapt to their time; if outside my window → confirm dialog («Ваше указанное время… не пересекаются. Вы уверены…»), then «Вы будете на месте около …»; my window is widened to what I agreed.
+- After a ПП booking the board opens (/share-board?booked=REF) with a banner. Pickup-interval editor removed from the form.
+- vitest 385/386, build OK.
+
 ## 2026-11-23 (later) — share-v2 review fixes (LOCAL, not pushed)
 - One booking end to end (CY-SDFX-6VM9, exact pickup 11:30): stays 11:30 after pairing, at the driver and in the push; receipt 35,20 €. Earlier 12:15 screenshot was a DIFFERENT booking that I had turned into an «old» one in the test DB with +30 min allowance.
 - Class step with «Попутчик»: no range; card shows the co-rider price; box «С попутчиком X / Без попутчика (≈ по счётчику) Y» + when each applies.

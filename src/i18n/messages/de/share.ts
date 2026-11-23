@@ -3,6 +3,8 @@ import type en from '../en/share';
 
 const share: Catalog<typeof en> = {
   terms: {
+    arrive: "Dort sein {af}–{at}",
+    board: "Nach der Buchung öffnet sich die Tafel — Sie können selbst einen Mitfahrer wählen.",
     auto: 'Bei einem Treffer verbinden wir die Fahrten automatisch.',
     times: 'Ankunft {af}–{at} · Abholung {pf}–{pt}',
     timesExact: 'Ankunft {af}–{at} · Abholung um {p}',
@@ -156,6 +158,13 @@ const share: Catalog<typeof en> = {
     LIMASSOL: 'Limassol',
   },
   board: {
+    booked: "Fahrt gebucht. Wählen Sie einen Mitfahrer oder warten Sie — wir verbinden Sie, wenn wir einen finden.",
+    youArrive: "Sie sind ca. {time} da",
+    doneAt: "Fahrt geteilt. Sie sind ca. {time} da.",
+    outsideQ: "Ihre Ankunftszeit {from}–{to} und {time} überschneiden sich nicht. Möchten Sie wirklich ca. {time} ankommen?",
+    outsideQ2: "Sie kämen ca. {time} an, außerhalb Ihrer Zeit. Fortfahren?",
+    outsideNo: "Nein",
+    outsideYes: "Ja, zusammen fahren",
     joinMismatch: 'Die Strecke muss gleich sein: Abholung und Ziel an diesen Orten.',
     driverOnly: 'Die Mitfahrer-Tafel ist für Fahrgäste. Fahrer sehen Vorbestellungen in der Fahrer-App.',
     noMineOpen: 'Wählen Sie unten eine Fahrt — oder buchen Sie Ihre eigene mit Mitfahrer.',
