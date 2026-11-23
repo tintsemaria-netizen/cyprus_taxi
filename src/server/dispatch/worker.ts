@@ -163,7 +163,7 @@ async function processJob(jobId: string): Promise<void> {
   if (job.openedAt && job.deadlineAt >= now) return; // on the free-orders board; no more offers
 
   // Ride-share (Task 022): an opted-in airport/intercity ride first tries to join a running trip
-  // on its way; while that proposal waits for the passenger + driver, no driver offers go out.
+  // on its way: every fitting co-rider car gets it at once for 60 s (2026-11-23); meanwhile no ordinary offers.
   if (!job.openedAt && (await tryLiveShare(job.bookingId, now))) return;
 
   // Board window over without anyone taking it → give up (NO_DRIVER).

@@ -88,9 +88,7 @@ export async function planWithRoads<T>(run: (leg: LegFn) => T, departure: Date |
 }
 
 // Live matching runs every worker tick while a ride searches; road-route a newcomer at most every 15 s.
-// `fits`: the cars that fitted at the last look — while one of them is untried, the newcomer keeps waiting for
-// a co-rider and gets no ordinary car (operator 2026-11-23: an ordinary car only when no co-rider is left).
-const lastLiveTry = new Map<string, { at: number; fits: string[] }>();
+const lastLiveTry = new Map<string, number>();
 
 async function lockBookings(tx: Tx, ids: string[]) {
   // One lock order everywhere (sorted ids) so two groups never deadlock each other.
@@ -112,13 +110,15 @@ async function activeGroupOf(db: Tx | typeof prisma, bookingId: string) {
 export async function tryLiveShare(guestId: string, now: Date = new Date()): Promise<boolean> {
   const guest = await prisma.booking.findUnique({ where: { id: guestId } });
   if (!guest || guest.status !== 'SEARCHING' || guest.scheduledAt || !shareCapable(guest)) return false;
-  const pending = await prisma.shareGroup.findFirst({ where: { guestBookingId: guestId, status: 'PROPOSED' } });
-  if (pending) return pending.expiresAt > now;
-  const tried = await prisma.shareGroup.findMany({ where: { guestBookingId: guestId }, select: { hostBookingId: true } });
+  // Offers out (operator 2026-11-23): settle any driver who said yes; wait while others may still answer.
+  if (await decideLive(guestId, now)) return true;
+  const open = await prisma.shareGroup.findMany({ where: { guestBookingId: guestId, mode: 'LIVE', status: 'PROPOSED' } });
+  if (open.some((g) => g.driverAnswer === 'YES' || g.expiresAt > now)) return true;
+  // ONE round only: every fitting co-rider car got the offer at once; nobody took it → an ordinary car.
+  if (await prisma.shareGroup.count({ where: { guestBookingId: guestId } })) return false;
 
   const hosts = await prisma.booking.findMany({
     where: {
-      id: { notIn: tried.map((t) => t.hostBookingId) },
       status: { in: [...LIVE_HOST_STATUSES] }, shareOptIn: true, vClass: guest.vClass, fareCents: { not: null }, stopLat: null,
       shareAsHost: { none: { activeHostBookingId: { not: null } } }, shareAsGuest: { none: { activeGuestBookingId: { not: null } } },
       assignments: { some: { activeDriverId: { not: null }, driver: { acceptsShared: true, onDuty: true } } },
@@ -127,15 +127,13 @@ export async function tryLiveShare(guestId: string, now: Date = new Date()): Pro
     take: 50,
   });
 
-  const last = lastLiveTry.get(guestId);
-  const triedIds = new Set(tried.map((t) => t.hostBookingId));
-  const untriedFit = !!last && last.fits.some((id) => !triedIds.has(id) && hosts.some((h) => h.id === id));
-  // Road routing at most every 15 s — except right after a driver said no while another co-rider car still fits.
-  if (last && now.getTime() - last.at < 15_000 && !untriedFit) return false;
-  if (lastLiveTry.size > 2000) for (const [k, v] of lastLiveTry) if (now.getTime() - v.at > 10 * MIN) lastLiveTry.delete(k);
+  const last = lastLiveTry.get(guestId) ?? 0;
+  if (now.getTime() - last < 15_000) return false;
+  lastLiveTry.set(guestId, now.getTime());
+  if (lastLiveTry.size > 2000) for (const [k, v] of lastLiveTry) if (now.getTime() - v > 10 * MIN) lastLiveTry.delete(k);
 
   const gp = pt(guest.pickupLat, guest.pickupLng);
-  // 1) Straight-line prefilter with some slack, 2) road time for the best three.
+  // 1) Straight-line prefilter with some slack, 2) road time for up to nine, best first.
   const SLACK = 10;
   const pre: { host: (typeof hosts)[number]; plan: SharePlan; pts: Parameters<typeof bestSharePlan>[0] }[] = [];
   for (const h of hosts) {
@@ -151,22 +149,22 @@ export async function tryLiveShare(guestId: string, now: Date = new Date()): Pro
     if (plan) pre.push({ host: h, plan, pts });
   }
   pre.sort((a, b) => a.plan.extraHost + a.plan.extraGuest - (b.plan.extraHost + b.plan.extraGuest));
-  let best: { host: (typeof hosts)[number]; plan: SharePlan; routed: boolean } | null = null;
-  const fits: string[] = [];
-  // Road time for three at a time, best first; the next three only if none of these fits (at most nine).
-  for (let i = 0; i < Math.min(pre.length, 9) && !best; i += 3) {
-    for (const c of pre.slice(i, i + 3)) {
-      const { result: plan, routed } = await planWithRoads(
-        (leg) => bestSharePlan(c.pts, leg, { hostOnBoard: c.host.status === 'IN_PROGRESS', hostMaxExtra: maxExtra(c.host), guestMaxExtra: maxExtra(guest) }), null);
-      if (!plan || !hostArrivesInTime(c.host, plan, now)) continue; // «быть на месте до …» − 10 min is a hard deadline
-      fits.push(c.host.id);
-      if (!best || plan.extraHost + plan.extraGuest < best.plan.extraHost + best.plan.extraGuest) best = { host: c.host, plan, routed };
-    }
+  const fits: LiveOffer[] = [];
+  for (const c of pre.slice(0, 9)) {
+    const { result: plan, routed } = await planWithRoads(
+      (leg) => bestSharePlan(c.pts, leg, { hostOnBoard: c.host.status === 'IN_PROGRESS', hostMaxExtra: maxExtra(c.host), guestMaxExtra: maxExtra(guest) }), null);
+    if (!plan || !hostArrivesInTime(c.host, plan, now)) continue; // «быть на месте до …» − 10 min is a hard deadline
+    fits.push({ hostId: c.host.id, driverId: c.host.assignments[0].driverId, plan, routed });
   }
-  lastLiveTry.set(guestId, { at: now.getTime(), fits });
-  if (!best) return false;
-  return proposeLive(best.host.id, guestId, best.host.assignments[0].driverId, best.plan, best.routed, now);
+  if (!fits.length) return false;
+  return proposeLiveAll(guestId, fits.slice(0, LIVE_MAX_OFFERS), now);
 }
+
+/** At most this many co-rider cars get the same newcomer at once. */
+const LIVE_MAX_OFFERS = 5;
+/** Two drivers who say yes within this of each other count as «at the same time» (operator 2026-11-23). */
+export const LIVE_SAME_TIME_SEC = 5;
+type LiveOffer = { hostId: string; driverId: string; plan: SharePlan; routed: boolean };
 
 // «Быть на месте до …» (2026-11-22): a co-rider picked up on the way must never make a host with an
 // arrival window late. Conservative: the trip cannot start before the booked pickup time.
@@ -177,32 +175,78 @@ function hostArrivesInTime(h: { arriveBy: Date | null; scheduledAt: Date | null;
   return start + plan.arrive.host * MIN <= h.arriveBy.getTime() + (slackMin - ARRIVE_BUFFER_MIN) * MIN;
 }
 
-async function proposeLive(hostId: string, guestId: string, driverId: string, plan: SharePlan, routed: boolean, now: Date): Promise<boolean> {
+/**
+ * «Попутчик в дороге» (operator 2026-11-23): the newcomer is offered to EVERY fitting co-rider car at
+ * once, for config.share.answerSec (60 s). Whoever takes it first gets it — but if several drivers say yes
+ * at about the same time (LIVE_SAME_TIME_SEC), the one best for the passenger already in the car wins
+ * (fewest extra minutes for him), then the earlier yes. Only ONE car ever gets the co-rider
+ * (activeGuestBookingId is set on the winner alone, and it is unique). Nobody takes it → an ordinary car.
+ */
+async function proposeLiveAll(guestId: string, offers: LiveOffer[], now: Date): Promise<boolean> {
   try {
     return await prisma.$transaction(async (tx) => {
-      await lockBookings(tx, [hostId, guestId]);
-      const [h, g] = await Promise.all([tx.booking.findUnique({ where: { id: hostId } }), tx.booking.findUnique({ where: { id: guestId } })]);
-      if (!h || !g || g.status !== 'SEARCHING' || !LIVE_HOST_STATUSES.includes(h.status as never)) return false;
-      if ((await activeGroupOf(tx, hostId)) || (await activeGroupOf(tx, guestId))) return false;
-      // The guest may not be offered to a driver at the same time.
+      await lockBookings(tx, [guestId, ...offers.map((o) => o.hostId)]);
+      const g = await tx.booking.findUnique({ where: { id: guestId } });
+      if (!g || g.status !== 'SEARCHING' || (await activeGroupOf(tx, guestId))) return false;
+      // The guest may not be offered to an ordinary driver at the same time.
       if (await tx.driverOffer.findFirst({ where: { activeBookingId: guestId } })) return false;
       const expiresAt = new Date(now.getTime() + S().answerSec * 1000);
-      // The passenger in the car agreed to these terms when ordering: not asked (operator 2026-11-23).
-      const group = await tx.shareGroup.create({ data: groupData('LIVE', h, g, plan, expiresAt, { driverId, guestAnswer: 'YES', hostAnswer: 'YES', routed }) });
-      // Give the newcomer's normal search the answer time back, so a "no" still leaves time to search.
+      let made = 0;
+      for (const o of offers) {
+        const h = await tx.booking.findUnique({ where: { id: o.hostId } });
+        if (!h || !LIVE_HOST_STATUSES.includes(h.status as never) || (await activeGroupOf(tx, h.id))) continue;
+        // The passenger in the car agreed to these terms when ordering: not asked. The guest slot is taken only by the winner.
+        const group = await tx.shareGroup.create({ data: { ...groupData('LIVE', h, g, o.plan, expiresAt, { driverId: o.driverId, guestAnswer: 'YES', hostAnswer: 'YES', routed: o.routed }), activeGuestBookingId: null } });
+        await tx.bookingEvent.create({ data: { bookingId: h.id, type: 'SHARE_PROPOSED', actorType: 'SYSTEM', reason: `co-rider ${g.reference}` } });
+        await recordEvent(tx, { eventType: 'share.proposed', aggregateType: 'share', aggregateId: group.id, aggregateVersion: 1, correlationId: guestId, payload: { mode: 'LIVE', driverPseudo: driverPseudo(o.driverId), extraMinHost: o.plan.extraHost, extraMinGuest: o.plan.extraGuest, offers: offers.length } });
+        await enqueueDriver(tx, o.driverId, 'Co-rider on your route', driverProposalBody(o.plan.extraDriver, earningsUpPct(group.hostCents + group.guestCents, h.fareCents ?? 0)), { tag: `share-d-${group.id}` });
+        made++;
+      }
+      if (!made) return false;
+      await tx.bookingEvent.create({ data: { bookingId: guestId, type: 'SHARE_PROPOSED', actorType: 'SYSTEM', reason: `offered to ${made} co-rider car(s)` } });
+      // Give the newcomer's normal search the answer time back, so «nobody» still leaves time to search.
       const job = await tx.dispatchJob.findUnique({ where: { bookingId: guestId } });
-      if (job) await tx.dispatchJob.update({ where: { id: job.id }, data: { deadlineAt: new Date(Math.max(now.getTime(), job.deadlineAt.getTime()) + S().answerSec * 1000) } });
-      await tx.bookingEvent.create({ data: { bookingId: hostId, type: 'SHARE_PROPOSED', actorType: 'SYSTEM', reason: `co-rider ${g.reference}` } });
-      await tx.bookingEvent.create({ data: { bookingId: guestId, type: 'SHARE_PROPOSED', actorType: 'SYSTEM', reason: `joins ${h.reference}` } });
-      await recordEvent(tx, { eventType: 'share.proposed', aggregateType: 'share', aggregateId: group.id, aggregateVersion: 1, correlationId: guestId, payload: { mode: 'LIVE', driverPseudo: driverPseudo(driverId), extraMinHost: plan.extraHost, extraMinGuest: plan.extraGuest } });
-      // No prices in notifications (operator, 2026-11-22): the passenger sees «−30 %», the driver «+N % earnings».
-      await enqueueDriver(tx, driverId, 'Co-rider on your route', driverProposalBody(plan.extraDriver, earningsUpPct(group.hostCents + group.guestCents, h.fareCents ?? 0)), { tag: `share-d-${group.id}` });
+      if (job) await tx.dispatchJob.update({ where: { id: job.id }, data: { deadlineAt: new Date(Math.max(now.getTime(), job.deadlineAt.getTime()) + (S().answerSec + LIVE_SAME_TIME_SEC) * 1000) } });
       return true;
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return false; // another group won the race
     throw e;
   }
+}
+
+/**
+ * Settle the drivers who said yes to this newcomer. Waits while another driver may still answer within
+ * LIVE_SAME_TIME_SEC of the first yes; then the best for the passenger in the car wins and every other
+ * offer for this newcomer closes (their drivers are told). Returns true if a car got the co-rider.
+ */
+export async function decideLive(guestId: string, now: Date = new Date()): Promise<boolean> {
+  const groups = await prisma.shareGroup.findMany({ where: { guestBookingId: guestId, mode: 'LIVE', status: 'PROPOSED' } });
+  const yes = groups.filter((g) => g.driverAnswer === 'YES');
+  if (!yes.length) return false;
+  const firstYes = Math.min(...yes.map((g) => (g.decidedAt ?? g.createdAt).getTime()));
+  const stillOpen = groups.some((g) => !g.driverAnswer && g.expiresAt > now);
+  if (stillOpen && now.getTime() - firstYes < LIVE_SAME_TIME_SEC * 1000) return false; // «at the same time» window
+  const ranked = [...yes].sort((a, b) => a.extraMinHost - b.extraMinHost || (a.decidedAt ?? a.createdAt).getTime() - (b.decidedAt ?? b.createdAt).getTime() || a.extraMinDriver - b.extraMinDriver);
+  return prisma.$transaction(async (tx) => {
+    await lockBookings(tx, [guestId, ...groups.map((g) => g.hostBookingId)]);
+    let won: string | null = null;
+    for (const c of ranked) {
+      const cur = await tx.shareGroup.findUnique({ where: { id: c.id } });
+      if (cur?.status !== 'PROPOSED' || cur.driverAnswer !== 'YES') continue;
+      const r = await finalizeLiveTx(tx, c.id);
+      if (r.ok) { won = c.id; break; }
+    }
+    // Close the rest; a driver who said yes (or still sees it) hears that someone else took it.
+    for (const g of groups) {
+      if (g.id === won) continue;
+      const cur = await tx.shareGroup.findUnique({ where: { id: g.id } });
+      if (cur?.status !== 'PROPOSED') continue;
+      await closeGroupTx(tx, g.id, 'CANCELED', won ? 'another driver took the co-rider' : 'the co-rider is no longer available');
+      if (g.driverId) await enqueueDriver(tx, g.driverId, 'Co-rider taken', 'Another driver took this co-rider.', { tag: `share-d-${g.id}`, msg: { k: 'share.taken', p: {} } });
+    }
+    return !!won;
+  });
 }
 
 // Proposal notifications (2026-11-19): shown on top of other apps / the lock screen and kept until
@@ -249,7 +293,7 @@ const fail = (status: number, code: string, message: string): ShareResult => ({ 
 export async function answerShare(groupId: string, party: ShareParty, accept: boolean, now: Date = new Date(), variant?: number): Promise<ShareResult> {
   const pre = await prisma.shareGroup.findUnique({ where: { id: groupId } });
   if (!pre) return fail(404, 'NOT_FOUND', 'Proposal not found.');
-  return prisma.$transaction(async (tx) => {
+  const res: ShareResult = await prisma.$transaction(async (tx) => {
     await lockBookings(tx, [pre.hostBookingId, pre.guestBookingId]);
     const grp = await tx.shareGroup.findUnique({ where: { id: groupId } });
     if (!grp) return fail(404, 'NOT_FOUND', 'Proposal not found.');
@@ -275,15 +319,23 @@ export async function answerShare(groupId: string, party: ShareParty, accept: bo
       if (!Number.isInteger(idx) || idx < 0 || idx >= variants.length) return fail(422, 'VALIDATION', 'Choose one of the offered times.');
       pick = { chosenVariant: idx, startAt: new Date(variants[idx].startAt) };
     }
-    const g2 = await tx.shareGroup.update({ where: { id: grp.id }, data: { [field]: answer, ...pick } });
+    const g2 = await tx.shareGroup.update({ where: { id: grp.id }, data: { [field]: answer, ...pick, ...(grp.mode === 'LIVE' && accept ? { decidedAt: now } : {}) } });
     if (!accept) {
       await closeGroupTx(tx, grp.id, 'DECLINED', `${field.replace('Answer', '')} declined`);
       return { ok: true, status: 'DECLINED' };
     }
     const allYes = g2.mode === 'LIVE' ? g2.hostAnswer === 'YES' && g2.driverAnswer === 'YES' : g2.hostAnswer === 'YES' && g2.guestAnswer === 'YES';
     if (!allYes) return { ok: true, status: 'PROPOSED' };
-    return g2.mode === 'LIVE' ? finalizeLiveTx(tx, g2.id) : finalizePrebookTx(tx, g2.id);
+    // LIVE: several cars may have the same newcomer — the winner is settled by decideLive (below).
+    return g2.mode === 'LIVE' ? { ok: true, status: 'WAITING' } : finalizePrebookTx(tx, g2.id);
   });
+  if (res.ok && res.status === 'WAITING') {
+    // Nobody else can still answer → settle now; otherwise the worker settles within LIVE_SAME_TIME_SEC.
+    await decideLive(pre.guestBookingId, now);
+    const after = await prisma.shareGroup.findUnique({ where: { id: groupId }, select: { status: true } });
+    return { ok: true, status: after?.status === 'PROPOSED' ? 'WAITING' : after?.status ?? 'WAITING' };
+  }
+  return res;
 }
 
 async function closeGroupTx(tx: Tx, groupId: string, status: 'DECLINED' | 'EXPIRED' | 'CANCELED' | 'ENDED', reason: string) {
@@ -351,7 +403,7 @@ async function finalizeLiveTx(tx: Tx, groupId: string): Promise<ShareResult> {
   await tx.booking.update({ where: { id: guest.id }, data: { status: 'EN_ROUTE', revision: { increment: 1 } } });
   await tx.bookingEvent.create({ data: { bookingId: guest.id, type: 'STATUS_EN_ROUTE', actorType: 'SYSTEM', beforeStatus: 'ASSIGNED', afterStatus: 'EN_ROUTE', reason: 'ride-share' } });
   await tx.bookingEvent.create({ data: { bookingId: host.id, type: 'SHARE_JOINED', actorType: 'SYSTEM', reason: `co-rider ${guest.reference}` } });
-  await tx.shareGroup.update({ where: { id: g.id }, data: { status: 'ACCEPTED', decidedAt: new Date() } });
+  await tx.shareGroup.update({ where: { id: g.id }, data: { status: 'ACCEPTED', activeGuestBookingId: guest.id } });
   await recordEvent(tx, { eventType: 'share.accepted', aggregateType: 'share', aggregateId: g.id, aggregateVersion: 2, correlationId: guest.id, payload: { mode: 'LIVE', driverPseudo: driverPseudo(hostAsg.driverId) } });
   // ONE notification each, only now that the driver took it (operator 2026-11-23): arrival and the amount.
   const arr = (g.arrivals ?? {}) as { host?: number; guest?: number; guestPickup?: number };
@@ -408,7 +460,10 @@ async function finalizePrebookTx(tx: Tx, groupId: string): Promise<ShareResult> 
 
 /** Worker: proposals nobody answered in time count as "no". */
 export async function expireShares(now: Date = new Date()): Promise<number> {
-  const due = await prisma.shareGroup.findMany({ where: { status: 'PROPOSED', expiresAt: { lte: now } }, select: { id: true, hostBookingId: true, guestBookingId: true } });
+  // A live «yes» waiting to be settled is never expired: settle it (operator 2026-11-23). OR, not NOT: NOT skips NULL rows.
+  const waiting = await prisma.shareGroup.findMany({ where: { status: 'PROPOSED', mode: 'LIVE', driverAnswer: 'YES' }, select: { guestBookingId: true }, distinct: ['guestBookingId'] });
+  for (const w of waiting) await decideLive(w.guestBookingId, now);
+  const due = await prisma.shareGroup.findMany({ where: { status: 'PROPOSED', expiresAt: { lte: now }, OR: [{ mode: 'PREBOOK' }, { driverAnswer: null }, { driverAnswer: { not: 'YES' } }] }, select: { id: true, hostBookingId: true, guestBookingId: true } });
   for (const d of due) {
     await prisma.$transaction(async (tx) => {
       await lockBookings(tx, [d.hostBookingId, d.guestBookingId]);

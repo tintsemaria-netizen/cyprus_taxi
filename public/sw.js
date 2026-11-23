@@ -92,6 +92,16 @@ const MSG_TEXT = {
     de: ["Ein Mitfahrer steigt zu", "Sie sind ca. {etaT} da. Sie zahlen {payC}."],
     fr: ["Un covoyageur rejoint votre trajet", "Vous arrivez vers {etaT}. À payer : {payC}."],
   },
+  'share.taken': {
+    ru: ["Попутчик", "Этого попутчика уже взял другой водитель."],
+    en: ["Co-rider", "Another driver already took this co-rider."],
+    el: ["Συνεπιβάτης", "Αυτόν τον συνεπιβάτη τον πήρε ήδη άλλος οδηγός."],
+    he: ["נוסע משותף", "נהג אחר כבר לקח את הנוסע הזה."],
+    ar: ["راكب مشارك", "أخذ سائق آخر هذا الراكب بالفعل."],
+    pl: ["Współpasażer", "Tego współpasażera wziął już inny kierowca."],
+    de: ["Mitfahrer", "Ein anderer Fahrer hat diesen Mitfahrer schon übernommen."],
+    fr: ["Covoyageur", "Un autre chauffeur a déjà pris ce covoyageur."],
+  },
   'share.found': {
     ru: ["Попутчик найден", "Подача в {pickT}, на месте около {etaT}. К оплате {payC}."],
     en: ["Co-rider found", "Pickup at {pickT}, arrival about {etaT}. You pay {payC}."],

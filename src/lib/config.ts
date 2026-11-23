@@ -78,7 +78,7 @@ export const config = {
     // paired automatically. First version: at most 15 extra minutes in the car for each passenger.
     termsVersion: '2026-11-23',
     termsMaxExtraMin: num('SHARE_TERMS_MAX_EXTRA_MIN', 15),
-    answerSec: num('SHARE_ANSWER_SEC', 90), // live: the driver answers within this (operator 2026-11-23: 90 s, the passenger in the car is not asked)
+    answerSec: num('SHARE_ANSWER_SEC', 60), // live: every fitting co-rider car gets the offer at once for this long (operator 2026-11-23); the passenger in the car is not asked
     prebookAnswerMin: num('SHARE_PREBOOK_ANSWER_MIN', 30), // pre-booking: both passengers answer within this…
     prebookAnswerBeforePickupMin: num('SHARE_PREBOOK_ANSWER_BEFORE_PICKUP_MIN', 60), // …and at the latest this long before pickup
     noShowFeeCents: num('SHARE_NO_SHOW_FEE_CENTS', 1000), // flat no-show fee on a pre-booked pair (€10; never above their price)
