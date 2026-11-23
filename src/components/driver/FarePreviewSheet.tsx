@@ -16,7 +16,9 @@ export function FarePreviewSheet({ bookingId, passengerName: _passengerName, onC
   const [p, setP] = useState<Preview | null>(null);
   const [err, setErr] = useState(false);
   // Operator 2026-11-24: a meter ride's amount can be changed ONLY here, before «Завершить»; then it is fixed.
-  const [edit, setEdit] = useState(false);
+  // «Есть вопросы?» → «Изменить цену» → the amount field (operator 2026-11-24): two taps before any change.
+  const [step, setStep] = useState<0 | 1 | 2>(0);
+  const edit = step === 2;
   const [amount, setAmount] = useState('');
   const typed = amount ? Math.round(parseFloat(amount.replace(',', '.')) * 100) : null;
   const typedBad = typed != null && (!Number.isFinite(typed) || typed < 0 || (p?.minCents != null && typed < p.minCents));
@@ -38,7 +40,8 @@ export function FarePreviewSheet({ bookingId, passengerName: _passengerName, onC
             <>
               {/* Only the total (2026-11-17): waiting is included in it, not listed. */}
               <Line k={t('driver.close.total')} v={fmt.money(typed != null && !typedBad ? typed : p.totalCents)} strong />
-              {!p.upfront && !edit && <button type="button" className="text-sm font-semibold text-accent underline" onClick={() => setEdit(true)} data-testid="fare-edit">{t('driver.close.edit')}</button>}
+              {!p.upfront && step === 0 && <button type="button" className="text-sm text-muted underline underline-offset-2" onClick={() => setStep(1)} data-testid="fare-questions">{t('driver.close.questions')}</button>}
+              {!p.upfront && step === 1 && <button type="button" className="mx-auto block rounded-full border border-accent px-4 py-2 text-sm font-semibold text-accent" onClick={() => setStep(2)} data-testid="fare-edit">{t('driver.close.changePrice')}</button>}
               {!p.upfront && edit && (
                 <div className="text-start" data-testid="fare-edit-box">
                   <label className="text-xs text-muted" htmlFor="fare-amount">{t('driver.close.editLabel')}</label>

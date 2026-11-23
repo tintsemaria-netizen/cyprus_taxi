@@ -307,7 +307,7 @@ const driver: Catalog<typeof en> = {
     fareEstimate: "≈ {amount}",
     loadFailed: "Impossible de charger les courses programmées.",
   },
-  close: { edit: "Le compteur indique un autre montant ? Modifier", editLabel: "Montant au compteur, €", editNote: "Vérifiez : après la fin de course, le montant ne peut plus être modifié.", belowMin: "Pas en dessous du minimum de réservation : {amount}",
+  close: { questions: "Des questions ?", changePrice: "Modifier le prix", editLabel: "Montant au compteur, €", editNote: "Vérifiez : après la fin de course, le montant ne peut plus être modifié.", belowMin: "Pas en dessous du minimum de réservation : {amount}",
     prebookMin: 'Réservation — {zone} : au moins {amount}. Si le compteur affiche moins, le passager paie {amount}.',
     title: "Coût de la course",
     subtitle: "Vérifiez le montant avec {name} avant de terminer.",

@@ -307,7 +307,7 @@ const driver: Catalog<typeof en> = {
     fareEstimate: "≈ {amount}",
     loadFailed: "לא ניתן לטעון נסיעות מתוזמנות.",
   },
-  close: { edit: "המונה מראה סכום אחר? לשנות", editLabel: "סכום לפי המונה, €", editNote: "בדקו: אחרי הסיום אי אפשר לשנות את הסכום.", belowMin: "לא פחות ממחיר המינימום להזמנה מראש: {amount}",
+  close: { questions: "יש שאלות?", changePrice: "לשנות מחיר", editLabel: "סכום לפי המונה, €", editNote: "בדקו: אחרי הסיום אי אפשר לשנות את הסכום.", belowMin: "לא פחות ממחיר המינימום להזמנה מראש: {amount}",
     prebookMin: 'הזמנה מראש — {zone}: לפחות {amount}. אם המונה מראה פחות, הנוסע משלם {amount}.',
     title: "עלות הנסיעה",
     subtitle: "בדקו את הסכום עם {name} לפני הסיום.",

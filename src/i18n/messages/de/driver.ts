@@ -307,7 +307,7 @@ const driver: Catalog<typeof en> = {
     fareEstimate: "≈ {amount}",
     loadFailed: "Geplante Fahrten konnten nicht geladen werden.",
   },
-  close: { edit: "Taxameter zeigt einen anderen Betrag? Ändern", editLabel: "Betrag laut Taxameter, €", editNote: "Prüfen Sie: nach «Beenden» ist der Betrag nicht mehr änderbar.", belowMin: "Nicht unter dem Vorbestellungs-Minimum: {amount}",
+  close: { questions: "Fragen?", changePrice: "Preis ändern", editLabel: "Betrag laut Taxameter, €", editNote: "Prüfen Sie: nach «Beenden» ist der Betrag nicht mehr änderbar.", belowMin: "Nicht unter dem Vorbestellungs-Minimum: {amount}",
     prebookMin: 'Vorbestellung — {zone}: mindestens {amount}. Zeigt das Taxameter weniger, zahlt der Fahrgast {amount}.',
     title: "Fahrtkosten",
     subtitle: "Prüfen Sie den Betrag mit {name}, bevor Sie beenden.",
