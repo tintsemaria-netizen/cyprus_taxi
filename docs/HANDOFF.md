@@ -2611,3 +2611,15 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   only shows when the server asks). Drivers / staff entrances have no Google on purpose. 345 tests passed.
   NOTE for the owner: the booking form still REQUIRES «Телефон для водителя» although the owner said drivers talk to
   passengers in the in-app chat — proposed removing it; not changed yet.
+
+## 2026-11-23 — «Не ваши изменения» (branch `changes-red`, NOT deployed yet)
+- Operator: no push with sound. Section renamed «Изменения» → «Не ваши изменения» / «Not your changes».
+- Owner menu item turns red with a pulsing dot and a count while there are unseen changes
+  (StaffShell polls GET /api/v1/admin/changes/count every 30 s + on return; opening the page marks read and fires `il-y:changes-seen`).
+- Removed: owner push enqueue in staff-log.ts, /api/v1/staff/push route, «Включить уведомления» button, sw.js `staff.change` text.
+- Tests: full suite 396 passed / 1 skipped (superadmin test now asserts no STAFF push + count endpoint, 403 for non-owner).
+- Follow-up (operator): opening the page no longer clears it. Each row has «Проверено»; button «Отметить всё проверенным (n)».
+  Red stays until all checked. Silent in-app pop-up «Новое изменение · Имя · раздел» (poll 10 s; not on the changes page; ✕ closes).
+  POST /admin/changes {id} = one, {} = all; GET /admin/changes/count returns {unread,last}.
+- Fixed during preview: page sent a double-JSON body (api() already stringifies) → would have marked all.
+- Screenshots /tmp/shots/red-popup.png, red-page.png, red-one.png, red-all.png. Next: «заливай» → merge to main.

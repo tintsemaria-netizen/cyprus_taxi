@@ -6,7 +6,7 @@ const staff = {
   nav: {
     fleets: 'Fleets', myFleet: 'My fleet',
     dispatch: 'Dispatch', analytics: 'Analytics', reliability: 'Reliability', applications: 'Applications',
-    passengers: 'Clients', drivers: 'Drivers', vehicles: 'Vehicles', settings: 'Settings', fixedPrices: 'Fixed prices', minFares: 'Pre-booking minimum', accounting: 'Accounting', changes: 'Changes', staff: 'Staff', security: 'Security',
+    passengers: 'Clients', drivers: 'Drivers', vehicles: 'Vehicles', settings: 'Settings', fixedPrices: 'Fixed prices', minFares: 'Pre-booking minimum', accounting: 'Accounting', changes: 'Not your changes', staff: 'Staff', security: 'Security',
   },
   role: { OWNER: 'Superadmin', ADMIN: 'Admin', DISPATCHER: 'Dispatcher', DRIVER: 'Driver', FLEET_OWNER: 'Fleet owner' },
   status: {
@@ -439,15 +439,16 @@ const staff = {
     confirmMfa: 'Reset two-factor sign-in for {login}?',
   },
   changes: {
-    title: 'Changes',
-    sub: 'Everything other admins changed. You get a notification for each change (at most once per 2 minutes per admin).',
+    title: 'Not your changes',
+    sub: 'What other admins changed: who, when and where. The menu item stays red until you check each change or press «Mark all as checked».',
     none: 'No changes yet.',
     markRead: 'Mark all as read',
-    pushOn: '🔔 Turn on notifications on this device',
-    pushDone: 'Notifications are on.',
-    pushFail: 'Could not turn on notifications on this device.',
     verb: { POST: 'added / did', PUT: 'changed', PATCH: 'changed', DELETE: 'deleted' },
     area: { drivers: 'Drivers', vehicles: 'Vehicles', fleets: 'Fleets', fixedPrices: 'Fixed prices', minFares: 'Pre-booking minimum', settings: 'Settings', passengers: 'Clients', applications: 'Applications', staff: 'Staff', accounting: 'Accounting', dispatch: 'Dispatch', misc: 'Other' },
+    check: 'Checked',
+    checked: 'checked',
+    checkAll: 'Mark all as checked ({n})',
+    popup: 'New change',
     newMark: 'new',
   },
 };

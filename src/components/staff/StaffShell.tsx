@@ -20,11 +20,41 @@ export interface Me {
   mfa?: { eligible: boolean; enabled: boolean; setupRequired: boolean };
 }
 
+/** «Не ваши изменения» with something new: a red item (2026-11-23, operator — no sound, just red). */
+const ALERT = 'bg-danger font-semibold text-white';
+/** The change log page tells the menu it has been read. */
+export const CHANGES_SEEN = 'il-y:changes-seen';
+interface ChangeLast { id: string; actor: string; method: string; area: string }
+
 export function StaffShell({ roles, children }: { roles: Me['role'][]; children: (me: Me) => React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useT();
   const [me, setMe] = useState<Me | null>(null);
+  // «Не ваши изменения» for the superadmin (2026-11-23, operator): checked every 10 s and when the app
+  // comes back. A new change pops up a silent banner; the item stays red until each change is checked.
+  const [unread, setUnread] = useState(0);
+  const [popup, setPopup] = useState<ChangeLast | null>(null);
+  const isOwner = !!me?.isOwner;
+  useEffect(() => { setUnread(me?.unreadChanges ?? 0); }, [me?.unreadChanges]);
+  useEffect(() => {
+    if (!isOwner) return;
+    let lastId: string | null | undefined; // undefined = first check: no pop-up for what was already there
+    const check = () => {
+      void api<{ unread: number; last: ChangeLast | null }>('/admin/changes/count').then((r) => {
+        setUnread(r.unread);
+        if (lastId !== undefined && r.last && r.last.id !== lastId && window.location.pathname !== '/admin/changes') setPopup(r.last);
+        lastId = r.last?.id ?? null;
+      }).catch(() => {});
+    };
+    check();
+    const id = window.setInterval(check, 10_000);
+    const onVis = () => { if (document.visibilityState === 'visible') check(); };
+    const onSeen = (e: Event) => { setUnread((e as CustomEvent<number>).detail ?? 0); setPopup(null); };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener(CHANGES_SEEN, onSeen);
+    return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', onVis); window.removeEventListener(CHANGES_SEEN, onSeen); };
+  }, [isOwner]);
   const [state, setState] = useState<'loading' | 'ok' | 'denied'>('loading');
   // (hooks before any early return) The driver page tells us when it shows a sub-screen that needs a back arrow.
   const [driverBack, setDriverBack] = useState(false);
@@ -74,7 +104,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
             ? [
                 // Superadmin first: the menu scrolls on narrow screens (2026-11-23).
                 ...(me.isOwner ? [
-                  { href: '/admin/changes', label: `${t('staff.nav.changes')}${me.unreadChanges ? ` (${me.unreadChanges})` : ''}` },
+                  { href: '/admin/changes', label: `${t('staff.nav.changes')}${unread ? ` (${unread})` : ''}`, alert: unread > 0 },
                   { href: '/admin/accounting', label: t('staff.nav.accounting') },
                   { href: '/admin/staff', label: t('staff.nav.staff') },
                 ] : []),
@@ -105,9 +135,10 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
               <a
                 key={n.href}
                 href={n.href}
-                className={`whitespace-nowrap rounded-[10px] px-2.5 py-1.5 text-sm ${pathname === n.href ? 'bg-elevated text-accent' : 'text-muted hover:text-ink'}`}
+                className={`whitespace-nowrap rounded-[10px] px-2.5 py-1.5 text-sm ${'alert' in n && n.alert ? ALERT : pathname === n.href ? 'bg-elevated text-accent' : 'text-muted hover:text-ink'}`}
+                data-testid={'alert' in n && n.alert ? 'nav-alert' : undefined}
               >
-                {n.label}
+                {'alert' in n && n.alert && <span className="me-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-white align-middle" />}{n.label}
               </a>
             ))}
           </nav>
@@ -131,11 +162,22 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
       {nav.length > 1 && (
         <nav className="flex gap-1 overflow-x-auto border-b border-edge bg-page px-3 py-1.5 xl:hidden">
           {nav.map((n) => (
-            <a key={n.href} href={n.href} className={`whitespace-nowrap rounded-[10px] px-3 py-1.5 text-sm ${pathname === n.href ? 'bg-elevated text-accent' : 'text-muted'}`}>
-              {n.label}
+            <a key={n.href} href={n.href} className={`whitespace-nowrap rounded-[10px] px-3 py-1.5 text-sm ${'alert' in n && n.alert ? ALERT : pathname === n.href ? 'bg-elevated text-accent' : 'text-muted'}`}
+              data-testid={'alert' in n && n.alert ? 'nav-alert' : undefined}>
+              {'alert' in n && n.alert && <span className="me-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-white align-middle" />}{n.label}
             </a>
           ))}
         </nav>
+      )}
+      {popup && (
+        <div className="fixed inset-x-3 z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-danger bg-elevated p-3 text-sm shadow-xl" style={{ top: 'calc(env(safe-area-inset-top) + 0.75rem)' }} data-testid="change-popup" role="status">
+          <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-danger" />
+          <a href="/admin/changes" className="min-w-0 flex-1">
+            <span className="block text-xs text-muted">{t('staff.changes.popup')}</span>
+            <span className="font-semibold">{popup.actor}</span> {t(`staff.changes.verb.${popup.method}` as 'staff.changes.verb.POST')} · {t(`staff.changes.area.${popup.area}` as 'staff.changes.area.misc')}
+          </a>
+          <button type="button" aria-label="✕" onClick={() => setPopup(null)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-white/5">✕</button>
+        </div>
       )}
       <main className="flex-1">{children(me)}</main>
     </div>
