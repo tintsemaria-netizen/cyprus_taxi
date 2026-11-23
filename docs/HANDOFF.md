@@ -2674,7 +2674,7 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Cause candidate: after the pick, GoogleMapView.centerPointAt re-centred in two steps (moveCamera to the middle + animated panBy back).
   Now one exact moveCamera via the projection, and nothing at all if the camera is already there. Needs a real-iPhone check after deploy.
 
-## 2026-11-24 — Only on the island of Cyprus (branch `island-only`, NOT deployed — shown to operator)
+## 2026-11-24 — Only on the island of Cyprus — DEPLOYED (operator «Заливай»)
 - `src/lib/cyprus-island.ts`: island polygon (Natural Earth 10 m land, public domain, +~0.9 km sea margin for harbours/marinas,
   173 pts) + `onCyprusIsland()`. Whole island incl. the north. Separate from the admin service area (still checked after).
 - Server, error `OFF_ISLAND` (422, 8 languages in errors.ts): booking create (pickup/stop/dropoff), /quote, /tracking/stop,
@@ -2683,3 +2683,6 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   (Google + MapLibre) → red line, confirm disabled; RouteEditor / PlacesInput → red line «OFF_ISLAND», nothing selected;
   a GPS position off the island is ignored (island view, no auto pickup).
 - Tests 421 passed / 1 skipped (new: cyprus-island.test.ts, off-island.db.test.ts; saved-places fixture moved from the sea to land).
+- 2026-11-24 follow-up (DEPLOYED): live check showed ~600 m of sea past Limassol port accepted (Natural Earth is coarse).
+  Polygon now = geoBoundaries CYP ADM0 (CC BY 4.0; accurate coast, whole island) ∪ UK bases from Natural Earth, +~300 m,
+  889 pts (src/lib/cyprus-island.ts, ~20 KB, also in the passenger bundle). Tests 425 passed / 1 skipped.
