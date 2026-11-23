@@ -7,7 +7,8 @@ import { scannerConfigured, scanFile } from '@/server/scan';
 import { googleConfigured } from '@/server/google';
 
 export type DepState = 'ok' | 'warn' | 'missing';
-export interface Dep { key: string; state: DepState; note: string }
+/** `note` is a text key (staff.alerts.dep.<note>) so staff read it in their language; `n` fills {n}. */
+export interface Dep { key: string; state: DepState; note: string; n?: number; names?: string }
 
 const has = (name: string) => !!(process.env[name] && process.env[name]!.length > 0);
 
@@ -19,23 +20,23 @@ export function missingRequiredSecrets(): string[] {
 export async function systemStatus(opts: { probeScanner?: boolean } = {}): Promise<{ env: string; production: boolean; deps: Dep[] }> {
   const deps: Dep[] = [];
   const miss = missingRequiredSecrets();
-  deps.push(miss.length ? { key: 'secrets', state: 'missing', note: `Missing: ${miss.join(', ')}` } : { key: 'secrets', state: 'ok', note: 'Session, tracking and database secrets are set.' });
+  deps.push(miss.length ? { key: 'secrets', state: 'missing', note: 'secretsMissing', names: miss.join(', ') } : { key: 'secrets', state: 'ok', note: 'secretsOk' });
 
-  if (config.sms.provider === 'twilio') deps.push({ key: 'sms', state: 'ok', note: 'Twilio Verify configured.' });
-  else if (config.sms.allowDevOtp) deps.push({ key: 'sms', state: 'warn', note: `TEST codes only, for ${config.sms.devOtpAllowlist.size} allow-listed number(s). Not for real passengers.` });
-  else deps.push({ key: 'sms', state: 'missing', note: 'No SMS provider: phone verification and driver sign-in by code are unavailable.' });
+  if (config.sms.provider === 'twilio') deps.push({ key: 'sms', state: 'ok', note: 'smsTwilio' });
+  else if (config.sms.allowDevOtp) deps.push({ key: 'sms', state: 'warn', note: 'smsTest', n: config.sms.devOtpAllowlist.size });
+  else deps.push({ key: 'sms', state: 'missing', note: 'smsNone' });
 
-  if (!scannerConfigured()) deps.push({ key: 'malwareScan', state: 'missing', note: 'No ClamAV: driver documents cannot be accepted or approved.' });
+  if (!scannerConfigured()) deps.push({ key: 'malwareScan', state: 'missing', note: 'scanNone' });
   else if (opts.probeScanner) {
     const st = await scanFile(Buffer.from('il-y readiness probe'));
-    deps.push(st === 'CLEAN' ? { key: 'malwareScan', state: 'ok', note: 'ClamAV reachable.' } : { key: 'malwareScan', state: 'warn', note: `ClamAV configured but answered ${st}.` });
-  } else deps.push({ key: 'malwareScan', state: 'ok', note: 'ClamAV configured.' });
+    deps.push(st === 'CLEAN' ? { key: 'malwareScan', state: 'ok', note: 'scanOk' } : { key: 'malwareScan', state: 'warn', note: 'scanBad', names: st });
+  } else deps.push({ key: 'malwareScan', state: 'ok', note: 'scanSet' });
 
-  deps.push(emailConfigured() ? { key: 'email', state: 'ok', note: 'Receipt e-mail provider configured.' } : { key: 'email', state: 'warn', note: 'No e-mail provider: receipt e-mails are skipped (in-app receipts still work).' });
-  deps.push(config.push.vapidPublic && config.push.vapidPrivate() ? { key: 'push', state: 'ok', note: 'Web push keys set.' } : { key: 'push', state: 'warn', note: 'No web push keys: no background notifications.' });
-  deps.push(googleConfigured() ? { key: 'maps', state: 'ok', note: 'Google Maps server key set.' } : { key: 'maps', state: 'warn', note: 'No Google server key: road ETAs fall back to estimates.' });
+  deps.push(emailConfigured() ? { key: 'email', state: 'ok', note: 'emailOk' } : { key: 'email', state: 'warn', note: 'emailNone' });
+  deps.push(config.push.vapidPublic && config.push.vapidPrivate() ? { key: 'push', state: 'ok', note: 'pushOk' } : { key: 'push', state: 'warn', note: 'pushNone' });
+  deps.push(googleConfigured() ? { key: 'maps', state: 'ok', note: 'mapsOk' } : { key: 'maps', state: 'warn', note: 'mapsNone' });
 
-  deps.push(config.staffMfaEnforce ? { key: 'staffMfa', state: 'ok', note: 'Staff two-factor enforced.' } : { key: 'staffMfa', state: 'warn', note: 'Staff two-factor NOT enforced (set APP_ENV=production or STAFF_MFA_ENFORCE=true).' });
-  deps.push(config.demoMode ? { key: 'demoMode', state: 'warn', note: 'DEMO_MODE on: place/route fixtures may be used.' } : { key: 'demoMode', state: 'ok', note: 'Demo fixtures off.' });
+  deps.push(config.staffMfaEnforce ? { key: 'staffMfa', state: 'ok', note: 'mfaOn' } : { key: 'staffMfa', state: 'warn', note: 'mfaOff' });
+  deps.push(config.demoMode ? { key: 'demoMode', state: 'warn', note: 'demoOn' } : { key: 'demoMode', state: 'ok', note: 'demoOff' });
   return { env: config.env, production: config.isProduction, deps };
 }

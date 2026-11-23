@@ -20,7 +20,7 @@ interface Row {
 interface Event { at: string; kind: string; detail: string; bookingRef: string | null }
 
 type T = (k: MsgKey, v?: Record<string, string | number>) => string;
-const lbl = (t: T, k: string, fallback: string) => { const key = k as MsgKey; const v = t(key); return v === key ? fallback : v; };
+const lbl = (t: T, k: string, fallback: string, p?: Record<string, string | number>) => { const key = k as MsgKey; const v = (t as (k: MsgKey, p?: Record<string, string | number>) => string)(key, p); return v === key ? fallback : v; };
 const age = (t: T, s: number | null) => s == null ? t('staff.rel.noGps') : s < 120 ? t('staff.rel.gpsSec', { n: s }) : s < 7200 ? t('staff.rel.gpsMin', { n: Math.round(s / 60) }) : t('staff.rel.gpsDays', { n: Math.round(s / 86400) || '<1' });
 
 function Reliability() {
@@ -38,7 +38,7 @@ function Reliability() {
   }, [days]);
   useEffect(() => { load(); }, [load]);
   // Launch fixes §3: dependency states (SMS, malware scan, e-mail, push, maps, switches).
-  const [sys, setSys] = useState<{ env: string; deps: { key: string; state: 'ok' | 'warn' | 'missing'; note: string }[] } | null>(null);
+  const [sys, setSys] = useState<{ env: string; deps: { key: string; state: 'ok' | 'warn' | 'missing'; note: string; n?: number; names?: string }[] } | null>(null);
   useEffect(() => { api<NonNullable<typeof sys>>('/admin/system').then(setSys).catch(() => {}); }, []);
 
   async function openDriver(id: string) {
@@ -66,7 +66,7 @@ function Reliability() {
           <div className="mb-1 font-semibold">{t('staff.alerts.system', { env: sys.env })}</div>
           <ul className="grid gap-1 sm:grid-cols-2">
             {sys.deps.map((d) => (
-              <li key={d.key} className="flex gap-2 text-xs"><span className={d.state === 'ok' ? 'text-accent' : d.state === 'warn' ? 'text-warn' : 'text-danger'}>●</span><span className="font-medium">{d.key}</span><span className="text-muted">{d.note}</span></li>
+              <li key={d.key} className="flex gap-2 text-xs"><span className={d.state === 'ok' ? 'text-accent' : d.state === 'warn' ? 'text-warn' : 'text-danger'}>●</span><span className="font-medium">{lbl(t, `staff.alerts.depName.${d.key}`, d.key)}</span><span className="text-muted">{lbl(t, `staff.alerts.dep.${d.note}`, d.note, { n: d.n ?? 0, names: d.names ?? '' })}</span></li>
             ))}
           </ul>
         </div>
