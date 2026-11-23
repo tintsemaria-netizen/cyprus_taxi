@@ -18,10 +18,13 @@ export async function GET(req: Request) {
   });
 }
 
-// POST — mark everything as seen.
-export async function POST() {
+// POST — «Проверено»: { id } marks one change, no body (or {}) marks everything (operator 2026-11-23:
+// the section stays red until he has checked each one or pressed «Отметить всё проверенным»).
+export async function POST(req?: Request) {
   const ctx = await requireOwner();
   if ('error' in ctx) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();
-  await prisma.staffAction.updateMany({ where: { seenAt: null }, data: { seenAt: new Date() } });
-  return apiOk({ ok: true });
+  let id: string | null = null;
+  try { const b = await req?.json(); if (b && typeof b.id === 'string') id = b.id; } catch { /* no body = all */ }
+  await prisma.staffAction.updateMany({ where: { seenAt: null, ...(id ? { id } : {}) }, data: { seenAt: new Date() } });
+  return apiOk({ ok: true, unread: await prisma.staffAction.count({ where: { seenAt: null } }) });
 }

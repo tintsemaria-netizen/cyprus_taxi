@@ -440,11 +440,15 @@ const staff = {
   },
   changes: {
     title: 'Not your changes',
-    sub: 'What other admins changed: who, when and where. While there is something new, the menu item is red.',
+    sub: 'What other admins changed: who, when and where. The menu item stays red until you check each change or press «Mark all as checked».',
     none: 'No changes yet.',
     markRead: 'Mark all as read',
     verb: { POST: 'added / did', PUT: 'changed', PATCH: 'changed', DELETE: 'deleted' },
     area: { drivers: 'Drivers', vehicles: 'Vehicles', fleets: 'Fleets', fixedPrices: 'Fixed prices', minFares: 'Pre-booking minimum', settings: 'Settings', passengers: 'Clients', applications: 'Applications', staff: 'Staff', accounting: 'Accounting', dispatch: 'Dispatch', misc: 'Other' },
+    check: 'Checked',
+    checked: 'checked',
+    checkAll: 'Mark all as checked ({n})',
+    popup: 'New change',
     newMark: 'new',
   },
 };

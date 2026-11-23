@@ -24,22 +24,33 @@ export interface Me {
 const ALERT = 'bg-danger font-semibold text-white';
 /** The change log page tells the menu it has been read. */
 export const CHANGES_SEEN = 'il-y:changes-seen';
+interface ChangeLast { id: string; actor: string; method: string; area: string }
 
 export function StaffShell({ roles, children }: { roles: Me['role'][]; children: (me: Me) => React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useT();
   const [me, setMe] = useState<Me | null>(null);
-  // New «Не ваши изменения» for the superadmin: checked every 30 s and when the app comes back.
+  // «Не ваши изменения» for the superadmin (2026-11-23, operator): checked every 10 s and when the app
+  // comes back. A new change pops up a silent banner; the item stays red until each change is checked.
   const [unread, setUnread] = useState(0);
+  const [popup, setPopup] = useState<ChangeLast | null>(null);
   const isOwner = !!me?.isOwner;
   useEffect(() => { setUnread(me?.unreadChanges ?? 0); }, [me?.unreadChanges]);
   useEffect(() => {
     if (!isOwner) return;
-    const check = () => { void api<{ unread: number }>('/admin/changes/count').then((r) => setUnread(r.unread)).catch(() => {}); };
-    const id = window.setInterval(check, 30_000);
+    let lastId: string | null | undefined; // undefined = first check: no pop-up for what was already there
+    const check = () => {
+      void api<{ unread: number; last: ChangeLast | null }>('/admin/changes/count').then((r) => {
+        setUnread(r.unread);
+        if (lastId !== undefined && r.last && r.last.id !== lastId && window.location.pathname !== '/admin/changes') setPopup(r.last);
+        lastId = r.last?.id ?? null;
+      }).catch(() => {});
+    };
+    check();
+    const id = window.setInterval(check, 10_000);
     const onVis = () => { if (document.visibilityState === 'visible') check(); };
-    const onSeen = () => setUnread(0);
+    const onSeen = (e: Event) => { setUnread((e as CustomEvent<number>).detail ?? 0); setPopup(null); };
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener(CHANGES_SEEN, onSeen);
     return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', onVis); window.removeEventListener(CHANGES_SEEN, onSeen); };
@@ -157,6 +168,16 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
             </a>
           ))}
         </nav>
+      )}
+      {popup && (
+        <div className="fixed inset-x-3 z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-danger bg-elevated p-3 text-sm shadow-xl" style={{ top: 'calc(env(safe-area-inset-top) + 0.75rem)' }} data-testid="change-popup" role="status">
+          <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-danger" />
+          <a href="/admin/changes" className="min-w-0 flex-1">
+            <span className="block text-xs text-muted">{t('staff.changes.popup')}</span>
+            <span className="font-semibold">{popup.actor}</span> {t(`staff.changes.verb.${popup.method}` as 'staff.changes.verb.POST')} · {t(`staff.changes.area.${popup.area}` as 'staff.changes.area.misc')}
+          </a>
+          <button type="button" aria-label="✕" onClick={() => setPopup(null)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-white/5">✕</button>
+        </div>
       )}
       <main className="flex-1">{children(me)}</main>
     </div>

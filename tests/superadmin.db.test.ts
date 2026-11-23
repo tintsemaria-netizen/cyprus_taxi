@@ -76,7 +76,12 @@ describe('superadmin', () => {
     expect(await prisma.staffAction.count()).toBe(2);
     const list = await (await changes.GET(new Request('http://localhost:3000/api/v1/admin/changes'))).json();
     expect(list.unread).toBe(2);
-    expect((await (await changesCount.GET()).json()).unread).toBe(2);
+    const cnt = await (await changesCount.GET()).json();
+    expect(cnt.unread).toBe(2);
+    expect(cnt.last).toMatchObject({ actor: 'Nikos' });
+    // «Проверено» on one: still red (1 left)
+    const one = await (await changes.POST(new Request('http://localhost:3000/api/v1/admin/changes', { method: 'POST', body: JSON.stringify({ id: cnt.last.id }) }))).json();
+    expect(one.unread).toBe(1);
     expect(list.actions[0]).toMatchObject({ actor: 'Nikos', area: 'minFares', method: 'POST' });
     await changes.POST();
     expect((await (await changes.GET(new Request('http://localhost:3000/api/v1/admin/changes'))).json()).unread).toBe(0);
