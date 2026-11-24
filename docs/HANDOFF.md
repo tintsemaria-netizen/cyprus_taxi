@@ -2840,6 +2840,12 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-24 22:45 — far pickup follows the passenger on return (DEPLOYED 82223e3)
+
+- Operator: came back to the app at the marina, the logo still at Paphos airport. BookingApp locate-on-return
+  (`useRefreshOnReturn` ≥ 60 s): `replaceable(pos)` = untouched auto pickup OR (no destination and pickup
+  > 500 m from the fresh fix) → pickup moves to the current position. Simulated locally (visibility + new geo).
+
 ## 2026-11-24 22:30 — landing glide 1.5 s, ease in-out (DEPLOYED 114b375)
 
 - SPOT_GLIDE_MS 1500; Google centerPointAt and MapLibre focus glides now ease in-out (cubic) — also used by
