@@ -11,7 +11,7 @@ import { Logo } from '@/components/Brand';
 import { BRAND_PIN_SVG, BRAND_PIN_SVG_RED } from '@/components/carMarker';
 import { pinPoint } from '@/components/mapFit';
 import { onCyprusIsland } from '@/lib/cyprus-island';
-import { areaBlock, loadNoGo } from '@/lib/area-client';
+import { areaBlock, loadNoGo, pickupSnap } from '@/lib/area-client';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import type { Selected } from './PlacesInput';
 import { setNearHint } from '@/lib/nearHint';
@@ -557,7 +557,24 @@ export default function BookingApp() {
   // The pin let go in the sea / abroad (2026-11-24, operator): no pickup there — the logo turns red while
   // the map glides back to the last pickup, then lime again. No text (operator: «убери надпись»).
   const [offIsland, setOffIsland] = useState(false);
-  useEffect(() => { void loadNoGo(); }, []);
+  const [noGoReady, setNoGoReady] = useState(0);
+  useEffect(() => { void loadNoGo().then(() => setNoGoReady((n) => n + 1)); }, []);
+  // «Одна точка подачи» (2026-11-24, operator): a pickup inside such a territory moves to its one point; a short
+  // note says so and the map goes there (the price and the order use the point too — the server snaps again).
+  const [snapNote, setSnapNote] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pickup) return;
+    const sp = pickupSnap(pickup);
+    if (!sp || (Math.abs(sp.lat - pickup.lat) < 1e-6 && Math.abs(sp.lng - pickup.lng) < 1e-6)) return;
+    pickSeq.current++; // a reverse-geocode still running must not overwrite the point's name
+    dragPick.current = null;
+    setPickup({ lat: sp.lat, lng: sp.lng, label: sp.name });
+    setPickupText(sp.name);
+    setSnapNote(sp.name);
+    const id = window.setTimeout(() => setSnapNote(null), 5000);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickup?.lat, pickup?.lng, noGoReady]);
   const offTimer = useRef<number | null>(null);
   function onCenterPick(p: { lat: number; lng: number; zoom: number }) {
     setPinLift(false);
@@ -1191,6 +1208,11 @@ export default function BookingApp() {
             <div className="h-full w-full bg-page" />
           ) : (
             <AutoMapView markers={markers} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : camFocus} focusZoom={pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
+          )}
+          {snapNote && (
+            <div className="pointer-events-none absolute inset-x-3 top-3 z-[6] mx-auto max-w-sm rounded-[12px] border border-[#4C9AFF] bg-elevated px-3 py-2 text-center text-[13px] font-medium leading-snug text-ink shadow-lg" data-testid="pickup-snap-note">
+              📍 {t('booking.pickupPoint', { name: snapNote })}
+            </div>
           )}
           {centerMode && mapBox.w > 0 && (() => {
             const pt = pinPoint(fitPadding, mapBox.w, mapBox.h);

@@ -201,6 +201,7 @@ const booking: Catalog<typeof en> = {
     myRides: 'Мои поездки',
     open: 'Открыть предзаказ',
   },
+  pickupPoint: 'Здесь подача только в одной точке: {name}',
   pickupAt: {
     title: 'Во сколько подать машину?',
     time: 'Время подачи',

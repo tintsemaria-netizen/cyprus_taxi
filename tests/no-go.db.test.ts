@@ -32,4 +32,19 @@ describe('no-go zones', () => {
     const r = await createBooking(inp(inside, lca), key());
     if (!r.ok) expect(r.code).not.toBe('NO_GO_ZONE');
   });
+
+  it('«одна точка подачи»: a pickup inside the territory goes to its one point; outside — unchanged', async () => {
+    const t = await prisma.noGoZone.create({ data: { name: 'Gate 3', kind: 'POINT', polygon: sq, pointLat: 34.7050, pointLng: 33.1050 } });
+    invalidateNoGoCache();
+    try {
+      const r = await createBooking(inp(inside, lca), key());
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        const b = await prisma.booking.findUniqueOrThrow({ where: { reference: r.body.reference } });
+        expect([b.pickupLat, b.pickupLng, b.pickupLabel]).toEqual([34.705, 33.105, 'Gate 3']);
+      }
+      const r2 = await createBooking(inp(lim, lca), key());
+      if (r2.ok) expect((await prisma.booking.findUniqueOrThrow({ where: { reference: r2.body.reference } })).pickupLat).toBe(lim.lat);
+    } finally { await prisma.noGoZone.delete({ where: { id: t.id } }); invalidateNoGoCache(); }
+  });
 });

@@ -2798,3 +2798,11 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Passenger: public GET /api/v1/no-go (active polygons) → src/lib/area-client.ts areaBlock() = island + no-go; RouteEditor,
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
+
+## 2026-11-24 16:10 — «Одна точка подачи» (branch `pickup-points`, NOT deployed — shown to operator)
+- Same tab «Запретная зона», second section (blue): a territory + ONE pickup point. NoGoZone.kind NOGO|POINT, pointLat/Lng
+  (migration 20261124170000_pickup_points). Admin form: «Углы территории» / «📍 Точка подачи» (click on map, onPick).
+- Server: snapPickup() in createBooking and /quote (pickup inside → the point, label = territory name).
+- Passenger: /api/v1/no-go returns points; area-client pickupSnap(); BookingApp moves the pickup to the point and shows a blue
+  note «Здесь подача только в одной точке: …» (booking.pickupPoint, 8 langs) for 5 s; map follows.
+- Tests: no-go.db.test.ts snap case. Not yet: driver sees nothing special (just the pickup address = point name).

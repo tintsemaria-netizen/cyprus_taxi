@@ -1,7 +1,7 @@
 import { lookupPostcode } from '@/server/postcode';
 import { SHARE_MAX_PEOPLE, SHARE_MAX_BAGS } from '@/lib/share';
 import { onCyprusIsland } from '@/lib/cyprus-island';
-import { firstNoGo } from '@/server/no-go';
+import { firstNoGo, snapPickup } from '@/server/no-go';
 import { startSearchTx } from '@/server/dispatch/search';
 import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
@@ -57,6 +57,8 @@ export async function createBooking(
   if (input.stop && !onCyprusIsland(input.stop)) return fail(422, 'OFF_ISLAND', 'The stop is not on the island of Cyprus.', { stop: 'Not on Cyprus.' });
   // «Запретная зона» (2026-11-24, operator): the taxi does not go into a red area.
   { const k = await firstNoGo({ pickup: input.pickup, dropoff: input.dropoff, stop: input.stop }); if (k) return fail(422, 'NO_GO_ZONE', 'The taxi does not go to this area.', { [k]: 'No-go area.' }); }
+  // «Одна точка подачи» (2026-11-24): a pickup inside such a territory goes to its one point.
+  input = { ...input, pickup: await snapPickup(input.pickup) };
 
   // 2. Service area (both stops inside configured polygon)
   const poly = settings.serviceAreaPolygon;

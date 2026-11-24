@@ -1,10 +1,10 @@
 import { apiOk } from '@/lib/http';
-import { noGoZones } from '@/server/no-go';
+import { noGoZones, pickupPoints } from '@/server/no-go';
 
 export const dynamic = 'force-dynamic';
 
 // Active «Запретная зона» polygons for the passenger app (2026-11-24): a point inside is refused right
 // where it is picked, not only at the price. Public — they are just map areas.
 export async function GET() {
-  return apiOk({ zones: (await noGoZones()).map((z) => z.polygon) });
+  return apiOk({ zones: (await noGoZones()).map((z) => z.polygon), points: (await pickupPoints()).map((z) => ({ polygon: z.polygon, lat: z.lat, lng: z.lng, name: z.name })) });
 }

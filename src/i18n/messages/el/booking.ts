@@ -196,6 +196,7 @@ const booking: Catalog<typeof en> = {
     myRides: 'Οι διαδρομές μου',
     open: 'Άνοιγμα προκράτησης',
   },
+  pickupPoint: 'Η παραλαβή εδώ γίνεται μόνο σε ένα σημείο: {name}',
   pickupAt: {
     title: 'Τι ώρα να έρθει το αυτοκίνητο;',
     time: 'Ώρα παραλαβής',

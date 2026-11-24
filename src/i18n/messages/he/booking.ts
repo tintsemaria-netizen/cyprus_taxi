@@ -209,6 +209,7 @@ const booking: Catalog<typeof en> = {
     myRides: "הנסיעות שלי",
     open: "פתיחת ההזמנה מראש",
   },
+  pickupPoint: 'האיסוף כאן רק בנקודה אחת: {name}',
   pickupAt: {
     title: 'באיזו שעה הרכב צריך לאסוף אותך?',
     time: 'שעת איסוף',

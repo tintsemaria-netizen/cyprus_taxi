@@ -193,6 +193,7 @@ const booking = {
     myRides: 'My rides',
     open: 'Open pre-booking',
   },
+  pickupPoint: 'Pickup here is only at one point: {name}',
   pickupAt: {
     title: 'What time should the car pick you up?',
     time: 'Pickup time',
