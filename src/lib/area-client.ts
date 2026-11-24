@@ -32,6 +32,23 @@ export function areaBlock(p: { lat: number; lng: number }): 'OFF_ISLAND' | 'NO_G
 export const allTerritories = (): Territory[] => territories;
 export const spotLabel = (t: Territory, i: number) => (t.points[i].name ? `${t.name} · ${t.points[i].name}` : t.name);
 
+/** The pickup territory a point is in — or, with `radiusM`, the one whose edge is that close (2026-11-24, operator:
+ *  at island zoom the airport is a dot; a logo let go next to it, even over the sea beside it, goes to its point). */
+export function territoryNear(p: { lat: number; lng: number }, radiusM: number): { t: Territory; on: number; nearest: number } | null {
+  const inside = territoryAt(p);
+  if (inside || radiusM <= 0) return inside;
+  const k = Math.cos((p.lat * Math.PI) / 180);
+  let best: Territory | null = null, bd = Infinity;
+  for (const t of territories) for (const [la, ln] of t.polygon) {
+    const d = Math.hypot((la - p.lat) * 110540, (ln - p.lng) * 111320 * k);
+    if (d < bd) { bd = d; best = t; }
+  }
+  if (!best || bd > radiusM) return null;
+  let nearest = 0, nd = Infinity;
+  best.points.forEach((s, i) => { const d = Math.hypot((s.lat - p.lat) * 110540, (s.lng - p.lng) * 111320 * k); if (d < nd) { nd = d; nearest = i; } });
+  return { t: best, on: -1, nearest };
+}
+
 /** The pickup territory a point is in, with the point it is on (if any) and the nearest one. */
 export function territoryAt(p: { lat: number; lng: number }): { t: Territory; on: number; nearest: number } | null {
   for (const t of territories) {

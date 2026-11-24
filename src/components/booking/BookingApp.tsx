@@ -12,7 +12,7 @@ import { BRAND_PIN_SVG, BRAND_PIN_SVG_RED } from '@/components/carMarker';
 import { pinPoint } from '@/components/mapFit';
 import { haversineMeters } from '@/lib/geo';
 import { onCyprusIsland } from '@/lib/cyprus-island';
-import { areaBlock, loadNoGo, territoryAt, spotLabel, allTerritories } from '@/lib/area-client';
+import { areaBlock, loadNoGo, territoryAt, territoryNear, spotLabel, allTerritories } from '@/lib/area-client';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import type { Selected } from './PlacesInput';
 import { setNearHint } from '@/lib/nearHint';
@@ -651,8 +651,14 @@ export default function BookingApp() {
     if (!centerModeRef.current) return;
     const zoomed = zoomRef.current != null && Math.abs(p.zoom - zoomRef.current) > 0.05;
     zoomRef.current = p.zoom;
-    if (zoomed && onSpotRef.current) return; // looking around the airport: the pickup stays on its point
-    if (areaBlock(p)) { // off the island or in a «Запретная зона» (2026-11-24)
+    // A logo let go on / next to a pickup territory goes to its point — checked BEFORE the sea check: at island
+    // zoom the airport's circle touches the sea and a drop on it was treated as «in the sea» (2026-11-24 22:49).
+    // «Next to»: 30 px on the screen, at most 1.5 km.
+    const mpp = (156543 * Math.cos((p.lat * Math.PI) / 180)) / 2 ** p.zoom;
+    const tz = territoryNear(p, Math.min(1500, 30 * mpp));
+    // Zooming while on a point only looks around — as long as the middle stays on that territory.
+    if (zoomed && onSpotRef.current && tz && terrRef.current && tz.t === terrRef.current.t) return;
+    if (!tz && areaBlock(p)) { // off the island or in a «Запретная зона» (2026-11-24)
       setOffIsland(true);
       // A short buzz with the red, shaking logo (operator 2026-11-24). Android browsers vibrate; iPhone
       // Safari has no vibration for web pages — there only the logo shakes (the native app can buzz later).
@@ -663,7 +669,6 @@ export default function BookingApp() {
       return;
     }
     setOffIsland(false);
-    const tz = territoryAt(p);
     if (tz) { // let go inside a pickup territory: the logo slides straight to the nearest point
       const i = tz.nearest, sp = tz.t.points[i], label = spotLabel(tz.t, i);
       slidePin(p, sp, SPOT_ZOOM);
@@ -692,7 +697,12 @@ export default function BookingApp() {
   const centerMode = step === 'form' && !dropoff && !picker && !!(pickup || myLoc);
   const onSpot = centerMode && !!terr && terr.on >= 0;
   const onSpotRef = useRef(onSpot); onSpotRef.current = onSpot;
-  const pinOverlay = centerMode && (!onSpot || landing);
+  const terrRef = useRef(terr); terrRef.current = terr;
+  // The overlay stays 300 ms after the landing: the map marker takes a moment to appear and the logo must not
+  // blink out in between (both stand on the same pixel).
+  const [landTail, setLandTail] = useState(false);
+  useEffect(() => { if (landing) return; setLandTail(true); const id = window.setTimeout(() => setLandTail(false), 300); return () => window.clearTimeout(id); }, [landing]);
+  const pinOverlay = centerMode && (!onSpot || landing || landTail);
   // No «you are here» person on the passenger's maps (2026-11-17): only the IL-Y pickup logo.
   const markers = useMemo<MapMarker[]>(() => {
     const m: MapMarker[] = [];
