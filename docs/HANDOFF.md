@@ -2698,7 +2698,7 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   (an over-large Akrotiri box had covered Limassol's sea front); Ayia Napa marina added explicitly. 2732 pts, ~61 KB.
   Tests 430 passed / 1 skipped.
 
-## 2026-11-24 — Centre pin back from the sea: red logo, no text (branch `pin-red`, NOT deployed — shown to operator)
+## 2026-11-24 — Centre pin back from the sea: red logo, no text — DEPLOYED (operator «Заливай»)
 - Off-island drop: the logo turns red (BRAND_PIN_SVG_RED in carMarker.ts) for ~1.1 s while the map glides back (Google:
   centerPointAt animate 700 ms on recenterTick, a drag cancels it; MapLibre easeTo already glides). Red text note removed.
   Map pickers / address search keep their red line (only the home logo changed).
