@@ -87,8 +87,6 @@ export async function planWithRoads<T>(run: (leg: LegFn) => T, departure: Date |
   return { result, routed };
 }
 
-// Live matching runs every worker tick while a ride searches; road-route a newcomer at most every 15 s.
-const lastLiveTry = new Map<string, number>();
 
 async function lockBookings(tx: Tx, ids: string[]) {
   // One lock order everywhere (sorted ids) so two groups never deadlock each other.
@@ -114,28 +112,25 @@ export async function tryLiveShare(guestId: string, now: Date = new Date()): Pro
   if (await decideLive(guestId, now)) return true;
   const open = await prisma.shareGroup.findMany({ where: { guestBookingId: guestId, mode: 'LIVE', status: 'PROPOSED' } });
   if (open.some((g) => g.driverAnswer === 'YES' || g.expiresAt > now)) return true;
-  // Up to LIVE_SEARCH_SEC (operator 2026-11-24: «две минуты прогнал — не нашёл — пошёл обычный заказ без −30%»):
-  // the search starts at the first call and holds ordinary offers; the dispatch job gets that time back once.
+  // Three passes 10 s apart (operator 2026-11-24: «три подхода по 10 секунд»): a car that comes along on the
+  // way in those ~20 s still gets him; a driver who gets him keeps 60 s to answer. Then an ordinary car, no −30%.
   const startEv = await prisma.bookingEvent.findFirst({ where: { bookingId: guestId, type: 'SHARE_LIVE_SEARCH' }, orderBy: { createdAt: 'asc' } });
-  let startedAt = startEv?.createdAt ?? null;
-  if (!startedAt) {
+  if (!startEv) {
     if (await prisma.shareGroup.count({ where: { guestBookingId: guestId } })) return false; // searched before (old rule)
-    startedAt = now;
     await prisma.$transaction(async (tx) => {
-      await tx.bookingEvent.create({ data: { bookingId: guestId, type: 'SHARE_LIVE_SEARCH', actorType: 'SYSTEM', reason: `co-rider search up to ${LIVE_SEARCH_SEC} s`, createdAt: now } });
+      await tx.bookingEvent.create({ data: { bookingId: guestId, type: 'SHARE_LIVE_SEARCH', actorType: 'SYSTEM', reason: `co-rider search: ${LIVE_PASSES} passes, ${LIVE_PASS_GAP_SEC} s apart`, createdAt: now } });
       const job = await tx.dispatchJob.findUnique({ where: { bookingId: guestId } });
-      if (job) await tx.dispatchJob.update({ where: { id: job.id }, data: { deadlineAt: new Date(Math.max(now.getTime(), job.deadlineAt.getTime()) + LIVE_SEARCH_SEC * 1000) } });
+      if (job) await tx.dispatchJob.update({ where: { id: job.id }, data: { deadlineAt: new Date(Math.max(now.getTime(), job.deadlineAt.getTime()) + LIVE_SEARCH_SPAN_SEC * 1000) } });
     });
   }
-  const endAt = startedAt.getTime() + LIVE_SEARCH_SEC * 1000;
-  if (now.getTime() >= endAt) return false; // nobody on the way in time → an ordinary car at the full price
-  // A new round only with time left for a driver to answer.
-  if (endAt - now.getTime() < LIVE_MIN_ANSWER_SEC * 1000) return true;
-
-  const last = lastLiveTry.get(guestId) ?? 0;
-  if (now.getTime() - last < 15_000) return true; // still searching
-  lastLiveTry.set(guestId, now.getTime());
-  if (lastLiveTry.size > 2000) for (const [k, v] of lastLiveTry) if (now.getTime() - v > 10 * MIN) lastLiveTry.delete(k);
+  const startedAt = startEv?.createdAt.getTime() ?? now.getTime();
+  const pass = livePass.get(guestId) ?? { n: 0, last: 0 };
+  if (pass.n >= LIVE_PASSES) return false; // three passes done, nobody pending → ordinary car
+  if (now.getTime() - startedAt > (LIVE_SEARCH_SPAN_SEC + 15) * 1000) return false; // e.g. after a restart: no endless search
+  if (pass.n > 0 && now.getTime() - pass.last < LIVE_PASS_GAP_SEC * 1000) return true; // between passes
+  pass.n += 1; pass.last = now.getTime();
+  livePass.set(guestId, pass);
+  if (livePass.size > 2000) for (const [k, v] of livePass) if (now.getTime() - v.last > 10 * MIN) livePass.delete(k);
 
   // Cars already offered this newcomer are not asked again.
   const asked = (await prisma.shareGroup.findMany({ where: { guestBookingId: guestId }, select: { hostBookingId: true } })).map((g) => g.hostBookingId);
@@ -176,15 +171,16 @@ export async function tryLiveShare(guestId: string, now: Date = new Date()): Pro
     if (plan.arrive.guestPickup > LIVE_PICKUP_MAX_MIN) continue; // «сейчас + 15 минут»: the car must be with him within 15 min
     fits.push({ hostId: c.host.id, driverId: c.host.assignments[0].driverId, plan, routed });
   }
-  if (!fits.length) return true; // nobody on the way yet — keep looking until LIVE_SEARCH_SEC
-  await proposeLiveAll(guestId, fits.slice(0, LIVE_MAX_OFFERS), now, new Date(endAt));
-  return true;
+  if (!fits.length) return pass.n < LIVE_PASSES; // nobody on the way yet — the next pass in 10 s, after the third: an ordinary car
+  if (await proposeLiveAll(guestId, fits.slice(0, LIVE_MAX_OFFERS), now)) return true;
+  return pass.n < LIVE_PASSES;
 }
 
-/** «Попутчик» on a ride NOW (operator 2026-11-24): look for a car on the way for 2 minutes, then an ordinary car. */
-export const LIVE_SEARCH_SEC = 120;
-/** A round of offers is only sent with at least this much answer time left. */
-const LIVE_MIN_ANSWER_SEC = 20;
+/** «Попутчик» on a ride NOW (operator 2026-11-24): three passes 10 s apart for a car on the way, then an ordinary car. */
+export const LIVE_PASSES = 3;
+export const LIVE_PASS_GAP_SEC = 10;
+const LIVE_SEARCH_SPAN_SEC = (LIVE_PASSES - 1) * LIVE_PASS_GAP_SEC;
+const livePass = new Map<string, { n: number; last: number }>();
 /** «Сейчас + 15 минут на попутчика»: the co-rider car must reach the newcomer within this. */
 export const LIVE_PICKUP_MAX_MIN = 15;
 /** Extra time on the road for a live co-rider ride: 15 min for everyone (operator 2026-11-24, no 10/30 choice). */
@@ -211,7 +207,7 @@ function hostArrivesInTime(h: { arriveBy: Date | null; scheduledAt: Date | null;
  * (fewest extra minutes for him), then the earlier yes. Only ONE car ever gets the co-rider
  * (activeGuestBookingId is set on the winner alone, and it is unique). Nobody takes it → an ordinary car.
  */
-async function proposeLiveAll(guestId: string, offers: LiveOffer[], now: Date, searchEnd?: Date): Promise<boolean> {
+async function proposeLiveAll(guestId: string, offers: LiveOffer[], now: Date): Promise<boolean> {
   try {
     return await prisma.$transaction(async (tx) => {
       await lockBookings(tx, [guestId, ...offers.map((o) => o.hostId)]);
@@ -219,7 +215,7 @@ async function proposeLiveAll(guestId: string, offers: LiveOffer[], now: Date, s
       if (!g || g.status !== 'SEARCHING' || (await activeGroupOf(tx, guestId))) return false;
       // The guest may not be offered to an ordinary driver at the same time.
       if (await tx.driverOffer.findFirst({ where: { activeBookingId: guestId } })) return false;
-      const expiresAt = new Date(Math.min(now.getTime() + S().answerSec * 1000, searchEnd?.getTime() ?? Infinity));
+      const expiresAt = new Date(now.getTime() + S().answerSec * 1000); // the driver keeps his 60 s (operator 2026-11-24)
       let made = 0;
       for (const o of offers) {
         const h = await tx.booking.findUnique({ where: { id: o.hostId } });
@@ -233,7 +229,9 @@ async function proposeLiveAll(guestId: string, offers: LiveOffer[], now: Date, s
       }
       if (!made) return false;
       await tx.bookingEvent.create({ data: { bookingId: guestId, type: 'SHARE_PROPOSED', actorType: 'SYSTEM', reason: `offered to ${made} co-rider car(s)` } });
-      // The newcomer's normal search already got the whole co-rider search time back (tryLiveShare).
+      // Give the newcomer's normal search the answer time back, so «nobody» still leaves time to search.
+      const job = await tx.dispatchJob.findUnique({ where: { bookingId: guestId } });
+      if (job) await tx.dispatchJob.update({ where: { id: job.id }, data: { deadlineAt: new Date(Math.max(now.getTime(), job.deadlineAt.getTime()) + (S().answerSec + LIVE_SAME_TIME_SEC) * 1000) } });
       return true;
     });
   } catch (e) {

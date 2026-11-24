@@ -45,7 +45,7 @@ const share: Catalog<typeof en> = {
     adults: "Dorośli",
     children: "Dzieci",
     luggage: "Walizki",
-    liveTerms: 'Szukamy auta ze współpasażerem po drodze do {sec} min. Odbierze Cię w ciągu {min} min, a przejazd potrwa najwyżej {min} min dłużej. Nie znaleziono — zwykłe auto w pełnej cenie.',
+    liveTerms: 'Szukamy auta ze współpasażerem po drodze przez około {sec} sekund. Odbierze Cię w ciągu {min} min, a przejazd potrwa najwyżej {min} min dłużej. Nie znaleziono — zwykłe auto w pełnej cenie.',
     maxExtra: "O ile dłużej może trwać przejazd?",
     wait: "Ile możesz poczekać na współpasażera?",
     noWait: "Nie czekam",

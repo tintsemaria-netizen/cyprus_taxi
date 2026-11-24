@@ -2754,8 +2754,9 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   normal car at full price. Still max two orders per car («за третьего никто не говорил» — City of Dreams + Amara = two).
 - UPDATE 04:55 (branch `live-2min`, NOT deployed): operator clarified «сейчас = сейчас + 15 минут на попутчика; если прямо сейчас —
   без попутчика» and answered: «две минуты прогнал, не нашёл — обычный заказ без −30%», «оставь 15 минут».
-  share.ts tryLiveShare: search for a car on the way for LIVE_SEARCH_SEC 120 s from the first try (event SHARE_LIVE_SEARCH; the
-  dispatch job gets those 120 s back once), rounds every 15 s to cars not asked yet, offers expire at the end of the 2 min at the
-  latest, a round needs ≥ 20 s left; the co-rider car must reach the newcomer within LIVE_PICKUP_MAX_MIN 15; extra time on the road
+  05:33 operator: «две минуты много — три подхода по 10 секунд; ответ водителю 60 секунд оставь».
+  share.ts tryLiveShare: LIVE_PASSES 3 passes LIVE_PASS_GAP_SEC 10 s apart (≈20 s; start event SHARE_LIVE_SEARCH, the dispatch job
+  gets 20 s back once, each offer round adds its 60 s answer time), each pass offers to cars not asked yet; a driver keeps 60 s;
+  after the third pass with nothing pending → ordinary car (safety: >35 s since start → ordinary); the co-rider car must reach the newcomer within LIVE_PICKUP_MAX_MIN 15; extra time on the road
   min(chosen, 15) for both (liveMax). UI: the 10/15/30 choice for a ride NOW replaced by a note (share.booking.liveTerms, 8 langs);
-  BookingApp sends shareMaxExtraMin 15 for NOW. Tests: ride-share live tests updated + «a car that comes along at 40 s gets it».
+  BookingApp sends shareMaxExtraMin 15 for NOW. Tests: ride-share live tests updated + «three passes: a car at the 2nd pass gets him, 60 s answer; none → ordinary».
