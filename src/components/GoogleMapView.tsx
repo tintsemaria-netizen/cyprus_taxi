@@ -450,12 +450,13 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   useEffect(() => () => cancelAnimationFrame(keepAnim.current), []);
 
   // Zoom to a focus point (the passenger's detected location) once it resolves, unless a
-  // full 2-stop route is already framed.
+  // full 2-stop route is already framed. Markers that are not framed (noFit: pickup-point dots of a
+  // territory, 2026-11-24) do not count — they kept the camera from moving to the chosen point.
   const focusKey = focus ? `${focus.lat.toFixed(5)},${focus.lng.toFixed(5)}` : '';
   const lastRecenter = useRef(recenterTick);
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
-    if (!map || !g || !ready || !focus || markers.length >= 2 || followRef.current || idle.active.current) return;
+    if (!map || !g || !ready || !focus || markers.filter((m) => !m.noFit).length >= 2 || followRef.current || idle.active.current) return;
     const fbox = containerRef.current?.getBoundingClientRect();
     const fpad = safePadding(fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 }, fbox?.width ?? 0, fbox?.height ?? 0);
     // «Моё местоположение» / back from the sea (recenterTick): glide; anything else: one exact move.

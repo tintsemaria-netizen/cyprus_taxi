@@ -546,6 +546,7 @@ export default function BookingApp() {
   // re-centre (the sheet opening) stays put instead of jumping back or zooming.
   const [noGoReady, setNoGoReady] = useState(0);
   useEffect(() => { void loadNoGo().then(() => setNoGoReady((n) => n + 1)); }, []);
+  const SPOT_ZOOM = 17;
   const HOME_ZOOM = 15.49; // 2026-11-17: 30 % further out than 16 (16 + log2 0.7)
   const dragPick = useRef<{ lat: number; lng: number } | null>(null);
   const [camFocus, setCamFocus] = useState<{ lat: number; lng: number } | null>(null);
@@ -554,10 +555,11 @@ export default function BookingApp() {
     const p = pickup ?? myLoc;
     if (!p) return;
     if (pickup && dragPick.current && dragPick.current.lat === pickup.lat && dragPick.current.lng === pickup.lng) return;
-    // On a pickup point of a territory (airport, port …) the camera zooms out so the whole rounded territory
-    // stays on screen around the chosen point (2026-11-24, operator) — switching points does not lose it.
+    // On a pickup point of a territory (airport, port …): ONE point — the logo jumps onto it and the map zooms in
+    // (operator 2026-11-24 20:08); SEVERAL — zoom out so the whole rounded territory stays on screen around the
+    // chosen point, so switching points does not lose it.
     const tz = pickup ? territoryAt(pickup) : null;
-    setCamFocus({ lat: p.lat, lng: p.lng }); setCamZoom(tz && tz.on >= 0 ? Math.min(HOME_ZOOM, fitZoom(p, tz.t.polygon)) : HOME_ZOOM);
+    setCamFocus({ lat: p.lat, lng: p.lng }); setCamZoom(!tz || tz.on < 0 ? HOME_ZOOM : tz.t.points.length === 1 ? SPOT_ZOOM : Math.min(HOME_ZOOM, fitZoom(p, tz.t.polygon)));
   }, [pickup?.lat, pickup?.lng, myLoc?.lat, myLoc?.lng, noGoReady]); // eslint-disable-line react-hooks/exhaustive-deps
   const [pinLift, setPinLift] = useState(false);
   const pickSeq = useRef(0);
