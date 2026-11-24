@@ -833,7 +833,7 @@ export default function BookingApp() {
         passengerName: name.trim() || passenger?.name || 'Passenger',
         phone: passenger?.phone || phone.trim(),
         note: effNote || undefined,
-        ...(shareOn ? { shareOptIn: true, shareMaxExtraMin: when === 'SCHEDULE' && pickRange ? (cfg?.share?.termsMaxExtraMin ?? 15) : shareOpts.maxExtra,
+        ...(shareOn ? { shareOptIn: true, shareMaxExtraMin: when === 'SCHEDULE' && !pickRange ? shareOpts.maxExtra : (cfg?.share?.termsMaxExtraMin ?? 15), // NOW: 15 min for everyone (2026-11-24)
           // The terms shown at booking (TZ 2026-11-23): paired automatically, inside this pickup interval.
           ...(when === 'SCHEDULE' && pickRange && cfg?.share?.termsVersion ? { shareTerms: cfg.share.termsVersion, sharePickupFrom: pickRange.from } : {}), childCount: shareOpts.children, ...(when === 'SCHEDULE' ? { shareWaitMin: shareOpts.wait, shareEarlyMin: shareOpts.early ?? 0 } : {}) } : {}),
       };

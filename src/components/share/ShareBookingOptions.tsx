@@ -57,7 +57,11 @@ export function ShareBookingOptions({ value, onChange, pct, maxPeople, prebook, 
           <Stepper label={t('share.booking.adults')} n={value.adults} min={1} max={maxPeople - value.children} onChange={(adults) => set({ adults })} />
           <Stepper label={t('share.booking.children')} n={value.children} min={0} max={Math.max(0, maxPeople - value.adults)} onChange={(children) => set({ children })} />
           <Stepper label={t('share.booking.luggage')} n={value.bags} min={0} max={6} onChange={(bags) => set({ bags })} />
-          {arrive ? <div className="pt-1" data-testid="share-arrive">{arrive}</div> : <>
+          {arrive ? <div className="pt-1" data-testid="share-arrive">{arrive}</div> : !prebook ? (
+            // A ride NOW (operator 2026-11-24): no 10/15/30 choice — ~20 s (3 passes) to find a car on the way, the car
+            // with him within 15 min, at most 15 min longer on the road; else an ordinary car at the full price.
+            <p className="rounded-[10px] border border-edge bg-page px-3 py-2 text-[13px] leading-snug text-ink" data-testid="share-live-terms">{t('share.booking.liveTerms', { sec: 20, min: 15 })}</p>
+          ) : <>
           <p className="label pt-1">{t(prebook ? 'share.booking.flex' : 'share.booking.maxExtra')}</p>
           <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t(prebook ? 'share.booking.flex' : 'share.booking.maxExtra')} data-testid="share-flex">
             {SHARE_FLEX.map((f) => {

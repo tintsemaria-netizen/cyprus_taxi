@@ -87,8 +87,6 @@ export async function planWithRoads<T>(run: (leg: LegFn) => T, departure: Date |
   return { result, routed };
 }
 
-// Live matching runs every worker tick while a ride searches; road-route a newcomer at most every 15 s.
-const lastLiveTry = new Map<string, number>();
 
 async function lockBookings(tx: Tx, ids: string[]) {
   // One lock order everywhere (sorted ids) so two groups never deadlock each other.
@@ -114,11 +112,31 @@ export async function tryLiveShare(guestId: string, now: Date = new Date()): Pro
   if (await decideLive(guestId, now)) return true;
   const open = await prisma.shareGroup.findMany({ where: { guestBookingId: guestId, mode: 'LIVE', status: 'PROPOSED' } });
   if (open.some((g) => g.driverAnswer === 'YES' || g.expiresAt > now)) return true;
-  // ONE round only: every fitting co-rider car got the offer at once; nobody took it → an ordinary car.
-  if (await prisma.shareGroup.count({ where: { guestBookingId: guestId } })) return false;
+  // Three passes 10 s apart (operator 2026-11-24: «три подхода по 10 секунд»): a car that comes along on the
+  // way in those ~20 s still gets him; a driver who gets him keeps 60 s to answer. Then an ordinary car, no −30%.
+  const startEv = await prisma.bookingEvent.findFirst({ where: { bookingId: guestId, type: 'SHARE_LIVE_SEARCH' }, orderBy: { createdAt: 'asc' } });
+  if (!startEv) {
+    if (await prisma.shareGroup.count({ where: { guestBookingId: guestId } })) return false; // searched before (old rule)
+    await prisma.$transaction(async (tx) => {
+      await tx.bookingEvent.create({ data: { bookingId: guestId, type: 'SHARE_LIVE_SEARCH', actorType: 'SYSTEM', reason: `co-rider search: ${LIVE_PASSES} passes, ${LIVE_PASS_GAP_SEC} s apart`, createdAt: now } });
+      const job = await tx.dispatchJob.findUnique({ where: { bookingId: guestId } });
+      if (job) await tx.dispatchJob.update({ where: { id: job.id }, data: { deadlineAt: new Date(Math.max(now.getTime(), job.deadlineAt.getTime()) + LIVE_SEARCH_SPAN_SEC * 1000) } });
+    });
+  }
+  const startedAt = startEv?.createdAt.getTime() ?? now.getTime();
+  const pass = livePass.get(guestId) ?? { n: 0, last: 0 };
+  if (pass.n >= LIVE_PASSES) return false; // three passes done, nobody pending → ordinary car
+  if (now.getTime() - startedAt > (LIVE_SEARCH_SPAN_SEC + 15) * 1000) return false; // e.g. after a restart: no endless search
+  if (pass.n > 0 && now.getTime() - pass.last < LIVE_PASS_GAP_SEC * 1000) return true; // between passes
+  pass.n += 1; pass.last = now.getTime();
+  livePass.set(guestId, pass);
+  if (livePass.size > 2000) for (const [k, v] of livePass) if (now.getTime() - v.last > 10 * MIN) livePass.delete(k);
 
+  // Cars already offered this newcomer are not asked again.
+  const asked = (await prisma.shareGroup.findMany({ where: { guestBookingId: guestId }, select: { hostBookingId: true } })).map((g) => g.hostBookingId);
   const hosts = await prisma.booking.findMany({
     where: {
+      id: { notIn: asked },
       status: { in: [...LIVE_HOST_STATUSES] }, shareOptIn: true, vClass: guest.vClass, fareCents: { not: null }, stopLat: null,
       shareAsHost: { none: { activeHostBookingId: { not: null } } }, shareAsGuest: { none: { activeGuestBookingId: { not: null } } },
       assignments: { some: { activeDriverId: { not: null }, driver: { acceptsShared: true, onDuty: true } } },
@@ -126,11 +144,6 @@ export async function tryLiveShare(guestId: string, now: Date = new Date()): Pro
     include: { assignments: { where: { activeDriverId: { not: null } }, include: { vehicle: true, driver: { include: { location: true } } } } },
     take: 50,
   });
-
-  const last = lastLiveTry.get(guestId) ?? 0;
-  if (now.getTime() - last < 15_000) return false;
-  lastLiveTry.set(guestId, now.getTime());
-  if (lastLiveTry.size > 2000) for (const [k, v] of lastLiveTry) if (now.getTime() - v > 10 * MIN) lastLiveTry.delete(k);
 
   const gp = pt(guest.pickupLat, guest.pickupLng);
   // 1) Straight-line prefilter with some slack, 2) road time for up to nine, best first.
@@ -144,22 +157,34 @@ export async function tryLiveShare(guestId: string, now: Date = new Date()): Pro
     const start = loc ? pt(loc.lat, loc.lng) : pt(h.pickupLat, h.pickupLng);
     if (haversineMeters(start, gp) > 40_000) continue; // far away: not "on the way"
     const pts = { start, Hp: pt(h.pickupLat, h.pickupLng), Hd: pt(h.dropoffLat, h.dropoffLng), Gp: gp, Gd: pt(guest.dropoffLat, guest.dropoffLng) };
-    const plan = bestSharePlan(pts, approxLegMin, { hostOnBoard: h.status === 'IN_PROGRESS', hostMaxExtra: maxExtra(h) + SLACK, guestMaxExtra: maxExtra(guest) + SLACK });
+    const plan = bestSharePlan(pts, approxLegMin, { hostOnBoard: h.status === 'IN_PROGRESS', hostMaxExtra: liveMax(h) + SLACK, guestMaxExtra: liveMax(guest) + SLACK });
     if (plan && !hostArrivesInTime(h, plan, now, SLACK)) continue;
+    if (plan && plan.arrive.guestPickup > LIVE_PICKUP_MAX_MIN + SLACK) continue;
     if (plan) pre.push({ host: h, plan, pts });
   }
   pre.sort((a, b) => a.plan.extraHost + a.plan.extraGuest - (b.plan.extraHost + b.plan.extraGuest));
   const fits: LiveOffer[] = [];
   for (const c of pre.slice(0, 9)) {
     const { result: plan, routed } = await planWithRoads(
-      (leg) => bestSharePlan(c.pts, leg, { hostOnBoard: c.host.status === 'IN_PROGRESS', hostMaxExtra: maxExtra(c.host), guestMaxExtra: maxExtra(guest) }), null);
+      (leg) => bestSharePlan(c.pts, leg, { hostOnBoard: c.host.status === 'IN_PROGRESS', hostMaxExtra: liveMax(c.host), guestMaxExtra: liveMax(guest) }), null);
     if (!plan || !hostArrivesInTime(c.host, plan, now)) continue; // «быть на месте до …» − 10 min is a hard deadline
+    if (plan.arrive.guestPickup > LIVE_PICKUP_MAX_MIN) continue; // «сейчас + 15 минут»: the car must be with him within 15 min
     fits.push({ hostId: c.host.id, driverId: c.host.assignments[0].driverId, plan, routed });
   }
-  if (!fits.length) return false;
-  return proposeLiveAll(guestId, fits.slice(0, LIVE_MAX_OFFERS), now);
+  if (!fits.length) return pass.n < LIVE_PASSES; // nobody on the way yet — the next pass in 10 s, after the third: an ordinary car
+  if (await proposeLiveAll(guestId, fits.slice(0, LIVE_MAX_OFFERS), now)) return true;
+  return pass.n < LIVE_PASSES;
 }
 
+/** «Попутчик» on a ride NOW (operator 2026-11-24): three passes 10 s apart for a car on the way, then an ordinary car. */
+export const LIVE_PASSES = 3;
+export const LIVE_PASS_GAP_SEC = 10;
+const LIVE_SEARCH_SPAN_SEC = (LIVE_PASSES - 1) * LIVE_PASS_GAP_SEC;
+const livePass = new Map<string, { n: number; last: number }>();
+/** «Сейчас + 15 минут на попутчика»: the co-rider car must reach the newcomer within this. */
+export const LIVE_PICKUP_MAX_MIN = 15;
+/** Extra time on the road for a live co-rider ride: 15 min for everyone (operator 2026-11-24, no 10/30 choice). */
+const liveMax = (b: { shareMaxExtraMin: number | null }) => Math.min(maxExtra(b), S().termsMaxExtraMin);
 /** At most this many co-rider cars get the same newcomer at once. */
 const LIVE_MAX_OFFERS = 5;
 /** Two drivers who say yes within this of each other count as «at the same time» (operator 2026-11-23). */
@@ -190,7 +215,7 @@ async function proposeLiveAll(guestId: string, offers: LiveOffer[], now: Date): 
       if (!g || g.status !== 'SEARCHING' || (await activeGroupOf(tx, guestId))) return false;
       // The guest may not be offered to an ordinary driver at the same time.
       if (await tx.driverOffer.findFirst({ where: { activeBookingId: guestId } })) return false;
-      const expiresAt = new Date(now.getTime() + S().answerSec * 1000);
+      const expiresAt = new Date(now.getTime() + S().answerSec * 1000); // the driver keeps his 60 s (operator 2026-11-24)
       let made = 0;
       for (const o of offers) {
         const h = await tx.booking.findUnique({ where: { id: o.hostId } });

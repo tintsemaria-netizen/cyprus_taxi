@@ -266,7 +266,7 @@ describe('live ride-share', () => {
     expect(await tryLiveShare(guest.id, new Date(t0.getTime() + 1500))).toBe(true); // settled after 1 s
     expect((await prisma.shareGroup.findUniqueOrThrow({ where: { id: o1.id } })).status).toBe('ACCEPTED');
     expect(await prisma.shareGroup.count({ where: { guestBookingId: guest.id, status: 'PROPOSED' } })).toBe(0);
-    // Another newcomer: nobody answers within 60 s → ordinary search, not offered again.
+    // Another newcomer: nobody answers within the driver's 60 s → the passes are over → an ordinary car.
     const g2 = await booking(lcaNear, limCentre);
     const d3 = await driver('Petros'); void d3;
     await prisma.shareGroup.updateMany({ where: { status: 'ACCEPTED' }, data: { status: 'ENDED', activeHostBookingId: null, activeGuestBookingId: null } });
@@ -286,14 +286,16 @@ describe('live ride-share', () => {
     expect((await fresh(host.id)).fareCents).toBe(6000);
     expect(await prisma.notificationOutbox.count({ where: { audience: `PASSENGER:${host.id}` } })).toBe(0); // he never heard of it
     expect((await fresh(guest.id)).status).toBe('SEARCHING');
-    expect(await tryLiveShare(guest.id)).toBe(false);
+    expect(await tryLiveShare(guest.id, new Date(Date.now() + 10_000))).toBe(true); // 2nd pass…
+    expect(await prisma.shareGroup.count({ where: { guestBookingId: guest.id } })).toBe(1); // …not the same car again
+    expect(await tryLiveShare(guest.id, new Date(Date.now() + 20_000))).toBe(false); // 3rd pass, nobody → ordinary car
 
     // Silence: a second guest's proposal expires.
     const guest2 = await booking(lcaNear, limCentre);
     expect(await tryLiveShare(guest2.id)).toBe(true);
     expect(await expireShares(new Date(Date.now() + (config.share.answerSec + 1) * 1000))).toBe(1);
     expect((await prisma.shareGroup.findFirst({ where: { guestBookingId: guest2.id } }))!.status).toBe('EXPIRED');
-    expect(await tryLiveShare(guest2.id)).toBe(false);
+    expect(await tryLiveShare(guest2.id, new Date(Date.now() + 125_000))).toBe(false); // passes over → ordinary car
   });
 
   it('«быть на месте до …»: a live co-rider that would make the passenger in the car late is never proposed', async () => {
@@ -303,11 +305,34 @@ describe('live ride-share', () => {
     // Deadline = solo drive + 1 min: any detour for a co-rider would make the host late.
     await prisma.booking.update({ where: { id: host.id }, data: { arriveBy: new Date(Date.now() + (solo + 1) * MIN), arriveFrom: new Date(Date.now() + (solo - 30) * MIN) } });
     const guest = await booking(lcaNear, limCentre, { pax: 1, bags: 1 });
-    expect(await tryLiveShare(guest.id)).toBe(false);
+    await tryLiveShare(guest.id);
+    expect(await prisma.shareGroup.count({ where: { guestBookingId: guest.id } })).toBe(0); // never proposed
     // With room in the window the same pair is proposed.
     await prisma.booking.update({ where: { id: host.id }, data: { arriveBy: new Date(Date.now() + (solo + 60) * MIN) } });
     const guest2 = await booking(lcaNear, limCentre, { pax: 1, bags: 1 });
     expect(await tryLiveShare(guest2.id)).toBe(true);
+  });
+
+  it('2026-11-24: three passes 10 s apart — a car that comes along at the 2nd pass gets him, the driver keeps 60 s; none → ordinary car', async () => {
+    const d = await driver('Andreas');
+    const guest = await booking(lcaNear, limCentre);
+    const t0 = new Date();
+    expect(await tryLiveShare(guest.id, t0)).toBe(true); // pass 1: nobody yet, no ordinary offers
+    expect(await tryLiveShare(guest.id, new Date(t0.getTime() + 4_000))).toBe(true); // between passes
+    expect(await prisma.shareGroup.count({ where: { guestBookingId: guest.id } })).toBe(0);
+    await hostOnTrip(d); // a co-rider car comes along
+    expect(await tryLiveShare(guest.id, new Date(t0.getTime() + 10_000))).toBe(true); // pass 2 → offered
+    const g = (await prisma.shareGroup.findFirst({ where: { guestBookingId: guest.id } }))!;
+    expect(g.expiresAt.getTime() - (t0.getTime() + 10_000)).toBe(config.share.answerSec * 1000); // 60 s to answer
+    expect(await tryLiveShare(guest.id, new Date(t0.getTime() + 40_000))).toBe(true); // waits for his answer
+    await expireShares(new Date(t0.getTime() + 71_000));
+    expect(await tryLiveShare(guest.id, new Date(t0.getTime() + 72_000))).toBe(false); // silence → ordinary car
+
+    const solo = await booking(lcaNear, limCentre, { pax: 4 }); // no car fits him: three passes, then an ordinary car
+    const s0 = new Date();
+    expect(await tryLiveShare(solo.id, s0)).toBe(true);
+    expect(await tryLiveShare(solo.id, new Date(s0.getTime() + 10_000))).toBe(true);
+    expect(await tryLiveShare(solo.id, new Date(s0.getTime() + 20_000))).toBe(false);
   });
 
   it('a co-rider ride cannot get an intermediate stop', async () => {
@@ -320,12 +345,13 @@ describe('live ride-share', () => {
   it('never: driver switched co-riders off, a passenger did not opt in, too many people/bags, or a city ride', async () => {
     const d = await driver('Andreas', { acceptsShared: false });
     await hostOnTrip(d);
-    expect(await tryLiveShare((await booking(lcaNear, limCentre)).id)).toBe(false);
+    const none = async (id: string) => { await tryLiveShare(id); return prisma.shareGroup.count({ where: { guestBookingId: id } }); };
+    expect(await none((await booking(lcaNear, limCentre)).id)).toBe(0);
 
     await prisma.driver.update({ where: { id: d.driverId }, data: { acceptsShared: true } });
     expect(await tryLiveShare((await booking(lcaNear, limCentre, { share: false })).id)).toBe(false);
-    expect(await tryLiveShare((await booking(lcaNear, limCentre, { pax: 4 })).id)).toBe(false); // 1 + 4 > 4 seats
-    expect(await tryLiveShare((await booking(lcaNear, limCentre, { bags: 4 })).id)).toBe(false); // 1 + 4 > boot
+    expect(await none((await booking(lcaNear, limCentre, { pax: 4 })).id)).toBe(0); // 1 + 4 > 4 seats
+    expect(await none((await booking(lcaNear, limCentre, { bags: 4 })).id)).toBe(0); // 1 + 4 > boot
     const city = await booking(larnacaTown, larnacaTown2);
     expect(city.shareOptIn).toBe(false); // not stored outside airport/intercity
     expect(await tryLiveShare(city.id)).toBe(false);
