@@ -514,7 +514,13 @@ function HomeSection(props: {
   const [earnView, setEarnView] = useState<'main' | 'time'>('main'); // «Время на линии» opens inside the card
   const trip = data.trip;
   // Documents (2026-11-24): one red line on the map, in the app's language; a tap opens «Документы».
-  const docAlert = dash?.alerts.find((a) => a.code === 'DOC_EXPIRED') ?? dash?.alerts.find((a) => a.code === 'DOC_EXPIRING');
+  // «Позже» (2026-11-24, operator): a reminder before the date can be put away for a day; it comes back
+  // the next day and again on the last day. An expired document is not hidden — it explains why he can't work.
+  const [laterTick, setLaterTick] = useState(0);
+  const laterKey = (x: { slot?: string; car?: string; daysLeft?: number | null }) => `ily-doc-later:${x.slot}:${x.car ?? ''}:${(x.daysLeft ?? 2) <= 1 ? 1 : 7}`;
+  const putOff = (x: { slot?: string; car?: string; daysLeft?: number | null }) => { try { localStorage.setItem(laterKey(x), String(Date.now())); } catch { /* private mode */ } setLaterTick((n) => n + 1); };
+  const isPutOff = (x: { slot?: string; car?: string; daysLeft?: number | null }) => { void laterTick; try { const v = Number(localStorage.getItem(laterKey(x)) || 0); return Date.now() - v < 86_400_000; } catch { return false; } };
+  const docAlert = dash?.alerts.find((a) => a.code === 'DOC_EXPIRED') ?? dash?.alerts.find((a) => a.code === 'DOC_EXPIRING' && !isPutOff(a));
   const slotName = useSlotName();
   // A car document (a car added through «Мои машины»): «Страховка (KXY 248)».
   const docSlot = docAlert?.slot ? `${slotName(docAlert.slot)}${docAlert.car ? ` (${docAlert.car})` : ''}` : '';
@@ -608,7 +614,13 @@ function HomeSection(props: {
                 : (docAlert.daysLeft ?? 2) <= 1 ? t('driver.profile.renew.bannerLast', { slot: docSlot })
                 : t('driver.profile.renew.bannerSoon', { slot: docSlot, days: docAlert.daysLeft ?? '' })}
             </span>
-            <span className="shrink-0 rounded-full bg-danger px-2.5 py-1 text-xs font-semibold text-white">{t('driver.profile.renew.open')}</span>
+            <span className="flex shrink-0 flex-col items-stretch gap-1">
+              <span className="rounded-full bg-danger px-2.5 py-1 text-center text-xs font-semibold text-white">{t('driver.profile.renew.open')}</span>
+              {docAlert.code === 'DOC_EXPIRING' && (
+                <span role="button" tabIndex={0} data-testid="doc-later" className="rounded-full border border-edge px-2.5 py-1 text-center text-xs text-muted"
+                  onClick={(e) => { e.stopPropagation(); putOff(docAlert); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); putOff(docAlert); } }}>{t('driver.profile.renew.later')}</span>
+              )}
+            </span>
           </button>
         )}
         {blocker && (

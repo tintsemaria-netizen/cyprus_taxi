@@ -1,5 +1,16 @@
 # Session handoff
 
+## 2026-11-24 ~22:10 — documents of «Мои машины» cars, revoke, «Позже» (deployed)
+- Cars added through «Мои машины»: CarDocument states via slotStates (option «б»); runCarDocExpiry (in
+  runDocExpiry): pushes drv.carDocExpiring / drv.carDocExpired to owner + bound driver at 7 and 1 day / expired;
+  expired with nothing waiting → bound driver offline (not on a ride), availability refuses CAR_DOCS_EXPIRED,
+  switchCar refuses. Owner uploads POST /api/v1/driver/cars/[id]/documents; admin /admin/vehicles/[id]/documents;
+  decideCarDoc handles renewals (accept deletes the older one). carDocAttention feeds «Машины» / fleet / red bar
+  (DocAttention.href). Passenger photo uses the car's accepted vehicle_front (photoFile()).
+- Revoke: driver-owner «Кто может ездить на ваших машинах» (POST access/[id] {revoke}); fleet owner block.
+- Driver banner «Позже» (operator 22:04): hides an expiring-document reminder for 24 h per 7-day / 1-day mark
+  (localStorage); an expired one is not hideable.
+
 ## 2026-11-24 ~21:30 — car photos, passenger photos, one car one registration, «Мои машины», no roadworthiness (deployed)
 - Registration: car photos only front + rear (others not asked); selfie required. Driver replaces selfie / car
   front / rear himself (doc-renewal PHOTO_RENEW_SLOTS).

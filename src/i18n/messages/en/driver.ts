@@ -276,6 +276,7 @@ const driver = {
       vehicle_rear: "Car photo — rear",
     },
     renew: {
+      later: "Later",
       upload: "Upload new",
       uploadAgain: "Upload again",
       uploading: "Uploading…",

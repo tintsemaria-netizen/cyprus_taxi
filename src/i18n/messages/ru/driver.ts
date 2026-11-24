@@ -279,6 +279,7 @@ const driver: Catalog<typeof en> = {
       vehicle_rear: "Фото машины сзади",
     },
     renew: {
+      later: "Позже",
       upload: "Загрузить новый",
       uploadAgain: "Загрузить ещё раз",
       uploading: "Загружаем…",
