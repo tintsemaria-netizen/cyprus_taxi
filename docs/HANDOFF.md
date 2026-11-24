@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-25 ~01:00 — ПП departure hours: arrival-version leftovers removed (deployed)
+- Co-rider box: «Выберите ниже час выезда…» (booking.slots.needHour) / «Подача 13:00–13:15» instead of the arrival
+  hint; «Мои предзаказы» + rides list show the hour (sharePickupFrom) with «Подача …»; tracking (REQUESTED) shows
+  «Подача …»; share board shows the span and no flex text, new subtitle (8 languages); driver pre-booking cards
+  show «13:00–13:15» (preassign `span`). Arrival texts stay only for arrival-window bookings / the ARRIVE sample.
+
 ## 2026-11-25 ~00:30 — ПП departure hours + «Образец ПП: время прибытия» (branch share-slots, LOCAL until «заливай»)
 - Saved the live version before the change as GitHub branch `obrazec-pp-vremya-pribytiya` (= origin/main e773317,
   2026-11-25 00:10). A tag push was refused (403 from the session proxy), so it is a branch, not a tag.
