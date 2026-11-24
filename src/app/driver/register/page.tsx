@@ -253,7 +253,7 @@ function VehicleStep({ app, reload }: { app: AppData; reload: () => void }) {
       </div>
       <Upload slot="vehicle_reg" app={app} reload={reload} label={t('driverReg.vehicle.registration')} />
       <Upload slot="insurance" app={app} reload={reload} label={t('driverReg.vehicle.insurance')} />
-      <Upload slot="roadworthiness" app={app} reload={reload} label={t('driverReg.vehicle.roadworthiness')} />
+      {/* Roadworthiness is not asked for (operator 2026-11-24). */}
       <Upload slot="fleet_authorization" app={app} reload={reload} label={t('driverReg.vehicle.fleetAuthorization')} />
     </div>
   );

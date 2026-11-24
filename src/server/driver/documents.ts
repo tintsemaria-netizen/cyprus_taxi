@@ -38,6 +38,7 @@ export async function driverDocuments(driver: { applicationId: string | null }):
   const documents: DriverDocument[] = [];
   for (const r of rows) {
     if (seen.has(r.slot)) continue; // newest per slot
+    if (r.slot === 'roadworthiness') continue; // not asked for any more (operator 2026-11-24)
     seen.add(r.slot);
     const st = states.get(r.slot);
     if (st?.accepted) {

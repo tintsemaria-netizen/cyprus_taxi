@@ -26,9 +26,12 @@ describe('document slot states', () => {
     const s = slotStates([row('old', 'licence_front', 'ACCEPTED', 900, -400), row('new', 'licence_front', 'ACCEPTED', 300, 200)], now)[0];
     expect(s).toMatchObject({ accepted: { id: 'new' }, blocking: false, renewal: null });
   });
-  it('taxi licence, insurance, roadworthiness and the car photos belong to the car; licence and selfie to the driver', () => {
-    expect([...CAR_SLOTS].sort()).toEqual(['insurance', 'roadworthiness', 'taxi_licence', 'vehicle_front', 'vehicle_rear']);
+  it('taxi licence, insurance and the car photos belong (no roadworthiness) to the car; licence and selfie to the driver', () => {
+    expect([...CAR_SLOTS].sort()).toEqual(['insurance', 'taxi_licence', 'vehicle_front', 'vehicle_rear']);
     // A photo without a date never blocks and never asks for renewal.
     expect(slotStates([row('s', 'selfie', 'ACCEPTED', 300, null)], now)[0]).toMatchObject({ blocking: false, needsRenewal: false, daysLeft: null });
+  });
+  it('roadworthiness is not tracked at all (operator 2026-11-24)', () => {
+    expect(slotStates([row('m', 'roadworthiness', 'ACCEPTED', 300, -5)], now)).toEqual([]);
   });
 });

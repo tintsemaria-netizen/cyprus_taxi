@@ -1,5 +1,22 @@
 # Session handoff
 
+## 2026-11-24 ~21:30 — car photos, passenger photos, one car one registration, «Мои машины», no roadworthiness (deployed)
+- Registration: car photos only front + rear (others not asked); selfie required. Driver replaces selfie / car
+  front / rear himself (doc-renewal PHOTO_RENEW_SLOTS).
+- Passenger card: accepted selfie + car front (`/api/v1/tracking/photo`, src/server/driver-photos.ts); car photo
+  only if the ride's plate = his application plate; not enlarged. Shared link: car photo only (`POST /share/photo`).
+- Admin cross-check: «Сверка: машина водителя» box + «Совпадает — принять» before accepting car docs/photos
+  (event VEHICLE_MATCH_CONFIRMED). Duplicate cars: src/server/vehicle-dupes.ts (plate any spelling, VIN);
+  submit/approve/admin create refuse DUPLICATE_VEHICLE; Vehicle.vin unique (migration 20261124200000_vehicle_vin).
+- «Мои машины» (migration 20261124210000_my_cars: Vehicle.ownerDriverId, CarAccess, CarRequest, CarDocument):
+  src/server/cars.ts. Own car always; fleet car → fleet owner; another driver's car → that driver AND admin;
+  ownerless → admin. Switch only offline, no ride, no held pre-booking; never onto a car someone is online in;
+  not with expired insurance / taxi licence. New car: reg, insurance, taxi licence, front, rear → admin
+  /admin/cars/[id] → his Vehicle. Queues: driver «Просят вашу машину», /fleet block, top of /admin/vehicles.
+- Roadworthiness dropped entirely (operator 21:24): not in registration, not in EXPIRING_SLOTS, hidden in lists.
+- Not built yet (offered): 7/1-day reminders for insurance / taxi licence of cars added via «Мои машины»;
+  owner's «who drives my cars» list with revoke (server revokeAccess exists).
+
 ## 2026-11-24 17:48 — operator decision: no document upload for old (manually added) drivers
 - Not needed: this is a test version; new drivers register through the app and get the document checks.
 - Checked the old backlog: co-rider stops on the driver map and RTL (he/ar) are already on main; branches

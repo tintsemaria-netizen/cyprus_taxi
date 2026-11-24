@@ -17,7 +17,7 @@ export const WARN_DAYS = 7;
 const DAY = 86_400_000;
 /** Car documents go to «Машины» (taxi licence too — it belongs to the car, operator 2026-11-24); the
  *  driving licence to «Водители». Without a bound car everything shows in «Водители». */
-export const CAR_SLOTS = new Set(['insurance', 'roadworthiness', 'taxi_licence', 'vehicle_front', 'vehicle_rear']);
+export const CAR_SLOTS = new Set(['insurance', 'taxi_licence', 'vehicle_front', 'vehicle_rear']);
 /** Photos without a date the driver may replace himself (2026-11-24): his selfie, the car from the front / rear. */
 export const PHOTO_RENEW_SLOTS = new Set(['selfie', 'vehicle_front', 'vehicle_rear']);
 const RENEWABLE = new Set([...EXPIRING_SLOTS, ...PHOTO_RENEW_SLOTS]);

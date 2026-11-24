@@ -114,7 +114,8 @@ async function runAdmin(applicationId: string, adminId: string, from: string[], 
 }
 
 /** Documents that always expire and must carry a future expiry date to be accepted (launch fixes §3). */
-export const EXPIRING_SLOTS = new Set(['licence_front', 'taxi_licence', 'insurance', 'roadworthiness']);
+// Roadworthiness (техосмотр) is not asked for at all (operator 2026-11-24): no date, no reminders, no block.
+export const EXPIRING_SLOTS = new Set(['licence_front', 'taxi_licence', 'insurance']);
 
 export async function setDocumentDecision(applicationId: string, docId: string, decision: 'ACCEPTED' | 'CHANGES', note: string | undefined, adminId: string, expiresAt?: string | null): Promise<Result> {
   const doc = await prisma.applicationDocument.findFirst({ where: { id: docId, applicationId } });
@@ -158,7 +159,7 @@ export async function approveApplication(applicationId: string, adminId: string,
       if (requiredDocs.some((d) => d.decision !== 'ACCEPTED')) return err(422, 'DOCS_NOT_ACCEPTED', 'Accept all required documents before approving.');
       if (requiredDocs.some((d) => d.scanStatus !== 'CLEAN')) return err(422, 'DOCS_NOT_SCANNED', 'Every document must pass a clean malware scan before approval.');
       if (requiredDocs.some((d) => d.expiresAt && d.expiresAt < new Date())) return err(422, 'DOC_EXPIRED', 'A required document has already expired.');
-      if (requiredDocs.some((d) => EXPIRING_SLOTS.has(d.slot) && !d.expiresAt)) return err(422, 'EXPIRY_REQUIRED', 'Licence, taxi licence, insurance and roadworthiness need an expiry date before approval.');
+      if (requiredDocs.some((d) => EXPIRING_SLOTS.has(d.slot) && !d.expiresAt)) return err(422, 'EXPIRY_REQUIRED', 'Licence, taxi licence and insurance need an expiry date before approval.');
 
       const ve = JSON.parse(app.vehicle || '{}');
       // One car, one registration (2026-11-24): same plate (any spelling) or VIN already in the system.
