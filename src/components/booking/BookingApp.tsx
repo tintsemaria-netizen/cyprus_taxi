@@ -547,6 +547,13 @@ export default function BookingApp() {
   const [noGoReady, setNoGoReady] = useState(0);
   useEffect(() => { void loadNoGo().then(() => setNoGoReady((n) => n + 1)); }, []);
   const SPOT_ZOOM = 17;
+  const SPOT_GLIDE_MS = 1600;
+  // On a territory's pickup point (2026-11-24 20:45, operator) the logo is a MAP MARKER standing in the point's
+  // silhouette (exactly — the centre overlay was ~20 px off on Google), and zooming happens where the fingers
+  // are, not around the logo: a zoom gesture does not move the pickup. Only a pan re-picks the map centre.
+  const [arriving, setArriving] = useState(false);
+  const arriveTimer = useRef<number | null>(null);
+  const zoomRef = useRef<number | null>(null);
   const HOME_ZOOM = 15.49; // 2026-11-17: 30 % further out than 16 (16 + log2 0.7)
   const dragPick = useRef<{ lat: number; lng: number } | null>(null);
   const [camFocus, setCamFocus] = useState<{ lat: number; lng: number } | null>(null);
@@ -559,8 +566,14 @@ export default function BookingApp() {
     // (operator 2026-11-24 20:08); SEVERAL — zoom out so the whole rounded territory stays on screen around the
     // chosen point, so switching points does not lose it.
     const tz = pickup ? territoryAt(pickup) : null;
-    if (tz && tz.on >= 0) setRecenterTick((n) => n + 1); // glide: the logo «arrives» into the point's silhouette
-    setCamFocus({ lat: p.lat, lng: p.lng }); setCamZoom(!tz || tz.on < 0 ? HOME_ZOOM : tz.t.points.length === 1 ? SPOT_ZOOM : Math.min(HOME_ZOOM, fitZoom(p, tz.t.polygon)));
+    if (tz && tz.on >= 0) { // glide: the logo «arrives» into the point's silhouette, then stays there as a map marker
+      setRecenterTick((n) => n + 1);
+      setArriving(true);
+      if (arriveTimer.current) window.clearTimeout(arriveTimer.current);
+      arriveTimer.current = window.setTimeout(() => setArriving(false), SPOT_GLIDE_MS + 150);
+    }
+    const z = !tz || tz.on < 0 ? HOME_ZOOM : tz.t.points.length === 1 ? SPOT_ZOOM : Math.min(HOME_ZOOM, fitZoom(p, tz.t.polygon));
+    setCamFocus({ lat: p.lat, lng: p.lng }); setCamZoom(z); zoomRef.current = z;
   }, [pickup?.lat, pickup?.lng, myLoc?.lat, myLoc?.lng, noGoReady]); // eslint-disable-line react-hooks/exhaustive-deps
   const [pinLift, setPinLift] = useState(false);
   const pickSeq = useRef(0);
@@ -596,6 +609,9 @@ export default function BookingApp() {
   function onCenterPick(p: { lat: number; lng: number; zoom: number }) {
     setPinLift(false);
     if (!centerModeRef.current) return;
+    const zoomed = zoomRef.current != null && Math.abs(p.zoom - zoomRef.current) > 0.05;
+    zoomRef.current = p.zoom;
+    if (zoomed && onSpotRef.current) return; // looking around the airport: the pickup stays on its point
     if (areaBlock(p)) { // off the island or in a «Запретная зона» (2026-11-24)
       setOffIsland(true);
       // A short buzz with the red, shaking logo (operator 2026-11-24). Android browsers vibrate; iPhone
@@ -626,14 +642,17 @@ export default function BookingApp() {
   // Centre pin (2026-11-23, operator): on the home screen (no destination yet) the IL-Y logo stays in the
   // middle of the map and the map moves under it; where the finger lets go is the pickup.
   const centerMode = step === 'form' && !dropoff && !picker && !!(pickup || myLoc);
+  const onSpot = centerMode && !!terr && terr.on >= 0;
+  const onSpotRef = useRef(onSpot); onSpotRef.current = onSpot;
+  const pinOverlay = centerMode && (!onSpot || arriving);
   // No «you are here» person on the passenger's maps (2026-11-17): only the IL-Y pickup logo.
   const markers = useMemo<MapMarker[]>(() => {
     const m: MapMarker[] = [];
-    if (pickup && !centerMode) m.push({ id: 'p', lat: pickup.lat, lng: pickup.lng, kind: 'pickup', label: pickup.label });
+    if (pickup && (!centerMode || (onSpot && !arriving))) m.push({ id: 'p', lat: pickup.lat, lng: pickup.lng, kind: 'pickup', label: pickup.label, ...(onSpot ? { noFit: true } : {}) });
     if (stop && hasStop) m.push({ id: 's', lat: stop.lat, lng: stop.lng, kind: 'stop', label: stop.label });
     if (dropoff) m.push({ id: 'd', lat: dropoff.lat, lng: dropoff.lng, kind: 'dropoff', label: dropoff.label });
     return m;
-  }, [pickup, dropoff, stop, hasStop, centerMode]);
+  }, [pickup, dropoff, stop, hasStop, centerMode, onSpot, arriving]);
   const mapMarkers = useMemo<MapMarker[]>(() => (!terr ? markers : [
     ...markers,
     ...terr.t.points.map((sp, i) => ({ id: `spot-${i}`, lat: sp.lat, lng: sp.lng, kind: 'spot' as const, label: terr.on === i ? sp.name || terr.t.name : '', active: terr.on === i, // names are on the chips; on the map only the chosen one, so nothing overlaps
@@ -1241,7 +1260,7 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-page" />
           ) : (
-            <AutoMapView markers={mapMarkers} areas={mapAreas} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : camFocus} focusZoom={pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} glideMs={terr && terr.on >= 0 ? 1600 : undefined} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
+            <AutoMapView markers={mapMarkers} areas={mapAreas} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : camFocus} focusZoom={pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} glideMs={terr && terr.on >= 0 ? SPOT_GLIDE_MS : undefined} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
           )}
           {terr && step === 'form' && (
             <div className="absolute inset-x-3 top-3 z-[6] mx-auto max-w-sm rounded-[14px] border border-[#4C9AFF] bg-elevated/95 px-3 py-2 text-[13px] leading-snug text-ink shadow-lg" data-testid="pickup-territory">
@@ -1258,7 +1277,7 @@ export default function BookingApp() {
               )}
             </div>
           )}
-          {centerMode && mapBox.w > 0 && (() => {
+          {pinOverlay && mapBox.w > 0 && (() => {
             const pt = pinPoint(fitPadding, mapBox.w, mapBox.h);
             return (
               <div aria-hidden data-testid="center-pin" className="pointer-events-none absolute z-[5]" style={{ left: pt.x - 16, top: pt.y - 40, width: 32, height: 40 }}>
