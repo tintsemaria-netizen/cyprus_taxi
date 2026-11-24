@@ -2746,3 +2746,11 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   to Larnaca airport, a second co-rider can appear on the way (Amara) and be picked up en route if the detour fits the limit.
   So «in time» = per co-rider: the car can still reach them on its way, not a fixed deadline before departure. Check against
   the other session's live co-rider work (share.ts LIVE mode) before designing.
+
+## 2026-11-24 (04:45) — Co-rider NOW: decided, nothing to build
+- Checked LIVE co-rider (share.ts tryLiveShare): a new opted-in order on the way (e.g. Amara) is offered to the driver of a running
+  opted-in trip (e.g. City of Dreams → LCA) for 90 s; detour within each passenger's limit, host arrival kept; −30% only on join.
+- Operator: no waiting window (15/30/45/60) — «ничего не менять»: the co-rider is looked for only at the moment of ordering, else a
+  normal car at full price. Still max two orders per car («за третьего никто не говорил» — City of Dreams + Amara = two).
+- Open: NOW extra-time choice is 10 / 15 / 30 min (ShareBookingOptions FLEX); operator said «оставляй как есть 15 минут» — asked
+  whether to keep the choice or fix it at 15.
