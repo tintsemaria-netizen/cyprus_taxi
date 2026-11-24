@@ -2752,7 +2752,7 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   opted-in trip (e.g. City of Dreams → LCA) for 90 s; detour within each passenger's limit, host arrival kept; −30% only on join.
 - Operator: no waiting window (15/30/45/60) — «ничего не менять»: the co-rider is looked for only at the moment of ordering, else a
   normal car at full price. Still max two orders per car («за третьего никто не говорил» — City of Dreams + Amara = two).
-- UPDATE 04:55 (branch `live-2min`, NOT deployed): operator clarified «сейчас = сейчас + 15 минут на попутчика; если прямо сейчас —
+- UPDATE 04:55 (branch `live-2min`, DEPLOYED 05:40 — operator «Заливай»): operator clarified «сейчас = сейчас + 15 минут на попутчика; если прямо сейчас —
   без попутчика» and answered: «две минуты прогнал, не нашёл — обычный заказ без −30%», «оставь 15 минут».
   05:33 operator: «две минуты много — три подхода по 10 секунд; ответ водителю 60 секунд оставь».
   share.ts tryLiveShare: LIVE_PASSES 3 passes LIVE_PASS_GAP_SEC 10 s apart (≈20 s; start event SHARE_LIVE_SEARCH, the dispatch job
