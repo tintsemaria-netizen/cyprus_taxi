@@ -12,7 +12,7 @@ import { BRAND_PIN_SVG, BRAND_PIN_SVG_RED } from '@/components/carMarker';
 import { pinPoint } from '@/components/mapFit';
 import { haversineMeters } from '@/lib/geo';
 import { onCyprusIsland } from '@/lib/cyprus-island';
-import { areaBlock, loadNoGo, territoryAt, territoryNear, spotLabel, allTerritories } from '@/lib/area-client';
+import { areaBlock, loadNoGo, territoryAt, territoryNear, spotLabel, allTerritories, dropTerritoryAt, dropLabel } from '@/lib/area-client';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import type { Selected } from './PlacesInput';
 import { setNearHint } from '@/lib/nearHint';
@@ -645,6 +645,19 @@ export default function BookingApp() {
     if (terr && terr.on < 0) chooseSpot(terr.nearest);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [terr]);
+  // Drop-off points (2026-11-24, operator): a destination inside a territory that has them goes to the nearest
+  // one; the passenger may choose another with the chips. The server snaps the same way.
+  const dropTerr = useMemo(() => (dropoff ? dropTerritoryAt(dropoff) : null), [dropoff?.lat, dropoff?.lng, noGoReady]); // eslint-disable-line react-hooks/exhaustive-deps
+  const chooseDrop = (i: number) => {
+    if (!dropTerr) return;
+    const sp = (dropTerr.t.dropPoints ?? [])[i]; if (!sp) return;
+    const label = dropLabel(dropTerr.t, i);
+    setDropoff({ lat: sp.lat, lng: sp.lng, label }); setDropoffText(label);
+  };
+  useEffect(() => {
+    if (dropTerr && dropTerr.on < 0) chooseDrop(dropTerr.nearest);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dropTerr]);
   const offTimer = useRef<number | null>(null);
   function onCenterPick(p: { lat: number; lng: number; zoom: number }) {
     setPinLift(false);
@@ -1328,8 +1341,10 @@ export default function BookingApp() {
           ) : (
             <AutoMapView markers={mapMarkers} areas={mapAreas} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : camFocus} focusZoom={pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} holdCamera={onSpot && !landing} onGlideEnd={() => { if (landTimer.current) window.clearTimeout(landTimer.current); setLanding(false); }} glideMs={landing ? SPOT_GLIDE_MS : undefined} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
           )}
-          {terr && step === 'form' && (
-            <div className="absolute inset-x-3 top-3 z-[6] mx-auto max-w-sm rounded-[14px] border border-[#4C9AFF] bg-elevated/95 px-3 py-2 text-[13px] leading-snug text-ink shadow-lg" data-testid="pickup-territory">
+          {step === 'form' && (terr || dropTerr) && (
+            <div className="pointer-events-none absolute inset-x-3 top-3 z-[6] mx-auto max-w-sm space-y-2">
+              {terr && (
+            <div className="pointer-events-auto rounded-[14px] border border-[#4C9AFF] bg-elevated/95 px-3 py-2 text-[13px] leading-snug text-ink shadow-lg" data-testid="pickup-territory">
               <div className="font-medium">📍 {t(terr.t.points.length > 1 ? 'booking.pickupPoints' : 'booking.pickupPoint', { name: terr.t.name })}</div>
               {terr.t.points.length > 1 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1339,6 +1354,23 @@ export default function BookingApp() {
                       {sp.name || `${i + 1}`}
                     </button>
                   ))}
+                </div>
+              )}
+            </div>
+              )}
+              {dropTerr && (dropTerr.t.dropPoints ?? []).length > 0 && (
+                <div className="pointer-events-auto rounded-[14px] border border-[#FFC83D] bg-elevated/95 px-3 py-2 text-[13px] leading-snug text-ink shadow-lg" data-testid="drop-territory">
+                  <div className="font-medium">🏁 {t((dropTerr.t.dropPoints ?? []).length > 1 ? 'booking.dropPoints' : 'booking.dropPoint', { name: dropTerr.t.name, point: (dropTerr.t.dropPoints ?? [])[Math.max(0, dropTerr.on)]?.name || dropTerr.t.name })}</div>
+                  {(dropTerr.t.dropPoints ?? []).length > 1 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {(dropTerr.t.dropPoints ?? []).map((sp, i) => (
+                        <button key={i} type="button" onClick={() => chooseDrop(i)} data-testid="drop-spot"
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${dropTerr.on === i ? 'border-[#FFC83D] bg-[#FFC83D] text-[#0b0f10]' : 'border-[#FFC83D]/60 text-ink'}`}>
+                          {sp.name || `${i + 1}`}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

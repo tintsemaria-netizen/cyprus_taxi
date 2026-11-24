@@ -211,6 +211,8 @@ const booking: Catalog<typeof en> = {
   },
   pickupPoint: 'Odbiór tutaj tylko w jednym miejscu: {name}',
   pickupPoints: 'Odbiór tutaj tylko w punktach «{name}» — wybierz jeden:',
+  dropPoint: 'Wysiadanie tutaj tylko w jednym punkcie: {point}',
+  dropPoints: 'Wysiadanie tutaj tylko w punktach «{name}» — wybierz jeden:',
   pickupAt: {
     title: 'O której ma przyjechać samochód?',
     time: 'Godzina odbioru',
