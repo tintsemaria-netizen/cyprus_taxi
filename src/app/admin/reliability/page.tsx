@@ -42,7 +42,7 @@ function Reliability() {
   useEffect(() => { api<NonNullable<typeof sys>>('/admin/system').then(setSys).catch(() => {}); }, []);
   // Staff alerts, last 7 days (launch fixes §8, ported 2026-11-24).
   const [alerts, setAlerts] = useState<{ alerts: { at: string; kind: string; detail: string | null; bookingRef: string | null }[]; failedReceiptEmails: number } | null>(null);
-  useEffect(() => { api<NonNullable<typeof alerts>>('/admin/alerts').then(setAlerts).catch(() => {}); }, []);
+  useEffect(() => { api<NonNullable<typeof alerts>>('/admin/signals').then(setAlerts).catch(() => {}); }, []);
   // Server reasons are stored in English; show them in the staff language.
   const WHY: Record<string, string> = { 'driver busy at conversion': 'busy', 'driver offline at conversion': 'offline', 'no live GPS at conversion': 'noGps', 'driver too far at conversion': 'far', 'pair blocked by a 1-star rating': 'blocked', 'driver or vehicle no longer eligible': 'ineligible', 'driver gave the pre-booking back late': 'late' };
   const whyText = (d: string) => { const m = /needs ~(\d+) min/.exec(d); if (m) return t('staff.alerts.why.needs', { n: Number(m[1]) }); const k = WHY[d]; return k ? lbl(t, `staff.alerts.why.${k}`, d) : d; };
