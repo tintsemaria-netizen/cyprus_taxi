@@ -2812,6 +2812,16 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-24 20:40 — pickup point silhouette + slow glide + re-centre (DEPLOYED cf2c6fb)
+
+- `spotEl` (carMarker.ts): IL-Y pin silhouette (BRAND_PIN_SILHOUETTE_SVG), 32×40, anchor bottom; label only on the
+  chosen point (zIndex 940). Root element must NOT set `position` (MapLibre positions it absolutely).
+- Glide into a point: recenterTick bump + `glideMs` prop (Google 700 default / MapLibre 500; booking passes 1600 on
+  a territory point).
+- Operator bug: after resume the logo sat above the pickup (sheet opened). BookingApp `recenterOnPickup`:
+  useRefreshOnReturn(…, 0) and on fitPadding change → recenterTick after 350 ms. Root cause on Google not found.
+- Live: chunk has the silhouette, health ready 200. Operator re-checks on the iPhone (resume, glide).
+
 ## 2026-11-24 20:15 — single pickup point: snap + zoom in (DEPLOYED 106728a)
 
 - Live bug (operator iPhone, Pafos airport, one point): logo stayed off the point. Cause: GoogleMapView focus effect
