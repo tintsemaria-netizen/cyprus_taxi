@@ -2850,6 +2850,11 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-25 00:35 — only the selected kind of point is draggable (DEPLOYED 6be3149)
+
+- AreaZones: draggable = mode === 'pick' / 'drop'; movePoint ignores the other kind. Live admin chunk has
+  `draggable:"pick"===mode`. superadmin.db.test.ts flaky in the full run again (passes alone).
+
 ## 2026-11-25 00:20 — admin territory points as logo pins, draggable (DEPLOYED 4c839cd)
 
 - ZoneEditorMap RefZone `pin: 'pick' | 'drop'`, `draggable`, prop `onPinMove(id, lat, lng)`; Google: legacy Marker
