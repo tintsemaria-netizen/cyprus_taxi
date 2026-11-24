@@ -146,9 +146,10 @@ export interface DocAttention {
 }
 
 /** Everything the admin should see in «Водители» / «Машины» about documents. */
-export async function docAttention(now: Date = new Date()): Promise<DocAttention[]> {
+export async function docAttention(now: Date = new Date(), fleetId?: string): Promise<DocAttention[]> {
   const drivers = await prisma.driver.findMany({
-    where: { applicationId: { not: null }, eligibility: { in: ['APPROVED', 'DOCUMENTS_EXPIRED'] } },
+    // A fleet owner (2026-11-24) sees his own drivers and anyone driving one of his cars.
+    where: { applicationId: { not: null }, eligibility: { in: ['APPROVED', 'DOCUMENTS_EXPIRED'] }, ...(fleetId ? { OR: [{ fleetId }, { bindings: { some: { endedAt: null, vehicle: { fleetId } } } }] } : {}) },
     select: { id: true, publicName: true, applicationId: true, bindings: { where: { endedAt: null }, select: { vehicle: { select: { id: true, plate: true } } } } },
   });
   const rows = await prisma.applicationDocument.findMany({ where: { applicationId: { in: drivers.map((d) => d.applicationId!) }, slot: { in: RENEWABLE_SLOTS } }, select: { id: true, applicationId: true, slot: true, decision: true, scanStatus: true, expiresAt: true, createdAt: true, decisionNote: true } });

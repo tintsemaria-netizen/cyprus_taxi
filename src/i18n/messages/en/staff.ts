@@ -532,6 +532,7 @@ const staff = {
     check: "Check",
     notify: "Document notifications",
     newLabel: "New · uploaded {date}",
+    uploadedOwner: "The driver uploaded a new one — waiting for the operator's check",
     currentLabel: "Current · until {date}",
     noScan: "No antivirus on the server — this file cannot be accepted.",
   },

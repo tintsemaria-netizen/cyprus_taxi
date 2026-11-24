@@ -7,6 +7,7 @@ import { api } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { useDriverFigures, FiguresTotals, DriverFiguresLine } from '@/components/reports/DriversFigures';
 import type { DriverFigures } from '@/server/reports/driver-report';
+import { useDocAttention, withDocsFirst, DocAttentionLines } from '@/components/staff/DocAttention';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,16 @@ function Fleet({ me }: { me: Me }) {
   const [name, setName] = useState('');
   const [drivers, setDrivers] = useState<DriverRow[] | null>(null);
   const [cars, setCars] = useState<CarRow[] | null>(null);
+  // Documents (2026-11-24): the same red rows on top as the admin's — driving licence on the driver,
+  // taxi licence / insurance / roadworthiness on the car.
+  const drvDocs = useDocAttention('drivers', '/fleet/doc-attention');
+  const carDocs = useDocAttention('vehicles', '/fleet/doc-attention');
+  // A car document of a car that isn't his (his driver drives someone else's car): show it on the driver.
+  const drvAll = { ...drvDocs };
+  for (const items of Object.values(carDocs)) for (const it of items) {
+    if (cars?.some((c) => c.id === it.vehicleId)) continue;
+    (drvAll[it.driverId] ??= []).push(it);
+  }
   const figs = useDriverFigures(() => api<{ drivers: DriverRow[]; figures: DriverFigures[] }>('/fleet/drivers').then((r) => { setDrivers(r.drivers); return r.figures; }));
   useEffect(() => {
     api<{ fleet: { name: string } }>('/fleet/me').then((r) => setName(r.fleet.name)).catch(() => {});
@@ -42,8 +53,9 @@ function Fleet({ me }: { me: Me }) {
 
       <h2 className="mt-5 font-semibold">{t('staff.fleet.drivers')}</h2>
       <div className="card mt-2 divide-y divide-edge">
-        {drivers?.map((d) => (
-          <a key={d.id} href={`/fleet/drivers/${d.id}`} className="block p-3" data-testid={`fleet-driver-${d.login}`}>
+        {drivers && withDocsFirst(drivers, (d) => d.id, drvAll).map((d) => (
+          <a key={d.id} href={`/fleet/drivers/${d.id}`} className={`block p-3 ${drvAll[d.id] ? 'row-alert' : ''}`} data-testid={`fleet-driver-${d.login}`}>
+            <DocAttentionLines items={drvAll[d.id]} owner />
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0 font-medium">{d.publicName} <span className="text-xs text-muted">@{d.login}</span></div>
               <span className={`chip shrink-0 ${d.onDuty ? '!text-accent' : ''}`}>{d.onDuty ? t('staff.drivers.onDuty') : t('staff.drivers.off')}</span>
@@ -59,8 +71,9 @@ function Fleet({ me }: { me: Me }) {
 
       <h2 className="mt-5 font-semibold">{t('staff.fleet.vehicles')}</h2>
       <div className="card mt-2 divide-y divide-edge" data-testid="fleet-cars">
-        {cars?.map((v) => (
-          <div key={v.id} className="p-3">
+        {cars && withDocsFirst(cars, (v) => v.id, carDocs).map((v) => (
+          <div key={v.id} className={`p-3 ${carDocs[v.id] ? 'row-alert' : ''}`}>
+            <DocAttentionLines items={carDocs[v.id]} owner />
             <div className="font-medium">{v.color} {v.make} {v.model} <span className="font-mono text-xs text-muted">{v.plate}</span></div>
             <div className="text-xs text-muted">{v.vClass} · {t('staff.vehicles.seatsN', { n: v.seats })} · {v.driver ? t('staff.fleet.drivenBy', { name: v.driver.publicName }) : t('staff.fleet.noDriver')}{v.active ? '' : ` · ${t('staff.inactive')}`}</div>
           </div>

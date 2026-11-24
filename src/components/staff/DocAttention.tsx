@@ -18,10 +18,10 @@ export interface DocItem {
 }
 
 /** Items of one section, by driver id («Водители») or vehicle id («Машины»). Re-checked every 30 s. */
-export function useDocAttention(section: 'drivers' | 'vehicles'): Record<string, DocItem[]> {
+export function useDocAttention(section: 'drivers' | 'vehicles', url = '/admin/doc-attention'): Record<string, DocItem[]> {
   const [by, setBy] = useState<Record<string, DocItem[]>>({});
   const load = useCallback(() => {
-    api<{ items: DocItem[] }>('/admin/doc-attention').then((r) => {
+    api<{ items: DocItem[] }>(url).then((r) => {
       const m: Record<string, DocItem[]> = {};
       for (const it of r.items) {
         if (it.section !== section) continue;
@@ -30,7 +30,7 @@ export function useDocAttention(section: 'drivers' | 'vehicles'): Record<string,
       }
       setBy(m);
     }).catch(() => {});
-  }, [section]);
+  }, [section, url]);
   useEffect(() => { load(); const id = window.setInterval(load, 30_000); return () => window.clearInterval(id); }, [load]);
   useRefreshOnReturn(load);
   return by;
@@ -42,7 +42,8 @@ export function withDocsFirst<T>(rows: T[], keyOf: (r: T) => string, by: Record<
   return rows.map((r, i) => ({ r, i })).sort((a, b) => rank(a.r) - rank(b.r) || a.i - b.i).map((x) => x.r);
 }
 
-export function DocAttentionLines({ items }: { items?: DocItem[] }) {
+/** `owner`: the fleet owner's view — no «Проверить», the operator checks. */
+export function DocAttentionLines({ items, owner }: { items?: DocItem[]; owner?: boolean }) {
   const { t, fmt } = useT();
   if (!items?.length) return null;
   return (
@@ -52,11 +53,11 @@ export function DocAttentionLines({ items }: { items?: DocItem[] }) {
           <span className="h-2 w-2 shrink-0 rounded-full bg-danger" aria-hidden />
           <span className="font-semibold text-danger">{t(`staff.docs.slot.${it.slot}` as MsgKey)}</span>
           <span className="text-ink">
-            {it.kind === 'UPLOADED' ? (it.oldExpired ? t('staff.docs.uploadedExpired', { date: fmt.date(it.oldExpiresAt!) }) : t('staff.docs.uploaded'))
+            {it.kind === 'UPLOADED' ? (owner ? t('staff.docs.uploadedOwner') : it.oldExpired ? t('staff.docs.uploadedExpired', { date: fmt.date(it.oldExpiresAt!) }) : t('staff.docs.uploaded'))
               : it.kind === 'EXPIRED' ? t('staff.docs.expired', { date: fmt.date(it.oldExpiresAt!) })
               : t('staff.docs.expiring', { date: fmt.date(it.oldExpiresAt!), days: it.daysLeft ?? '' })}
           </span>
-          {it.kind === 'UPLOADED' && (
+          {it.kind === 'UPLOADED' && !owner && (
             <a href={`/admin/applications/${it.applicationId}#doc-${it.docId}`} className="rounded-full bg-danger px-2.5 py-0.5 font-semibold text-white" data-testid="doc-check">{t('staff.docs.check')} ›</a>
           )}
         </div>
