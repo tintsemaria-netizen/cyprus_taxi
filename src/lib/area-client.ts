@@ -6,7 +6,7 @@ import { api } from './api-client';
 // «Запретная зона». The zones come from /api/v1/no-go (refreshed every 5 min); the server checks again.
 let zones: [number, number][][] = [];
 /** Pickup territories (already rounded by the server): a pickup inside goes to one of their points. */
-export interface Territory { name: string; polygon: [number, number][]; points: { lat: number; lng: number; name: string }[] }
+export interface Territory { name: string; polygon: [number, number][]; points: { lat: number; lng: number; name: string }[]; dropPoints?: { lat: number; lng: number; name: string }[] }
 let territories: Territory[] = [];
 let loadedAt = 0;
 let loading: Promise<void> | null = null;
@@ -30,6 +30,23 @@ export function areaBlock(p: { lat: number; lng: number }): 'OFF_ISLAND' | 'NO_G
 
 /** All pickup territories — drawn on the passenger map all the time (2026-11-24, operator). */
 export const allTerritories = (): Territory[] => territories;
+/** The territory with drop-off points a destination is in, with the drop-off point it is on (if any) and the
+ *  nearest one (2026-11-24, operator: the airport's drop-off is not at the pickup points). */
+export function dropTerritoryAt(p: { lat: number; lng: number }): { t: Territory; on: number; nearest: number } | null {
+  for (const t of territories) {
+    const pts = t.dropPoints ?? [];
+    if (!pts.length || t.polygon.length < 3 || !pointInPolygon(p, t.polygon.map(([lat, lng]) => ({ lat, lng })))) continue;
+    let nearest = 0, bd = Infinity, on = -1;
+    pts.forEach((s, i) => {
+      const d = (s.lat - p.lat) ** 2 + ((s.lng - p.lng) * Math.cos((p.lat * Math.PI) / 180)) ** 2;
+      if (d < bd) { bd = d; nearest = i; }
+      if (Math.abs(s.lat - p.lat) < 1e-6 && Math.abs(s.lng - p.lng) < 1e-6) on = i;
+    });
+    return { t, on, nearest };
+  }
+  return null;
+}
+export const dropLabel = (t: Territory, i: number) => { const s = (t.dropPoints ?? [])[i]; return s?.name ? `${t.name} · ${s.name}` : t.name; };
 export const spotLabel = (t: Territory, i: number) => (t.points[i].name ? `${t.name} · ${t.points[i].name}` : t.name);
 
 /** The pickup territory a point is in — or, with `radiusM`, the one whose edge is that close (2026-11-24, operator:

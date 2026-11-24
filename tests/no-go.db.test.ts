@@ -1,7 +1,7 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import { prisma } from '@/lib/db';
 import { createBooking } from '@/server/bookings';
-import { invalidateNoGoCache } from '@/server/no-go';
+import { invalidateNoGoCache, noGoSchema } from '@/server/no-go';
 import * as quote from '@/app/api/v1/quote/route';
 import type { CreateBookingInput } from '@/lib/validation';
 
@@ -46,5 +46,21 @@ describe('no-go zones', () => {
       const r2 = await createBooking(inp(lim, lca), key());
       if (r2.ok) expect((await prisma.booking.findUniqueOrThrow({ where: { reference: r2.body.reference } })).pickupLat).toBe(lim.lat);
     } finally { await prisma.noGoZone.delete({ where: { id: t.id } }); invalidateNoGoCache(); }
+  });
+  it('точки высадки: a destination inside the territory goes to the nearest drop-off point, apart from the pickup points', async () => {
+    const t = await prisma.noGoZone.create({ data: { name: 'Port', kind: 'POINT', polygon: sq, points: [{ lat: 34.7050, lng: 33.1050, name: 'Gate 3' }], dropPoints: [{ lat: 34.6985, lng: 33.0985, name: 'Departures' }, { lat: 34.7060, lng: 33.0960, name: 'Cruise' }] } });
+    invalidateNoGoCache();
+    try {
+      const r = await createBooking(inp(lim, inside), key());
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        const b = await prisma.booking.findUniqueOrThrow({ where: { reference: r.body.reference } });
+        expect([b.dropoffLat, b.dropoffLng, b.dropoffLabel]).toEqual([34.6985, 33.0985, 'Port · Departures']);
+      }
+    } finally { await prisma.noGoZone.delete({ where: { id: t.id } }); invalidateNoGoCache(); }
+    // pickup and drop-off points must not overlap (≥ 15 m apart)
+    const base = { name: 'P', kind: 'POINT' as const, polygon: sq, points: [{ lat: 34.70, lng: 33.10, name: '' }] };
+    expect(noGoSchema.safeParse({ ...base, dropPoints: [{ lat: 34.70005, lng: 33.10, name: '' }] }).success).toBe(false);
+    expect(noGoSchema.safeParse({ ...base, dropPoints: [{ lat: 34.7010, lng: 33.10, name: '' }] }).success).toBe(true);
   });
 });
