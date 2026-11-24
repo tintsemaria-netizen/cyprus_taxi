@@ -2812,6 +2812,14 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-24 20:15 — single pickup point: snap + zoom in (DEPLOYED 106728a)
+
+- Live bug (operator iPhone, Pafos airport, one point): logo stayed off the point. Cause: GoogleMapView focus effect
+  skipped when `markers.length >= 2` — the territory's spot dots (noFit) counted. Now only framed markers count.
+  MapLibre had no such guard (that is why local screenshots looked right).
+- One point → SPOT_ZOOM 17 on the point; several → fitZoom (whole territory).
+- Live: new chunk contains the fix, health ready 200. Operator re-checks on the phone.
+
 ## 2026-11-24 19:55 — pickup territory camera (DEPLOYED b6c8e66)
 
 - BookingApp `fitZoom`: on a territory pickup point the camera zooms out so the whole rounded territory is in
