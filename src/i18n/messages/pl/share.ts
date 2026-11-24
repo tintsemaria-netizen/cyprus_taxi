@@ -44,7 +44,7 @@ const share: Catalog<typeof en> = {
     routes: "Współprzejazd działa tylko między lotniskami LCA i PFO, Larnaką, Nikozją, Pafos, Ayia Napą i Limassolem.",
     adults: "Dorośli",
     children: "Dzieci",
-    luggage: "Walizki",
+    luggage: 'Walizki do 10 kg',
     liveTerms: 'Szukamy auta ze współpasażerem po drodze przez około {sec} sekund. Odbierze Cię w ciągu {min} min, a przejazd potrwa najwyżej {min} min dłużej. Nie znaleziono — zwykłe auto w pełnej cenie.',
     maxExtra: "O ile dłużej może trwać przejazd?",
     wait: "Ile możesz poczekać na współpasażera?",

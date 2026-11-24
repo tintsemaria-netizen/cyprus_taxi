@@ -42,7 +42,7 @@ const share = {
     routes: "Ride-share works only between LCA and PFO airports, Larnaca, Nicosia, Paphos, Ayia Napa and Limassol.",
     adults: 'Adults',
     children: 'Children',
-    luggage: 'Suitcases',
+    luggage: 'Suitcases up to 10 kg',
     liveTerms: 'We look for a car with a co-rider on your way for about {sec} seconds. It picks you up within {min} min, and the ride takes at most {min} min longer. None found — an ordinary car at the full price.',
     maxExtra: 'How much longer can the ride take?',
     wait: "How long can you wait for a co-rider?",

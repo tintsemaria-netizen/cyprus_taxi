@@ -2785,3 +2785,8 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   after the third pass with nothing pending → ordinary car (safety: >35 s since start → ordinary); the co-rider car must reach the newcomer within LIVE_PICKUP_MAX_MIN 15; extra time on the road
   min(chosen, 15) for both (liveMax). UI: the 10/15/30 choice for a ride NOW replaced by a note (share.booking.liveTerms, 8 langs);
   BookingApp sends shareMaxExtraMin 15 for NOW. Tests: ride-share live tests updated + «three passes: a car at the 2nd pass gets him, 60 s answer; none → ordinary».
+
+## 2026-11-24 15:00 — Co-rider size limits (branch `share-limits`)
+- Operator: «Попутчик» max 3 people and 3 suitcases; label «Чемоданы до 10 кг». lib/share.ts SHARE_MAX_PEOPLE/BAGS = 3;
+  ShareBookingOptions caps steppers (and trims values above the limit); createBooking refuses SHARE_TOO_BIG (errors.ts, 8 langs).
+  Without «Попутчик» the usual car limits apply. Tests: share-limits.db.test.ts; ride-share «doesn't fit» cases now 2+3 > 4.
