@@ -203,13 +203,13 @@ export async function enforceDocumentExpiries(now: Date = new Date()): Promise<v
         for (const o of offers) await tx.driverOffer.update({ where: { id: o.id }, data: { status: 'EXPIRED', respondedAt: new Date(), activeBookingId: null, activeDriverId: null } });
       });
       const { enqueue } = await import('@/server/outbox');
-      await enqueue(prisma, { audience: `DRIVER:${d.userId}`, title: 'Documents expired', body: 'A required document expired. You cannot take new rides until it is renewed and re-reviewed.', url: '/driver', tag: 'ride', dedupeKey: `expired:${d.id}` });
+      await enqueue(prisma, { audience: `DRIVER:${d.userId}`, title: 'Documents expired', body: 'A required document expired. You cannot take new rides until it is renewed and re-reviewed.', url: '/driver', tag: 'ride', dedupeKey: `expired:${d.id}`, msg: { k: 'driver.docExpired', p: {} } });
     } else {
       const soonest = docs.reduce((m, x) => (x.expiresAt! < m ? x.expiresAt! : m), new Date(8.64e15));
       const days = Math.ceil((soonest.getTime() - now.getTime()) / 86400000);
       if ([30, 7, 1].includes(days)) {
         const { enqueue } = await import('@/server/outbox');
-        await enqueue(prisma, { audience: `DRIVER:${d.userId}`, title: 'Document expiring soon', body: `A required document expires in ${days} day(s). Renew it to keep driving.`, url: '/driver', tag: 'ride', dedupeKey: `expiry:${d.id}:${days}` });
+        await enqueue(prisma, { audience: `DRIVER:${d.userId}`, title: 'Document expiring soon', body: `A required document expires in ${days} day(s). Renew it to keep driving.`, url: '/driver', tag: 'ride', dedupeKey: `expiry:${d.id}:${days}`, msg: { k: 'driver.docExpiring', p: { days } } });
       }
     }
   }
