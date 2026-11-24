@@ -20,6 +20,7 @@ const patchSchema = z.object({
   scheduleMinMinutes: z.number().int().min(0).max(1440).optional(),
   scheduleMaxDays: z.number().int().min(1).max(365).optional(),
   shareMinMinutes: z.number().int().min(0).max(2880).optional(),
+  shareTimeMode: z.enum(['DEPART', 'ARRIVE']).optional(), // 2026-11-25
   shareSlotMinutes: z.union([z.literal(30), z.literal(60), z.literal(90), z.literal(120), z.literal(180)]).optional(), // 2026-11-24
   shareBoardHideMinutes: z.number().int().min(0).max(2880).optional(),
   minStopDistanceMeters: z.number().int().min(0).max(100000).optional(),

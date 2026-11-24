@@ -1,5 +1,15 @@
 # Session handoff
 
+## 2026-11-25 ~00:30 — ПП departure hours + «Образец ПП: время прибытия» (branch share-slots, LOCAL until «заливай»)
+- Saved the live version before the change as GitHub branch `obrazec-pp-vremya-pribytiya` (= origin/main e773317,
+  2026-11-25 00:10). A tag push was refused (403 from the session proxy), so it is a branch, not a tag.
+- New: ПП passenger picks a departure HOUR (step = admin «Попутчик: часы выезда по», 60 min default); pickup
+  hour..hour+15 (terms via sharePickupFrom, no arrive window). Under each hour: orders on the same route (only
+  ones with terms), people in each, «с ним прибудете ≈» per order (fitPair, straight-line), «одни прибудете ≈».
+  src/server/share-slots.ts, GET /api/v1/share/slots.
+- Admin «ПП: как пассажир выбирает время»: «Час выезда» (default) / «Время прибытия (образец)» — the old
+  «не раньше / не позже» form, unchanged. Server pairs both kinds together (test).
+
 ## 2026-11-24 ~22:10 — documents of «Мои машины» cars, revoke, «Позже» (deployed)
 - Cars added through «Мои машины»: CarDocument states via slotStates (option «б»); runCarDocExpiry (in
   runDocExpiry): pushes drv.carDocExpiring / drv.carDocExpired to owner + bound driver at 7 and 1 day / expired;

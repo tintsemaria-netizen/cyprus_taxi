@@ -14,6 +14,9 @@ export interface OperationalSettings {
   shareBoardHideMinutes: number;
   /** «Попутчик»: arrival windows are offered in steps of this many minutes (operator 2026-11-24: 1 h). */
   shareSlotMinutes: number;
+  /** «Попутчик» time choice (2026-11-25, operator): DEPART = departure hours (new); ARRIVE = «быть на месте с … до …»
+   *  (the saved «Образец ПП: время прибытия», branch obrazec-pp-vremya-pribytiya). */
+  shareTimeMode: 'DEPART' | 'ARRIVE';
   minStopDistanceMeters: number;
   gpsFreshSeconds: number;
   gpsStaleSeconds: number;
@@ -32,6 +35,7 @@ const DEFAULTS: OperationalSettings = {
   shareMinMinutes: 180,
   shareBoardHideMinutes: 240,
   shareSlotMinutes: 60,
+  shareTimeMode: 'DEPART',
   minStopDistanceMeters: config.minStopDistanceMeters,
   gpsFreshSeconds: config.gps.freshSeconds,
   gpsStaleSeconds: config.gps.staleSeconds,
@@ -89,7 +93,7 @@ export async function getPublicConfig() {
     supportEmail: s.supportEmail,
     googleReviewUrl: reviewLink(s.googleReviewUrl),
     classes: s.classes,
-    schedule: { minMinutes: s.scheduleMinMinutes, maxDays: s.scheduleMaxDays, shareMinMinutes: s.shareMinMinutes, shareSlotMinutes: s.shareSlotMinutes },
+    schedule: { minMinutes: s.scheduleMinMinutes, maxDays: s.scheduleMaxDays, shareMinMinutes: s.shareMinMinutes, shareSlotMinutes: s.shareSlotMinutes, shareTimeMode: s.shareTimeMode },
     serviceAreaPolygon: s.serviceAreaPolygon,
     fareWording: 'Metered fare estimate — settled with the driver',
     // Ride-share «Попутчик» (Task 022): offered on airport / intercity routes only.

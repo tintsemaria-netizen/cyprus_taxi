@@ -16,6 +16,7 @@ interface Settings {
   scheduleMaxDays: number;
   shareMinMinutes: number;
   shareSlotMinutes: number;
+  shareTimeMode: 'DEPART' | 'ARRIVE';
   shareBoardHideMinutes: number;
   minStopDistanceMeters: number;
   serviceAreaPolygon: { lat: number; lng: number }[];
@@ -50,6 +51,7 @@ function SettingsForm() {
           scheduleMaxDays: Number(s.scheduleMaxDays),
           shareMinMinutes: Number(s.shareMinMinutes),
           shareSlotMinutes: Number(s.shareSlotMinutes),
+          shareTimeMode: s.shareTimeMode ?? 'DEPART',
           shareBoardHideMinutes: Number(s.shareBoardHideMinutes),
           minStopDistanceMeters: Number(s.minStopDistanceMeters),
         },
@@ -77,6 +79,13 @@ function SettingsForm() {
         <div className="grid grid-cols-3 gap-3">
           <Row label={t('staff.settings.schedMin')}><input type="number" className="field" value={s.scheduleMinMinutes} onChange={(e) => setS({ ...s, scheduleMinMinutes: Number(e.target.value) })} /></Row>
           {/* «Попутчик» arrival windows (2026-11-24): the passenger picks one of these, so co-riders meet. */}
+          {/* 2026-11-25: departure hours (new) or the saved «Образец ПП: время прибытия». */}
+          <Row label={t('staff.settings.shareMode')}>
+            <select className="field" value={s.shareTimeMode ?? 'DEPART'} onChange={(e) => setS({ ...s, shareTimeMode: e.target.value as 'DEPART' | 'ARRIVE' })} data-testid="set-share-mode">
+              <option value="DEPART">{t('staff.settings.shareModeDepart')}</option>
+              <option value="ARRIVE">{t('staff.settings.shareModeArrive')}</option>
+            </select>
+          </Row>
           <Row label={t('staff.settings.shareSlot')}>
             <select className="field" value={s.shareSlotMinutes ?? 60} onChange={(e) => setS({ ...s, shareSlotMinutes: Number(e.target.value) })} data-testid="set-share-slot">
               {[30, 60, 90, 120, 180].map((m) => <option key={m} value={m}>{t('staff.settings.shareSlotOpt', { m })}</option>)}
