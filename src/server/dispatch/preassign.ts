@@ -366,8 +366,7 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
     if (await isPairBlocked(pa.driverId, b.passengerId, tx)) {
       return lapse('pair blocked by a 1-star rating', 'We are finding you another driver automatically.', 'Your pre-booked ride was released.', { pax: 'pre.reassign', drv: 'drv.preReleased' });
     }
-    // A paused driver (on duty, not taking rides) is not ready either (launch fixes §8).
-    const busy = !driver.onDuty || !driver.available
+    const busy = !driver.onDuty
       || !!(await tx.assignment.findFirst({ where: { activeDriverId: pa.driverId }, select: { id: true } }))
       || !!(await tx.driverOffer.findFirst({ where: { activeDriverId: pa.driverId }, select: { id: true } }));
     // Launch fixes §8 (ported 2026-11-24): hand the ride over only to a driver whose phone sends a live

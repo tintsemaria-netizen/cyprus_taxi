@@ -1,7 +1,7 @@
 # Session handoff
 
-## 2026-11-24 — staff alerts + pre-booking robustness (branch `staff-alerts`, LOCAL, not pushed)
-- Launch fixes §8 ported: conversions earliest pickup first, one failing ride never stalls the others; a paused driver (on duty, not taking rides) is not ready at conversion.
+## 2026-11-24 — staff alerts + pre-booking robustness (deployed 2026-11-24 ~05:00)
+- Launch fixes §8 ported: conversions earliest pickup first, one failing ride never stalls the others. (A «paused driver» check was dropped: the app has no pause — operator 2026-11-24: decide when one exists.)
 - Staff alerts (AuditEvent ALERT_*): ALERT_PREBOOK_LAPSED (went to automatic search, with the reason), ALERT_PREBOOK_TOO_LATE (taken off a driver who could not make it), ALERT_PREBOOK_LATE_RELEASE (driver gave it back < 1 h before). GET /admin/alerts (ADMIN, DISPATCHER), list «Сигналы за 7 дней» on admin «Надёжность» with failed receipt e-mails; reasons shown in the staff language (en/ru).
 
 ## 2026-11-24 — pre-booking hand-off needs live GPS and reach (deployed 2026-11-24 ~04:20)
