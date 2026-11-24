@@ -140,14 +140,32 @@ describe('share board', () => {
     if (!r.ok) expect(r.code).toBe('DRIVER_ACCOUNT');
   });
 
-  it('a pre-booking with a co-rider must be at least 3 h ahead (admin setting)', async () => {
-    const at = new Date(Date.now() + 2 * 3600_000).toLocaleString('sv-SE', { timeZone: 'Asia/Nicosia' }).slice(0, 16).replace(' ', 'T');
-    const input = createBookingSchema.parse({ pickup: lca, dropoff: nic1, when: 'SCHEDULE', scheduledAt: at, vClass: 'COMFORT', passengerCount: 1, luggageCount: 1, passengerName: 'X', phone: '+35799123456', shareOptIn: true });
-    const r = await createBooking(input, `sb-soon-${RUN}`);
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.code).toBe('SHARE_TOO_SOON');
-    const plain = createBookingSchema.parse({ ...input, shareOptIn: false });
-    expect((await createBooking(plain, `sb-soon2-${RUN}`)).ok).toBe(true); // without a co-rider 2 h ahead is fine (≥ 1 h)
+  it('a pre-booking with a co-rider must be at least 3 h ahead in the arrival sample mode; not in the departure-hour mode', async () => {
+    const { saveSettings, getSettings } = await import('@/lib/settings');
+    const was = (await getSettings()).shareTimeMode;
+    try {
+      await saveSettings({ shareTimeMode: 'ARRIVE' });
+      const at = new Date(Date.now() + 2 * 3600_000).toLocaleString('sv-SE', { timeZone: 'Asia/Nicosia' }).slice(0, 16).replace(' ', 'T');
+      const input = createBookingSchema.parse({ pickup: lca, dropoff: nic1, when: 'SCHEDULE', scheduledAt: at, vClass: 'COMFORT', passengerCount: 1, luggageCount: 1, passengerName: 'X', phone: '+35799123456', shareOptIn: true });
+      const r = await createBooking(input, `sb-soon-${RUN}`);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.code).toBe('SHARE_TOO_SOON');
+      const plain = createBookingSchema.parse({ ...input, shareOptIn: false });
+      expect((await createBooking(plain, `sb-soon2-${RUN}`)).ok).toBe(true); // without a co-rider 2 h ahead is fine (≥ 1 h)
+      // Departure hours (operator 2026-11-25): no 3-hour rule — he sees who rides when.
+      await saveSettings({ shareTimeMode: 'DEPART' });
+      expect((await createBooking(input, `sb-soon3-${RUN}`)).ok).toBe(true);
+    } finally { await saveSettings({ shareTimeMode: was }); }
+  });
+
+  // Operator 2026-11-25: in the hour list he picks whom to ride with, up to the normal pre-booking minimum
+  // (the board itself still hides rides inside its last 4 h).
+  it('picked in the hour list: rides 2 h ahead can be joined (fromHours); the board alone would refuse', async () => {
+    const a = await passenger(), b = await passenger();
+    const ra = await ride(a.id, lca, nic1, 2, { early: 15 });
+    const rb = await ride(b.id, lcaNear, nic2, 2, { early: 15 });
+    expect((await proposeFromBoard(a.id, ra.id, rb.id)).ok).toBe(false);
+    expect((await proposeFromBoard(a.id, ra.id, rb.id, new Date(), false, true)).ok).toBe(true);
   });
 
   it('«ride together» outside the other passenger’s terms is refused (TZ 2026-11-23: nobody is moved to the other’s time)', async () => {

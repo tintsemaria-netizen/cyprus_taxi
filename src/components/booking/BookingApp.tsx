@@ -95,7 +95,9 @@ export default function BookingApp() {
   const [arriveToT, setArriveToT] = useState('');
   // «Попутчик» departure hour (2026-11-24, operator): «13:00» → the car comes 13:00–13:15.
   const [departT, setDepartT] = useState('');
-  const [arriveSlots, setArriveSlots] = useState<{ at: string; orders: { people: number; myArrive: string | null }[] }[] | null>(null);
+  // The order he chose to ride with in the hour list (its booking id) — proposed right after booking (2026-11-25).
+  const [joinPick, setJoinPick] = useState<string | null>(null);
+  const [arriveSlots, setArriveSlots] = useState<{ at: string; orders: { id: string; people: number; myArrive: string | null; why?: 'ROOM' | 'TIME' }[] }[] | null>(null);
   const [scheduleOffsetMin, setScheduleOffsetMin] = useState<number | undefined>(undefined);
   const [ambiguous, setAmbiguous] = useState<string[] | null>(null);
   const [vClass, setVClass] = useState<'COMFORT' | 'XL'>('COMFORT');
@@ -1006,6 +1008,16 @@ export default function BookingApp() {
         // Pre-booking: confirm here instead of jumping to tracking, so another ride can be ordered.
         setDoneAt(scheduledAt); setStep('scheduled'); setSubmitting(false);
         // Operator 2026-11-23: after a co-rider pre-booking the board opens at once — choose a co-rider yourself.
+        // Chosen in the hour list (2026-11-25): ride with that order — proposed at once, no board.
+        if (shareOn && joinPick && departMode) {
+          const myId = (res as unknown as { bookingId?: string }).bookingId;
+          setJoinResult(null);
+          if (myId) api('/passenger/share-board', { method: 'POST', body: { myBookingId: myId, otherBookingId: joinPick, fromHours: true } })
+            .then(() => setJoinResult({ ok: true, text: t('share.board.joinSent') }))
+            .catch((e) => setJoinResult({ ok: false, text: t('share.board.joinFailed', { reason: e instanceof ApiRequestError ? tError(e) : t('common.networkError') }) }));
+          setJoinPick(null);
+          return;
+        }
         if (shareOn && !join) { router.push(`/share-board?booked=${encodeURIComponent((res as unknown as { reference?: string }).reference ?? '')}`); return; }
         if (join && shareOn) {
           const myId = (res as unknown as { bookingId?: string }).bookingId;
@@ -1143,7 +1155,8 @@ export default function BookingApp() {
   // Co-rider pre-booking at least N h ahead (operator 2026-11-22: 3 h, admin «Настройки»).
   const shareMinWall = nicosiaInputValue(new Date(Date.now() + (cfg?.schedule.shareMinMinutes ?? 180) * 60000));
   const shareMinH = Math.round(((cfg?.schedule.shareMinMinutes ?? 180) / 60) * 10) / 10;
-  const shareTooSoon = when === 'SCHEDULE' && shareOn && !!scheduledAt && scheduledAt < shareMinWall;
+  // No 3-hour rule in the departure-hour mode (2026-11-25): he sees who rides when and picks what he can make.
+  const shareTooSoon = !departMode && when === 'SCHEDULE' && shareOn && !!scheduledAt && scheduledAt < shareMinWall;
   useEffect(() => {
     if (when === 'SCHEDULE' && !arriveDay) setArriveDay(scheduleMin.slice(0, 10));
     if (when === 'SCHEDULE' && !pickDay) setPickDay(scheduleMin.slice(0, 10));
@@ -1181,7 +1194,10 @@ export default function BookingApp() {
   // «Попутчик −30%» terms inside the co-rider box (TZ 2026-11-23): automatic pairing, arrival + pickup interval,
   // +15 min limit, «Изменить» to narrow it or pick an exact time. Prices are on the class step, next to «Заказать».
   const clk = (wallStr: string) => fmt.clock(wallStr.slice(11, 16));
-  const shareTermsBox = (
+  // Departure-hour mode (operator 2026-11-25): no conditions text — the hour list shows who and when; only
+  // «Подача 13:00–13:15» once an hour is chosen.
+  // (an empty element still hides the «how flexible» choice in the co-rider box)
+  const shareTermsBox = departMode ? <></> : (
     <div className="rounded-[12px] border border-accent/40 bg-accent/10 px-3 py-2.5" data-testid="share-terms">
       <p className="text-[13px] font-semibold text-accent">{t('share.terms.auto')}</p>
       {/* Simple (operator 2026-11-23): the window, the 15-minute limit and the board — no pickup editor. */}
@@ -1210,11 +1226,11 @@ export default function BookingApp() {
   // setting); the car comes within 15 min of it. Under each hour: orders already there, people in each, and
   // when he would arrive riding with each one — so he sees who suits his flight.
   const slotPax = Math.max(1, effPax);
-  const slotsFor = departMode && arriveOn && when === 'SCHEDULE' && arriveDay && pickup && dropoff ? `${arriveDay}|${pickup.lat},${pickup.lng}|${dropoff.lat},${dropoff.lng}|${slotPax}|${vClass}` : '';
+  const slotsFor = departMode && arriveOn && when === 'SCHEDULE' && arriveDay && pickup && dropoff ? `${arriveDay}|${pickup.lat},${pickup.lng}|${dropoff.lat},${dropoff.lng}|${slotPax}|${effBags}|${vClass}` : '';
   useEffect(() => {
     if (!slotsFor || !pickup || !dropoff) { setArriveSlots(null); return; }
     let gone = false;
-    api<{ slots: { at: string; orders: { people: number; myArrive: string | null }[] }[] }>(`/share/slots?day=${arriveDay}&pLat=${pickup.lat}&pLng=${pickup.lng}&dLat=${dropoff.lat}&dLng=${dropoff.lng}&pax=${slotPax}&vClass=${vClass}`)
+    api<{ slots: { at: string; orders: { id: string; people: number; myArrive: string | null; why?: 'ROOM' | 'TIME' }[] }[] }>(`/share/slots?day=${arriveDay}&pLat=${pickup.lat}&pLng=${pickup.lng}&dLat=${dropoff.lat}&dLng=${dropoff.lng}&pax=${slotPax}&bags=${effBags}&vClass=${vClass}`)
       .then((r) => { if (!gone) setArriveSlots(r.slots); }).catch(() => { if (!gone) setArriveSlots([]); });
     return () => { gone = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1238,29 +1254,38 @@ export default function BookingApp() {
           const on = departT === x.at;
           const alone = aloneAt(x.at);
           return (
-            <button key={x.at} type="button" disabled={late} onClick={() => setDepartT(x.at)} data-testid={`slot-${x.at}`} aria-pressed={on}
-              className={`w-full rounded-[10px] border px-3 py-2.5 text-start ${on ? 'border-accent bg-accent/15' : 'border-edge bg-elevated'} ${late ? 'opacity-40' : ''}`}>
-              <div className="flex items-baseline justify-between gap-3">
+            <div key={x.at} className={`rounded-[10px] border ${on ? 'border-accent bg-accent/15' : 'border-edge bg-elevated'} ${late ? 'opacity-40' : ''}`}>
+              {/* The hour alone (or let the system pair him) — tap the hour. */}
+              <button type="button" disabled={late} onClick={() => { setDepartT(x.at); setJoinPick(null); }} data-testid={`slot-${x.at}`} aria-pressed={on && !joinPick}
+                className="flex w-full items-baseline justify-between gap-3 px-3 py-2.5 text-start">
                 <span className="text-[16px] font-bold tabular-nums">{fmt.clock(x.at)}</span>
-                <span className="text-end text-xs text-muted">
-                  {late ? t('booking.slots.tooSoon') : x.orders.length ? tp('booking.slots.orders', x.orders.length) : alone ? t('booking.slots.alone', { at: fmt.clock(alone) }) : t('booking.slots.none')}
-                </span>
-              </div>
+                <span className="text-end text-xs text-muted">{late ? t('booking.slots.tooSoon') : alone ? t('booking.slots.alone', { at: fmt.clock(alone) }) : x.orders.length ? tp('booking.slots.orders', x.orders.length) : t('booking.slots.none')}</span>
+              </button>
+              {/* Each order in this hour: ride with it — only if he can (time, detour, room). */}
               {!late && x.orders.length > 0 && (
-                <ul className="mt-1 space-y-0.5 text-xs">
-                  {x.orders.map((o, i) => (
-                    <li key={i} className={o.myArrive ? 'text-accent' : 'text-muted'}>
-                      • {t('booking.slots.people', { n: o.people })} — {o.myArrive ? t('booking.slots.withArrive', { at: fmt.clock(nicosiaInputValue(new Date(o.myArrive)).slice(11, 16)) }) : t('booking.slots.notOnWay')}
-                    </li>
-                  ))}
-                  {alone && <li className="text-muted">• {t('booking.slots.alone', { at: fmt.clock(alone) })}</li>}
-                </ul>
+                <div className="space-y-1 px-2 pb-2">
+                  {x.orders.map((o) => {
+                    const picked = joinPick === o.id;
+                    return (
+                      <button key={o.id} type="button" disabled={!o.myArrive} onClick={() => { setDepartT(x.at); setJoinPick(o.id); }} data-testid={`slot-order-${o.id}`} aria-pressed={picked}
+                        className={`flex w-full items-center justify-between gap-2 rounded-[8px] border px-2.5 py-2 text-start text-xs ${picked ? 'border-accent bg-accent text-[#10191C]' : o.myArrive ? 'border-accent/40 text-accent' : 'border-edge text-muted'}`}>
+                        <span>👥 {t('booking.slots.people', { n: o.people })} — {o.myArrive ? t('booking.slots.withArrive', { at: fmt.clock(nicosiaInputValue(new Date(o.myArrive)).slice(11, 16)) }) : o.why === 'ROOM' ? t('booking.slots.noRoom') : t('booking.slots.noTime')}</span>
+                        {o.myArrive && <span className="shrink-0 font-semibold">{picked ? '✓' : t('booking.slots.ride')}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
-      {arriveCalc && <p className="mt-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium text-ink" data-testid="arrive-leave">{t('booking.slots.pickupSpan', { from: fmt.clock(arriveCalc.leaveFrom.slice(11)), to: fmt.clock(arriveCalc.leaveBy.slice(11)) })}</p>}
+      {arriveCalc && (
+        <div className="mt-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium text-ink" data-testid="arrive-leave">
+          <p className="text-[15px] font-bold">{t('booking.slots.pickupSpan', { from: fmt.clock(arriveCalc.leaveFrom.slice(11)), to: fmt.clock(arriveCalc.leaveBy.slice(11)) })}</p>
+          {joinPick && <p className="mt-0.5 font-semibold text-accent" data-testid="share-terms-with">👥 {t('booking.slots.withChosen')}</p>}
+        </div>
+      )}
     </div>
   );
   // «Образец ПП: время прибытия» (until 2026-11-24, kept as an admin choice 2026-11-25).

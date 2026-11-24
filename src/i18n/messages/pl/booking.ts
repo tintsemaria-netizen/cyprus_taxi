@@ -221,6 +221,10 @@ const booking: Catalog<typeof en> = {
   },
   // «Попутчик» arrival windows (2026-11-24).
   slots: {
+    withChosen: "Wybrałeś współpasażera — połączymy zaraz po zamówieniu.",
+    ride: "Jedź",
+    noRoom: "za mało miejsca",
+    noTime: "nie zdążysz z nim",
     needHour: "Wybierz poniżej godzinę wyjazdu — auto przyjedzie w ciągu 15 minut.",
     label: "Godzina wyjazdu",
     titleDepart: "Wybierz godzinę wyjazdu — w tej samej godzinie łatwiej o współpasażera. Auto przyjedzie w ciągu 15 minut.",

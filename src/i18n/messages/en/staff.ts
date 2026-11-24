@@ -252,7 +252,7 @@ const staff = {
     shareModeArrive: "Arrival time (sample)",
     shareSlot: "Co-rider: departure hours every",
     shareSlotOpt: "{m} min",
-    shareMin: 'Pre-booking with a co-rider at least (min) ahead',
+    shareMin: 'Pre-booking with a co-rider at least (min) ahead — «Arrival time» mode only',
     boardHide: 'Share board: remove a ride (min) before pickup',
     schedMax: 'Schedule max (days)',
     minStop: 'Min stop dist (m)',

@@ -16,5 +16,6 @@ export async function GET(req: Request) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || ['pLat', 'pLng', 'dLat', 'dLng'].some((k) => !Number.isFinite(n(k)))) return Errors.validation({ _: 'day, pLat, pLng, dLat, dLng required.' });
   const people = Math.min(6, Math.max(1, Math.round(n('pax')) || 1));
   const vClass = q.get('vClass') === 'XL' ? 'XL' : 'COMFORT';
-  return apiOk(await shareSlots(day, { lat: n('pLat'), lng: n('pLng') }, { lat: n('dLat'), lng: n('dLng') }, { people, vClass }));
+  const bags = Math.min(10, Math.max(0, Math.round(n('bags')) || 0));
+  return apiOk(await shareSlots(day, { lat: n('pLat'), lng: n('pLng') }, { lat: n('dLat'), lng: n('dLng') }, { people, bags, vClass }));
 }

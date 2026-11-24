@@ -27,8 +27,9 @@ const SEL = {
 } as const;
 
 /** Open (listable) co-rider pre-bookings: no proposal or pair, no pre-accepted driver, far enough ahead. */
-export async function openRides(now: Date, where: object = {}) {
-  const hideMin = await hideMinutes();
+export async function openRides(now: Date, where: object = {}, hideOverrideMin?: number) {
+  // The hour list (2026-11-25) shows orders up to the normal pre-booking minimum, not the board's 4 h.
+  const hideMin = hideOverrideMin ?? await hideMinutes();
   const rows = await prisma.booking.findMany({
     where: {
       status: 'REQUESTED', shareOptIn: true, fareCents: { not: null }, stopLat: null,
@@ -165,9 +166,10 @@ export type BoardResult = { ok: true; proposalId: string; arriveAt: string } | {
 const fail = (status: number, code: string, message: string): BoardResult => ({ ok: false, status, code, message });
 
 /** «Поехать вместе»: propose a pair at the other passenger's time; my answer counts as «yes». */
-export async function proposeFromBoard(passengerId: string, myBookingId: string, otherBookingId: string, now: Date = new Date(), confirmOutside = false): Promise<BoardResult> {
+export async function proposeFromBoard(passengerId: string, myBookingId: string, otherBookingId: string, now: Date = new Date(), confirmOutside = false, fromHours = false): Promise<BoardResult> {
   if (myBookingId === otherBookingId) return fail(422, 'SAME_RIDE', 'Choose another passenger’s ride.');
-  const open = await openRides(now, { id: { in: [myBookingId, otherBookingId] } });
+  // Chosen in the hour list at booking (2026-11-25): open up to the normal pre-booking minimum.
+  const open = await openRides(now, { id: { in: [myBookingId, otherBookingId] } }, fromHours ? (await getSettings()).scheduleMinMinutes : undefined);
   const me = open.find((r) => r.id === myBookingId);
   const them = open.find((r) => r.id === otherBookingId);
   if (await isDriverPassenger(passengerId)) return fail(403, 'DRIVER_ACCOUNT', 'The share board is for passengers.');
