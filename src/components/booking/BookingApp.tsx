@@ -558,6 +558,9 @@ export default function BookingApp() {
     if (!centerModeRef.current) return;
     if (!onCyprusIsland(p)) {
       setOffIsland(true);
+      // A short buzz with the red, shaking logo (operator 2026-11-24). Android browsers vibrate; iPhone
+      // Safari has no vibration for web pages — there only the logo shakes (the native app can buzz later).
+      try { navigator.vibrate?.([70, 50, 70]); } catch { /* not supported */ }
       if (offTimer.current) window.clearTimeout(offTimer.current);
       offTimer.current = window.setTimeout(() => setOffIsland(false), 1100);
       setRecenterTick((n) => n + 1);
@@ -1187,7 +1190,9 @@ export default function BookingApp() {
             const pt = pinPoint(fitPadding, mapBox.w, mapBox.h);
             return (
               <div aria-hidden data-testid="center-pin" className="pointer-events-none absolute z-[5]" style={{ left: pt.x - 16, top: pt.y - 40, width: 32, height: 40 }}>
-                <div className="h-full w-full transition-transform duration-150" style={{ transform: pinLift ? 'translateY(-10px)' : 'none', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.55))' }} dangerouslySetInnerHTML={{ __html: offIsland ? BRAND_PIN_SVG_RED : BRAND_PIN_SVG }} data-red={offIsland ? '1' : undefined} />
+                <div className="h-full w-full transition-transform duration-150" style={{ transform: pinLift ? 'translateY(-10px)' : 'none', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.55))' }}>
+                  <div className={`h-full w-full ${offIsland ? 'ily-pin-shake' : ''}`} dangerouslySetInnerHTML={{ __html: offIsland ? BRAND_PIN_SVG_RED : BRAND_PIN_SVG }} data-red={offIsland ? '1' : undefined} />
+                </div>
                 <div className={`absolute left-1/2 top-full h-1.5 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/40 transition-opacity ${pinLift ? 'opacity-100' : 'opacity-0'}`} />
               </div>
             );

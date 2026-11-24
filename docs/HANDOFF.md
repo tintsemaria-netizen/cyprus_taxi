@@ -2702,3 +2702,5 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Off-island drop: the logo turns red (BRAND_PIN_SVG_RED in carMarker.ts) for ~1.1 s while the map glides back (Google:
   centerPointAt animate 700 ms on recenterTick, a drag cancels it; MapLibre easeTo already glides). Red text note removed.
   Map pickers / address search keep their red line (only the home logo changed).
+- + vibration `navigator.vibrate([70,50,70])` (Android browsers; iPhone Safari has no web vibration → remind for the native app)
+  and the red logo shakes (CSS `ily-pin-shake`, 2×0.5 s, off with prefers-reduced-motion).
