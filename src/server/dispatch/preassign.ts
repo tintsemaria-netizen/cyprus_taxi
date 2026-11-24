@@ -156,11 +156,20 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
 export async function reachMinutes(driverId: string, target: { lat: number; lng: number }, now: Date = new Date()): Promise<number | null> {
   const loc = await prisma.latestDriverLocation.findUnique({ where: { driverId } });
   if (!loc || computeFreshness(loc.sampledAt, loc.receivedAt, now) !== 'fresh') return null;
-  const cur = await prisma.assignment.findFirst({ where: { activeDriverId: driverId }, select: { booking: { select: { dropoffLat: true, dropoffLng: true } } } });
-  const legs: [{ lat: number; lng: number }, { lat: number; lng: number }][] = cur
-    ? [[loc, { lat: cur.booking.dropoffLat, lng: cur.booking.dropoffLng }], [{ lat: cur.booking.dropoffLat, lng: cur.booking.dropoffLng }, target]]
-    : [[loc, target]];
-  let total = cur ? 2 : 0; // a couple of minutes to drop the current passenger
+  // On a trip: the time he will drop that passenger off counts (operator 2026-11-24) — via the pickup if he has
+  // not picked him up yet, via a stop not yet made, then the drop-off, then on to the pre-booked pickup.
+  const cur = await prisma.assignment.findFirst({ where: { activeDriverId: driverId }, select: { booking: { select: { status: true, pickupLat: true, pickupLng: true, stopLat: true, stopLng: true, stopDepartedAt: true, dropoffLat: true, dropoffLng: true } } } });
+  type P = { lat: number; lng: number };
+  const path: P[] = [loc];
+  let total = 0;
+  if (cur) {
+    const c = cur.booking;
+    if (c.status !== 'IN_PROGRESS') { path.push({ lat: c.pickupLat, lng: c.pickupLng }); total += 3; } // boarding
+    if (c.stopLat != null && c.stopLng != null && !c.stopDepartedAt) { path.push({ lat: c.stopLat, lng: c.stopLng }); total += 3; }
+    path.push({ lat: c.dropoffLat, lng: c.dropoffLng }); total += 2; // dropping off
+  }
+  path.push(target);
+  const legs = path.slice(1).map((b, i) => [path[i], b] as [P, P]);
   for (const [a, b] of legs) {
     let m: number | null = null;
     if (googleConfigured()) {

@@ -283,6 +283,17 @@ describe('reach: claim, the hour-before check, and orders in between', () => {
     expect((await claimScheduled(d, (await scheduledRide(600)).id)).ok).toBe(true);
   });
 
+  it('on a trip: the time he drops that passenger off counts (via its pickup and drop-off)', async () => {
+    const d = await driver('Andreas', { onDuty: true });
+    await at(d, larnacaTown); // near the airport…
+    const cur = await scheduledRide(500);
+    await prisma.booking.update({ where: { id: cur.id }, data: { status: 'ASSIGNED', pickupLat: larnacaTown.lat, pickupLng: larnacaTown.lng, dropoffLat: paphos.lat, dropoffLng: paphos.lng } });
+    const v = await prisma.driverVehicleBinding.findFirst({ where: { driverId: d, endedAt: null } });
+    await prisma.assignment.create({ data: { bookingId: cur.id, driverId: d, vehicleId: v!.vehicleId, driverPublicName: 'A', driverPhone: '1', vehiclePlate: 'P', vehicleMake: 'M', vehicleModel: 'M', vehicleColor: 'C', vehicleClass: 'COMFORT', actor: 't', activeBookingId: cur.id, activeDriverId: d, activeVehicleId: v!.vehicleId } });
+    const b = await scheduledRide(50); // …but first he takes a passenger to Paphos
+    expect(await claimScheduled(d, b.id)).toMatchObject({ ok: false, code: 'TOO_FAR_FROM_PICKUP' });
+  });
+
   it('from an hour before: cannot make it → taken off him («вы не успеваете»), back in the pre-bookings; re-taking is checked again', async () => {
     const d = await driver('Andreas', { onDuty: true });
     const b = await scheduledRide(240);
