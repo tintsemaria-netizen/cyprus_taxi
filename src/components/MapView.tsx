@@ -311,7 +311,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     lastRecenter.current = recenterTick;
     // Centre in the visible area (between overlays / above a sheet) — fitPadding, 2026-11-16.
     if (glide) map.once('moveend', () => glideEndRef.current?.());
-    map.easeTo({ center: [focus.lng, focus.lat], zoom: focusZoom, duration: glide ? glideMs : 500, easing: (k) => 1 - Math.pow(1 - k, 3), ...(fitPadding ? { padding: safePadding(fitPadding, map.getContainer().clientWidth, map.getContainer().clientHeight) } : {}) });
+    map.easeTo({ center: [focus.lng, focus.lat], zoom: focusZoom, duration: glide ? glideMs : 500, easing: (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2), ...(fitPadding ? { padding: safePadding(fitPadding, map.getContainer().clientWidth, map.getContainer().clientHeight) } : {}) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusKey, ready, idle.returnTick, padKey, recenterTick]);
 

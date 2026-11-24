@@ -550,7 +550,7 @@ export default function BookingApp() {
   // Landing on a point always ends at the same close zoom (2026-11-24 22:11, operator's screenshot), whatever
   // the zoom before.
   const SPOT_ZOOM = 19;
-  const SPOT_GLIDE_MS = 700;
+  const SPOT_GLIDE_MS = 1500; // 2026-11-24 22:26, operator: «слишком быстро приближает»
   // On a territory's pickup point (2026-11-24 20:45, operator) the logo is a MAP MARKER standing in the point's
   // silhouette (exactly — the centre overlay was ~20 px off on Google), and zooming happens where the fingers
   // are, not around the logo: a zoom gesture does not move the pickup. Only a pan re-picks the map centre.

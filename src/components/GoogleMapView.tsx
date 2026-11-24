@@ -90,7 +90,8 @@ function centerPointAt(map: any, lat: number, lng: number, pad: any, zoom: numbe
     // Glide back (2026-11-24: the red logo «returns» from the sea instead of the map jumping).
     const from = { lat: cur.lat(), lng: cur.lng(), zoom: z0 }, to = { lat: c.lat(), lng: c.lng(), zoom }, t0 = performance.now();
     const step = (now: number) => {
-      const k = Math.min(1, (now - t0) / animateMs), e = 1 - Math.pow(1 - k, 3);
+      // Ease in and out: a long zoom-in starts gently instead of rushing in (2026-11-24, operator).
+      const k = Math.min(1, (now - t0) / animateMs), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
       map.moveCamera({ center: { lat: from.lat + (to.lat - from.lat) * e, lng: from.lng + (to.lng - from.lng) * e }, zoom: from.zoom + (to.zoom - from.zoom) * e });
       if (k < 1) map.__ilyCam = requestAnimationFrame(step);
       else onDone?.();
