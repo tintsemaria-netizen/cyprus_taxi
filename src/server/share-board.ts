@@ -23,7 +23,7 @@ async function hideMinutes(): Promise<number> { return (await getSettings()).sha
 const SEL = {
   id: true, passengerId: true, status: true, vClass: true, shareOptIn: true, shareMaxExtraMin: true, fareCents: true, priceType: true,
   passengerCount: true, childCount: true, luggageCount: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true,
-  stopLat: true, scheduledAt: true, shareWaitMin: true, shareEarlyMin: true, pickupLabel: true, dropoffLabel: true, arriveFrom: true, arriveBy: true, shareTermsVersion: true,
+  stopLat: true, scheduledAt: true, shareWaitMin: true, shareEarlyMin: true, pickupLabel: true, dropoffLabel: true, arriveFrom: true, arriveBy: true, shareTermsVersion: true, sharePickupFrom: true, sharePickupTo: true,
 } as const;
 
 /** Open (listable) co-rider pre-bookings: no proposal or pair, no pre-accepted driver, far enough ahead. */
@@ -52,6 +52,8 @@ export interface BoardRide {
   vClass: string;
   /** «Быть на месте с … до …» of that ride, if set. */
   arrive: { from: string; by: string } | null;
+  /** Departure-hour booking: «Подача 13:00–13:15» (2026-11-25). */
+  span?: { from: string; to: string } | null;
   /** For another passenger's ride: the price of MY matching ride if we pair (and its full price). */
   myBookingId?: string; myFullCents?: number; mySharedCents?: number; myShiftMin?: number;
   /** When I would be there if we ride together; `myOutside` = not inside my own window (operator 2026-11-23: ask first). */
@@ -73,6 +75,8 @@ function view(r: Ride, mine: boolean): BoardRide {
     adults: r.passengerCount - r.childCount, children: r.childCount, bags: r.luggageCount,
     early: r.shareEarlyMin ?? 0, wait: r.shareWaitMin ?? 0, vClass: r.vClass,
     arrive: r.arriveFrom && r.arriveBy ? { from: r.arriveFrom.toISOString(), by: r.arriveBy.toISOString() } : null,
+    // A departure-hour booking (2026-11-25): its pickup span «13:00–13:15».
+    span: !r.arriveFrom && r.sharePickupFrom && r.sharePickupTo ? { from: r.sharePickupFrom.toISOString(), to: r.sharePickupTo.toISOString() } : null,
   };
 }
 

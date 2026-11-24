@@ -178,7 +178,7 @@ const share: Catalog<typeof en> = {
     joinFailed: 'Non envoyé ({reason}). Nous continuons à chercher automatiquement.',
     cancelJoin: 'Ne pas rejoindre',
     title: 'Tableau des covoyageurs',
-    subtitle: "Trajets avec covoyageur encore sans partenaire. En gros : l’heure où la personne doit ÊTRE SUR PLACE, pas l’heure de départ. Choisissez un covoyageur — on vous associe tout de suite. Sinon, le système cherche lui-même.",
+    subtitle: "Trajets avec covoyageur encore sans paire. En gros : l'heure de prise en charge (pour les réservations avec créneau d'arrivée — quand la personne doit être sur place). Choisissez un covoyageur, nous vous associons tout de suite. Sinon, le système cherche lui-même.",
     noMine: 'Pour utiliser le tableau, réservez une course (plus de {h} h à l’avance) avec «Covoyageur».',
     book: 'Réserver une course',
     yours: 'Vos courses',

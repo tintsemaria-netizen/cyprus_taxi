@@ -17,6 +17,7 @@ interface Ride {
   id: string; mine: boolean; at: string; from: string; to: string; fromArea: string; toArea: string;
   adults: number; children: number; bags: number; early: number; wait: number; vClass?: string;
   arrive?: { from: string; by: string } | null;
+  span?: { from: string; to: string } | null;
   myBookingId?: string; myFullCents?: number; mySharedCents?: number; myShiftMin?: number; myArriveAt?: string; myOutside?: boolean;
   waiting?: { until: string } | null;
 }
@@ -40,17 +41,18 @@ export default function Page() {
   useEffect(() => { load(); const iv = setInterval(load, 30_000); return () => clearInterval(iv); }, [load]);
   useRefreshOnReturn(load); // resumed app: fresh data at once (2026-11-22)
 
-  // Large: the ARRIVAL window («на месте»), not the departure (operator 2026-11-23); no window → the pickup time, labelled.
+  // Large: an old booking's ARRIVAL window («на месте»); a departure-hour booking's pickup span «подача 13:00–13:15»
+  // (2026-11-25); otherwise the pickup time, labelled.
   const bigTime = (r: Ride) => (
     <span className="shrink-0 text-end leading-tight" data-testid="board-time">
       <span className="block text-[11px] font-semibold uppercase text-accent">{r.arrive ? t('share.board.atPlace') : t('share.board.atPickup')}</span>
-      <span className="block text-lg font-bold tabular-nums">{r.arrive ? `${fmt.time(r.arrive.from)}–${fmt.time(r.arrive.by)}` : fmt.time(r.at)}</span>
+      <span className="block text-lg font-bold tabular-nums">{r.arrive ? `${fmt.time(r.arrive.from)}–${fmt.time(r.arrive.by)}` : r.span ? `${fmt.time(r.span.from)}–${fmt.time(r.span.to)}` : fmt.time(r.at)}</span>
       <span className="block text-xs text-muted">{fmt.date(r.arrive?.from ?? r.at)}</span>
     </span>
   );
   const zone = (k: string) => t(`share.zones.${k}` as 'share.zones.LCA');
   const people = (r: Ride) => [t('share.who.adults', { n: r.adults }), r.children ? t('share.who.children', { n: r.children }) : null, t('share.who.luggage', { n: r.bags })].filter(Boolean).join(' · ');
-  const flex = (r: Ride) => (r.arrive ? '' : !r.early && !r.wait ? t('share.board.onTime') : t('share.board.flex', { e: r.early, w: r.wait }));
+  const flex = (r: Ride) => (r.arrive || r.span ? '' : !r.early && !r.wait ? t('share.board.onTime') : t('share.board.flex', { e: r.early, w: r.wait }));
 
   // Operator 2026-11-23: the one who taps adapts to the other's time. If that is outside his own window,
   // ask first («Вы уверены…»); afterwards show when he will be there.

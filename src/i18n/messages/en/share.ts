@@ -176,7 +176,7 @@ const share = {
     joinFailed: 'Could not send it to that co-rider ({reason}). We keep looking for a co-rider automatically.',
     cancelJoin: 'Don’t join',
     title: 'Share board',
-    subtitle: "Co-rider rides that have no pair yet. In large type: when the passenger needs to BE THERE, not the departure time. Pick a co-rider and we pair you at once. If you don’t, the system looks for a pair itself.",
+    subtitle: "Co-rider rides that have no pair yet. In large print: the pickup time (for bookings with an arrival window — when that person needs to be there). Pick a co-rider and we pair you at once. If you don't, the system looks for a pair itself.",
     noMine: 'To use the board, pre-book a ride (more than {h} h ahead) with «Co-rider» switched on.',
     book: 'Pre-book a ride',
     yours: 'Your rides',

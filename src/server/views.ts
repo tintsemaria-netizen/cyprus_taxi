@@ -144,6 +144,8 @@ export async function trackingView(bookingId: string) {
     passengerName: booking.passengerName,
     flightNumber: booking.flightNumber,
     arrive: booking.arriveFrom && booking.arriveBy ? { from: booking.arriveFrom.toISOString(), by: booking.arriveBy.toISOString() } : null, // «быть на месте с … до …»
+    // «Попутчик» departure hour (2026-11-25): «Подача 13:00–13:15».
+    span: !booking.arriveFrom && booking.sharePickupFrom && booking.sharePickupTo ? { from: booking.sharePickupFrom.toISOString(), to: booking.sharePickupTo.toISOString() } : null,
     confirmedDriver,
     vClass: booking.vClass,
     passengerCount: booking.passengerCount,

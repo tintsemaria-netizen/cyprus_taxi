@@ -18,6 +18,7 @@ interface Item {
   note?: string | null;
   share?: ShareBoard | null; // ride-share pair (Task 022)
   arrive?: { from: string; by: string } | null; // «быть на месте с … до …» (2026-11-22)
+  span?: { from: string; to: string } | null; // «Попутчик» departure hour: «подача 13:00–13:15» (2026-11-25)
 }
 interface ShareBoard {
   guestPickupAt: string; guestPickupLabel: string; guestDropoffLabel: string;
@@ -91,7 +92,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
   const row = (i: Item, action: React.ReactNode) => i.share ? pairRow(i, i.share) : (
     <div key={i.bookingId} className="rounded-[12px] border border-edge bg-elevated p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-semibold">{fmt.dateTime(i.pickupAt)}</span>
+        <span className="font-semibold">{i.span ? `${fmt.dateTime(i.span.from)}–${fmt.time(i.span.to)}` : fmt.dateTime(i.pickupAt)}</span>
         <span className="flex shrink-0 gap-1">
           <span className="rounded-md border-2 border-white/25 px-2 py-0.5 text-[13px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${i.vClass}` as 'common.vClass.COMFORT')}</span>
         </span>
@@ -262,7 +263,7 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
           {!d ? <p className="py-6 text-center text-sm text-muted">{t('common.loading')}</p> : (
             <>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-lg font-bold">{fmt.dateTime(d.pickupAt)}</span>
+                <span className="text-lg font-bold">{d.span ? `${fmt.dateTime(d.span.from)}–${fmt.time(d.span.to)}` : fmt.dateTime(d.pickupAt)}</span>
                 <span className="flex shrink-0 gap-1">
                   <span className="rounded-md border-2 border-white/25 px-2 py-0.5 text-[15px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${d.vClass}` as 'common.vClass.COMFORT')}</span>
                 </span>

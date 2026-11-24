@@ -178,7 +178,7 @@ const share: Catalog<typeof en> = {
     joinFailed: 'Nie wysłano ({reason}). Szukamy dalej automatycznie.',
     cancelJoin: 'Nie dołączaj',
     title: 'Tablica współpasażerów',
-    subtitle: "Przejazdy ze współpasażerem, które nie mają jeszcze pary. Dużą czcionką: kiedy pasażer musi BYĆ NA MIEJSCU, a nie godzina wyjazdu. Wybierz współpasażera — połączymy od razu. Jeśli nie wybierzesz, system poszuka pary sam.",
+    subtitle: "Przejazdy ze współpasażerem, które nie mają jeszcze pary. Dużą czcionką: godzina podstawienia (przy zamówieniach z oknem przyjazdu — kiedy ta osoba musi być na miejscu). Wybierz współpasażera — połączymy od razu. Jeśli nie wybierzesz, system poszuka pary sam.",
     noMine: 'Aby korzystać z tablicy, zarezerwuj kurs (ponad {h} h wcześniej) z włączonym «Współpasażerem».',
     book: 'Zarezerwuj kurs',
     yours: 'Twoje kursy',

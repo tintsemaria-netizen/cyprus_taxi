@@ -178,7 +178,7 @@ const share: Catalog<typeof en> = {
     joinFailed: 'Nicht gesendet ({reason}). Wir suchen automatisch weiter.',
     cancelJoin: 'Nicht anschließen',
     title: 'Mitfahrer-Board',
-    subtitle: "Fahrten mit Mitfahrer, die noch keinen Partner haben. Groß: wann der Fahrgast DORT SEIN muss, nicht die Abfahrtszeit. Wählen Sie einen Mitfahrer — wir verbinden sofort. Sonst sucht das System selbst.",
+    subtitle: "Fahrten mit Mitfahrer, die noch kein Paar haben. Groß: die Abholzeit (bei Buchungen mit Ankunftsfenster — wann die Person dort sein muss). Wählen Sie einen Mitfahrer — wir verbinden sofort. Sonst sucht das System selbst ein Paar.",
     noMine: 'Für das Board bitte eine Fahrt (mehr als {h} Std. im Voraus) mit «Mitfahrer» vorbestellen.',
     book: 'Fahrt vorbestellen',
     yours: 'Ihre Fahrten',

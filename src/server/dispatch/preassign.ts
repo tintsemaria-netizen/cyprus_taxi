@@ -52,6 +52,7 @@ export interface BoardItem {
   share?: ShareBoardInfo | null; // ride-share pair (Task 022): one order, two passengers
   /** «Быть на месте с … до …» (2026-11-22): the passenger must ARRIVE inside this window. */
   arrive?: { from: string; by: string } | null;
+  span?: { from: string; to: string } | null;
 }
 
 // A pre-booked ride-share pair as one order on the board: the second passenger's stops and time,
@@ -63,6 +64,8 @@ export interface ShareBoardInfo {
   hostArrive?: { from: string; by: string } | null; guestArrive?: { from: string; by: string } | null;
 }
 
+/** «Попутчик» departure hour (2026-11-25): the passenger expects the car 13:00–13:15. */
+const spanOf = (b: { arriveFrom: Date | null; sharePickupFrom?: Date | null; sharePickupTo?: Date | null }) => (!b.arriveFrom && b.sharePickupFrom && b.sharePickupTo ? { from: b.sharePickupFrom.toISOString(), to: b.sharePickupTo.toISOString() } : null);
 const arriveOf = (b: { arriveFrom: Date | null; arriveBy: Date | null }) => (b.arriveFrom && b.arriveBy ? { from: b.arriveFrom.toISOString(), by: b.arriveBy.toISOString() } : null);
 
 async function sharePairs(bookingIds: string[]) {
@@ -95,7 +98,7 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
   const mineRows = await prisma.preAssignment.findMany({
     where: { driverId, status: 'COMMITTED' },
     orderBy: { pickupAt: 'asc' },
-    include: { booking: { select: { reference: true, pickupLabel: true, dropoffLabel: true, dropoffPostcode: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, passengerCount: true, vClass: true, fareCents: true, priceType: true, flightNumber: true, note: true, arriveFrom: true, arriveBy: true, fareMinCents: true } } },
+    include: { booking: { select: { reference: true, pickupLabel: true, dropoffLabel: true, dropoffPostcode: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, passengerCount: true, vClass: true, fareCents: true, priceType: true, flightNumber: true, note: true, arriveFrom: true, arriveBy: true, sharePickupFrom: true, sharePickupTo: true, fareMinCents: true } } },
   });
   const minePairs = await sharePairs(mineRows.map((r) => r.bookingId));
   const mine = mineRows.map((p) => ({
@@ -104,7 +107,7 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
     pickupLabel: minePairs.get(p.bookingId) ? approxLabel(p.booking.pickupLabel) : p.booking.pickupLabel, dropoffLabel: minePairs.get(p.bookingId) ? approxLabel(p.booking.dropoffLabel) : p.booking.dropoffLabel, dropoffPostcode: p.booking.dropoffPostcode ?? null, vClass: p.booking.vClass,
     passengerCount: p.booking.passengerCount, fareCents: p.booking.fareCents, priceType: p.booking.priceType,
     minCents: p.booking.fareMinCents ?? null,
-    flightNumber: p.booking.flightNumber, note: p.booking.note, arrive: arriveOf(p.booking),
+    flightNumber: p.booking.flightNumber, note: p.booking.note, arrive: arriveOf(p.booking), span: spanOf(p.booking),
     airport: isAirportPoint(p.booking.pickupLat, p.booking.pickupLng) || isAirportPoint(p.booking.dropoffLat, p.booking.dropoffLng),
     canReleaseFreely: p.pickupAt.getTime() - now.getTime() > config.dispatch.preassign.lateReleaseMinutes * MIN,
   }));
@@ -123,7 +126,7 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
     },
     orderBy: { scheduledAt: 'asc' },
     take: 50,
-    select: { id: true, passengerId: true, reference: true, scheduledAt: true, pickupLabel: true, dropoffLabel: true, dropoffPostcode: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, vClass: true, passengerCount: true, fareCents: true, priceType: true, flightNumber: true, note: true, arriveFrom: true, arriveBy: true, fareMinCents: true },
+    select: { id: true, passengerId: true, reference: true, scheduledAt: true, pickupLabel: true, dropoffLabel: true, dropoffPostcode: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, vClass: true, passengerCount: true, fareCents: true, priceType: true, flightNumber: true, note: true, arriveFrom: true, arriveBy: true, sharePickupFrom: true, sharePickupTo: true, fareMinCents: true },
   });
   const gap = p.minGapMinutes * MIN;
   // Never offer a passenger this driver is blocked with (1-star either way, blocked-pairs.ts).
@@ -141,7 +144,7 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
     bookingId: b.id, reference: b.reference, pickupAt: b.scheduledAt!.toISOString(),
     // A ride-share pair shows approximate addresses until the ride starts (operator, 2026-11-19).
     pickupLabel: pairs.get(b.id) ? approxLabel(b.pickupLabel) : b.pickupLabel, dropoffLabel: pairs.get(b.id) ? approxLabel(b.dropoffLabel) : b.dropoffLabel, dropoffPostcode: b.dropoffPostcode ?? null, vClass: b.vClass, passengerCount: b.passengerCount,
-    fareCents: b.fareCents, priceType: b.priceType, flightNumber: b.flightNumber, note: b.note, minCents: b.fareMinCents ?? null, arrive: arriveOf(b),
+    fareCents: b.fareCents, priceType: b.priceType, flightNumber: b.flightNumber, note: b.note, minCents: b.fareMinCents ?? null, arrive: arriveOf(b), span: spanOf(b),
     airport: isAirportPoint(b.pickupLat, b.pickupLng) || isAirportPoint(b.dropoffLat, b.dropoffLng),
     conflict: mineRows.length >= p.maxPerDriver || mineRows.some((m) => Math.abs(m.pickupAt.getTime() - b.scheduledAt!.getTime()) < gap),
   }));
