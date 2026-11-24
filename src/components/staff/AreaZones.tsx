@@ -95,8 +95,10 @@ function AreaZones({ kind }: { kind: Kind }) {
     // the territory being drawn: its rounded outline (faint behind the corners; solid while points are placed)
     ...(draft?.kind === 'POINT' && draft.polygon.length >= 3 ? [{ id: 'draft-round', name: draft.name, polygon: smoothRing(draft.polygon), color: BLUE, strong: pointMode }] : []),
     // The territory being edited: its points can be dragged to a new place (2026-11-25, operator).
-    ...(draft ? draft.points.map((p, i) => ({ ...pointLabel(p.name, p, i), id: `draft-pick-${i}`, draggable: true })) : []),
-    ...(draft ? draft.dropPoints.map((p, i) => ({ ...dropLabel(p.name, p, i), id: `draft-drop-${i}`, draggable: true })) : []),
+    // Only the kind chosen in the switch moves (operator 2026-11-25): «📍 Точки подачи» → pickup points,
+    // «🏁 Точки высадки» → drop-off points, «Углы» → none.
+    ...(draft ? draft.points.map((p, i) => ({ ...pointLabel(p.name, p, i), id: `draft-pick-${i}`, draggable: mode === 'pick' })) : []),
+    ...(draft ? draft.dropPoints.map((p, i) => ({ ...dropLabel(p.name, p, i), id: `draft-drop-${i}`, draggable: mode === 'drop' })) : []),
   ];
 
   const fitKey = `${draft ? (draft.id ?? 'new') : ''}|${zones.length}`;
@@ -116,6 +118,7 @@ function AreaZones({ kind }: { kind: Kind }) {
     if (!draft) return;
     const m = /^draft-(pick|drop)-(\d+)$/.exec(id); if (!m) return;
     const which = m[1] as 'pick' | 'drop', i = Number(m[2]);
+    if (which !== mode) { setDraft({ ...draft }); return; }
     const pt = { lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6 };
     const ok = onCyprusIsland(pt) && pointInPolygon(pt, smoothRing(draft.polygon).map(([a, b]) => ({ lat: a, lng: b })));
     const near = (which === 'pick' ? draft.dropPoints : draft.points).some((q) => metres(q, pt) < MIN_PICK_DROP_M);
