@@ -513,7 +513,7 @@ self.addEventListener('push', (event) => {
       silent: quiet,
       requireInteraction: isOffer || isShare, // stays until the person acts on it
       vibrate: isOffer || isShare ? [600, 200, 600, 200, 600, 200, 600] : [200],
-      icon: '/icons/icon-192.png',
+      icon: '/icons/icon-192.png?v=2',
       badge: '/icons/favicon-32.png',
       timestamp: Date.now(),
       data: { url: data.url || '/', shownAt },
