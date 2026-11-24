@@ -2812,6 +2812,13 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-24 19:55 — pickup territory camera (DEPLOYED b6c8e66)
+
+- BookingApp `fitZoom`: on a territory pickup point the camera zooms out so the whole rounded territory is in
+  view around the pin; only the chosen point is labelled on the map (names are on the chips).
+- Live: new chunk served (marker 78271.5), health ready 200. Operator will test live himself (draw a territory in
+  «Цены → Точки подачи», then open the client inside it). Not checked: Google-map look.
+
 ## 2026-11-24 17:10 — «Точки подачи»: несколько точек + закруглённая территория (DEPLOYED 4924a3a, 17:20)
 
 - NoGoZone kind POINT now has `points` JSONB `[{lat,lng,name}]` (1–20) instead of pointLat/pointLng. Migration
