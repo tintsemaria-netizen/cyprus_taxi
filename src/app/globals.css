@@ -133,3 +133,15 @@ body {
 input[type='time'], input[type='date'], input[type='datetime-local'] { min-width: 0; }
 input[type='time']::-webkit-date-and-time-value, input[type='date']::-webkit-date-and-time-value { text-align: center; min-width: 0; }
 @keyframes ily-bubble-in { from { opacity: 0; transform: translateY(-4px) scale(.97) } to { opacity: 1; transform: none } }
+
+/* Centre pin back from the sea (2026-11-24, operator): the red logo shakes a little. */
+@keyframes ily-pin-shake {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  15% { transform: translateX(-4px) rotate(-6deg); }
+  30% { transform: translateX(4px) rotate(6deg); }
+  45% { transform: translateX(-3px) rotate(-4deg); }
+  60% { transform: translateX(3px) rotate(4deg); }
+  75% { transform: translateX(-1px) rotate(-2deg); }
+}
+.ily-pin-shake { animation: ily-pin-shake 0.5s ease-in-out 2; transform-origin: 50% 100%; }
+@media (prefers-reduced-motion: reduce) { .ily-pin-shake { animation: none; } }
