@@ -40,6 +40,12 @@ function Reliability() {
   // Launch fixes §3: dependency states (SMS, malware scan, e-mail, push, maps, switches).
   const [sys, setSys] = useState<{ env: string; deps: { key: string; state: 'ok' | 'warn' | 'missing'; note: string; n?: number; names?: string }[] } | null>(null);
   useEffect(() => { api<NonNullable<typeof sys>>('/admin/system').then(setSys).catch(() => {}); }, []);
+  // Staff alerts, last 7 days (launch fixes §8, ported 2026-11-24).
+  const [alerts, setAlerts] = useState<{ alerts: { at: string; kind: string; detail: string | null; bookingRef: string | null }[]; failedReceiptEmails: number } | null>(null);
+  useEffect(() => { api<NonNullable<typeof alerts>>('/admin/alerts').then(setAlerts).catch(() => {}); }, []);
+  // Server reasons are stored in English; show them in the staff language.
+  const WHY: Record<string, string> = { 'driver busy at conversion': 'busy', 'driver offline at conversion': 'offline', 'no live GPS at conversion': 'noGps', 'driver too far at conversion': 'far', 'pair blocked by a 1-star rating': 'blocked', 'driver or vehicle no longer eligible': 'ineligible', 'driver gave the pre-booking back late': 'late' };
+  const whyText = (d: string) => { const m = /needs ~(\d+) min/.exec(d); if (m) return t('staff.alerts.why.needs', { n: Number(m[1]) }); const k = WHY[d]; return k ? lbl(t, `staff.alerts.why.${k}`, d) : d; };
 
   async function openDriver(id: string) {
     if (open === id) { setOpen(null); return; }
@@ -67,6 +73,22 @@ function Reliability() {
           <ul className="grid gap-1 sm:grid-cols-2">
             {sys.deps.map((d) => (
               <li key={d.key} className="flex gap-2 text-xs"><span className={d.state === 'ok' ? 'text-accent' : d.state === 'warn' ? 'text-warn' : 'text-danger'}>●</span><span className="font-medium">{lbl(t, `staff.alerts.depName.${d.key}`, d.key)}</span><span className="text-muted">{lbl(t, `staff.alerts.dep.${d.note}`, d.note, { n: d.n ?? 0, names: d.names ?? '' })}</span></li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {alerts && (alerts.alerts.length > 0 || alerts.failedReceiptEmails > 0) && (
+        <div className="card p-3 text-sm" data-testid="staff-alerts">
+          <div className="mb-1 font-semibold">{t('staff.alerts.title')}</div>
+          {alerts.failedReceiptEmails > 0 && <p className="text-xs text-danger">{t('staff.alerts.failedEmails', { n: alerts.failedReceiptEmails })}</p>}
+          <ul className="mt-1 space-y-1">
+            {alerts.alerts.map((a, i) => (
+              <li key={i} className="flex flex-wrap gap-x-2 text-xs">
+                <span className="text-muted tabular-nums">{fmt.dateTime(a.at)}</span>
+                <span className="font-medium">{lbl(t, `staff.alerts.kind.${a.kind}`, a.kind)}</span>
+                {a.bookingRef && <span className="font-mono">{a.bookingRef}</span>}
+                {a.detail && <span className="text-muted">{whyText(a.detail)}</span>}
+              </li>
             ))}
           </ul>
         </div>

@@ -1,19 +1,22 @@
 import { apiOk, Errors } from '@/lib/http';
 import { requireStaff, isStaffCtx } from '@/lib/auth';
-import { staffAlerts } from '@/server/staff-alerts';
-import { areaOf } from '@/server/staff-log';
+import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// The red menu (2026-11-23): waiting driver applications for every admin; the owner also gets unchecked
-// «Не ваши изменения» and the newest one for the silent pop-up. Polled by StaffShell every 10 s.
+// Staff alerts (launch fixes §8/§3, ported 2026-11-24): pre-bookings that went to automatic search, were
+// taken off a driver who could not make it, or were given back late; receipt e-mails that failed. Last 7
+// days. ADMIN and DISPATCHER. No passenger data — the booking reference only.
 export async function GET() {
-  const ctx = await requireStaff(['ADMIN']);
+  const ctx = await requireStaff(['ADMIN', 'DISPATCHER']);
   if (!isStaffCtx(ctx)) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();
-  const a = await staffAlerts(ctx.user);
+  const since = new Date(Date.now() - 7 * 86_400_000);
+  const rows = await prisma.auditEvent.findMany({ where: { action: { startsWith: 'ALERT_' }, createdAt: { gte: since } }, orderBy: { createdAt: 'desc' }, take: 50 });
+  const ids = [...new Set(rows.map((r) => r.target).filter((x): x is string => !!x))];
+  const refs = new Map((await prisma.booking.findMany({ where: { id: { in: ids } }, select: { id: true, reference: true } })).map((b) => [b.id, b.reference]));
+  const failedEmails = await prisma.receiptEmail.count({ where: { status: 'FAILED', updatedAt: { gte: since } } });
   return apiOk({
-    applications: a.applications,
-    changes: a.changes,
-    last: a.last ? { id: a.last.id, actor: a.last.actorName, method: a.last.method, area: areaOf(a.last.path) } : null,
+    alerts: rows.map((r) => ({ at: r.createdAt.toISOString(), kind: r.action, detail: r.detail, bookingRef: r.target ? refs.get(r.target) ?? null : null })),
+    failedReceiptEmails: failedEmails,
   });
 }

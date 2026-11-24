@@ -181,6 +181,7 @@ describe('conversion near pickup', () => {
     await prisma.preAssignment.updateMany({ where: { bookingId: b.id }, data: { pickupAt: new Date(Date.now() + (config.dispatch.scheduleLeadMinutes - 1) * MIN) } });
     expect((await runPreassignments(new Date())).lapsed).toBe(1);
     expect((await prisma.preAssignment.findFirst({ where: { bookingId: b.id } }))!.endReason).toBe('driver too far at conversion');
+    expect(await prisma.auditEvent.count({ where: { action: 'ALERT_PREBOOK_LAPSED', target: b.id } })).toBe(1);
     const u = await prisma.driver.findUniqueOrThrow({ where: { id: d }, select: { userId: true } });
     const msgs = await prisma.notificationOutbox.findMany({ where: { audience: `DRIVER:${u.userId}` } });
     expect(msgs.some((m) => (m.msg as { k: string } | null)?.k === 'drv.preLapsedFar')).toBe(true);
@@ -311,6 +312,8 @@ describe('reach: claim, the hour-before check, and orders in between', () => {
     const u = await prisma.driver.findUniqueOrThrow({ where: { id: d }, select: { userId: true } });
     expect((await prisma.notificationOutbox.findMany({ where: { audience: `DRIVER:${u.userId}` } })).some((x) => (x.msg as { k: string } | null)?.k === 'drv.preTooLate')).toBe(true);
     expect(await claimScheduled(d, b.id)).toMatchObject({ ok: false, code: 'TOO_FAR_FROM_PICKUP' });
+    // Staff see it on admin «Надёжность» (no passenger data, the booking only).
+    expect(await prisma.auditEvent.count({ where: { action: 'ALERT_PREBOOK_TOO_LATE', target: b.id } })).toBe(1);
   });
 
   it('within the hour: an order towards the pickup that still makes it is offered; one going away is not', async () => {

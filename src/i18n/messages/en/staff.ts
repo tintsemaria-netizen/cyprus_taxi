@@ -264,6 +264,23 @@ const staff = {
     expiryHint: 'Required for licence, taxi licence, insurance and roadworthiness; leave empty only for documents without an expiry.',
   },
   alerts: {
+    why: {
+      busy: "driver was on another trip",
+      offline: "driver did not go online",
+      noGps: "no location from the driver’s phone",
+      far: "driver was too far away",
+      blocked: "pair blocked by a 1★ rating",
+      ineligible: "driver or vehicle no longer eligible",
+      late: "given back less than an hour before pickup",
+      needs: "driver needed ~{n} min",
+    },
+    title: "Alerts, last 7 days",
+    failedEmails: "Receipt e-mails that failed: {n}",
+    kind: {
+      ALERT_PREBOOK_LAPSED: "Pre-booking went to automatic search",
+      ALERT_PREBOOK_TOO_LATE: "Pre-booking taken off: driver could not make it",
+      ALERT_PREBOOK_LATE_RELEASE: "Driver gave a pre-booking back late",
+    },
     dep: {
       secretsMissing: "Missing: {names}",
       secretsOk: "Session, tracking and database secrets are set.",

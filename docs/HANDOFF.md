@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-24 — staff alerts + pre-booking robustness (branch `staff-alerts`, LOCAL, not pushed)
+- Launch fixes §8 ported: conversions earliest pickup first, one failing ride never stalls the others; a paused driver (on duty, not taking rides) is not ready at conversion.
+- Staff alerts (AuditEvent ALERT_*): ALERT_PREBOOK_LAPSED (went to automatic search, with the reason), ALERT_PREBOOK_TOO_LATE (taken off a driver who could not make it), ALERT_PREBOOK_LATE_RELEASE (driver gave it back < 1 h before). GET /admin/alerts (ADMIN, DISPATCHER), list «Сигналы за 7 дней» on admin «Надёжность» with failed receipt e-mails; reasons shown in the staff language (en/ru).
+
 ## 2026-11-24 — pre-booking hand-off needs live GPS and reach (deployed 2026-11-24 ~04:20)
 - `convertOne` (preassign.ts): besides on duty / not busy, the driver needs a position received ≤ 90 s ago and must reach the pickup in time (straight line ×1.3 at 45 km/h, +10 min grace; no road call under the lock). Not ready → waits like a busy driver, then lapses at the usual cutoff with reason «no live GPS at conversion» / «driver too far at conversion» and driver push `drv.preLapsedNoGps` / `drv.preLapsedFar` (sw.js, 8 languages). Covers ride-share pairs too (same conversion).
 - Map on the share board: rebased onto the new board (branch `share-map-2`), operator: later.

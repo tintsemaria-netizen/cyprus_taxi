@@ -238,6 +238,7 @@ export async function releaseScheduled(driverId: string, bookingId: string, now:
     const late = pa.pickupAt.getTime() - now.getTime() < config.dispatch.preassign.lateReleaseMinutes * MIN;
     await endPreAssignmentTx(tx, bookingId, 'RELEASED', late ? 'driver released late' : 'driver released');
     await tx.bookingEvent.create({ data: { bookingId, type: 'PREASSIGN_RELEASED', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED', reason: late ? 'late release' : null } });
+    if (late) await staffAlertTx(tx, 'ALERT_PREBOOK_LATE_RELEASE', bookingId, 'driver gave the pre-booking back late');
     // No push to the passenger (operator, 2026-11-22): a new driver is found automatically before pickup.
     return { ok: true, status: late ? 'RELEASED_LATE' : 'RELEASED' };
   });
@@ -283,11 +284,16 @@ export async function runPreassignments(now: Date = new Date()): Promise<{ remin
   }
 
   // 2) Convert (or lapse) commitments inside the conversion window.
-  const window = await prisma.preAssignment.findMany({ where: { status: 'COMMITTED', pickupAt: { lte: new Date(now.getTime() + p.convertMinutes * MIN) } }, select: { bookingId: true }, take: 25 });
+  // Launch fixes §8 (ported 2026-11-24): earliest pickup first; one failing ride never stalls the others.
+  const window = await prisma.preAssignment.findMany({ where: { status: 'COMMITTED', pickupAt: { lte: new Date(now.getTime() + p.convertMinutes * MIN) } }, select: { bookingId: true }, orderBy: { pickupAt: 'asc' }, take: 25 });
   for (const w of window) {
-    const r = await convertOne(w.bookingId, now);
-    if (r === 'converted') converted++;
-    if (r === 'lapsed') lapsed++;
+    try {
+      const r = await convertOne(w.bookingId, now);
+      if (r === 'converted') converted++;
+      if (r === 'lapsed') lapsed++;
+    } catch (e) {
+      console.error('[preassign] conversion failed', w.bookingId, e instanceof Error ? e.message : e);
+    }
   }
   return { reminded, converted, lapsed };
 }
@@ -297,6 +303,11 @@ const PREBOOK_GPS_FRESH_SEC = 90;
 /** Rough minutes to drive to the pickup: straight line ×1.3 at 45 km/h (no road call under a lock). */
 function reachMin(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   return (haversineMeters(a, b) * 1.3) / 1000 / 45 * 60;
+}
+
+/** Staff alert (launch fixes §8, ported 2026-11-24): an audit row listed on admin «Надёжность»; no passenger data. */
+export async function staffAlertTx(tx: Prisma.TransactionClient, action: `ALERT_${string}`, bookingId: string, detail: string): Promise<void> {
+  await tx.auditEvent.create({ data: { actorRole: 'SYSTEM', action, target: bookingId, detail: detail.slice(0, 200) } });
 }
 
 const lastReach = new Map<string, number>();
@@ -319,6 +330,7 @@ async function checkReach(now: Date): Promise<void> {
       await endPreAssignmentTx(tx, pa.bookingId, 'RELEASED', `cannot make it in time (needs ~${Math.round(need)} min)`,
         { notifyDriver: 'You cannot make it to the pre-booked ride in time — it was taken off you and is back in the pre-bookings.', notifyDriverKey: 'drv.preTooLate' });
       await tx.bookingEvent.create({ data: { bookingId: pa.bookingId, type: 'PREASSIGN_RELEASED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED', reason: 'cannot make it in time' } });
+      await staffAlertTx(tx, 'ALERT_PREBOOK_TOO_LATE', pa.bookingId, `driver cannot make it (needs ~${Math.round(need)} min)`);
     });
   }
   if (lastReach.size > 2000) for (const [k, v] of lastReach) if (now.getTime() - v > 3 * 3600_000) lastReach.delete(k);
@@ -338,6 +350,7 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
     const lapse = async (why: string, passengerMsg: string, driverMsg: string, keys: { pax: string; drv: string }) => {
       await endPreAssignmentTx(tx, bookingId, 'LAPSED', why, { notifyDriver: driverMsg, notifyDriverKey: keys.drv });
       await tx.bookingEvent.create({ data: { bookingId, type: 'PREASSIGN_LAPSED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED', reason: why } });
+      await staffAlertTx(tx, 'ALERT_PREBOOK_LAPSED', bookingId, why);
       // Always told (operator, 2026-11-22), also on a pre-booking: «the driver did not make it, we assign another».
       await enqueuePassenger(tx, bookingId, 'Finding you a driver', passengerMsg, { msg: { k: keys.pax } });
       return 'lapsed' as const;
@@ -353,7 +366,8 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
     if (await isPairBlocked(pa.driverId, b.passengerId, tx)) {
       return lapse('pair blocked by a 1-star rating', 'We are finding you another driver automatically.', 'Your pre-booked ride was released.', { pax: 'pre.reassign', drv: 'drv.preReleased' });
     }
-    const busy = !driver.onDuty
+    // A paused driver (on duty, not taking rides) is not ready either (launch fixes §8).
+    const busy = !driver.onDuty || !driver.available
       || !!(await tx.assignment.findFirst({ where: { activeDriverId: pa.driverId }, select: { id: true } }))
       || !!(await tx.driverOffer.findFirst({ where: { activeDriverId: pa.driverId }, select: { id: true } }));
     // Launch fixes §8 (ported 2026-11-24): hand the ride over only to a driver whose phone sends a live
