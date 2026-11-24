@@ -2,6 +2,16 @@ import type { Catalog } from '../../types';
 import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
+  CAR_NOT_ALLOWED: "Nie masz zgody na to auto.",
+  GO_OFFLINE_FIRST: "Najpierw przejdź offline, potem zmień auto.",
+  PREBOOK_ON_CAR: "Masz zlecenie z wyprzedzeniem na obecnym aucie. Najpierw je oddaj.",
+  CAR_DOCS_EXPIRED: "Ubezpieczenie lub licencja taxi tego auta wygasły.",
+  CAR_INACTIVE: "To auto jest wyłączone przez operatora.",
+  ON_TRIP: "Najpierw zakończ kurs.",
+  CAR_IN_USE: "Inny kierowca jest teraz online w tym aucie.",
+  CAR_NOT_IN_SYSTEM: "Tego auta nie ma w systemie — dodaj je jako nowe.",
+  CAR_ALREADY_YOURS: "Już możesz korzystać z tego auta.",
+  TOO_MANY: "Najpierw dokończ rozpoczęte auta.",
   DUPLICATE_VEHICLE: "To auto jest już zarejestrowane (ta sama rejestracja lub VIN). Jednego auta nie można zarejestrować dwa razy — skontaktuj się z operatorem.",
   EXPIRY_REQUIRED: "Podaj przyszłą datę ważności, aby przyjąć dokument.",
   AMOUNT_LOCKED: "Kwota została ustalona przy zakończeniu przejazdu i nie można jej zmienić.",

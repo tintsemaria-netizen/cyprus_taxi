@@ -254,7 +254,10 @@ export async function docMenuCounts(now: Date = new Date()): Promise<{ drivers: 
   const up = all.filter((a) => a.kind === 'UPLOADED');
   return {
     drivers: new Set(all.filter((a) => a.section === 'drivers').map((a) => a.driverId)).size,
-    vehicles: new Set(all.filter((a) => a.section === 'vehicles').map((a) => a.vehicleId)).size,
+    // + «Мои машины» (2026-11-24): drivers asking the admin for a car, and new cars to check.
+    vehicles: new Set(all.filter((a) => a.section === 'vehicles').map((a) => a.vehicleId)).size
+      + await prisma.carAccess.count({ where: { status: 'PENDING', needAdmin: true, adminOkAt: null } })
+      + await prisma.carRequest.count({ where: { status: 'SUBMITTED' } }),
     uploaded: up.length,
     uploadedSection: up[0]?.section ?? null,
   };

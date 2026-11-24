@@ -182,6 +182,7 @@ export async function approveApplication(applicationId: string, adminId: string,
         if (await tx.driver.findUnique({ where: { userId: user.id } })) return err(409, 'ALREADY_DRIVER', 'This account is already a driver.');
         const vehicle = await tx.vehicle.create({ data: { plate: ve.plate, vin: normVin(ve.vin) || null, make: ve.make, model: ve.model, color: ve.color || 'Unknown', vClass: ve.vClass, seats: Number(ve.seats), active: true } });
         driver = await tx.driver.create({ data: { userId: user.id, publicName: id.legalName || 'Driver', phone, active: true, onDuty: false, available: false, eligibility: 'APPROVED', applicationId } });
+        await tx.vehicle.update({ where: { id: vehicle.id }, data: { ownerDriverId: driver.id } }); // his own car («Мои машины», 2026-11-24)
         await tx.driverVehicleBinding.create({ data: { driverId: driver.id, vehicleId: vehicle.id, activeDriverId: driver.id, activeVehicleId: vehicle.id } });
       } else if (driver.eligibility !== 'APPROVED') {
         await tx.driver.update({ where: { id: driver.id }, data: { eligibility: 'APPROVED' } });

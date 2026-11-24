@@ -2,6 +2,16 @@ import type { Catalog } from '../../types';
 import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
+  CAR_NOT_ALLOWED: "Vous n'êtes pas autorisé sur cette voiture.",
+  GO_OFFLINE_FIRST: "Passez d'abord hors ligne, puis changez de voiture.",
+  PREBOOK_ON_CAR: "Vous avez une réservation avec la voiture actuelle. Libérez-la d’abord.",
+  CAR_DOCS_EXPIRED: "L'assurance ou la licence de taxi de cette voiture a expiré.",
+  CAR_INACTIVE: "Cette voiture est désactivée par l'opérateur.",
+  ON_TRIP: "Terminez d'abord la course.",
+  CAR_IN_USE: "Un autre chauffeur est en ligne avec cette voiture.",
+  CAR_NOT_IN_SYSTEM: "Cette voiture n'est pas dans le système — ajoutez-la comme nouvelle.",
+  CAR_ALREADY_YOURS: "Vous pouvez déjà utiliser cette voiture.",
+  TOO_MANY: "Terminez d'abord les voitures déjà commencées.",
   DUPLICATE_VEHICLE: "Ce véhicule est déjà enregistré (même plaque ou même VIN). Un véhicule ne peut pas être enregistré deux fois — contactez l'opérateur.",
   EXPIRY_REQUIRED: "Indiquez une date d’expiration future pour accepter le document.",
   AMOUNT_LOCKED: "Le montant a été fixé à la fin de la course et ne peut plus être modifié.",

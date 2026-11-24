@@ -2,6 +2,16 @@ import type { Catalog } from '../../types';
 import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
+  CAR_NOT_ALLOWED: "אין לך אישור לרכב הזה.",
+  GO_OFFLINE_FIRST: "קודם צאו מהקו, ואז החליפו רכב.",
+  PREBOOK_ON_CAR: "יש לך הזמנה מראש על הרכב הנוכחי. קודם וותרו עליה.",
+  CAR_DOCS_EXPIRED: "הביטוח או רישיון המונית של הרכב פגו.",
+  CAR_INACTIVE: "הרכב הושבת על ידי המפעיל.",
+  ON_TRIP: "קודם סיימו את הנסיעה.",
+  CAR_IN_USE: "נהג אחר מחובר עכשיו עם הרכב הזה.",
+  CAR_NOT_IN_SYSTEM: "הרכב לא במערכת — הוסיפו אותו כחדש.",
+  CAR_ALREADY_YOURS: "כבר מותר לך לעבוד על הרכב הזה.",
+  TOO_MANY: "קודם סיימו את הרכבים שכבר התחלתם.",
   DUPLICATE_VEHICLE: "הרכב הזה כבר רשום (אותה לוחית או אותו VIN). אי אפשר לרשום רכב פעמיים — פנו למפעיל.",
   EXPIRY_REQUIRED: "הזינו תאריך תפוגה עתידי כדי לאשר את המסמך.",
   AMOUNT_LOCKED: "הסכום נקבע בסיום הנסיעה ואי אפשר לשנותו.",

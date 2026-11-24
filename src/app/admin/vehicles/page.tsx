@@ -5,6 +5,7 @@ import { StaffShell } from '@/components/staff/StaffShell';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { useDocAttention, withDocsFirst, DocAttentionLines } from '@/components/staff/DocAttention';
+import { CarQueue } from '@/components/staff/CarQueue';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,6 +62,8 @@ function Vehicles() {
   return (
     <div className="mx-auto max-w-4xl p-4 sm:p-6">
       <h1 className="text-xl font-bold">{t('staff.vehicles.title')}</h1>
+      {/* «Мои машины» (2026-11-24): new cars to check and drivers asking for a car — on top, red. */}
+      <div className="mt-3"><CarQueue /></div>
       {msg && <p className="mt-3 rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn">{msg}</p>}
 
       <form onSubmit={create} className="card mt-4 grid gap-3 p-4 sm:grid-cols-7">

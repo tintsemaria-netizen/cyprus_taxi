@@ -43,6 +43,8 @@ export async function runKycRetention(now: Date = new Date()): Promise<KycRetent
     const known = new Set((await prisma.applicationDocument.findMany({ select: { storageKey: true } })).map((d) => d.storageKey));
     // The owner's bookkeeping receipts live in the same store (2026-11-23) — never orphans.
     for (const e of await prisma.ledgerEntry.findMany({ where: { receiptKey: { not: null } }, select: { receiptKey: true } })) known.add(e.receiptKey!);
+    // Documents of cars added through «Мои машины» (2026-11-24) — same store, never orphans.
+    for (const d of await prisma.carDocument.findMany({ select: { storageKey: true } })) known.add(d.storageKey);
     for (const f of files) {
       if (known.has(f.storageKey)) continue;
       if (now.getTime() - f.mtime.getTime() < day) continue; // upload in flight

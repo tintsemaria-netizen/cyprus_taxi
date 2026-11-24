@@ -20,6 +20,7 @@ import { OPEN_CO_RIDER } from '@/components/share/ShareDriver';
 import { filterFix, initialFilterState, accuracyLevel, type FilterState } from '@/lib/gpsFilter';
 import { DriverHomeMap } from '@/components/driver/DriverHomeMap';
 import { DriverDocs, useSlotName } from '@/components/driver/DriverDocs';
+import { MyCars } from '@/components/driver/MyCars';
 import { unlockOfferSound, playOfferChime, vibrateOffer, keepScreenOn } from '@/lib/driver-alerts';
 import { formatFlight } from '@/lib/flight';
 import { useT, useLocale, MsgKey } from '@/i18n/I18nProvider';
@@ -70,7 +71,7 @@ interface Dashboard {
 
 // Bottom tabs (2026-11-13): Home | Free orders | Pre-bookings | Profile (profile, trips, earnings).
 // Free orders and pre-bookings carry a small red count badge. Today's earnings show on the Home map.
-type Tab = 'home' | 'free' | 'prebook' | 'profile' | 'earnings';
+type Tab = 'home' | 'free' | 'prebook' | 'profile' | 'earnings' | 'cars';
 
 // Locale-aware formatting helpers for the driver app (money, durations, distances, status labels).
 // Map padding that keeps the driver's car and the client ABOVE a bottom sheet (offer / free-order
@@ -280,6 +281,9 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   const [profileView, setProfileView] = useState<'me' | 'trips'>('me');
   const [earnEntry, setEarnEntry] = useState<'summary' | 'analytics'>('summary'); // which part of «Заработок» to open (2026-11-20)
   const [prebookCount, setPrebookCount] = useState(0);
+  // Others asking for his car (2026-11-24): a red count on «Мои машины» in the menu.
+  const [carAsks, setCarAsks] = useState(0);
+  useEffect(() => { if (drawer) api<{ asks: unknown[] }>('/driver/cars').then((r) => setCarAsks(r.asks.length)).catch(() => {}); }, [drawer]);
   const [prebookPair, setPrebookPair] = useState(false); // any open pre-booking is a ride-share pair
   const [prebookMine, setPrebookMine] = useState(0); // pre-bookings this driver has taken
   const onPrebookCount = useCallback((n: number, pair: boolean, mine: number) => { setPrebookCount(n); setPrebookPair(pair); setPrebookMine(mine); }, []);
@@ -414,6 +418,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
           data={data} dash={dash} gps={gps} pos={pos} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
           onDuty={setDuty} onStartGps={startGps} onStopGps={stopGps}
           onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => { setProfileView('trips'); setDrawer(true); }}
+          openCars={() => setTab('cars')}
           openDocs={() => { setProfileView('me'); setDrawer(true); window.setTimeout(() => document.getElementById('driver-docs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 350); }}
           goEarnings={(to) => { setEarnEntry(to ?? 'summary'); setTab('earnings'); }}
           refreshDash={loadDash}
@@ -422,6 +427,8 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
       {tab === 'free' && <FreeOrdersSection pos={pos} onDuty={!!data.onDuty} onTaken={async () => { setFreeCount(0); setTab('home'); await load(); await loadDash(); }} />}
       {/* Count AND «is a pair» come together, so the map button never shows «П» for a moment before «ПП» (2026-11-19). */}
       {tab === 'prebook' && <ScheduledRides onCount={onPrebookCount} />}
+      {/* «Мои машины» (2026-11-24): a sub-screen — the ‹ back arrow is in the top bar. */}
+      {tab === 'cars' && <div className="mx-auto max-w-lg px-4 pb-28 pt-3"><MyCars /></div>}
       {/* «Заработок» (2026-11-20, operator): no longer a menu tab — the earnings pill on the map opens a small
           «today» card, its «Подробнее» opens this full screen (back arrow «‹» in the top bar, like other sub-screens). */}
       {tab === 'earnings' && <div className="mx-auto max-w-lg px-4 pb-28 pt-3" data-testid="earnings-screen"><EarningsReport key={earnEntry} initialRange="today" openAnalytics={earnEntry === 'analytics'} /></div>}
@@ -445,6 +452,15 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
                 <span className="flex items-center gap-1.5">
                   {prebookMine > 0 && <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white" title={t('driver.scheduled.mine')}>{prebookMine}</span>}
                   {prebookCount > 0 && <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white">{prebookCount}</span>}
+                </span>
+              </button>
+              {/* «Мои машины» (2026-11-24): change car, ask for a car in the system, add a new one. */}
+              <button type="button" onClick={() => { setDrawer(false); setTab('cars'); }} data-testid="drawer-cars"
+                className="mb-3 flex w-full items-center justify-between rounded-[12px] border border-edge bg-elevated px-4 py-3 text-start text-[16px] font-semibold">
+                <span>{t('driver.cars.menu')}</span>
+                <span className="flex items-center gap-1.5">
+                  {carAsks > 0 && <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white">{carAsks}</span>}
+                  <span className="text-muted">›</span>
                 </span>
               </button>
               {/* A driver who also owns a fleet (2026-11-20, operator): his fleet's reports, same login. */}
@@ -489,7 +505,7 @@ function HomeSection(props: {
   pos: { lat: number; lng: number } | null;
   offer: Offer | null; offerSecs: number; offerBusy: boolean;
   onDuty: (v: boolean) => void; onStartGps: () => void; onStopGps: () => void;
-  onAccept: (id: string) => void; onDecline: (id: string) => void; goTrips: () => void; openDocs?: () => void; goEarnings: (to?: 'summary' | 'analytics') => void; refreshDash?: () => void;
+  onAccept: (id: string) => void; onDecline: (id: string) => void; goTrips: () => void; openDocs?: () => void; openCars?: () => void; goEarnings: (to?: 'summary' | 'analytics') => void; refreshDash?: () => void;
 }) {
   const { data, dash, gps, offer, offerSecs, offerBusy } = props;
   const { t, fmt } = useT();
@@ -595,8 +611,9 @@ function HomeSection(props: {
         )}
         {blocker && (
           <div className="pointer-events-auto rounded-[12px] border border-danger/40 bg-page/95 px-3 py-2 text-sm">
-            <p className="font-medium text-danger">{blocker.code === 'NO_VEHICLE' ? t('driver.alerts.noVehicle') : blocker.message}</p>
-            {blocker.action && <a href={blocker.action.href} className="mt-1 inline-block text-xs underline">{blocker.action.label}</a>}
+            <p className="font-medium text-danger">{blocker.code === 'NO_VEHICLE' ? t('driver.alerts.noVehicleCars') : blocker.message}</p>
+            {blocker.code === 'NO_VEHICLE' && props.openCars && <button type="button" onClick={props.openCars} className="mt-1 text-xs font-semibold underline">{t('driver.cars.menu')} ›</button>}
+            {blocker.action && blocker.code !== 'NO_VEHICLE' && <a href={blocker.action.href} className="mt-1 inline-block text-xs underline">{blocker.action.label}</a>}
           </div>
         )}
         {!offer && warning && <div className="pointer-events-auto rounded-[12px] border border-warn/40 bg-page/95 px-3 py-2 text-sm text-warn">{warning.message}{warning.action && <a href={warning.action.href} className="ms-2 underline">{warning.action.label}</a>}</div>}

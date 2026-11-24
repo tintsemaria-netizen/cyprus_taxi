@@ -1,6 +1,16 @@
 // Translations for API error codes shown to passengers/drivers. Unknown codes fall back to the
 // server's English message (see tError in I18nProvider).
 const errors = {
+  CAR_NOT_ALLOWED: "You are not allowed on this car.",
+  GO_OFFLINE_FIRST: "Go offline first, then change the car.",
+  PREBOOK_ON_CAR: "You hold a pre-booking on your current car. Give it up first.",
+  CAR_DOCS_EXPIRED: "This car's insurance or taxi licence has expired.",
+  CAR_INACTIVE: "This car is switched off by the operator.",
+  ON_TRIP: "Finish the ride first.",
+  CAR_IN_USE: "Another driver is online in this car now.",
+  CAR_NOT_IN_SYSTEM: "This car is not in the system — add it as a new car.",
+  CAR_ALREADY_YOURS: "You can already use this car.",
+  TOO_MANY: "Finish the cars you already started first.",
   DUPLICATE_VEHICLE: "This car is already registered (same plate or VIN). One car can't be registered twice — please contact the operator.",
   EXPIRY_REQUIRED: "Enter the document’s expiry date (in the future) to accept it.",
   AMOUNT_LOCKED: "The amount was fixed when the ride was completed and cannot be changed.",

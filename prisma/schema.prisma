@@ -447,6 +447,9 @@ model Vehicle {
   plate     String       @unique
   /// VIN, upper-case without spaces (2026-11-24): the same car can't be registered twice.
   vin       String?      @unique
+  /// The driver whose car this is (2026-11-24): his application or «Мои машины» added it. Another driver
+  /// may work on it only with his and the admin's yes; a fleet car — with the fleet owner's yes.
+  ownerDriverId String?
   make      String
   model     String
   color     String
@@ -1152,4 +1155,67 @@ model StaffAction {
 
   @@index([createdAt])
   @@index([seenAt])
+}
+
+/// «Мои машины» (2026-11-24, operator): a driver may work only on cars that are in the system and that he
+/// is allowed on. His own (Vehicle.ownerDriverId) always; a fleet car once the fleet owner says yes;
+/// another driver's car once that driver AND the admin say yes; a car with neither — the admin.
+model CarAccess {
+  id        String    @id @default(uuid())
+  driverId  String
+  vehicleId String
+  status    String    @default("PENDING") // PENDING | APPROVED | REJECTED | REVOKED
+  needFleet Boolean   @default(false)
+  fleetOkAt DateTime?
+  needOwner Boolean   @default(false)
+  ownerOkAt DateTime?
+  needAdmin Boolean   @default(false)
+  adminOkAt DateTime?
+  decidedBy String?
+  createdAt DateTime  @default(now())
+  decidedAt DateTime?
+
+  @@unique([driverId, vehicleId])
+  @@index([vehicleId, status])
+  @@index([status])
+}
+
+/// A new car the driver adds himself (2026-11-24): car details + registration, insurance, taxi licence,
+/// front and rear photos. The admin compares, accepts the documents and approves → a Vehicle he owns.
+model CarRequest {
+  id           String        @id @default(uuid())
+  driverId     String
+  status       String        @default("DRAFT") // DRAFT | SUBMITTED | CHANGES | APPROVED | REJECTED
+  vehicle      String        // JSON: plate, vin, make, model, year, color, seats, vClass
+  vehicleId    String?       // set on approval
+  decisionNote String?
+  createdAt    DateTime      @default(now())
+  submittedAt  DateTime?
+  decidedAt    DateTime?
+  documents    CarDocument[]
+
+  @@index([driverId, status])
+  @@index([status])
+}
+
+/// Documents and photos of a car added through «Мои машины». Bytes in private storage, like
+/// ApplicationDocument. vehicleId is set once the car is approved.
+model CarDocument {
+  id           String      @id @default(uuid())
+  request      CarRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  requestId    String?
+  vehicleId    String?
+  slot         String
+  storageKey   String
+  mime         String
+  sizeBytes    Int
+  sha256       String
+  scanStatus   String      @default("PENDING")
+  decision     String      @default("PENDING") // PENDING | ACCEPTED | CHANGES
+  decisionNote String?
+  expiresAt    DateTime?
+  createdAt    DateTime    @default(now())
+
+  @@index([requestId, slot])
+  @@index([vehicleId, slot])
 }

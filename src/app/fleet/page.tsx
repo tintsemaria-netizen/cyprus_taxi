@@ -51,6 +51,8 @@ function Fleet({ me }: { me: Me }) {
       </div>
       <div className="mt-4"><FiguresTotals figs={figs} /></div>
 
+      {/* «Мои машины» (2026-11-24): drivers asking to work on a fleet car — the owner decides. */}
+      <FleetCarAsks />
       <h2 className="mt-5 font-semibold">{t('staff.fleet.drivers')}</h2>
       <div className="card mt-2 divide-y divide-edge">
         {drivers && withDocsFirst(drivers, (d) => d.id, drvAll).map((d) => (
@@ -81,5 +83,26 @@ function Fleet({ me }: { me: Me }) {
         {cars && cars.length === 0 && <p className="p-4 text-sm text-muted">{t('staff.fleet.noVehicles')}</p>}
       </div>
     </div>
+  );
+}
+
+function FleetCarAsks() {
+  const { t } = useT();
+  const [items, setItems] = useState<{ id: string; driverName: string; plate: string }[]>([]);
+  const load = () => { api<{ items: typeof items }>('/fleet/car-access').then((r) => setItems(r.items)).catch(() => {}); };
+  useEffect(load, []);
+  if (!items.length) return null;
+  const decide = (id: string, yes: boolean) => api('/fleet/car-access', { method: 'POST', body: { id, yes } }).then(load).catch(() => {});
+  return (
+    <section className="card row-alert mt-4 p-4" data-testid="fleet-car-asks">
+      <h2 className="label mb-2">{t('staff.cars.fleetTitle')}</h2>
+      {items.map((a) => (
+        <div key={a.id} className="flex flex-wrap items-center gap-2 border-t border-edge py-2 text-sm first:border-0">
+          <span className="min-w-0 flex-1">{t('staff.cars.accessLine', { who: a.driverName, plate: a.plate })}</span>
+          <button className="btn-primary !min-h-0 !py-1.5 text-xs" onClick={() => decide(a.id, true)}>{t('staff.cars.allow')}</button>
+          <button className="btn-ghost !min-h-0 !py-1.5 text-xs" onClick={() => decide(a.id, false)}>{t('staff.cars.deny')}</button>
+        </div>
+      ))}
+    </section>
   );
 }
