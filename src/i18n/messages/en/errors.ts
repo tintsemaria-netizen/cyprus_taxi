@@ -37,6 +37,7 @@ const errors = {
   NO_RECEIPT: 'A receipt is available after the ride is completed.',
   OFF_ISLAND: 'We only operate on the island of Cyprus. Choose a point on land.',
   SHARE_TOO_BIG: 'With a co-rider — at most 3 people and 3 suitcases.',
+  NO_GO_ZONE: 'The taxi does not go to this area. Please choose another place.',
   NO_ROUTE: 'A car cannot reach this point. Choose an address by a road.',
   OFFER_EXPIRED: 'This offer has expired.',
   OFFER_GONE: 'This offer is no longer available.',

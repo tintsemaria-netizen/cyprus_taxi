@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { onCyprusIsland } from '@/lib/cyprus-island';
+import { areaBlock, loadNoGo } from '@/lib/area-client';
 import { BRAND_PIN_SVG } from '@/components/carMarker';
 import { useEffect, useRef, useState } from 'react';
 import { useTwoFingerCamera } from '@/components/useTwoFingerCamera';
@@ -49,7 +49,10 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
   const popped = useRef(false);
 
   const [center, setCenter] = useState(centerRef.current);
-  const offIsland = !onCyprusIsland(center);
+  // Not on the island or in a «Запретная зона» (2026-11-24): confirm off, a red line says why.
+  const blockCode = areaBlock(center);
+  const offIsland = !!blockCode;
+  useEffect(() => { void loadNoGo(); }, []);
   const [addr, setAddr] = useState<string | null>(initial?.label ?? null);
   const [resolving, setResolving] = useState(false);
   const [geo, setGeo] = useState<GeoState>('idle');
@@ -226,7 +229,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
     const lat = c ? c.lat() : centerRef.current.lat;
     const lng = c ? c.lng() : centerRef.current.lng;
     // Only on the island of Cyprus (2026-11-24, operator): the button is off and a red line says why.
-    if (!onCyprusIsland({ lat, lng })) return;
+    if (areaBlock({ lat, lng })) return;
     closed.current = true;
     const snap = addrRef.current;
     // Stored on the booking and shown to the driver → language-neutral English, not the passenger's UI language.
@@ -292,7 +295,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
             {resolving && !addr && <span className="ms-2 text-xs text-muted">{t('booking.picker.resolving')}</span>}
           </div>
           {offIsland
-            ? <div className="text-xs font-medium leading-snug text-danger" data-testid="picker-off-island">{t('errors.OFF_ISLAND')}</div>
+            ? <div className="text-xs font-medium leading-snug text-danger" data-testid="picker-off-island">{t(`errors.${blockCode ?? 'OFF_ISLAND'}` as 'errors.OFF_ISLAND')}</div>
             : <div className="truncate text-xs text-muted">{addr ? ' ' : t('booking.picker.noAddress')}</div>}
         </div>
         <div className="flex gap-2">

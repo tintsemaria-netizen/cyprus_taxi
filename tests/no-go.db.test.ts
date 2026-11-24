@@ -1,0 +1,35 @@
+import { describe, it, expect, afterAll } from 'vitest';
+import { prisma } from '@/lib/db';
+import { createBooking } from '@/server/bookings';
+import { invalidateNoGoCache } from '@/server/no-go';
+import * as quote from '@/app/api/v1/quote/route';
+import type { CreateBookingInput } from '@/lib/validation';
+
+// «Запретная зона» (2026-11-24, operator): no pickup, stop or destination inside an active red zone.
+const inside = { lat: 34.7000, lng: 33.1000, label: 'Inside' };
+const lim = { lat: 34.6713, lng: 33.0423, label: 'Limassol Old Port' };
+const lca = { lat: 34.8754, lng: 33.6249, label: 'Larnaca Airport' };
+const sq: [number, number][] = [[34.69, 33.09], [34.69, 33.11], [34.71, 33.11], [34.71, 33.09]];
+let id = '';
+const inp = (p: typeof lim, d: typeof lim): CreateBookingInput => ({ pickup: p, dropoff: d, when: 'NOW', vClass: 'COMFORT', passengerCount: 1, passengerName: 'T', phone: '+35799123456' } as CreateBookingInput);
+let n = 0; const key = () => `nogo-${Date.now()}-${++n}`;
+afterAll(async () => { if (id) await prisma.noGoZone.delete({ where: { id } }).catch(() => {}); invalidateNoGoCache(); });
+
+describe('no-go zones', () => {
+  it('a pickup or destination inside an active zone is refused; switched off → allowed', async () => {
+    id = (await prisma.noGoZone.create({ data: { name: 'Test base', polygon: sq } })).id;
+    invalidateNoGoCache();
+    for (const [p, d] of [[inside, lca], [lim, inside]] as const) {
+      const r = await createBooking(inp(p, d), key());
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.code).toBe('NO_GO_ZONE');
+    }
+    const q = await quote.POST(new Request('http://localhost:3000/api/v1/quote', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-forwarded-for': '10.7.7.7' }, body: JSON.stringify({ pickup: lim, dropoff: inside, vClass: 'COMFORT', passengerCount: 1 }) }));
+    expect(q.status).toBe(422);
+    expect((await q.json()).error.code).toBe('NO_GO_ZONE');
+    await prisma.noGoZone.update({ where: { id }, data: { active: false } });
+    invalidateNoGoCache();
+    const r = await createBooking(inp(inside, lca), key());
+    if (!r.ok) expect(r.code).not.toBe('NO_GO_ZONE');
+  });
+});

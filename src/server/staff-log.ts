@@ -17,7 +17,7 @@ export function areaOf(path: string): string {
   const p = path.replace(/^\/api\/v1\//, '');
   const map: [RegExp, string][] = [
     [/^admin\/drivers/, 'drivers'], [/^admin\/vehicle/, 'vehicles'], [/^admin\/fleets/, 'fleets'],
-    [/^admin\/fixed-zones/, 'fixedPrices'], [/^admin\/min-fares/, 'minFares'], [/^admin\/settings/, 'settings'],
+    [/^admin\/fixed-zones/, 'fixedPrices'], [/^admin\/min-fares/, 'minFares'], [/^admin\/no-go/, 'noGo'], [/^admin\/settings/, 'settings'],
     [/^admin\/passengers/, 'passengers'], [/^admin\/applications/, 'applications'], [/^admin\/staff/, 'staff'],
     [/^admin\/accounting/, 'accounting'], [/^(admin\/)?dispatch|^bookings|^admin\/bookings/, 'dispatch'],
   ];

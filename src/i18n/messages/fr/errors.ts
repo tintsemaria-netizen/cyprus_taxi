@@ -38,6 +38,7 @@ const errors: Catalog<typeof en> = {
   NO_RECEIPT: "Un reçu est disponible une fois la course terminée.",
   OFF_ISLAND: "Nous opérons uniquement sur l'île de Chypre. Choisissez un point sur terre.",
   SHARE_TOO_BIG: 'Avec covoyageur — 3 personnes et 3 valises au maximum.',
+  NO_GO_ZONE: 'Le taxi ne va pas dans cette zone. Choisissez un autre endroit.',
   NO_ROUTE: "Une voiture ne peut pas atteindre ce point. Choisissez une adresse au bord d’une route.",
   OFFER_EXPIRED: "Cette offre a expiré.",
   OFFER_GONE: "Cette offre n’est plus disponible.",

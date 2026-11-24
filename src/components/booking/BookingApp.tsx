@@ -11,6 +11,7 @@ import { Logo } from '@/components/Brand';
 import { BRAND_PIN_SVG, BRAND_PIN_SVG_RED } from '@/components/carMarker';
 import { pinPoint } from '@/components/mapFit';
 import { onCyprusIsland } from '@/lib/cyprus-island';
+import { areaBlock, loadNoGo } from '@/lib/area-client';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import type { Selected } from './PlacesInput';
 import { setNearHint } from '@/lib/nearHint';
@@ -556,11 +557,12 @@ export default function BookingApp() {
   // The pin let go in the sea / abroad (2026-11-24, operator): no pickup there — the logo turns red while
   // the map glides back to the last pickup, then lime again. No text (operator: «убери надпись»).
   const [offIsland, setOffIsland] = useState(false);
+  useEffect(() => { void loadNoGo(); }, []);
   const offTimer = useRef<number | null>(null);
   function onCenterPick(p: { lat: number; lng: number; zoom: number }) {
     setPinLift(false);
     if (!centerModeRef.current) return;
-    if (!onCyprusIsland(p)) {
+    if (areaBlock(p)) { // off the island or in a «Запретная зона» (2026-11-24)
       setOffIsland(true);
       // A short buzz with the red, shaking logo (operator 2026-11-24). Android browsers vibrate; iPhone
       // Safari has no vibration for web pages — there only the logo shakes (the native app can buzz later).

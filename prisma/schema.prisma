@@ -687,6 +687,17 @@ model MinFareZone {
   updatedAt    DateTime @default(now()) @updatedAt
 }
 
+// «Запретная зона» (2026-11-24, operator): red areas the taxi does not go to — no pickup, stop or
+// destination inside an active one. Edited in admin «Запретная зона».
+model NoGoZone {
+  id        String   @id @default(uuid())
+  name      String
+  polygon   Json // [[lat, lng], …] ≥ 3 points
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
 // E-mailed trip receipt (2026-11-17). One row per completed booking, written in the completion
 // transaction (outbox); the worker sends it through the e-mail provider. A passenger "send again"
 // request puts the same row back to PENDING (resendCount is capped).
