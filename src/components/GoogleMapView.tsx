@@ -65,7 +65,7 @@ const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
 // Exact zoom with the point centred in the visible area (between the overlays), not a fitted
 // box: fitBounds with a big box landed below the wanted zoom on narrow phones, so the map looked
 // zoomed out / scaled instead of moving closer to the car (2026-11-16).
-function centerPointAt(map: any, lat: number, lng: number, pad: any, zoom: number) {
+function centerPointAt(map: any, lat: number, lng: number, pad: any, zoom: number, animateMs = 0) {
   const p = typeof pad === 'number' ? { top: pad, right: pad, bottom: pad, left: pad } : pad;
   const dx = ((p.right ?? 0) - (p.left ?? 0)) / 2, dy = ((p.bottom ?? 0) - (p.top ?? 0)) / 2;
   // One exact camera move (2026-11-24): the point lands between the overlays without a jump to the
@@ -75,8 +75,18 @@ function centerPointAt(map: any, lat: number, lng: number, pad: any, zoom: numbe
     const w = proj.fromLatLngToPoint(new g.LatLng(lat, lng)), scale = 2 ** zoom;
     const c = proj.fromPointToLatLng(new g.Point(w.x + dx / scale, w.y + dy / scale));
     const cur = map.getCenter?.();
-    if (cur && Math.abs((map.getZoom?.() ?? -1) - zoom) < 1e-6 && Math.abs(cur.lat() - c.lat()) < 1e-7 && Math.abs(cur.lng() - c.lng()) < 1e-7) return; // already there
-    map.moveCamera({ center: { lat: c.lat(), lng: c.lng() }, zoom });
+    const z0 = map.getZoom?.() ?? zoom;
+    if (cur && Math.abs(z0 - zoom) < 1e-6 && Math.abs(cur.lat() - c.lat()) < 1e-7 && Math.abs(cur.lng() - c.lng()) < 1e-7) return; // already there
+    cancelAnimationFrame(map.__ilyCam ?? 0);
+    if (!animateMs || !cur) { map.moveCamera({ center: { lat: c.lat(), lng: c.lng() }, zoom }); return; }
+    // Glide back (2026-11-24: the red logo «returns» from the sea instead of the map jumping).
+    const from = { lat: cur.lat(), lng: cur.lng(), zoom: z0 }, to = { lat: c.lat(), lng: c.lng(), zoom }, t0 = performance.now();
+    const step = (now: number) => {
+      const k = Math.min(1, (now - t0) / animateMs), e = 1 - Math.pow(1 - k, 3);
+      map.moveCamera({ center: { lat: from.lat + (to.lat - from.lat) * e, lng: from.lng + (to.lng - from.lng) * e }, zoom: from.zoom + (to.zoom - from.zoom) * e });
+      if (k < 1) map.__ilyCam = requestAnimationFrame(step);
+    };
+    map.__ilyCam = requestAnimationFrame(step);
     return;
   }
   map.moveCamera({ center: { lat, lng }, zoom });
@@ -214,7 +224,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
           map.addListener('click', (e: any) => clickRef.current?.({ lat: e.latLng.lat(), lng: e.latLng.lng() }));
         }
         mapRef.current = map;
-        map.addListener('dragstart', () => { userMoveRef.current?.(); if (followRef.current) breakRef.current?.(); });
+        map.addListener('dragstart', () => { cancelAnimationFrame(map.__ilyCam ?? 0); userMoveRef.current?.(); if (followRef.current) breakRef.current?.(); });
         // Centre pin: only a move the user made by hand (finger / mouse / wheel) reports the point under
         // the pin, once the map has stopped and the finger is up — programmatic camera moves never do.
         {
@@ -439,12 +449,16 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   // Zoom to a focus point (the passenger's detected location) once it resolves, unless a
   // full 2-stop route is already framed.
   const focusKey = focus ? `${focus.lat.toFixed(5)},${focus.lng.toFixed(5)}` : '';
+  const lastRecenter = useRef(recenterTick);
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
     if (!map || !g || !ready || !focus || markers.length >= 2 || followRef.current || idle.active.current) return;
     const fbox = containerRef.current?.getBoundingClientRect();
     const fpad = safePadding(fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 }, fbox?.width ?? 0, fbox?.height ?? 0);
-    if (focusZoom != null) centerPointAt(map, focus.lat, focus.lng, fpad, focusZoom);
+    // «Моё местоположение» / back from the sea (recenterTick): glide; anything else: one exact move.
+    const glide = recenterTick !== lastRecenter.current;
+    lastRecenter.current = recenterTick;
+    if (focusZoom != null) centerPointAt(map, focus.lat, focus.lng, fpad, focusZoom, glide ? 700 : 0);
     else framePoint(map, g, focus.lat, focus.lng, fpad);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusKey, ready, idle.returnTick, padKey, recenterTick]);

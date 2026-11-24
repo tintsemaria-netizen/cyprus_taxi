@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
-import { BRAND_PIN_SVG } from '@/components/carMarker';
+import { BRAND_PIN_SVG, BRAND_PIN_SVG_RED } from '@/components/carMarker';
 import { pinPoint } from '@/components/mapFit';
 import { onCyprusIsland } from '@/lib/cyprus-island';
 import { InstallPrompt } from '@/components/InstallPrompt';
@@ -549,8 +549,8 @@ export default function BookingApp() {
     setPickup({ lat, lng, label: label ?? translate('en', 'booking.currentLocation') });
     setPickupText(label ?? t('booking.currentLocation'));
   }
-  // The pin let go in the sea / abroad (2026-11-24, operator): no pickup there — a red note over the logo
-  // and the map slides back to the last pickup.
+  // The pin let go in the sea / abroad (2026-11-24, operator): no pickup there — the logo turns red while
+  // the map glides back to the last pickup, then lime again. No text (operator: «убери надпись»).
   const [offIsland, setOffIsland] = useState(false);
   const offTimer = useRef<number | null>(null);
   function onCenterPick(p: { lat: number; lng: number; zoom: number }) {
@@ -559,7 +559,7 @@ export default function BookingApp() {
     if (!onCyprusIsland(p)) {
       setOffIsland(true);
       if (offTimer.current) window.clearTimeout(offTimer.current);
-      offTimer.current = window.setTimeout(() => setOffIsland(false), 3500);
+      offTimer.current = window.setTimeout(() => setOffIsland(false), 1100);
       setRecenterTick((n) => n + 1);
       return;
     }
@@ -1187,9 +1187,8 @@ export default function BookingApp() {
             const pt = pinPoint(fitPadding, mapBox.w, mapBox.h);
             return (
               <div aria-hidden data-testid="center-pin" className="pointer-events-none absolute z-[5]" style={{ left: pt.x - 16, top: pt.y - 40, width: 32, height: 40 }}>
-                <div className="h-full w-full transition-transform duration-150" style={{ transform: pinLift ? 'translateY(-10px)' : 'none', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.55))' }} dangerouslySetInnerHTML={{ __html: BRAND_PIN_SVG }} />
+                <div className="h-full w-full transition-transform duration-150" style={{ transform: pinLift ? 'translateY(-10px)' : 'none', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.55))' }} dangerouslySetInnerHTML={{ __html: offIsland ? BRAND_PIN_SVG_RED : BRAND_PIN_SVG }} data-red={offIsland ? '1' : undefined} />
                 <div className={`absolute left-1/2 top-full h-1.5 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/40 transition-opacity ${pinLift ? 'opacity-100' : 'opacity-0'}`} />
-                {offIsland && <div className="absolute bottom-full left-1/2 mb-2 w-[230px] -translate-x-1/2 rounded-[12px] bg-danger px-3 py-2 text-center text-[13px] font-semibold leading-snug text-white shadow-lg" data-testid="pin-off-island">{t('errors.OFF_ISLAND')}</div>}
               </div>
             );
           })()}
