@@ -295,7 +295,7 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
     await endPreAssignmentTx(tx, bookingId, 'CONVERTED', 'converted to assignment');
     await attachMatchedGuestTx(tx, bookingId); // ride-share pair: the co-rider joins the same car
     await enqueuePassengerDriverNews(tx, bookingId, 'assigned', 'Driver assigned', `${driver.publicName.split(' ')[0]} is assigned to your ride — track them live.`, { k: 'pre.assigned', p: { driver: driver.publicName.split(' ')[0] } });
-    await enqueueDriver(tx, pa.driverId, 'Pre-booked ride is now active', `Pickup ${timeLabel(pa.pickupAt)} at ${b.pickupLabel}. Head to the pickup in time.`, { tag: `pre-${bookingId}` });
+    await enqueueDriver(tx, pa.driverId, 'Pre-booked ride is now active', `Pickup ${timeLabel(pa.pickupAt)} at ${b.pickupLabel}. Head to the pickup in time.`, { tag: `pre-${bookingId}`, msg: { k: 'pre.active', p: { timeT: pa.pickupAt.toISOString(), place: b.pickupLabel } } });
     return 'converted';
   });
 }

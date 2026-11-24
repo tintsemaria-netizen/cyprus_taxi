@@ -52,6 +52,58 @@ function shareText(tag, body, L) {
 // PushMsg): shown in the app's language, or the phone's when the app has not saved one. A key or
 // language missing here → the server's English title/body. `…C` values are euro cents.
 const MSG_TEXT = {
+  // Chat (2026-11-24): the title in the reader's language, the message itself as written.
+  'chat.fromDriver': {
+    ru: ["Сообщение от водителя", "{text}"],
+    en: ["Message from your driver", "{text}"],
+    el: ["Μήνυμα από τον οδηγό", "{text}"],
+    de: ["Nachricht von Ihrem Fahrer", "{text}"],
+    fr: ["Message de votre chauffeur", "{text}"],
+    pl: ["Wiadomość od kierowcy", "{text}"],
+    he: ["הודעה מהנהג", "{text}"],
+    ar: ["رسالة من السائق", "{text}"],
+  },
+  'chat.fromPassenger': {
+    ru: ["Сообщение от пассажира", "{text}"],
+    en: ["Message from your passenger", "{text}"],
+    el: ["Μήνυμα από τον επιβάτη", "{text}"],
+    de: ["Nachricht vom Fahrgast", "{text}"],
+    fr: ["Message de votre passager", "{text}"],
+    pl: ["Wiadomość od pasażera", "{text}"],
+    he: ["הודעה מהנוסע", "{text}"],
+    ar: ["رسالة من الراكب", "{text}"],
+  },
+  // Driver document expiry and «pre-booking active» (2026-11-24, operator: Greek, Russian and English first).
+  'driver.docExpired': {
+    ru: ["Документы просрочены", "Срок обязательного документа истёк. Новые поездки недоступны, пока документ не обновят и не проверят снова."],
+    en: ["Documents expired", "A required document expired. You cannot take new rides until it is renewed and re-reviewed."],
+    el: ["Τα έγγραφα έληξαν", "Ένα υποχρεωτικό έγγραφο έληξε. Δεν μπορείτε να πάρετε νέες διαδρομές μέχρι να ανανεωθεί και να ελεγχθεί ξανά."],
+    de: ["Dokumente abgelaufen", "Ein Pflichtdokument ist abgelaufen. Neue Fahrten sind erst nach Erneuerung und erneuter Prüfung möglich."],
+    fr: ["Documents expirés", "Un document obligatoire a expiré. Vous ne pouvez plus prendre de courses tant qu'il n'est pas renouvelé et revérifié."],
+    pl: ["Dokumenty wygasły", "Wymagany dokument wygasł. Nowe kursy są niedostępne, dopóki nie zostanie odnowiony i ponownie sprawdzony."],
+    he: ["פג תוקף מסמכים", "פג תוקפו של מסמך חובה. לא ניתן לקבל נסיעות חדשות עד שיחודש וייבדק מחדש."],
+    ar: ["انتهت صلاحية المستندات", "انتهت صلاحية مستند مطلوب. لا يمكنك قبول رحلات جديدة حتى يتم تجديده ومراجعته مرة أخرى."],
+  },
+  'driver.docExpiring': {
+    ru: ["Документ скоро истекает", "Срок обязательного документа истекает через {days} дн. Обновите его, чтобы продолжать работать."],
+    en: ["Document expiring soon", "A required document expires in {days} day(s). Renew it to keep driving."],
+    el: ["Έγγραφο λήγει σύντομα", "Ένα υποχρεωτικό έγγραφο λήγει σε {days} ημ. Ανανεώστε το για να συνεχίσετε να οδηγείτε."],
+    de: ["Dokument läuft bald ab", "Ein Pflichtdokument läuft in {days} Tag(en) ab. Erneuern Sie es, um weiterzufahren."],
+    fr: ["Document bientôt expiré", "Un document obligatoire expire dans {days} jour(s). Renouvelez-le pour continuer à rouler."],
+    pl: ["Dokument wkrótce wygaśnie", "Wymagany dokument wygaśnie za {days} dn. Odnów go, aby dalej jeździć."],
+    he: ["תוקף מסמך יפוג בקרוב", "תוקפו של מסמך חובה יפוג בעוד {days} ימים. חדשו אותו כדי להמשיך לנהוג."],
+    ar: ["مستند ستنتهي صلاحيته قريبًا", "تنتهي صلاحية مستند مطلوب خلال {days} يوم. جدّده لتستمر في القيادة."],
+  },
+  'pre.active': {
+    ru: ["Предзаказ активен", "Подача в {timeT}: {place}. Выезжайте к месту подачи вовремя."],
+    en: ["Pre-booked ride is now active", "Pickup {timeT} at {place}. Head to the pickup in time."],
+    el: ["Η προκράτηση είναι ενεργή", "Παραλαβή στις {timeT}: {place}. Ξεκινήστε έγκαιρα για το σημείο παραλαβής."],
+    de: ["Vorbestellung ist aktiv", "Abholung um {timeT}: {place}. Fahren Sie rechtzeitig zum Abholort."],
+    fr: ["Réservation active", "Prise en charge à {timeT} : {place}. Rendez-vous au point de départ à temps."],
+    pl: ["Rezerwacja aktywna", "Odbiór o {timeT}: {place}. Wyrusz na miejsce odbioru na czas."],
+    he: ["ההזמנה המוקדמת פעילה", "איסוף ב-{timeT}: {place}. צאו לנקודת האיסוף בזמן."],
+    ar: ["الحجز المسبق نشط الآن", "الاستلام في {timeT}: {place}. توجّه إلى نقطة الاستلام في الوقت المحدد."],
+  },
   'share.joinGuest': {
     ru: ["Водитель назначен — поездка с попутчиком", "Вы едете с попутчиком: скидка −{pct}%."],
     en: ["Driver assigned — shared ride", "You share the car with a co-rider: −{pct}%."],

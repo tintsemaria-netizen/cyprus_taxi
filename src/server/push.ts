@@ -147,11 +147,11 @@ export async function notifyNewMessage(bookingId: string, sender: 'PASSENGER' | 
   const body = snippet.length > 120 ? snippet.slice(0, 117) + '…' : snippet;
   const { enqueue } = await import('@/server/outbox');
   if (sender === 'DRIVER') {
-    await enqueue(prisma, { audience: `PASSENGER:${bookingId}`, title: 'Message from your driver', body, url: '/track', tag: `chat-${bookingId}` });
+    await enqueue(prisma, { audience: `PASSENGER:${bookingId}`, title: 'Message from your driver', body, url: '/track', tag: `chat-${bookingId}`, msg: { k: 'chat.fromDriver', p: { text: body } } });
   } else {
     const a = await prisma.assignment.findFirst({ where: { activeBookingId: bookingId }, select: { driverId: true } });
     if (!a) return;
     const d = await prisma.driver.findUnique({ where: { id: a.driverId }, select: { userId: true } });
-    if (d) await enqueue(prisma, { audience: `DRIVER:${d.userId}`, title: 'Message from your passenger', body, url: '/driver', tag: `chat-${bookingId}` });
+    if (d) await enqueue(prisma, { audience: `DRIVER:${d.userId}`, title: 'Message from your passenger', body, url: '/driver', tag: `chat-${bookingId}`, msg: { k: 'chat.fromPassenger', p: { text: body } } });
   }
 }
