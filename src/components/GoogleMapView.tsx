@@ -55,6 +55,8 @@ interface Props {
   recenterTick?: number;
   /** Leave the camera where the passenger put it (a pickup point's logo is a map marker, 2026-11-24). */
   holdCamera?: boolean;
+  /** Called when a re-centre glide (recenterTick) has reached its end. */
+  onGlideEnd?: () => void;
   /** Duration of a re-centre glide (recenterTick), ms. Default 700. */
   glideMs?: number;
   /** The user dragged the map by hand. */
@@ -71,7 +73,7 @@ const CYPRUS_CENTER = { lat: 34.92, lng: 33.2 };
 // Exact zoom with the point centred in the visible area (between the overlays), not a fitted
 // box: fitBounds with a big box landed below the wanted zoom on narrow phones, so the map looked
 // zoomed out / scaled instead of moving closer to the car (2026-11-16).
-function centerPointAt(map: any, lat: number, lng: number, pad: any, zoom: number, animateMs = 0) {
+function centerPointAt(map: any, lat: number, lng: number, pad: any, zoom: number, animateMs = 0, onDone?: () => void) {
   const p = typeof pad === 'number' ? { top: pad, right: pad, bottom: pad, left: pad } : pad;
   const dx = ((p.right ?? 0) - (p.left ?? 0)) / 2, dy = ((p.bottom ?? 0) - (p.top ?? 0)) / 2;
   // One exact camera move (2026-11-24): the point lands between the overlays without a jump to the
@@ -82,15 +84,16 @@ function centerPointAt(map: any, lat: number, lng: number, pad: any, zoom: numbe
     const c = proj.fromPointToLatLng(new g.Point(w.x + dx / scale, w.y + dy / scale));
     const cur = map.getCenter?.();
     const z0 = map.getZoom?.() ?? zoom;
-    if (cur && Math.abs(z0 - zoom) < 1e-6 && Math.abs(cur.lat() - c.lat()) < 1e-7 && Math.abs(cur.lng() - c.lng()) < 1e-7) return; // already there
+    if (cur && Math.abs(z0 - zoom) < 1e-6 && Math.abs(cur.lat() - c.lat()) < 1e-7 && Math.abs(cur.lng() - c.lng()) < 1e-7) { onDone?.(); return; } // already there
     cancelAnimationFrame(map.__ilyCam ?? 0);
-    if (!animateMs || !cur) { map.moveCamera({ center: { lat: c.lat(), lng: c.lng() }, zoom }); return; }
+    if (!animateMs || !cur) { map.moveCamera({ center: { lat: c.lat(), lng: c.lng() }, zoom }); onDone?.(); return; }
     // Glide back (2026-11-24: the red logo «returns» from the sea instead of the map jumping).
     const from = { lat: cur.lat(), lng: cur.lng(), zoom: z0 }, to = { lat: c.lat(), lng: c.lng(), zoom }, t0 = performance.now();
     const step = (now: number) => {
       const k = Math.min(1, (now - t0) / animateMs), e = 1 - Math.pow(1 - k, 3);
       map.moveCamera({ center: { lat: from.lat + (to.lat - from.lat) * e, lng: from.lng + (to.lng - from.lng) * e }, zoom: from.zoom + (to.zoom - from.zoom) * e });
       if (k < 1) map.__ilyCam = requestAnimationFrame(step);
+      else onDone?.();
     };
     map.__ilyCam = requestAnimationFrame(step);
     return;
@@ -146,7 +149,7 @@ function markerEl(mk: MapMarker): HTMLElement {
 /** Fitting never zooms out past the whole island. */
 const MIN_FIT_ZOOM = 8;
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], fleetLikeSelf, routeWidth = 7, areas = [], focus, focusZoom, follow, onFollowBreak, recenterTick = 0, glideMs = 700, holdCamera = false, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], fleetLikeSelf, routeWidth = 7, areas = [], focus, focusZoom, follow, onFollowBreak, recenterTick = 0, glideMs = 700, holdCamera = false, onGlideEnd, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const lastUpd = useRef(new Map<string, number>());
@@ -173,6 +176,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   breakRef.current = onFollowBreak;
   const userMoveRef = useRef(onUserMove);
   userMoveRef.current = onUserMove;
+  const glideEndRef = useRef(onGlideEnd);
+  glideEndRef.current = onGlideEnd;
   const centerPickRef = useRef(onCenterPick);
   centerPickRef.current = onCenterPick;
   const padRef = useRef(fitPadding);
@@ -468,7 +473,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     // «Моё местоположение» / back from the sea (recenterTick): glide; anything else: one exact move.
     const glide = recenterTick !== lastRecenter.current;
     lastRecenter.current = recenterTick;
-    if (focusZoom != null) centerPointAt(map, focus.lat, focus.lng, fpad, focusZoom, glide ? glideMs : 0);
+    if (focusZoom != null) centerPointAt(map, focus.lat, focus.lng, fpad, focusZoom, glide ? glideMs : 0, glide ? () => glideEndRef.current?.() : undefined);
     else framePoint(map, g, focus.lat, focus.lng, fpad);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusKey, ready, idle.returnTick, padKey, recenterTick]);
