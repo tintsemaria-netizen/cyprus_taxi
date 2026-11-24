@@ -446,6 +446,7 @@ export default function BookingApp() {
   // and the order button with the price instead of «Куда едем?» — measured the same way.
   const routeReady = !!pickup && !!dropoff;
   const peekRoute = isMobile && collapsed && routeReady && step === 'form';
+  const peekSched = peekRoute && when === 'SCHEDULE';
   const footerRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const box = contentRef.current, sheet = sheetRef.current;
@@ -458,7 +459,10 @@ export default function BookingApp() {
         const padTop = parseFloat(getComputedStyle(box).paddingTop) || 0;
         const f = footerRef.current;
         const footer = f ? f.offsetHeight - (parseFloat(getComputedStyle(f).paddingBottom) || 0) + 12 : 76;
-        h = Math.round(box.getBoundingClientRect().top - sheet.getBoundingClientRect().top + padTop + routeBox.offsetHeight + 14 + footer);
+        // To the box's real bottom (2026-11-24): in a pre-booking the «Запланировать» heading sits above it, and
+        // «top + height» cut the box off — useHideClipped then hid it and only the ⇅ arrow was left.
+        void padTop;
+        h = Math.round(routeBox.getBoundingClientRect().bottom - sheet.getBoundingClientRect().top + 14 + footer);
       } else {
         // No full route yet (2026-11-17): the whole address box must show — one «Куда» row at the
         // start, both rows once an address is being entered (was: only the first input → rows cut).
@@ -1288,7 +1292,8 @@ export default function BookingApp() {
                         top, then the full «Откуда / Куда» box — no «Куда едем?», no tiles, no recent trips. */}
                     {when === 'SCHEDULE' ? (
                       <div data-testid="schedule-panel">
-                        <h1 className="mb-3 pe-12 text-xl font-bold">🕒 {t('booking.form.schedule')}</h1>
+                        {/* Collapsed (2026-11-24, operator chose variant 1): no heading — the route box shows like a normal ride. */}
+                        <h1 className={`mb-3 pe-12 text-xl font-bold ${peekSched ? 'hidden' : ''}`}>🕒 {t('booking.form.schedule')}</h1>
                         {join && (
                           <div className="mb-3 rounded-[12px] border border-accent/50 bg-accent/10 px-3 py-2 text-[13px] text-ink" data-testid="join-banner">
                             👥 {t('share.board.joining', { from: t(`share.zones.${join.from}` as 'share.zones.LCA'), to: t(`share.zones.${join.to}` as 'share.zones.LCA'), when: join.arrive ? t('rides.prebookings.arrive', { from: fmt.time(join.arrive.from), to: fmt.time(join.arrive.by) }) : fmt.dateTime(join.at) })}
