@@ -10,6 +10,8 @@ import { loadMaplibre } from '@/lib/maplibre';
 import { googleEnabled, loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { publicMapConfig } from '@/lib/config';
 import { currentTheme } from '@/lib/theme';
+// New corners go where the ring stays one loop; crossings are untangled (2026-11-24, operator).
+import { addToRing, untangle } from '@/lib/ring';
 
 export type Poly = [number, number][];
 export interface RefZone { id: string; name: string; polygon: Poly; color: string; label?: string; labelAt?: [number, number]; strong?: boolean; holes?: Poly[] }
@@ -65,7 +67,7 @@ function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange
       });
       map.addListener('click', (e: { latLng: { lat: () => number; lng: () => number } }) => {
         if (!editingRef.current) { onPickRef.current?.(e.latLng.lat(), e.latLng.lng()); return; }
-        onChangeRef.current([...editingRef.current, [e.latLng.lat(), e.latLng.lng()]]);
+        onChangeRef.current(addToRing(editingRef.current, [e.latLng.lat(), e.latLng.lng()]));
       });
       st.current = { g, map, edit: null, refs: [], airport: null, labels: [] };
       draw();
@@ -98,14 +100,14 @@ function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange
         if (!path) return;
         const pts: Poly = [];
         for (let i = 0; i < path.getLength(); i++) { const p = path.getAt(i); pts.push([p.lat(), p.lng()]); }
-        onChangeRef.current(pts);
+        onChangeRef.current(untangle(pts)); // a dragged corner never twists the ring into a figure-8
       };
       const path = poly.getPath();
       path?.addListener('set_at', sync); path?.addListener('insert_at', sync); path?.addListener('remove_at', sync);
       // A click on the polygon itself also adds a corner (else clicks inside would be swallowed).
       poly.addListener('click', (e: { latLng: { lat: () => number; lng: () => number }; vertex?: number }) => {
         if (e.vertex != null) return;
-        onChangeRef.current([...(editingRef.current ?? []), [e.latLng.lat(), e.latLng.lng()]]);
+        onChangeRef.current(addToRing(editingRef.current ?? [], [e.latLng.lat(), e.latLng.lng()]));
       });
       s.edit = poly;
     }
@@ -160,7 +162,7 @@ function LibreZoneMap({ center, airport, zones, editing, editingHoles, onChange,
       });
       map.on('click', (e) => {
         if (!editingRef.current) { onPickRef.current?.(e.lngLat.lat, e.lngLat.lng); return; }
-        onChangeRef.current([...editingRef.current, [e.lngLat.lat, e.lngLat.lng]]);
+        onChangeRef.current(addToRing(editingRef.current, [e.lngLat.lat, e.lngLat.lng]));
       });
       mapRef.current = map;
     });
@@ -203,7 +205,7 @@ function LibreZoneMap({ center, airport, zones, editing, editingHoles, onChange,
         const ll = mk.getLngLat();
         const cur = [...(editingRef.current ?? [])];
         cur[i] = [ll.lat, ll.lng];
-        onChangeRef.current(cur);
+        onChangeRef.current(untangle(cur)); // a dragged corner never twists the ring into a figure-8
       });
       return mk;
     });

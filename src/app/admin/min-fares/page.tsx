@@ -2,6 +2,7 @@
 
 // Admin «Минимум предзаказа» (2026-11-22, operator): areas on the map — one per town / district — with the
 // minimum price of a PRE-BOOKED ride inside the area, Comfort and XL separately. Above it the meter counts.
+import { untangle } from '@/lib/ring';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamicImport from 'next/dynamic';
 import { StaffShell } from '@/components/staff/StaffShell';
@@ -76,7 +77,7 @@ function MinFares() {
   }, [fitKey]);
 
   function startNew() { setMsg(null); resetHist(); setDraft({ id: null, name: '', comfort: '20', xl: '28', active: true, polygon: [] }); }
-  function startEdit(z: Zone) { setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, comfort: euro(z.comfortCents), xl: euro(z.xlCents), active: z.active, polygon: z.polygon }); }
+  function startEdit(z: Zone) { setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, comfort: euro(z.comfortCents), xl: euro(z.xlCents), active: z.active, polygon: untangle(z.polygon) }); } // an old figure-8 opens as one loop (2026-11-24)
 
   async function save() {
     if (!draft) return;
