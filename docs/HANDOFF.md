@@ -2731,9 +2731,13 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   305546 (Safari 26.2: after soft navigation the status bar tint is replaced by a page-colour shadow, no workaround, fix PR open).
   Operator 2026-11-24 03:31: «пропала затемнёнка» — gone now, nothing changed on our side.
 
-## 2026-11-24 — Last English-only pushes translated (branch `push-texts`, NOT deployed)
+## 2026-11-24 — Last English-only pushes translated — DEPLOYED (operator «заливай»)
 - sw.js MSG_TEXT: `driver.docExpired`, `driver.docExpiring` {days} (applications.ts), `pre.active` {timeT, place} (preassign.ts,
   driver «pre-booking active», was В9 text), `chat.fromDriver` / `chat.fromPassenger` {text} (push.ts — titles were English).
   Operator asked for el/ru/en; all 8 written (test + language rule). Whole src/server scanned: every other push already has a
   key or is parsed by sw.js (offerBody, share proposals).
-- Co-rider NOW window: operator answered «−30% only when found: yes», asked what «in time» means for 13:00–15:00 → explained.
+- Co-rider NOW window (PARKED, design notes): −30% only when a co-rider is actually found (yes). If none in time → normal taxi,
+  full price. Operator 04:13: «всё относительно» — the search must NOT stop when the car leaves: e.g. host from City of Dreams
+  to Larnaca airport, a second co-rider can appear on the way (Amara) and be picked up en route if the detour fits the limit.
+  So «in time» = per co-rider: the car can still reach them on its way, not a fixed deadline before departure. Check against
+  the other session's live co-rider work (share.ts LIVE mode) before designing.
