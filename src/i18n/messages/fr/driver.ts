@@ -65,6 +65,9 @@ const driver: Catalog<typeof en> = {
     goOnline: "Passer en ligne",
   },
   offer: {
+    nextTitle: 'Course suivante — après la dépose',
+    nextShort: 'Suivante',
+    nextHint: 'Déposez votre passager, puis allez-y directement',
     minShort: "{min} min",
     toClient: "jusqu’au client",
     whereTo: "Vers",

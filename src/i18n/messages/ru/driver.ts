@@ -65,6 +65,9 @@ const driver: Catalog<typeof en> = {
     goOnline: 'Выйти на линию',
   },
   offer: {
+    nextTitle: 'Следующий заказ — после высадки',
+    nextShort: 'Следующий',
+    nextHint: 'Высадите пассажира — и сразу к нему',
     minShort: '{min} мин',
     toClient: 'до клиента',
     whereTo: 'Куда',

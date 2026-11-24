@@ -2861,6 +2861,24 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-25 02:30 — next order for a finishing driver (branch `next-order`, NOT deployed)
+
+- Rule (operator): offered while the passenger is on board when the drop-off is ≤ 5 min away; ≤ 7 min when the new
+  pickup is ≤ 1 km from that drop-off. Competes with free drivers by total time (rest of trip + 2 min drop-off +
+  drive to the client). Operator answers: «кто быстрее приедет», passenger told honestly.
+- Migration 20261125020000_queued_assignment: Assignment.queuedDriverId @unique (one next ride per driver).
+  createAssignment(…, { queued }) leaves activeDriverId/activeVehicleId empty; share.afterLegEndedTx →
+  promoteQueuedTx when the current trip ends (ASSIGNED → EN_ROUTE, push ride.nextOnWay). All assignment-ending
+  writes clear queuedDriverId.
+- eligibility.finishingCandidates (NEXT_ORDER_* constants); createOffer/acceptOffer allow it only when the current
+  booking is IN_PROGRESS and there is no next ride; not for share pairs / scheduled rides / shared trips; live
+  co-rider search skips drivers with a next ride.
+- Driver app: offer polling also during IN_PROGRESS; NextOfferCard («Следующий заказ — после высадки»),
+  NextRidePill. Passenger: trackingView.finishingNearby + ETA via preassign.reachMinutes (30 s cache);
+  TrackApp headline track.finishing(Eta). sw.js: next-offer title, ride.assignedNext, ride.nextOnWay (8 langs).
+- Tests: tests/next-order.db.test.ts (3). Full suite 478 passed.
+- Not done: the driver cannot give back a next ride himself (only the passenger cancels / admin).
+
 ## 2026-11-25 01:20 — admin zone map rotates 360° + zooms together (DEPLOYED a1ce8cb)
 
 - ZoneEditorMap (Google): headingInteractionEnabled, rotateControl, useTwoFingerCamera. All other maps already

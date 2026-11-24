@@ -58,7 +58,7 @@ async function endActiveAssignment(tx: Prisma.TransactionClient, bookingId: stri
   if (active) {
     await tx.assignment.update({
       where: { id: active.id },
-      data: { endedAt: new Date(), reason, activeBookingId: null, activeDriverId: null, activeVehicleId: null },
+      data: { endedAt: new Date(), reason, activeBookingId: null, activeDriverId: null, activeVehicleId: null, queuedDriverId: null },
     });
     await afterLegEndedTx(tx, active);
   }
@@ -115,6 +115,7 @@ export async function createAssignment(
   vehicle: { id: string; plate: string; make: string; model: string; color: string; vClass: 'COMFORT' | 'XL' },
   actorId: string,
   reason?: string,
+  opts: { queued?: boolean } = {},
 ) {
   await tx.assignment.create({
     data: {
@@ -131,8 +132,8 @@ export async function createAssignment(
       actor: actorId,
       reason,
       activeBookingId: booking.id,
-      activeDriverId: driver.id,
-      activeVehicleId: vehicle.id,
+      // A next order (opts.queued): his until the current trip ends, then active (share.afterLegEndedTx).
+      ...(opts.queued ? { queuedDriverId: driver.id } : { activeDriverId: driver.id, activeVehicleId: vehicle.id }),
     },
   });
   await tx.driver.update({ where: { id: driver.id }, data: { available: false } });

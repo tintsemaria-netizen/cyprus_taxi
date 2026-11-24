@@ -22,6 +22,8 @@ const track: Catalog<typeof en> = {
   repeatRide: 'Παραγγελία ξανά',
   yourDriver: 'Ο οδηγός σας',
   etaApprox: '{min} (περίπου)',
+  finishingEta: 'Ο/Η {name} ολοκληρώνει μια κούρσα κοντά και έρχεται σε εσάς — {eta}',
+  finishing: 'Ο/Η {name} ολοκληρώνει μια κούρσα κοντά και έρχεται σε εσάς αμέσως μετά',
   meetDriver: '{name} έρχεται',
   meetDriverEta: '{name} έρχεται — {eta}',
   pillEnRoute: 'Ο ΟΔΗΓΟΣ ΕΡΧΕΤΑΙ',

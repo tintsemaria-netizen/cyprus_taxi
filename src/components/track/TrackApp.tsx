@@ -44,6 +44,8 @@ interface TrackView {
   location: null | { lat: number; lng: number; freshness: string; poorAccuracy: boolean; sampledAt: string };
   pickupEta: string | null;
   pickupEtaMin: number | null;
+  /** The driver is finishing another ride nearby first (next order, 2026-11-25). */
+  finishingNearby?: boolean;
   pickupEtaApprox: boolean;
   fareCents: number | null;
   startCode: string | null;
@@ -396,7 +398,9 @@ export default function TrackApp() {
   const etaText = !disconnected && etaMinText ? (view.pickupEtaApprox ? t('track.etaApprox', { min: etaMinText }) : etaMinText) : null;
   const statusLabel = STATUS_KEYS.has(view.status) ? t(`common.status.${view.status}` as MsgKey) : view.status;
   const headline =
-    (view.status === 'EN_ROUTE' || view.status === 'ASSIGNED') && view.vehicle
+    (view.status === 'EN_ROUTE' || view.status === 'ASSIGNED') && view.vehicle && view.finishingNearby
+      ? (etaText ? t('track.finishingEta', { name: view.vehicle.driverName, eta: etaText }) : t('track.finishing', { name: view.vehicle.driverName }))
+      : (view.status === 'EN_ROUTE' || view.status === 'ASSIGNED') && view.vehicle
       ? (etaText ? t('track.meetDriverEta', { name: view.vehicle.driverName, eta: etaText }) : t('track.meetDriver', { name: view.vehicle.driverName }))
       // An old order no driver was found for (2026-11-20): «Поездка не состоялась», no retry.
       : view.status === 'NO_DRIVER' && !view.canRetry ? t('rides.detail.notHappened') : statusLabel;

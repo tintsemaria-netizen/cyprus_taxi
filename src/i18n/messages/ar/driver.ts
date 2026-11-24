@@ -65,6 +65,9 @@ const driver: Catalog<typeof en> = {
     goOnline: "الاتصال",
   },
   offer: {
+    nextTitle: 'الطلب التالي — بعد الإنزال',
+    nextShort: 'التالي',
+    nextHint: 'أنزل الراكب ثم توجّه إلى هناك مباشرة',
     minShort: "{min} د",
     toClient: "حتى العميل",
     whereTo: "إلى",

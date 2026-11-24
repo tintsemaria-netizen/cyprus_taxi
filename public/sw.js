@@ -7,14 +7,14 @@
 const OFFER_TTL_MS = 12000; // offer lifetime (10 s) + delivery slack
 
 const OFFER_TEXT = {
-  ru: { title: 'Новый заказ', min: (n) => `~${n} мин до клиента`, tap: 'нажмите, чтобы открыть', near: 'Клиент рядом' },
-  el: { title: 'Νέα κούρσα', min: (n) => `~${n} λεπτά μέχρι τον πελάτη`, tap: 'πατήστε για άνοιγμα', near: 'Πελάτης κοντά' },
-  en: { title: 'New ride offer', min: (n) => `~${n} min to the pickup`, tap: 'tap to open', near: 'Pickup nearby' },
-  he: { title: 'הזמנה חדשה', min: (n) => `~${n} דק׳ עד הלקוח`, tap: 'הקישו לפתיחה', near: 'הלקוח קרוב' },
-  ar: { title: 'طلب جديد', min: (n) => `~${n} د حتى العميل`, tap: 'اضغط للفتح', near: 'العميل قريب' },
-  pl: { title: 'Nowe zlecenie', min: (n) => `~${n} min do klienta`, tap: 'stuknij, aby otworzyć', near: 'Klient w pobliżu' },
-  de: { title: 'Neuer Auftrag', min: (n) => `~${n} Min. bis zum Kunden`, tap: 'zum Öffnen tippen', near: 'Kunde in der Nähe' },
-  fr: { title: 'Nouvelle course', min: (n) => `~${n} min jusqu’au client`, tap: 'touchez pour ouvrir', near: 'Client à proximité' },
+  ru: { next: 'Следующий заказ — после высадки', title: 'Новый заказ', min: (n) => `~${n} мин до клиента`, tap: 'нажмите, чтобы открыть', near: 'Клиент рядом' },
+  el: { next: 'Επόμενη κούρσα — μετά την αποβίβαση', title: 'Νέα κούρσα', min: (n) => `~${n} λεπτά μέχρι τον πελάτη`, tap: 'πατήστε για άνοιγμα', near: 'Πελάτης κοντά' },
+  en: { next: 'Next ride — after the drop-off', title: 'New ride offer', min: (n) => `~${n} min to the pickup`, tap: 'tap to open', near: 'Pickup nearby' },
+  he: { next: 'ההזמנה הבאה — אחרי ההורדה', title: 'הזמנה חדשה', min: (n) => `~${n} דק׳ עד הלקוח`, tap: 'הקישו לפתיחה', near: 'הלקוח קרוב' },
+  ar: { next: 'الطلب التالي — بعد الإنزال', title: 'طلب جديد', min: (n) => `~${n} د حتى العميل`, tap: 'اضغط للفتح', near: 'العميل قريب' },
+  pl: { next: 'Następne zlecenie — po wysadzeniu', title: 'Nowe zlecenie', min: (n) => `~${n} min do klienta`, tap: 'stuknij, aby otworzyć', near: 'Klient w pobliżu' },
+  de: { next: 'Nächster Auftrag — nach dem Absetzen', title: 'Neuer Auftrag', min: (n) => `~${n} Min. bis zum Kunden`, tap: 'zum Öffnen tippen', near: 'Kunde in der Nähe' },
+  fr: { next: 'Course suivante — après la dépose', title: 'Nouvelle course', min: (n) => `~${n} min jusqu’au client`, tap: 'touchez pour ouvrir', near: 'Client à proximité' },
 };
 
 // Ride-share proposals (2026-11-19): «Нашёлся попутчик» must reach the passenger / driver even
@@ -406,6 +406,26 @@ const MSG_TEXT = {
     pl: ["Brak wolnych kierowców", "Nie udało się teraz znaleźć kierowcy. Stuknij, aby spróbować ponownie."],
     he: ["אין נהג פנוי", "לא מצאנו נהג כרגע. הקישו כדי לנסות שוב."],
     ar: ["لا يوجد سائق متاح", "لم نجد سائقاً الآن. اضغط للمحاولة مرة أخرى."],
+  },
+  'ride.assignedNext': {
+    ru: ["Водитель назначен", "Водитель заканчивает поездку неподалёку и приедет к вам следующим."],
+    en: ["Driver assigned", "Your driver is finishing a ride nearby and will come to you next."],
+    el: ["Οδηγός ορίστηκε", "Ο οδηγός ολοκληρώνει μια κούρσα κοντά και έρχεται σε εσάς αμέσως μετά."],
+    de: ["Fahrer zugewiesen", "Ihr Fahrer beendet in der Nähe eine Fahrt und kommt direkt danach zu Ihnen."],
+    fr: ["Chauffeur attribué", "Votre chauffeur termine une course à proximité et viendra vous chercher juste après."],
+    pl: ["Kierowca przydzielony", "Kierowca kończy kurs w pobliżu i przyjedzie do Ciebie zaraz potem."],
+    he: ["נהג שובץ", "הנהג מסיים נסיעה בקרבת מקום ויגיע אליכם מיד אחריה."],
+    ar: ["تم تعيين سائق", "سائقك ينهي رحلة قريبة وسيأتي إليك بعدها مباشرة."],
+  },
+  'ride.nextOnWay': {
+    ru: ["Водитель едет к вам", "Водитель закончил предыдущую поездку и уже едет к вам."],
+    en: ["Your driver is on the way", "The driver has finished the previous ride and is heading to you."],
+    el: ["Ο οδηγός έρχεται", "Ο οδηγός ολοκλήρωσε την προηγούμενη κούρσα και έρχεται σε εσάς."],
+    de: ["Ihr Fahrer ist unterwegs", "Der Fahrer hat die vorige Fahrt beendet und ist auf dem Weg zu Ihnen."],
+    fr: ["Votre chauffeur arrive", "Le chauffeur a terminé la course précédente et se dirige vers vous."],
+    pl: ["Kierowca jedzie do Ciebie", "Kierowca zakończył poprzedni kurs i jedzie do Ciebie."],
+    he: ["הנהג בדרך אליכם", "הנהג סיים את הנסיעה הקודמת ובדרך אליכם."],
+    ar: ["السائق في الطريق إليك", "أنهى السائق الرحلة السابقة وهو في طريقه إليك."],
   },
   'ride.assigned': {
     ru: ["Водитель назначен", "Водитель уже едет — следите за ним на карте."],
@@ -825,7 +845,7 @@ self.addEventListener('push', (event) => {
       const L = OFFER_TEXT[await appLocale()];
       const p = parseOfferBody(body);
       const pickup = p.pickup && p.pickup !== 'Pickup nearby' ? p.pickup : L.near;
-      title = `🚕 ${L.title}`;
+      title = `🚕 ${data.title === 'Next ride offer' ? L.next : L.title}`; // next ride while on a trip (2026-11-25)
       body = `${pickup}${p.min != null ? ` · ${L.min(p.min)}` : ''} — ${L.tap}`;
     }
     if (isShare) {

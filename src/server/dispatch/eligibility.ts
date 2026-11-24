@@ -11,6 +11,13 @@ export const MAX_PICKUP_ETA_SEC = 20 * 60; // exclude candidates worse than 20 m
 export const SHORTLIST = 5; // how many nearest to road-route per cycle
 export const DISPATCH_ROUTE_TIMEOUT_MS = 2500; // per Routes call while matching (falls back to approx)
 const ETA_TIE_SEC = 60; // candidates within 60s of best ETA tie-break on idle
+// Next order for a driver finishing a trip (2026-11-25, operator): offered when he drops his passenger off within
+// 5 min — 7 min when the new pickup is within 1 km of that drop-off. His time to the new client counts the rest
+// of the trip + DROP_OFF_SEC + the drive from the drop-off, and competes with free drivers on equal terms.
+export const NEXT_ORDER_FINISH_MIN = 5;
+export const NEXT_ORDER_FINISH_NEAR_MIN = 7;
+export const NEXT_ORDER_NEAR_M = 1000;
+const DROP_OFF_SEC = 120; // as preassign.reachMinutes (the passenger sees the same minutes)
 
 export interface Candidate {
   driverId: string;
@@ -19,6 +26,8 @@ export interface Candidate {
   roadDistanceMeters?: number; // driving distance to the pickup when road-routed (shown to the driver)
   etaSec: number;
   etaApproximate: boolean;
+  /** Offered to a driver still on a trip: the ride becomes his next one (seconds until he drops his passenger). */
+  afterTrip?: { finishInSec: number };
 }
 
 // Find the single best candidate for a booking under the given radius, EXCLUDING the
@@ -27,7 +36,7 @@ export interface Candidate {
 export async function findBestCandidate(
   // requireAcceptsShared: a pre-booked ride-share pair is offered only to drivers who take co-riders
   // (passengerCount is then both bookings together).
-  booking: { pickupLat: number; pickupLng: number; dropoffLat?: number; dropoffLng?: number; vClass: 'COMFORT' | 'XL'; passengerCount: number; passengerId?: string | null; requireAcceptsShared?: boolean },
+  booking: { pickupLat: number; pickupLng: number; dropoffLat?: number; dropoffLng?: number; vClass: 'COMFORT' | 'XL'; passengerCount: number; passengerId?: string | null; requireAcceptsShared?: boolean; scheduledAt?: Date | null },
   radiusKm: number,
   triedDriverIds: string[],
   etaCache: Map<string, { etaSec: number; approx: boolean; roadM?: number }> = new Map(),
@@ -74,7 +83,12 @@ export async function findBestCandidate(
     if (!holdOk(d.id, { lat: loc.lat, lng: loc.lng })) continue;
     prelim.push({ driverId: d.id, vehicleId: v.id, distanceMeters });
   }
-  if (!prelim.length) return null;
+  // Drivers finishing a trip near this pickup (not for a ride-share pair or a pre-booked ride ahead of time).
+  const finishing = booking.requireAcceptsShared || booking.scheduledAt ? [] : await finishingCandidates(pickup, radiusKm, {
+    tried, blockedIds, offerBusy: new Set(busyOffer.map((b) => b.activeDriverId!)), vClass: booking.vClass, passengerCount: booking.passengerCount,
+    holdOk: (id, from, min) => holdOk(id, from, min),
+  });
+  if (!prelim.length && !finishing.length) return null;
 
   // Road-route the nearest few (straight-line distance is only a prefilter).
   prelim.sort((a, b) => a.distanceMeters - b.distanceMeters);
@@ -108,6 +122,7 @@ export async function findBestCandidate(
     if (!holdOk(c.driverId, { lat: dl.lat, lng: dl.lng }, etaSec / 60)) return; // with the real approach time
     if (etaSec <= MAX_PICKUP_ETA_SEC) scored.push({ driverId: c.driverId, vehicleId: c.vehicleId, distanceMeters: c.distanceMeters, ...(roadM != null ? { roadDistanceMeters: roadM } : {}), etaSec, etaApproximate: approx });
   });
+  scored.push(...finishing);
   if (!scored.length) return null;
 
   // Rank primarily by ETA; within a 60s band prefer the longest-idle driver (fairness),
@@ -136,4 +151,68 @@ async function lastAssignmentEndedByDriver(driverIds: string[]): Promise<Map<str
   const m = new Map<string, number>();
   for (const r of rows) if (!m.has(r.driverId)) m.set(r.driverId, r.endedAt!.getTime());
   return m;
+}
+
+// Road time between two points (Google with traffic when configured, else straight line at 40 km/h).
+async function legSec(a: { lat: number; lng: number }, b: { lat: number; lng: number }): Promise<{ sec: number; approx: boolean; m?: number }> {
+  const straight = haversineMeters(a, b);
+  if (straight < 30) return { sec: 0, approx: false, m: 0 };
+  if (googleConfigured()) {
+    try {
+      const r = await googleRoute(a, b, undefined, { timeoutMs: DISPATCH_ROUTE_TIMEOUT_MS });
+      if (r) return { sec: r.etaMinutes * 60, approx: false, m: Math.round(r.distanceKm * 1000) };
+    } catch { /* fall back */ }
+  }
+  return { sec: Math.round((straight / 1000 / 40) * 3600), approx: true };
+}
+
+/** Drivers whose passenger is on board and who will drop him off soon enough near this pickup (see
+ *  NEXT_ORDER_*). One next order per driver; never during a shared ride. */
+async function finishingCandidates(
+  pickup: { lat: number; lng: number },
+  radiusKm: number,
+  f: { tried: Set<string>; blockedIds: Set<string>; offerBusy: Set<string>; vClass: 'COMFORT' | 'XL'; passengerCount: number; holdOk: (id: string, from: { lat: number; lng: number }, min?: number) => boolean },
+): Promise<Candidate[]> {
+  const rows = await prisma.assignment.findMany({
+    where: { activeDriverId: { not: null }, booking: { status: 'IN_PROGRESS' } },
+    include: { booking: true, driver: { include: { user: true, location: true } }, vehicle: true },
+  });
+  if (!rows.length) return [];
+  const ids = rows.map((r) => r.driverId);
+  const [queued, legs, groups] = await Promise.all([
+    prisma.assignment.findMany({ where: { queuedDriverId: { in: ids } }, select: { queuedDriverId: true } }),
+    prisma.assignment.groupBy({ by: ['driverId'], where: { driverId: { in: ids }, activeBookingId: { not: null } }, _count: { _all: true } }),
+    prisma.shareGroup.findMany({ where: { OR: [{ activeHostBookingId: { in: rows.map((r) => r.bookingId) } }, { activeGuestBookingId: { in: rows.map((r) => r.bookingId) } }] }, select: { activeHostBookingId: true, activeGuestBookingId: true } }),
+  ]);
+  const hasNext = new Set(queued.map((q) => q.queuedDriverId!));
+  const twoLegs = new Set(legs.filter((l) => l._count._all > 1).map((l) => l.driverId));
+  const shared = new Set(groups.flatMap((g) => [g.activeHostBookingId, g.activeGuestBookingId]).filter(Boolean) as string[]);
+  const now = new Date();
+  const out: Candidate[] = [];
+  await Promise.all(rows.map(async (r) => {
+    const d = r.driver, b = r.booking, v = r.vehicle;
+    if (hasNext.has(d.id) || twoLegs.has(d.id) || shared.has(b.id)) return;
+    if (!d.active || !d.user.active || !d.onDuty || f.tried.has(d.id) || f.blockedIds.has(d.id) || f.offerBusy.has(d.id)) return;
+    if (!v.active || v.vClass !== f.vClass || v.seats < f.passengerCount) return;
+    const loc = d.location;
+    if (!loc || computeFreshness(loc.sampledAt, loc.receivedAt, now) !== 'fresh') return;
+    const drop = { lat: b.dropoffLat, lng: b.dropoffLng };
+    const near = haversineMeters(drop, pickup);
+    if (near > radiusKm * 1000) return;
+    const limitSec = (near <= NEXT_ORDER_NEAR_M ? NEXT_ORDER_FINISH_NEAR_MIN : NEXT_ORDER_FINISH_MIN) * 60;
+    // The rest of his trip: via a stop not made yet, then the drop-off. A cheap straight-line check first.
+    const path = [{ lat: loc.lat, lng: loc.lng }, ...(b.stopLat != null && b.stopLng != null && !b.stopDepartedAt ? [{ lat: b.stopLat, lng: b.stopLng }] : []), drop];
+    let straight = 0;
+    for (let i = 1; i < path.length; i++) straight += haversineMeters(path[i - 1], path[i]);
+    if ((straight / 1000 / 60) * 3600 > limitSec) return; // even at 60 km/h he would not be done in time
+    let rest = 0, approx = false;
+    for (let i = 1; i < path.length; i++) { const l = await legSec(path[i - 1], path[i]); rest += l.sec; approx ||= l.approx; }
+    if (path.length > 2) rest += 180; // the stop
+    if (rest > limitSec) return;
+    const toPickup = await legSec(drop, pickup);
+    const etaSec = rest + DROP_OFF_SEC + toPickup.sec;
+    if (etaSec > MAX_PICKUP_ETA_SEC || !f.holdOk(d.id, drop, etaSec / 60)) return;
+    out.push({ driverId: d.id, vehicleId: v.id, distanceMeters: near, ...(toPickup.m != null ? { roadDistanceMeters: toPickup.m } : {}), etaSec, etaApproximate: approx || toPickup.approx, afterTrip: { finishInSec: rest } });
+  }));
+  return out;
 }

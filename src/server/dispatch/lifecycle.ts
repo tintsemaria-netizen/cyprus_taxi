@@ -115,7 +115,7 @@ async function finalizeCompletion(
       },
     });
   }
-  await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason: 'completed', activeBookingId: null, activeDriverId: null, activeVehicleId: null } });
+  await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason: 'completed', activeBookingId: null, activeDriverId: null, activeVehicleId: null, queuedDriverId: null } });
   // A shared ride's other leg may still be in the car: it takes over and the driver stays busy.
   // The amount the driver typed on the completion screen (meter ride): recorded once, final from now on.
   if (meterCents != null && !isUpfront && !(await tx.driverSettlement.findFirst({ where: { bookingId: b.id }, select: { id: true } }))) {
@@ -319,7 +319,7 @@ export async function rematchBooking(
   await leaveShareTx(tx, bookingId, `rematch: ${reason}`);
   const a = await tx.assignment.findFirst({ where: { activeBookingId: bookingId } });
   if (a) {
-    await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason, activeBookingId: null, activeDriverId: null, activeVehicleId: null } });
+    await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason, activeBookingId: null, activeDriverId: null, activeVehicleId: null, queuedDriverId: null } });
     await afterLegEndedTx(tx, a);
   }
   await tx.waitingSession.deleteMany({ where: { bookingId } });
@@ -372,7 +372,7 @@ export async function driverShareNoShow(bookingId: string, driverId: string, exp
     const sharedPrice = g.hostBookingId === bookingId ? g.hostCents : g.guestCents;
     const fee = g.mode === 'PREBOOK' ? noShowFeeCents(sharedPrice) : null;
     await leaveShareTx(tx, bookingId, 'no-show', fee != null ? { noShowFeeCents: fee } : {});
-    await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason: 'no-show', activeBookingId: null, activeDriverId: null, activeVehicleId: null } });
+    await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason: 'no-show', activeBookingId: null, activeDriverId: null, activeVehicleId: null, queuedDriverId: null } });
     await afterLegEndedTx(tx, a);
     const u = await tx.booking.update({ where: { id: bookingId }, data: { status: 'CANCELED', revision: { increment: 1 } } });
     await tx.bookingEvent.create({ data: { bookingId, type: 'NO_SHOW', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'ARRIVED', afterStatus: 'CANCELED', reason: fee != null ? `no-show fee ${fee} cents` : 'no-show' } });
