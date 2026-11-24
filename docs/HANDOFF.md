@@ -2812,6 +2812,13 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-24 21:30 — logo as map marker on a pickup point; zoom where the fingers are (DEPLOYED 1207ba4)
+
+- BookingApp: `onSpot` (centre mode + pickup on a territory point). After the 1.6 s glide (`arriving`) the centre
+  overlay is replaced by the pickup map marker (noFit) — sits exactly in the silhouette (overlay was ~20 px off on
+  Google). `onCenterPick`: a gesture that changed the zoom (> 0.05, `zoomRef`) while onSpot does not re-pick.
+- Live: new build, health ready 200. Not checked on the phone (pinch on Google) — operator tests.
+
 ## 2026-11-24 20:40 — pickup point silhouette + slow glide + re-centre (DEPLOYED cf2c6fb)
 
 - `spotEl` (carMarker.ts): IL-Y pin silhouette (BRAND_PIN_SILHOUETTE_SVG), 32×40, anchor bottom; label only on the
