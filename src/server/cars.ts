@@ -46,19 +46,21 @@ export async function allowedVehicleIds(driverId: string): Promise<Set<string>> 
   return new Set([...own.map((v) => v.id), ...access.map((a) => a.vehicleId), ...bound.map((b) => b.vehicleId)]);
 }
 
-/** An accepted insurance / taxi licence of a car added through «Мои машины» that has expired. */
-async function expiredCarDoc(vehicleId: string, now = new Date()): Promise<string | null> {
-  const docs = await prisma.carDocument.findMany({ where: { vehicleId, decision: 'ACCEPTED', slot: { in: [...CAR_EXPIRY_SLOTS] } }, orderBy: { createdAt: 'desc' } });
-  const seen = new Set<string>();
-  for (const d of docs) {
-    if (seen.has(d.slot)) continue; // newest per slot
-    seen.add(d.slot);
-    if (d.expiresAt && d.expiresAt < now) return d.slot;
-  }
-  return null;
+/** Document states of a car added through «Мои машины» (same rules as the driver's own documents). */
+export async function carDocStates(vehicleId: string, now = new Date()) {
+  const { slotStates } = await import('@/server/doc-renewal');
+  const rows = await prisma.carDocument.findMany({ where: { vehicleId }, select: { id: true, slot: true, decision: true, scanStatus: true, expiresAt: true, createdAt: true, decisionNote: true } });
+  return slotStates(rows, now);
 }
 
-export interface MyCar { id: string; plate: string; make: string; model: string; color: string; vClass: string; seats: number; current: boolean; own: boolean; busy: boolean; expired: string | null }
+/** An insurance / taxi licence of this car that expired with nothing new waiting (option «б»: an upload
+ *  the admin hasn't looked at yet keeps the car working). */
+export async function expiredCarDoc(vehicleId: string, now = new Date()): Promise<string | null> {
+  return (await carDocStates(vehicleId, now)).find((s) => s.blocking)?.slot ?? null;
+}
+
+export interface CarDocView { slot: string; expiresAt: string | null; daysLeft: number | null; expired: boolean; soon: boolean; waiting: boolean; returned: string | null }
+export interface MyCar { id: string; plate: string; make: string; model: string; color: string; vClass: string; seats: number; current: boolean; own: boolean; busy: boolean; expired: string | null; docs: CarDocView[] }
 
 export async function myCars(driverId: string) {
   const ids = await allowedVehicleIds(driverId);
@@ -71,6 +73,11 @@ export async function myCars(driverId: string) {
       current: b?.driverId === driverId, own: v.ownerDriverId === driverId,
       busy: !!b && b.driverId !== driverId && b.driver.onDuty,
       expired: await expiredCarDoc(v.id),
+      // His own added car: its documents with dates, and «Загрузить новый» (2026-11-24).
+      docs: v.ownerDriverId === driverId ? (await carDocStates(v.id)).map((s) => ({
+        slot: s.slot, expiresAt: s.accepted?.expiresAt?.toISOString() ?? null, daysLeft: s.daysLeft, expired: s.expired,
+        soon: s.needsRenewal, waiting: s.renewal?.decision === 'PENDING', returned: s.renewal?.decision === 'CHANGES' ? (s.renewal.note ?? '') : null,
+      })) : [],
     });
   }
   cars.sort((a, b) => Number(b.current) - Number(a.current) || a.plate.localeCompare(b.plate));
@@ -81,12 +88,18 @@ export async function myCars(driverId: string) {
   const asks = await prisma.carAccess.findMany({ where: { status: 'PENDING', needOwner: true, ownerOkAt: null, vehicleId: { in: (await prisma.vehicle.findMany({ where: { ownerDriverId: driverId }, select: { id: true } })).map((v) => v.id) } } });
   const askDrivers = await prisma.driver.findMany({ where: { id: { in: asks.map((a) => a.driverId) } }, select: { id: true, publicName: true } });
   const askCars = await prisma.vehicle.findMany({ where: { id: { in: asks.map((a) => a.vehicleId) } }, select: { id: true, plate: true } });
+  // Who may drive HIS cars (2026-11-24): he can take the permission back.
+  const ownIds = (await prisma.vehicle.findMany({ where: { ownerDriverId: driverId }, select: { id: true } })).map((v) => v.id);
+  const granted = await prisma.carAccess.findMany({ where: { status: 'APPROVED', vehicleId: { in: ownIds }, driverId: { not: driverId } } });
+  const grantedDrivers = await prisma.driver.findMany({ where: { id: { in: granted.map((g) => g.driverId) } }, select: { id: true, publicName: true } });
+  const grantedCars = await prisma.vehicle.findMany({ where: { id: { in: granted.map((g) => g.vehicleId) } }, select: { id: true, plate: true } });
   const me = await prisma.driver.findUnique({ where: { id: driverId }, select: { onDuty: true } });
   const onTrip = !!(await prisma.assignment.findFirst({ where: { activeDriverId: driverId }, select: { id: true } }));
   return {
     online: !!me?.onDuty, onTrip, cars,
     access: requests.map((r) => ({ id: r.id, status: r.status, vehicle: reqCars.find((c) => c.id === r.vehicleId) ?? null, waitingFor: [r.needFleet && !r.fleetOkAt ? 'FLEET' : null, r.needOwner && !r.ownerOkAt ? 'OWNER' : null, r.needAdmin && !r.adminOkAt ? 'ADMIN' : null].filter(Boolean) as string[] })),
     newCars: newCars.map((c) => ({ id: c.id, status: c.status, vehicle: JSON.parse(c.vehicle), note: c.decisionNote, documents: latestDocs(c.documents).map((d) => ({ id: d.id, slot: d.slot, decision: d.decision, note: d.decisionNote })) })),
+    granted: granted.map((g) => ({ id: g.id, driverName: grantedDrivers.find((d) => d.id === g.driverId)?.publicName ?? '', plate: grantedCars.find((c) => c.id === g.vehicleId)?.plate ?? '' })),
     asks: asks.map((a) => ({ id: a.id, driverName: askDrivers.find((d) => d.id === a.driverId)?.publicName ?? '', plate: askCars.find((c) => c.id === a.vehicleId)?.plate ?? '' })),
   };
 }
@@ -249,15 +262,25 @@ export async function submitCarRequest(driverId: string, requestId: string): Pro
 
 export async function decideCarDoc(docId: string, decision: 'ACCEPTED' | 'CHANGES', note: string | undefined, expiresAt: string | undefined): Promise<R<{ decision: string }>> {
   const d = await prisma.carDocument.findUnique({ where: { id: docId }, include: { request: true } });
-  if (!d?.request || d.request.status !== 'SUBMITTED') return no(409, 'BAD_STATE', 'Not under review.');
+  // A renewal of an approved car's document (no request, a car): accepted → the older one goes.
+  const renewal = !d?.requestId && !!d?.vehicleId && d.decision === 'PENDING';
+  if (!d || (!renewal && (!d.request || d.request.status !== 'SUBMITTED'))) return no(409, 'BAD_STATE', 'Not under review.');
   if (decision === 'ACCEPTED') {
     if (d.scanStatus !== 'CLEAN') return no(422, 'DOC_NOT_SCANNED', 'Only a file that passed the malware scan can be accepted.');
     const exp = expiresAt ? new Date(expiresAt) : null;
     if (CAR_EXPIRY_SLOTS.has(d.slot) && (!exp || Number.isNaN(exp.getTime()) || exp <= new Date())) return no(422, 'EXPIRY_REQUIRED', 'Enter a future expiry date.');
     await prisma.carDocument.update({ where: { id: d.id }, data: { decision, decisionNote: null, expiresAt: exp && !Number.isNaN(exp.getTime()) ? exp : null } });
+    if (renewal) {
+      const older = await prisma.carDocument.findMany({ where: { vehicleId: d.vehicleId, slot: d.slot, id: { not: d.id }, createdAt: { lt: d.createdAt } } });
+      for (const o of older) { await prisma.carDocument.delete({ where: { id: o.id } }); await deleteDocumentFile(o.storageKey); }
+    }
   } else {
     if (!note || note.trim().length < 3) return no(422, 'VALIDATION', 'Say what to change.');
     await prisma.carDocument.update({ where: { id: d.id }, data: { decision, decisionNote: note.trim().slice(0, 500) } });
+    if (renewal) {
+      const v = await prisma.vehicle.findUnique({ where: { id: d.vehicleId! }, select: { ownerDriverId: true } });
+      if (v?.ownerDriverId) await pushDriver(v.ownerDriverId, { title: 'Document sent back', body: 'The operator could not accept the new car document. Upload it again: menu → My cars.', msg: { k: 'drv.docReturned', p: { slot: d.slot } }, dedupeKey: `cardocback:${d.id}` });
+    }
   }
   return ok({ decision });
 }
@@ -327,4 +350,50 @@ export async function adminCarRequest(requestId: string) {
     duplicate: r.status === 'SUBMITTED' ? await findDuplicateVehicle(ve) : null,
     documents: latestDocs(r.documents).map((x) => ({ id: x.id, slot: x.slot, decision: x.decision, decisionNote: x.decisionNote, mime: x.mime, scanStatus: x.scanStatus, expiresAt: x.expiresAt?.toISOString() ?? null })),
   };
+}
+
+// ---------- Renewing a document of an approved car (2026-11-24) ----------
+
+export const CAR_RENEW_SLOTS = new Set(['insurance', 'taxi_licence', 'vehicle_front', 'vehicle_rear']);
+
+/** The car's owner uploads a new insurance / taxi licence / photo; the accepted one stays until the admin
+ *  accepts the new one, and the car keeps working meanwhile (option «б»). */
+export async function uploadCarRenewal(driverId: string, vehicleId: string, slot: string, buf: Buffer): Promise<R<{ id: string; scanStatus: string }>> {
+  if (!CAR_RENEW_SLOTS.has(slot)) return no(422, 'BAD_SLOT', 'Unknown document.');
+  const v = await prisma.vehicle.findUnique({ where: { id: vehicleId }, select: { ownerDriverId: true, plate: true } });
+  if (!v || v.ownerDriverId !== driverId) return no(403, 'CAR_NOT_ALLOWED', 'Not your car.');
+  const scanStatus = await scanFile(buf);
+  if (scanStatus === 'INFECTED') return no(422, 'INFECTED', 'This file failed a malware scan and was rejected.');
+  const id = randomUUID();
+  const stored = await saveDocument(`cars/v-${vehicleId}`, id, buf);
+  if ('error' in stored) return no(422, 'BAD_FILE', stored.error);
+  const old = await prisma.carDocument.findMany({ where: { vehicleId, slot, decision: { not: 'ACCEPTED' } } });
+  await prisma.carDocument.create({ data: { id, vehicleId, slot, storageKey: stored.storageKey, mime: stored.mime, sizeBytes: stored.sizeBytes, sha256: stored.sha256, scanStatus } });
+  for (const o of old) { await prisma.carDocument.delete({ where: { id: o.id } }); await deleteDocumentFile(o.storageKey); }
+  const me = await prisma.driver.findUnique({ where: { id: driverId }, select: { publicName: true } });
+  const who = `${me?.publicName ?? ''} · ${v.plate}`;
+  for (const a of await prisma.staffUser.findMany({ where: { role: 'ADMIN', active: true }, select: { id: true } })) {
+    await push({ audience: `STAFF:${a.id}`, title: 'New document to check', body: `${who}: new ${slot}`, url: `/admin/vehicles/${vehicleId}/documents`, msg: { k: 'staff.docUploaded', p: { who, slot } }, dedupeKey: `cardocup:${id}:${a.id}` });
+  }
+  return ok({ id, scanStatus });
+}
+
+/** For the admin: an approved car's documents, newest first, with the car's facts to compare. */
+export async function adminCarDocs(vehicleId: string) {
+  const v = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
+  if (!v) return null;
+  const owner = v.ownerDriverId ? await prisma.driver.findUnique({ where: { id: v.ownerDriverId }, select: { publicName: true } }) : null;
+  const docs = await prisma.carDocument.findMany({ where: { vehicleId }, orderBy: [{ slot: 'asc' }, { createdAt: 'desc' }] });
+  return {
+    vehicle: { id: v.id, plate: v.plate, vin: v.vin, make: v.make, model: v.model, color: v.color, vClass: v.vClass, seats: v.seats, ownerName: owner?.publicName ?? null },
+    documents: docs.map((x) => ({ id: x.id, slot: x.slot, decision: x.decision, decisionNote: x.decisionNote, mime: x.mime, scanStatus: x.scanStatus, expiresAt: x.expiresAt?.toISOString() ?? null, createdAt: x.createdAt.toISOString() })),
+  };
+}
+
+/** Who may drive the fleet's cars (2026-11-24) — the fleet owner can take it back. */
+export async function fleetGranted(fleetId: string) {
+  const cars = await prisma.vehicle.findMany({ where: { fleetId }, select: { id: true, plate: true } });
+  const g = await prisma.carAccess.findMany({ where: { status: 'APPROVED', vehicleId: { in: cars.map((c) => c.id) } } });
+  const drivers = await prisma.driver.findMany({ where: { id: { in: g.map((x) => x.driverId) } }, select: { id: true, publicName: true } });
+  return g.map((x) => ({ id: x.id, driverName: drivers.find((d) => d.id === x.driverId)?.publicName ?? '', plate: cars.find((c) => c.id === x.vehicleId)?.plate ?? '' }));
 }

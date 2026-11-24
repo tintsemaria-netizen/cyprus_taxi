@@ -196,6 +196,9 @@ const driver: Catalog<typeof en> = {
   },
   // «Мои машины» (2026-11-24).
   cars: {
+    grantedTitle: "من يمكنه قيادة سياراتك",
+    revoke: "سحب الإذن",
+    revoked: "تم سحب الإذن.",
     menu: "سياراتي",
     title: "سياراتي",
     failed: "لم ينجح ذلك. حاول مرة أخرى.",

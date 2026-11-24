@@ -89,11 +89,25 @@ function Fleet({ me }: { me: Me }) {
 function FleetCarAsks() {
   const { t } = useT();
   const [items, setItems] = useState<{ id: string; driverName: string; plate: string }[]>([]);
-  const load = () => { api<{ items: typeof items }>('/fleet/car-access').then((r) => setItems(r.items)).catch(() => {}); };
+  const [granted, setGranted] = useState<{ id: string; driverName: string; plate: string }[]>([]);
+  const load = () => { api<{ items: typeof items; granted: typeof granted }>('/fleet/car-access').then((r) => { setItems(r.items); setGranted(r.granted); }).catch(() => {}); };
   useEffect(load, []);
-  if (!items.length) return null;
   const decide = (id: string, yes: boolean) => api('/fleet/car-access', { method: 'POST', body: { id, yes } }).then(load).catch(() => {});
+  const revoke = (id: string) => api('/fleet/car-access', { method: 'POST', body: { id, revoke: true } }).then(load).catch(() => {});
   return (
+    <>
+    {granted.length > 0 && (
+      <section className="card mt-4 p-4" data-testid="fleet-car-granted">
+        <h2 className="label mb-2">{t('staff.cars.fleetGranted')}</h2>
+        {granted.map((g) => (
+          <div key={g.id} className="flex items-center gap-2 border-t border-edge py-2 text-sm first:border-0">
+            <span className="min-w-0 flex-1">{g.driverName} · <span className="font-mono font-bold">{g.plate}</span></span>
+            <button className="btn-ghost !min-h-0 !py-1.5 text-xs text-danger" onClick={() => revoke(g.id)}>{t('staff.cars.revoke')}</button>
+          </div>
+        ))}
+      </section>
+    )}
+    {items.length > 0 && (
     <section className="card row-alert mt-4 p-4" data-testid="fleet-car-asks">
       <h2 className="label mb-2">{t('staff.cars.fleetTitle')}</h2>
       {items.map((a) => (
@@ -104,5 +118,7 @@ function FleetCarAsks() {
         </div>
       ))}
     </section>
+    )}
+    </>
   );
 }

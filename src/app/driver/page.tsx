@@ -65,7 +65,7 @@ interface Dashboard {
   vehicle: { plate: string; vClass: string; seats: number; label: string } | null;
   today: { recordedEarnings: { currency: string; cents: number }[]; pendingFinalTrips: number; completedTrips: number; onlineSeconds: number; cash?: { currency: string; cents: number }[]; card?: { currency: string; cents: number }[]; canceledTrips?: number };
   latestTrips: TripCard[];
-  alerts: { level: string; code: string; message: string; action?: { label: string; href: string }; slot?: string; daysLeft?: number | null }[];
+  alerts: { level: string; code: string; message: string; action?: { label: string; href: string }; slot?: string; daysLeft?: number | null; car?: string }[];
   support: { operatorName: string | null; phone: string | null; email: string | null };
 }
 
@@ -516,6 +516,8 @@ function HomeSection(props: {
   // Documents (2026-11-24): one red line on the map, in the app's language; a tap opens «Документы».
   const docAlert = dash?.alerts.find((a) => a.code === 'DOC_EXPIRED') ?? dash?.alerts.find((a) => a.code === 'DOC_EXPIRING');
   const slotName = useSlotName();
+  // A car document (a car added through «Мои машины»): «Страховка (KXY 248)».
+  const docSlot = docAlert?.slot ? `${slotName(docAlert.slot)}${docAlert.car ? ` (${docAlert.car})` : ''}` : '';
   const blocker = dash?.alerts.find((a) => a.level === 'blocker' && !(docAlert && (a.code === 'DOCUMENTS_EXPIRED' || a.code === 'DOC_EXPIRED')));
 
   const [counts, setCounts] = useState({ free: 0, busy: 0 });
@@ -598,13 +600,13 @@ function HomeSection(props: {
         )}
         {props.banner && <button className="pointer-events-auto rounded-[12px] border border-warn/40 bg-page/95 px-3 py-2 text-start text-sm text-warn" onClick={props.onDismissBanner}>{props.banner}</button>}
         {!offer && docAlert?.slot && (
-          <button type="button" onClick={props.openDocs} data-testid="doc-banner"
+          <button type="button" onClick={docAlert.car ? props.openCars : props.openDocs} data-testid="doc-banner"
             className="pointer-events-auto flex w-full items-center gap-2 rounded-[12px] border border-danger/60 bg-page/95 px-3 py-2 text-start text-sm">
             <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-danger" aria-hidden />
             <span className="min-w-0 flex-1 font-medium text-danger">
-              {docAlert.code === 'DOC_EXPIRED' ? t('driver.profile.renew.bannerExpired', { slot: slotName(docAlert.slot) })
-                : (docAlert.daysLeft ?? 2) <= 1 ? t('driver.profile.renew.bannerLast', { slot: slotName(docAlert.slot) })
-                : t('driver.profile.renew.bannerSoon', { slot: slotName(docAlert.slot), days: docAlert.daysLeft ?? '' })}
+              {docAlert.code === 'DOC_EXPIRED' ? t('driver.profile.renew.bannerExpired', { slot: docSlot })
+                : (docAlert.daysLeft ?? 2) <= 1 ? t('driver.profile.renew.bannerLast', { slot: docSlot })
+                : t('driver.profile.renew.bannerSoon', { slot: docSlot, days: docAlert.daysLeft ?? '' })}
             </span>
             <span className="shrink-0 rounded-full bg-danger px-2.5 py-1 text-xs font-semibold text-white">{t('driver.profile.renew.open')}</span>
           </button>

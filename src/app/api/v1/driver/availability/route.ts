@@ -34,6 +34,9 @@ export async function PATCH(req: Request) {
   if (goingOnline) {
     const binding = await prisma.driverVehicleBinding.findFirst({ where: { driverId: ctx.driver.id, endedAt: null }, select: { vehicle: { select: { active: true } } } });
     if (!binding?.vehicle.active) return apiError(409, 'NO_VEHICLE', 'No vehicle is assigned to you, so you cannot receive ride offers. Contact the operator.');
+    // A car added through «Мои машины» with an expired insurance / taxi licence and nothing new uploaded (2026-11-24).
+    const bound = await prisma.driverVehicleBinding.findFirst({ where: { activeDriverId: ctx.driver.id }, select: { vehicleId: true } });
+    if (bound && await (await import('@/server/cars')).expiredCarDoc(bound.vehicleId)) return apiError(409, 'CAR_DOCS_EXPIRED', "This car's insurance or taxi licence has expired.");
   }
 
   // Going off duty / unavailable must not cancel an active trip (SPEC §4).

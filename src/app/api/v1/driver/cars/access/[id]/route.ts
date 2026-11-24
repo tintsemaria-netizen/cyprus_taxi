@@ -1,6 +1,6 @@
 import { apiOk, apiError, Errors } from '@/lib/http';
 import { requireDriver, isDriverCtx } from '@/lib/driver-ctx';
-import { decideAccess } from '@/server/cars';
+import { decideAccess, revokeAccess } from '@/server/cars';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +11,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return Errors.validation({ _: 'Invalid JSON body.' }); }
   const { id } = await params;
-  const r = await decideAccess(id, { kind: 'OWNER', driverId: ctx.driver.id }, body.yes === true);
+  // {revoke: true}: take back a permission he gave (2026-11-24).
+  const r = body.revoke === true ? await revokeAccess(id, { kind: 'OWNER', driverId: ctx.driver.id }) : await decideAccess(id, { kind: 'OWNER', driverId: ctx.driver.id }, body.yes === true);
   return r.ok ? apiOk(r.data) : apiError(r.status, r.code, r.message);
 }

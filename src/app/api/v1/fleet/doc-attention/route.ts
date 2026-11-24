@@ -9,6 +9,6 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const ctx = await requireFleetOwner();
   if (!isFleetCtx(ctx)) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();
-  const items = (await docAttention(new Date(), ctx.fleet.id)).map((a) => ({ ...a, applicationId: '' })); // no admin links
+  const items = (await docAttention(new Date(), ctx.fleet.id)).map((a) => ({ ...a, applicationId: '', href: '' })); // no admin links
   return apiOk({ items });
 }

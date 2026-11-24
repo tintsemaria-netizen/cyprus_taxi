@@ -196,6 +196,9 @@ const driver: Catalog<typeof en> = {
   },
   // «Мои машины» (2026-11-24).
   cars: {
+    grantedTitle: "מי רשאי לנהוג ברכבים שלך",
+    revoke: "לבטל אישור",
+    revoked: "האישור בוטל.",
     menu: "הרכבים שלי",
     title: "הרכבים שלי",
     failed: "זה לא הצליח. נסו שוב.",

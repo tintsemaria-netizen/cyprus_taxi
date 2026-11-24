@@ -15,7 +15,7 @@ import { driverRatingSummary } from '@/server/ratings';
 
 type DriverRow = { id: string; publicName: string; onDuty: boolean; available: boolean; active: boolean; eligibility: string; applicationId: string | null };
 
-export interface DashboardAlert { level: 'blocker' | 'warning' | 'info'; code: string; message: string; action?: { label: string; href: string }; slot?: string; daysLeft?: number | null; expiresAt?: string | null }
+export interface DashboardAlert { level: 'blocker' | 'warning' | 'info'; code: string; message: string; action?: { label: string; href: string }; slot?: string; daysLeft?: number | null; expiresAt?: string | null; car?: string }
 
 
 const BLOCKER_MESSAGES: Record<string, string> = {
@@ -40,6 +40,17 @@ export async function driverDashboard(driver: DriverRow) {
   }
   if (eligible && !binding?.vehicle.active) {
     alerts.push({ level: 'blocker', code: 'NO_VEHICLE', message: 'No vehicle is assigned to you, so you won’t receive ride offers. Contact the operator.' });
+  }
+  // His car's documents (a car added through «Мои машины», 2026-11-24): the same marker, opens «Мои машины».
+  {
+    const b = await prisma.driverVehicleBinding.findFirst({ where: { activeDriverId: driver.id }, select: { vehicle: { select: { id: true, plate: true } } } });
+    if (b) {
+      const { carDocStates } = await import('@/server/cars');
+      for (const st of await carDocStates(b.vehicle.id, now)) {
+        if (!st.needsRenewal) continue;
+        alerts.push({ level: st.blocking ? 'blocker' : 'warning', code: st.blocking ? 'DOC_EXPIRED' : 'DOC_EXPIRING', slot: st.slot, car: b.vehicle.plate, daysLeft: st.daysLeft, expiresAt: st.accepted?.expiresAt?.toISOString() ?? null, message: `${b.vehicle.plate}: ${st.slot} ${st.blocking ? 'has expired' : 'expires soon'}.` });
+      }
+    }
   }
   // Documents (2026-11-24): a marker from 7 days before expiry; once he uploaded the new one, nothing
   // more is asked of him (option «б»). The screen words come from the app's language (slot, days, date).

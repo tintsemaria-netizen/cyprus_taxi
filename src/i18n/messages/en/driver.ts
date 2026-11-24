@@ -193,6 +193,9 @@ const driver = {
   },
   // «Мои машины» (2026-11-24).
   cars: {
+    grantedTitle: "Who may drive your cars",
+    revoke: "Take back",
+    revoked: "Permission taken back.",
     menu: "My cars",
     title: "My cars",
     failed: "That didn't work. Please try again.",

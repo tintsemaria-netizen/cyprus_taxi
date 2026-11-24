@@ -3,7 +3,7 @@ import { config } from '@/lib/config';
 import { prisma } from '@/lib/db';
 import { rateLimit } from '@/lib/rate-limit';
 import { resolveShareToken } from '@/lib/tracking';
-import { passengerPhotos } from '@/server/driver-photos';
+import { passengerPhotos, photoFile } from '@/server/driver-photos';
 import { readDocument } from '@/server/storage';
 
 export const dynamic = 'force-dynamic';
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   const active = await prisma.assignment.findFirst({ where: { activeBookingId: bookingId }, select: { driverId: true, vehiclePlate: true } });
   if (!active) return Errors.notFound();
   const id = (await passengerPhotos(active.driverId, active.vehiclePlate)).car;
-  const doc = id ? await prisma.applicationDocument.findUnique({ where: { id }, select: { storageKey: true, mime: true } }) : null;
+  const doc = id ? await photoFile(id) : null;
   const buf = doc ? await readDocument(doc.storageKey) : null;
   if (!doc || !buf) return Errors.notFound();
   return new Response(new Uint8Array(buf), { headers: { 'Content-Type': doc.mime, 'Cache-Control': 'private, no-store' } });

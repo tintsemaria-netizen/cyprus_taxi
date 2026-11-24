@@ -246,6 +246,27 @@ const MSG_TEXT = {
     he: ["רכב חדש לבדיקה", "{who}: {plate} — לבדוק מסמכים"],
     ar: ["سيارة جديدة للمراجعة", "{who}: {plate} — راجِع المستندات"],
   },
+  // Documents of cars added through «Мои машины» (2026-11-24).
+  "drv.carDocExpiring": {
+    ru: ["Документ машины истекает", "{plate}: {slot} — срок истекает через {days} дн. Загрузите новый: меню → Мои машины."],
+    en: ["Car document expiring", "{plate}: {slot} expires in {days} day(s). Upload the new one: menu → My cars."],
+    el: ["Έγγραφο αυτοκινήτου λήγει", "{plate}: {slot} — λήγει σε {days} ημ. Ανεβάστε το νέο: μενού → Τα αυτοκίνητά μου."],
+    de: ["Autodokument läuft ab", "{plate}: {slot} läuft in {days} Tag(en) ab. Neues hochladen: Menü → Meine Autos."],
+    fr: ["Document de voiture bientôt expiré", "{plate} : {slot} expire dans {days} jour(s). Envoyez le nouveau : menu → Mes voitures."],
+    pl: ["Dokument auta wygasa", "{plate}: {slot} — wygasa za {days} dn. Wgraj nowy: menu → Moje auta."],
+    he: ["מסמך רכב עומד לפוג", "{plate}: {slot} — פג בעוד {days} ימים. העלו חדש: תפריט ← הרכבים שלי."],
+    ar: ["مستند سيارة ستنتهي صلاحيته", "{plate}: {slot} — تنتهي خلال {days} يوم. ارفع الجديد: القائمة ← سياراتي."],
+  },
+  "drv.carDocExpired": {
+    ru: ["Документ машины просрочен", "{plate}: {slot} — срок истёк, на этой машине нельзя выйти на линию. Загрузите новый: меню → Мои машины."],
+    en: ["Car document expired", "{plate}: {slot} has expired — you can't go online in this car. Upload the new one: menu → My cars."],
+    el: ["Έγγραφο αυτοκινήτου έληξε", "{plate}: {slot} — έληξε, δεν μπορείτε να συνδεθείτε με αυτό. Ανεβάστε το νέο: μενού → Τα αυτοκίνητά μου."],
+    de: ["Autodokument abgelaufen", "{plate}: {slot} ist abgelaufen — mit diesem Auto nicht online. Neues hochladen: Menü → Meine Autos."],
+    fr: ["Document de voiture expiré", "{plate} : {slot} a expiré — impossible de passer en ligne avec cette voiture. Envoyez le nouveau : menu → Mes voitures."],
+    pl: ["Dokument auta wygasł", "{plate}: {slot} — wygasł, nie możesz być online tym autem. Wgraj nowy: menu → Moje auta."],
+    he: ["מסמך רכב פג", "{plate}: {slot} — פג, אי אפשר להתחבר עם הרכב הזה. העלו חדש: תפריט ← הרכבים שלי."],
+    ar: ["انتهت صلاحية مستند السيارة", "{plate}: {slot} — انتهى، لا يمكنك الاتصال بهذه السيارة. ارفع الجديد: القائمة ← سياراتي."],
+  },
   'pre.active': {
     ru: ["Предзаказ активен", "Подача в {timeT}: {place}. Выезжайте к месту подачи вовремя."],
     en: ["Pre-booked ride is now active", "Pickup {timeT} at {place}. Head to the pickup in time."],

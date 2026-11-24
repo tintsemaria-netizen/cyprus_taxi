@@ -146,6 +146,8 @@ export interface DocAttention {
   /** UPLOADED: a new document waits for the admin. EXPIRING / EXPIRED: nothing uploaded yet. */
   kind: 'UPLOADED' | 'EXPIRING' | 'EXPIRED';
   docId: string; oldExpiresAt: string | null; oldExpired: boolean; uploadedAt: string | null; daysLeft: number | null;
+  /** Where the admin checks it: the application, or a car added through «Мои машины». */
+  href: string;
 }
 
 /** Everything the admin should see in «Водители» / «Машины» about documents. */
@@ -170,9 +172,11 @@ export async function docAttention(now: Date = new Date(), fleetId?: string): Pr
         docId: waiting ? s.renewal!.id : s.accepted!.id,
         oldExpiresAt: s.accepted?.expiresAt?.toISOString() ?? null, oldExpired: s.expired,
         uploadedAt: waiting ? s.renewal!.createdAt.toISOString() : null, daysLeft: s.daysLeft,
+        href: `/admin/applications/${d.applicationId}#doc-${waiting ? s.renewal!.id : s.accepted!.id}`,
       });
     }
   }
+  out.push(...await carDocAttention(now, fleetId));
   // Waiting uploads first, then the ones already working on an expired document, then the soonest.
   const rank = (a: DocAttention) => (a.kind === 'UPLOADED' ? (a.oldExpired ? 0 : 1) : a.kind === 'EXPIRED' ? 2 : 3);
   return out.sort((a, b) => rank(a) - rank(b) || (a.daysLeft ?? 0) - (b.daysLeft ?? 0));
@@ -203,7 +207,7 @@ async function notifyStaffUpload(driverId: string, slot: string) {
   const who = a.section === 'vehicles' && a.plate ? `${a.driverName} · ${a.plate}` : a.driverName;
   await pushAdmins({
     title: 'New document to check', body: `${who}: new ${SLOT_EN[slot] ?? slot} — check it`,
-    url: `/admin/applications/${a.applicationId}`, dedupeKey: `docup:${a.docId}`,
+    url: a.href.split('#')[0], dedupeKey: `docup:${a.docId}`,
     msg: { k: 'staff.docUploaded', p: { who, slot } },
   });
 }
@@ -227,12 +231,15 @@ export async function runDocExpiry(now: Date = new Date()): Promise<void> {
     }
   }
 
+  // Cars added through «Мои машины» (2026-11-24).
+  await runCarDocExpiry(now);
+
   // Admins: a reminder twice a day for every new document still unchecked (urgent once the old one expired),
   // and one push at 7 and at 1 day for a document the driver has not renewed yet.
   const half = Math.floor(now.getTime() / (12 * 3_600_000));
   for (const a of await docAttention(now)) {
     const who = a.section === 'vehicles' && a.plate ? `${a.driverName} · ${a.plate}` : a.driverName;
-    const url = `/admin/applications/${a.applicationId}`;
+    const url = a.href.split('#')[0];
     if (a.kind === 'UPLOADED') {
       // The upload push itself counts as the first one: no reminder in the first 12 hours.
       if (now.getTime() - new Date(a.uploadedAt!).getTime() < 12 * 3_600_000) continue;
@@ -261,4 +268,66 @@ export async function docMenuCounts(now: Date = new Date()): Promise<{ drivers: 
     uploaded: up.length,
     uploadedSection: up[0]?.section ?? null,
   };
+}
+
+/** Cars added through «Мои машины» (2026-11-24): their insurance / taxi licence / photos, like the driver's own. */
+export async function carDocAttention(now: Date = new Date(), fleetId?: string): Promise<DocAttention[]> {
+  const rows = await prisma.carDocument.findMany({ where: { vehicleId: { not: null }, slot: { in: RENEWABLE_SLOTS } }, select: { id: true, vehicleId: true, slot: true, decision: true, scanStatus: true, expiresAt: true, createdAt: true, decisionNote: true } });
+  if (!rows.length) return [];
+  const vIds = [...new Set(rows.map((r) => r.vehicleId!))];
+  const cars = await prisma.vehicle.findMany({ where: { id: { in: vIds }, active: true }, select: { id: true, plate: true, fleetId: true, ownerDriverId: true, bindings: { where: { endedAt: null }, select: { driverId: true } } } });
+  const owners = await prisma.driver.findMany({ where: { id: { in: cars.flatMap((c) => [c.ownerDriverId, c.bindings[0]?.driverId]).filter(Boolean) as string[] } }, select: { id: true, publicName: true, fleetId: true } });
+  const out: DocAttention[] = [];
+  for (const c of cars) {
+    const ownerId = c.ownerDriverId ?? c.bindings[0]?.driverId ?? null;
+    const owner = owners.find((o) => o.id === ownerId);
+    if (fleetId && c.fleetId !== fleetId && owner?.fleetId !== fleetId) continue;
+    for (const s of slotStates(rows.filter((r) => r.vehicleId === c.id), now)) {
+      const waiting = s.renewal?.decision === 'PENDING';
+      if (!waiting && !s.needsRenewal) continue;
+      const docId = waiting ? s.renewal!.id : s.accepted!.id;
+      out.push({
+        driverId: ownerId ?? '', driverName: owner?.publicName ?? '', vehicleId: c.id, plate: c.plate, applicationId: '', slot: s.slot, section: 'vehicles',
+        kind: waiting ? 'UPLOADED' : s.expired ? 'EXPIRED' : 'EXPIRING', docId,
+        oldExpiresAt: s.accepted?.expiresAt?.toISOString() ?? null, oldExpired: s.expired,
+        uploadedAt: waiting ? s.renewal!.createdAt.toISOString() : null, daysLeft: s.daysLeft,
+        href: `/admin/vehicles/${c.id}/documents#doc-${docId}`,
+      });
+    }
+  }
+  return out;
+}
+
+/** Cars added through «Мои машины»: pushes to the owner (and the driver on it) at 7 and 1 day / expired;
+ *  a driver online in a car whose document expired with nothing new waiting goes offline. */
+export async function runCarDocExpiry(now: Date = new Date()): Promise<void> {
+  const { enqueue } = await import('@/server/outbox');
+  const vehicleIds = [...new Set((await prisma.carDocument.findMany({ where: { vehicleId: { not: null }, decision: 'ACCEPTED', expiresAt: { not: null } }, select: { vehicleId: true } })).map((r) => r.vehicleId!))];
+  for (const vid of vehicleIds) {
+    const car = await prisma.vehicle.findUnique({ where: { id: vid }, select: { plate: true, active: true, ownerDriverId: true, bindings: { where: { endedAt: null }, select: { driver: { select: { id: true, userId: true, onDuty: true } } } } } });
+    if (!car?.active) continue;
+    const bound = car.bindings[0]?.driver ?? null;
+    const people = new Set<string>();
+    if (car.ownerDriverId) { const o = await prisma.driver.findUnique({ where: { id: car.ownerDriverId }, select: { userId: true } }); if (o) people.add(o.userId); }
+    if (bound) people.add(bound.userId);
+    const rows = await prisma.carDocument.findMany({ where: { vehicleId: vid }, select: { id: true, slot: true, decision: true, scanStatus: true, expiresAt: true, createdAt: true, decisionNote: true } });
+    for (const s of slotStates(rows, now)) {
+      if (!s.accepted || s.renewal?.decision === 'PENDING') continue;
+      if (s.blocking) {
+        for (const u of people) await enqueue(prisma, { audience: `DRIVER:${u}`, title: 'Car document expired', body: `${car.plate}: a document expired. Upload the new one: menu → My cars.`, url: '/driver', tag: 'docs', dedupeKey: `cardocexp:${s.accepted.id}:${u}`, msg: { k: 'drv.carDocExpired', p: { slot: s.slot, plate: car.plate } } });
+        // Online in this car with no ride → offline (never in the middle of a ride).
+        if (bound?.onDuty && !(await prisma.assignment.findFirst({ where: { activeDriverId: bound.id }, select: { id: true } }))) {
+          await prisma.$transaction(async (tx) => {
+            await tx.driver.update({ where: { id: bound.id }, data: { onDuty: false, available: false } });
+            const { goOffline } = await import('@/server/driver/duty');
+            await goOffline(tx, bound.id, 'system');
+          });
+        }
+        continue;
+      }
+      if (s.daysLeft == null || s.daysLeft > WARN_DAYS) continue;
+      const mark = s.daysLeft <= 1 ? 1 : 7;
+      for (const u of people) await enqueue(prisma, { audience: `DRIVER:${u}`, title: 'Car document expiring', body: `${car.plate}: a document expires in ${Math.max(s.daysLeft, 1)} day(s). Upload the new one: menu → My cars.`, url: '/driver', tag: 'docs', dedupeKey: `cardocsoon:${s.accepted.id}:${mark}:${u}`, msg: { k: 'drv.carDocExpiring', p: { slot: s.slot, plate: car.plate, days: Math.max(s.daysLeft, 1) } } });
+    }
+  }
 }

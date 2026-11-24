@@ -15,6 +15,7 @@ export interface DocItem {
   applicationId: string; slot: string; section: 'drivers' | 'vehicles';
   kind: 'UPLOADED' | 'EXPIRING' | 'EXPIRED';
   docId: string; oldExpiresAt: string | null; oldExpired: boolean; uploadedAt: string | null; daysLeft: number | null;
+  href?: string;
 }
 
 /** Items of one section, by driver id («Водители») or vehicle id («Машины»). Re-checked every 30 s. */
@@ -58,7 +59,7 @@ export function DocAttentionLines({ items, owner }: { items?: DocItem[]; owner?:
               : t('staff.docs.expiring', { date: fmt.date(it.oldExpiresAt!), days: it.daysLeft ?? '' })}
           </span>
           {it.kind === 'UPLOADED' && !owner && (
-            <a href={`/admin/applications/${it.applicationId}#doc-${it.docId}`} className="rounded-full bg-danger px-2.5 py-0.5 font-semibold text-white" data-testid="doc-check">{t('staff.docs.check')} ›</a>
+            <a href={it.href || `/admin/applications/${it.applicationId}#doc-${it.docId}`} className="rounded-full bg-danger px-2.5 py-0.5 font-semibold text-white" data-testid="doc-check">{t('staff.docs.check')} ›</a>
           )}
         </div>
       ))}

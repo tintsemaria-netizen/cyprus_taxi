@@ -1,7 +1,7 @@
 import { Errors } from '@/lib/http';
 import { prisma } from '@/lib/db';
 import { getTrackingBookingId } from '@/lib/tracking';
-import { passengerPhotos } from '@/server/driver-photos';
+import { passengerPhotos, photoFile } from '@/server/driver-photos';
 import { readDocument } from '@/server/storage';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   const ids = await passengerPhotos(active.driverId, active.vehiclePlate);
   const id = kind === 'driver' ? ids.driver : ids.car;
   if (!id) return Errors.notFound();
-  const doc = await prisma.applicationDocument.findUnique({ where: { id }, select: { storageKey: true, mime: true } });
+  const doc = await photoFile(id);
   const buf = doc ? await readDocument(doc.storageKey) : null;
   if (!doc || !buf) return Errors.notFound();
   return new Response(new Uint8Array(buf), { headers: { 'Content-Type': doc.mime, 'Cache-Control': 'private, max-age=600', 'Content-Disposition': 'inline' } });

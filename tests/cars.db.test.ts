@@ -138,4 +138,57 @@ describe('«Мои машины»', () => {
     expect(exp.ok ? null : exp.code).toBe('CAR_DOCS_EXPIRED');
     void dup;
   });
+
+  it('an added car’s documents: pushes at 7 and 1 day, expired → offline and not chosen; a new upload keeps it working; accept → old one gone', async () => {
+    const { runCarDocExpiry, docAttention } = await import('@/server/doc-renewal');
+    const { uploadCarRenewal, expiredCarDoc, myCars } = await import('@/server/cars');
+    const { passengerPhotos } = await import('@/server/driver-photos');
+    const d = await driver('R');
+    const v = await car('CT-500', { ownerDriverId: d.id });
+    await bind(d.id, v.id);
+    const exp = new Date(Date.now() + 10 * 86_400_000);
+    const doc = await prisma.carDocument.create({ data: { vehicleId: v.id, slot: 'insurance', storageKey: 'x/ct500.png', mime: 'image/png', sizeBytes: 1, sha256: 'h', scanStatus: 'CLEAN', decision: 'ACCEPTED', expiresAt: exp } });
+    const front = await prisma.carDocument.create({ data: { vehicleId: v.id, slot: 'vehicle_front', storageKey: 'x/ct500f.png', mime: 'image/png', sizeBytes: 1, sha256: 'h', scanStatus: 'CLEAN', decision: 'ACCEPTED' } });
+    expect((await passengerPhotos(d.id, 'ct 500')).car).toBe(front.id); // the passenger sees this car's photo
+    const pushes = (k: string) => prisma.notificationOutbox.count({ where: { msg: { path: ['k'], equals: k }, dedupeKey: { contains: doc.id } } });
+    await runCarDocExpiry(new Date(exp.getTime() - 6 * 86_400_000)); await runCarDocExpiry(new Date(exp.getTime() - 5 * 86_400_000));
+    expect(await pushes('drv.carDocExpiring')).toBe(1);
+    await runCarDocExpiry(new Date(exp.getTime() - 0.5 * 86_400_000));
+    expect(await pushes('drv.carDocExpiring')).toBe(2);
+    await prisma.carDocument.update({ where: { id: doc.id }, data: { expiresAt: new Date(Date.now() + 5 * 86_400_000) } });
+    expect((await myCars(d.id)).cars[0].docs.find((x) => x.slot === 'insurance')!.soon).toBe(true);
+    // Expired while online, no ride → offline; can't be chosen; the admin sees it in «Машины».
+    await prisma.carDocument.update({ where: { id: doc.id }, data: { expiresAt: new Date(Date.now() - 3_600_000) } });
+    await prisma.driver.update({ where: { id: d.id }, data: { onDuty: true } });
+    await runCarDocExpiry();
+    expect((await prisma.driver.findUnique({ where: { id: d.id } }))!.onDuty).toBe(false);
+    expect(await pushes('drv.carDocExpired')).toBe(1);
+    expect(await expiredCarDoc(v.id)).toBe('insurance');
+    expect((await docAttention()).find((a) => a.vehicleId === v.id)).toMatchObject({ section: 'vehicles', kind: 'EXPIRED', slot: 'insurance' });
+    // He uploads the new insurance → the car works again at once (option «б»).
+    const up = await uploadCarRenewal(d.id, v.id, 'insurance', PNG);
+    expect(up.ok).toBe(true);
+    if (!up.ok) return;
+    expect(await expiredCarDoc(v.id)).toBeNull();
+    expect((await docAttention()).find((a) => a.vehicleId === v.id)).toMatchObject({ kind: 'UPLOADED', href: `/admin/vehicles/${v.id}/documents#doc-${up.data.id}` });
+    expect((await uploadCarRenewal((await driver('X')).id, v.id, 'insurance', PNG)).ok).toBe(false); // not his car
+    await prisma.carDocument.update({ where: { id: up.data.id }, data: { scanStatus: 'CLEAN' } });
+    expect((await decideCarDoc(up.data.id, 'ACCEPTED', undefined, new Date(Date.now() + 365 * 86_400_000).toISOString())).ok).toBe(true);
+    expect(await prisma.carDocument.count({ where: { vehicleId: v.id, slot: 'insurance' } })).toBe(1);
+    expect((await docAttention()).find((a) => a.vehicleId === v.id)).toBeUndefined();
+  });
+
+  it('the owner sees who may drive his car and takes it back', async () => {
+    const o = await driver('P'); const g = await driver('Q');
+    const v = await car('CT-600', { ownerDriverId: o.id });
+    const r = await requestAccess(g.id, 'CT-600');
+    if (!r.ok) throw new Error('ask');
+    await decideAccess(r.data.id, { kind: 'OWNER', driverId: o.id }, true);
+    await decideAccess(r.data.id, { kind: 'ADMIN', userId: 'admin' }, true);
+    expect((await myCars(o.id)).granted.map((x) => [x.driverName, x.plate])).toEqual([['Q', 'CT-600']]);
+    expect((await revokeAccess(r.data.id, { kind: 'OWNER', driverId: g.id })).ok).toBe(false); // only the owner
+    expect((await revokeAccess(r.data.id, { kind: 'OWNER', driverId: o.id })).ok).toBe(true);
+    expect((await myCars(o.id)).granted).toEqual([]);
+    void v;
+  });
 });

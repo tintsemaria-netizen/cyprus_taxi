@@ -12,10 +12,11 @@ import { useSlotName } from '@/components/driver/DriverDocs';
 // the fleet owner decides; another driver's car — that driver and the admin), or adds a new car with its
 // documents for the admin to check. Others asking for HIS car are answered here too.
 
-interface Car { id: string; plate: string; make: string; model: string; color: string; vClass: string; seats: number; current: boolean; own: boolean; busy: boolean; expired: string | null }
+interface CarDoc { slot: string; expiresAt: string | null; daysLeft: number | null; expired: boolean; soon: boolean; waiting: boolean; returned: string | null }
+interface Car { id: string; plate: string; make: string; model: string; color: string; vClass: string; seats: number; current: boolean; own: boolean; busy: boolean; expired: string | null; docs: CarDoc[] }
 interface Access { id: string; status: string; vehicle: { plate: string; make: string; model: string } | null; waitingFor: string[] }
 interface NewCar { id: string; status: string; vehicle: Record<string, string>; note: string | null; documents: { id: string; slot: string; decision: string; note: string | null }[] }
-interface Data { online: boolean; onTrip: boolean; cars: Car[]; access: Access[]; newCars: NewCar[]; asks: { id: string; driverName: string; plate: string }[] }
+interface Data { online: boolean; onTrip: boolean; cars: Car[]; access: Access[]; newCars: NewCar[]; asks: { id: string; driverName: string; plate: string }[]; granted: { id: string; driverName: string; plate: string }[] }
 
 const SLOTS = ['vehicle_reg', 'insurance', 'taxi_licence', 'vehicle_front', 'vehicle_rear'];
 
@@ -71,6 +72,7 @@ export function MyCars() {
                   <div className="truncate text-sm text-muted">{c.color} {c.make} {c.model} · {t(`common.vClass.${c.vClass}` as never)}</div>
                   {c.busy && !c.current && <div className="text-xs text-warn">{t('driver.cars.busy')}</div>}
                   {c.expired && <div className="text-xs text-danger">{t('driver.cars.expired')}</div>}
+                  {c.docs.length > 0 && <CarDocs car={c} onDone={load} />}
                 </div>
                 {!c.current && (
                   <button className="btn-primary !min-h-0 shrink-0 !py-1.5 text-xs" disabled={busy || locked || c.busy || !!c.expired} data-testid={`car-switch-${c.plate}`}
@@ -81,6 +83,18 @@ export function MyCars() {
           </ul>
         )}
       </section>
+
+      {d.granted.length > 0 && (
+        <section className="card p-4" data-testid="car-granted">
+          <div className="mb-1 font-medium">{t('driver.cars.grantedTitle')}</div>
+          {d.granted.map((g) => (
+            <div key={g.id} className="flex items-center gap-2 border-t border-edge py-2 text-sm first:border-0">
+              <span className="min-w-0 flex-1">{g.driverName} · <span className="font-mono font-bold">{g.plate}</span></span>
+              <button className="btn-ghost !min-h-0 !py-1.5 text-xs text-danger" disabled={busy} onClick={() => run(() => api(`/driver/cars/access/${g.id}`, { method: 'POST', body: { revoke: true } }), t('driver.cars.revoked'))}>{t('driver.cars.revoke')}</button>
+            </div>
+          ))}
+        </section>
+      )}
 
       {d.access.length > 0 && (
         <section className="card p-4">
@@ -213,5 +227,45 @@ function NewCarCard({ n, onChange }: { n: NewCar; onChange: () => void }) {
       {n.status === 'SUBMITTED' && <p className="text-xs text-muted">{t('driver.cars.underReview')}</p>}
       {err && <p className="text-xs text-danger">{err}</p>}
     </section>
+  );
+}
+
+/** His own added car's documents (2026-11-24): dates, a red marker from 7 days, «Загрузить новый». */
+function CarDocs({ car, onDone }: { car: Car; onDone: () => void }) {
+  const { t, fmt } = useT();
+  const name = useSlotName();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  async function upload(slot: string, file: File) {
+    setBusy(slot); setMsg(null);
+    try {
+      const body = await compressImageForUpload(file);
+      if (body.size > UPLOAD_TARGET_BYTES) { setMsg({ ok: false, text: t('driver.profile.renew.tooLarge') }); return; }
+      const res = await fetch(`/api/v1/driver/cars/${car.id}/documents?slot=${slot}`, { method: 'POST', body, credentials: 'same-origin' });
+      if (!res.ok) { setMsg({ ok: false, text: t('driver.profile.renew.failed') }); return; }
+      setMsg({ ok: true, text: t('driver.profile.renew.sent') }); onDone();
+    } catch { setMsg({ ok: false, text: t('driver.profile.renew.failed') }); } finally { setBusy(null); }
+  }
+  return (
+    <div className="mt-2 space-y-1.5" data-testid={`car-docs-${car.plate}`}>
+      {car.docs.map((x) => {
+        const alarm = !x.waiting && (x.soon || x.expired);
+        return (
+          <div key={x.slot} className={`rounded-[10px] px-2 py-1.5 text-xs ${alarm ? 'border border-danger/50 bg-danger/10' : 'bg-elevated'}`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5">{alarm && <span className="h-2 w-2 animate-pulse rounded-full bg-danger" aria-hidden />}{name(x.slot)}</span>
+              {x.expiresAt && <span className={x.expired ? 'text-danger' : x.soon ? 'text-warn' : 'text-muted'}>{x.expired ? t('driver.profile.renew.expiredOn', { date: fmt.date(x.expiresAt) }) : t('driver.profile.renew.until', { date: fmt.date(x.expiresAt) })}</span>}
+            </div>
+            {x.waiting && <div className="mt-0.5 text-accent">✓ {t('driver.profile.renew.underReview')}</div>}
+            {x.returned !== null && <div className="mt-0.5 text-danger">{x.returned ? t('driver.profile.renew.returnedNote', { note: x.returned }) : t('driver.profile.renew.returned')}</div>}
+            <label className="mt-1 inline-block cursor-pointer">
+              <span className={alarm ? 'font-semibold text-danger underline' : 'text-muted underline'}>{busy === x.slot ? t('driver.profile.renew.uploading') : x.waiting || x.returned !== null ? t('driver.profile.renew.uploadAgain') : t('driver.profile.renew.upload')}</span>
+              <input type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(x.slot, f); e.target.value = ''; }} />
+            </label>
+          </div>
+        );
+      })}
+      {msg && <p className={`text-xs ${msg.ok ? 'text-accent' : 'text-danger'}`} role="status">{msg.text}</p>}
+    </div>
   );
 }

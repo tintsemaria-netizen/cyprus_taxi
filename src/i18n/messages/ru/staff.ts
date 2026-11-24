@@ -576,6 +576,10 @@ const staff: Catalog<typeof en> = {
   },
   // «Мои машины» requests and new cars (2026-11-24).
   cars: {
+    fleetGranted: "Кто может ездить на машинах автопарка",
+    revoke: "Забрать разрешение",
+    carDocsTitle: "Документы машины {plate}",
+    owner: "владелец: {name}",
     queueTitle: "Машины: запросы водителей",
     newCar: "Новая машина",
     accessLine: "{who} просит работать на {plate}",

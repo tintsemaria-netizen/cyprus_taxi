@@ -574,6 +574,10 @@ const staff = {
   },
   // «Мои машины» requests and new cars (2026-11-24).
   cars: {
+    fleetGranted: "Who may drive the fleet cars",
+    revoke: "Take back",
+    carDocsTitle: "Documents of {plate}",
+    owner: "owner: {name}",
     queueTitle: "Cars: drivers’ requests",
     newCar: "New car",
     accessLine: "{who} asks to drive {plate}",
