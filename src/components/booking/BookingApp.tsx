@@ -559,6 +559,7 @@ export default function BookingApp() {
     // (operator 2026-11-24 20:08); SEVERAL — zoom out so the whole rounded territory stays on screen around the
     // chosen point, so switching points does not lose it.
     const tz = pickup ? territoryAt(pickup) : null;
+    if (tz && tz.on >= 0) setRecenterTick((n) => n + 1); // glide: the logo «arrives» into the point's silhouette
     setCamFocus({ lat: p.lat, lng: p.lng }); setCamZoom(!tz || tz.on < 0 ? HOME_ZOOM : tz.t.points.length === 1 ? SPOT_ZOOM : Math.min(HOME_ZOOM, fitZoom(p, tz.t.polygon)));
   }, [pickup?.lat, pickup?.lng, myLoc?.lat, myLoc?.lng, noGoReady]); // eslint-disable-line react-hooks/exhaustive-deps
   const [pinLift, setPinLift] = useState(false);

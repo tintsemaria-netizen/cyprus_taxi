@@ -233,9 +233,10 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
           el.style.opacity = mk.stale ? '0.5' : '1';
           el.title = mk.label || mk.kind;
         }
-        const marker = new maplibre.Marker({ element: el, anchor: mk.kind === 'pickup' ? 'bottom' : mk.kind === 'spot' ? 'top' : 'center', offset: mk.kind === 'spot' ? [0, -8] : [0, 0] }).setLngLat([mk.lng, mk.lat]).addTo(map);
+        const marker = new maplibre.Marker({ element: el, anchor: mk.kind === 'pickup' || mk.kind === 'spot' ? 'bottom' : 'center' }).setLngLat([mk.lng, mk.lat]).addTo(map);
         if (mk.self) marker.getElement().style.zIndex = '1000';
         else if (mk.kind === 'pickup') marker.getElement().style.zIndex = '950'; // brand pin over the person (2026-11-17)
+        else if (mk.kind === 'spot' && mk.active) marker.getElement().style.zIndex = '940'; // chosen point's name over the other silhouettes
         else if (mk.kind === 'person') marker.getElement().style.zIndex = '900';
         markerObjs.current.push(marker);
       }

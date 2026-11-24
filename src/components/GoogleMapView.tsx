@@ -128,7 +128,7 @@ function markerEl(mk: MapMarker): HTMLElement {
     el.classList.add('ily-vehicle');
     return centerOnPoint(el);
   }
-  if (mk.kind === 'spot') { const el = spotEl({ name: mk.label ?? '', active: mk.active }); el.style.transform = 'translateY(calc(100% - 8px))'; el.dataset.sig = `spot|${mk.active ? 1 : 0}|${mk.label ?? ''}`; return el; }
+  if (mk.kind === 'spot') { const el = spotEl({ name: mk.label ?? '', active: mk.active }); el.dataset.sig = `spot|${mk.active ? 1 : 0}|${mk.label ?? ''}`; return el; }
   if (mk.num != null && mk.kind !== 'person') return centerOnPoint(numberedStopEl({ num: mk.num, kind: mk.kind, next: mk.next, title: mk.label }));
   if (mk.kind === 'person') return centerOnPoint(personMarkerEl({ title: mk.label, stale: mk.stale }));
   // Pin: the needle tip (element bottom) is the point — Google's default bottom anchor, no shift.
@@ -310,7 +310,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     for (const mk of markers) {
       let marker = markerMap.current.get(mk.id);
       if (!marker) {
-        marker = new g.marker.AdvancedMarkerElement({ map, position: { lat: mk.lat, lng: mk.lng }, content: markerEl(mk), title: mk.label, ...(mk.self ? { zIndex: 1000 } : mk.kind === 'pickup' ? { zIndex: 950 } : mk.kind === 'person' ? { zIndex: 900 } : {}) /* brand pin over the person (2026-11-17) */ });
+        marker = new g.marker.AdvancedMarkerElement({ map, position: { lat: mk.lat, lng: mk.lng }, content: markerEl(mk), title: mk.label, ...(mk.self ? { zIndex: 1000 } : mk.kind === 'pickup' ? { zIndex: 950 } : mk.kind === 'spot' && mk.active ? { zIndex: 940 } : mk.kind === 'person' ? { zIndex: 900 } : {}) /* brand pin over the person (2026-11-17) */ });
         if (mk.kind === 'vehicle' && mk.heading != null && marker.content) orientVehicle(marker.content as HTMLElement, map.getHeading?.() ?? 0, mk.heading);
         markerMap.current.set(mk.id, marker);
         posMap.current.set(mk.id, { lat: mk.lat, lng: mk.lng });
@@ -320,6 +320,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       // Re-render a vehicle whose plate tag or busy state changed (staff fleet map).
       const sig = mk.nav ? 'nav' : `${mk.busy ? 1 : 0}|${mk.tag ?? ''}`;
       if (mk.kind === 'pickup' && marker.content && (marker.content as HTMLElement).dataset.sig !== (mk.pulse ? 'pulse' : 'pin')) marker.content = markerEl(mk);
+      // Pickup-point silhouette: the chosen one carries the name (2026-11-24).
+      if (mk.kind === 'spot' && marker.content && (marker.content as HTMLElement).dataset.sig !== `spot|${mk.active ? 1 : 0}|${mk.label ?? ''}`) marker.content = markerEl(mk);
       if (mk.kind === 'vehicle' && marker.content && (marker.content as HTMLElement).dataset.sig !== sig) {
         marker.content = markerEl(mk);
         if (mk.heading != null) orientVehicle(marker.content as HTMLElement, map.getHeading?.() ?? 0, mk.heading);
