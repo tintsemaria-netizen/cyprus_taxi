@@ -8,13 +8,25 @@ import type * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { loadMaplibre } from '@/lib/maplibre';
 import { googleEnabled, loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
+import { BRAND_PIN_SVG, BRAND_PIN_SVG_CHECKER } from '@/components/carMarker';
 import { publicMapConfig } from '@/lib/config';
 import { currentTheme } from '@/lib/theme';
 // New corners go where the ring stays one loop; crossings are untangled (2026-11-24, operator).
 import { addToRing, untangle } from '@/lib/ring';
 
 export type Poly = [number, number][];
-export interface RefZone { id: string; name: string; polygon: Poly; color: string; label?: string; labelAt?: [number, number]; strong?: boolean; holes?: Poly[] }
+/** pin: the label stands under the IL-Y logo pin whose tip is at labelAt — exactly the logo the passenger sees on a
+ *  pickup point (2026-11-24, operator). */
+export interface RefZone { id: string; name: string; polygon: Poly; color: string; label?: string; labelAt?: [number, number]; strong?: boolean; holes?: Poly[]; pin?: 'pick' | 'drop'; draggable?: boolean }
+
+// The logo pin with the name pill under it, as one image; the anchor is the logo's tip.
+function pinPillSvg(text: string, color: string, drop = false): { url: string; w: number; h: number; ax: number; ay: number } {
+  const pw = Math.round(text.length * 7.2 + 18), ph = 24, w = Math.max(pw, 32), h = 40 + 4 + ph;
+  const esc = text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const logo = (drop ? BRAND_PIN_SVG_CHECKER : BRAND_PIN_SVG).replace('<svg viewBox="0 0 500 620" width="100%" height="100%"', `<svg viewBox="0 0 500 620" x="${(w - 32) / 2}" y="0" width="32" height="40"`);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${logo}<rect x="${(w - pw) / 2 + 0.5}" y="44.5" width="${pw - 1}" height="${ph - 1}" rx="11" fill="${color}" stroke="#0b0f10" stroke-opacity="0.4"/><text x="${w / 2}" y="61" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0b0f10">${esc}</text></svg>`;
+  return { url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`, w, h, ax: w / 2, ay: 40 };
+}
 
 // Price label on the map (2026-11-21): a small pill in the zone's colour.
 function pillSvg(text: string, color: string): { url: string; w: number; h: number } {
@@ -30,6 +42,8 @@ interface Props {
   zones: RefZone[];
   editing: Poly | null; // null = not editing
   onChange: (p: Poly) => void;
+  /** A labelled pin (RefZone.draggable) was dragged to a new place. */
+  onPinMove?: (id: string, lat: number, lng: number) => void;
   /** A click on the map when no polygon is being drawn (e.g. «the ring's edge goes through here»). */
   onPick?: (lat: number, lng: number) => void;
   /** Zones inside the one being drawn: shown cut out, so a belt looks like a band from its inner zone outwards. */
@@ -48,7 +62,9 @@ export default function ZoneEditorMap(props: Props) {
 }
 
 // ---------- Google ----------
-function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange, onPick, fit, className, editColor }: Props) {
+function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange, onPick, onPinMove, fit, className, editColor }: Props) {
+  const pinMoveRef = useRef(onPinMove);
+  pinMoveRef.current = onPinMove;
   const LIME = editColor ?? DEFAULT_EDIT;
   const ref = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -87,6 +103,13 @@ function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange
     s.refs = zones.map((z) => new g.Polygon({ map, paths: [z.polygon, ...(z.holes ?? []).map((h) => h.slice().reverse())].map((r) => r.map(([lat, lng]) => ({ lat, lng }))), strokeColor: z.color, strokeWeight: z.strong ? 3 : 2, fillColor: z.color, fillOpacity: z.strong ? 0.2 : 0.08, clickable: false, zIndex: z.strong ? 5 : 1 }));
     s.labels.forEach((m) => m.setMap(null));
     s.labels = zones.filter((z) => z.label && z.labelAt).map((z) => {
+      if (z.pin) {
+        const pp = pinPillSvg(z.label!, z.color, z.pin === 'drop');
+        const mk = new g.Marker({ map, position: { lat: z.labelAt![0], lng: z.labelAt![1] }, clickable: !!z.draggable, draggable: !!z.draggable, zIndex: 40,
+          icon: { url: pp.url, scaledSize: new g.Size(pp.w, pp.h), anchor: new g.Point(pp.ax, pp.ay) } });
+        if (z.draggable) mk.addListener('dragend', (e: any) => pinMoveRef.current?.(z.id, e.latLng.lat(), e.latLng.lng()));
+        return mk;
+      }
       const pill = pillSvg(z.label!, z.color);
       return new g.Marker({ map, position: { lat: z.labelAt![0], lng: z.labelAt![1] }, clickable: false, zIndex: z.strong ? 30 : 20,
         icon: { url: pill.url, scaledSize: new g.Size(pill.w, pill.h), anchor: new g.Point(pill.w / 2, pill.h / 2) } });
@@ -130,7 +153,9 @@ function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange
 }
 
 // ---------- MapLibre ----------
-function LibreZoneMap({ center, airport, zones, editing, editingHoles, onChange, onPick, fit, className, editColor }: Props) {
+function LibreZoneMap({ center, airport, zones, editing, editingHoles, onChange, onPick, onPinMove, fit, className, editColor }: Props) {
+  const pinMoveRef = useRef(onPinMove);
+  pinMoveRef.current = onPinMove;
   const LIME = editColor ?? DEFAULT_EDIT;
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -194,6 +219,15 @@ function LibreZoneMap({ center, airport, zones, editing, editingHoles, onChange,
     labelMarkers.current.forEach((m) => m.remove());
     labelMarkers.current = zones.filter((z) => z.label && z.labelAt).map((z) => {
       const el = document.createElement('div');
+      if (z.pin) {
+        // Logo pin, tip on the point; the name under it (symmetric overflow keeps the tip centred).
+        el.style.cssText = `width:32px;height:40px;pointer-events:${z.draggable ? 'auto' : 'none'};cursor:${z.draggable ? 'grab' : 'default'}`;
+        el.innerHTML = `<div style="position:relative;width:32px;height:40px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.55))">${z.pin === 'drop' ? BRAND_PIN_SVG_CHECKER : BRAND_PIN_SVG}<div style="position:absolute;top:calc(100% + 4px);left:-100px;right:-100px;text-align:center"><span style="display:inline-block;background:${z.color};color:#0b0f10;font:700 12.5px Inter,Arial,sans-serif;padding:3px 9px;border-radius:11px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)"></span></div></div>`;
+        (el.querySelector('span') as HTMLElement).textContent = z.label!;
+        const mk = new lib.Marker({ element: el, anchor: 'bottom', draggable: !!z.draggable }).setLngLat([z.labelAt![1], z.labelAt![0]]).addTo(map);
+        if (z.draggable) mk.on('dragend', () => { const ll = mk.getLngLat(); pinMoveRef.current?.(z.id, ll.lat, ll.lng); });
+        return mk;
+      }
       el.textContent = z.label!;
       el.style.cssText = `background:${z.color};color:#0b0f10;font:700 12.5px Inter,Arial,sans-serif;padding:3px 9px;border-radius:11px;white-space:nowrap;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.4)`;
       return new lib.Marker({ element: el }).setLngLat([z.labelAt![1], z.labelAt![0]]).addTo(map);

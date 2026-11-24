@@ -82,8 +82,8 @@ function AreaZones({ kind }: { kind: Kind }) {
 
   // Pickup territories are shown rounded — exactly as passengers will see them.
   const shape = (z: { kind: Kind; polygon: Poly }) => (z.kind === 'POINT' ? smoothRing(z.polygon) : z.polygon);
-  const pointLabel = (name: string, p: Pt, i: number): RefZone => ({ id: `pt-${i}-${p.lat}-${p.lng}`, name, polygon: [], color: BLUE, label: `📍 ${name || `${t('staff.noGo.point')} ${i + 1}`}`, labelAt: [p.lat, p.lng], strong: true });
-  const dropLabel = (name: string, p: Pt, i: number): RefZone => ({ id: `dp-${i}-${p.lat}-${p.lng}`, name, polygon: [], color: DROP, label: `🏁 ${name || `${t('staff.noGo.dropPoint')} ${i + 1}`}`, labelAt: [p.lat, p.lng], strong: true });
+  const pointLabel = (name: string, p: Pt, i: number): RefZone => ({ id: `pt-${i}-${p.lat}-${p.lng}`, name, polygon: [], color: BLUE, label: name || `${t('staff.noGo.point')} ${i + 1}`, labelAt: [p.lat, p.lng], strong: true, pin: 'pick' }); // the logo passengers see there
+  const dropLabel = (name: string, p: Pt, i: number): RefZone => ({ id: `dp-${i}-${p.lat}-${p.lng}`, name, polygon: [], color: DROP, label: name || `${t('staff.noGo.dropPoint')} ${i + 1}`, labelAt: [p.lat, p.lng], strong: true, pin: 'drop' }); // the logo with black-and-white squares
   const refZones: RefZone[] = [
     // the other block's zones, faint, for orientation
     ...otherZones.filter((z) => z.polygon.length >= 3).map((z) => ({ id: z.id, name: z.name, polygon: shape(z), color: colorOf(z) })),
@@ -94,8 +94,9 @@ function AreaZones({ kind }: { kind: Kind }) {
     ...zones.filter((z) => z.id !== draft?.id).flatMap((z) => [...z.points.map((p, i) => pointLabel(p.name, p, i)), ...(z.dropPoints ?? []).map((p, i) => dropLabel(p.name, p, i))]),
     // the territory being drawn: its rounded outline (faint behind the corners; solid while points are placed)
     ...(draft?.kind === 'POINT' && draft.polygon.length >= 3 ? [{ id: 'draft-round', name: draft.name, polygon: smoothRing(draft.polygon), color: BLUE, strong: pointMode }] : []),
-    ...(draft ? draft.points.map((p, i) => pointLabel(p.name, p, i)) : []),
-    ...(draft ? draft.dropPoints.map((p, i) => dropLabel(p.name, p, i)) : []),
+    // The territory being edited: its points can be dragged to a new place (2026-11-25, operator).
+    ...(draft ? draft.points.map((p, i) => ({ ...pointLabel(p.name, p, i), id: `draft-pick-${i}`, draggable: true })) : []),
+    ...(draft ? draft.dropPoints.map((p, i) => ({ ...dropLabel(p.name, p, i), id: `draft-drop-${i}`, draggable: true })) : []),
   ];
 
   const fitKey = `${draft ? (draft.id ?? 'new') : ''}|${zones.length}`;
@@ -108,6 +109,21 @@ function AreaZones({ kind }: { kind: Kind }) {
 
   function startNew() { setMsg(null); resetHist(); setDraft({ id: null, name: '', kind, active: true, polygon: [], points: [], dropPoints: [] }); setMode('corners'); }
   function startEdit(z: Zone) { setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, kind: z.kind, active: z.active, polygon: untangle(z.polygon), points: z.points, dropPoints: z.dropPoints ?? [] }); setMode('corners'); }
+
+  // A point dragged on the map: same rules as placing one (inside the rounded territory, on land, 15 m from the
+  // other kind); a bad place puts it back.
+  function movePoint(id: string, lat: number, lng: number) {
+    if (!draft) return;
+    const m = /^draft-(pick|drop)-(\d+)$/.exec(id); if (!m) return;
+    const which = m[1] as 'pick' | 'drop', i = Number(m[2]);
+    const pt = { lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6 };
+    const ok = onCyprusIsland(pt) && pointInPolygon(pt, smoothRing(draft.polygon).map(([a, b]) => ({ lat: a, lng: b })));
+    const near = (which === 'pick' ? draft.dropPoints : draft.points).some((q) => metres(q, pt) < MIN_PICK_DROP_M);
+    if (!ok || near) { setMsg(t(ok ? 'staff.noGo.tooClose' : 'staff.noGo.pointOutside', { m: MIN_PICK_DROP_M })); setDraft({ ...draft }); return; }
+    setMsg(null);
+    if (which === 'pick') setDraft({ ...draft, points: draft.points.map((q, j) => (j === i ? { ...q, ...pt } : q)) });
+    else setDraft({ ...draft, dropPoints: draft.dropPoints.map((q, j) => (j === i ? { ...q, ...pt } : q)) });
+  }
 
   async function save() {
     if (!draft) return;
@@ -150,7 +166,7 @@ function AreaZones({ kind }: { kind: Kind }) {
 
       <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="relative h-[62vh] min-h-[380px] overflow-hidden rounded-[14px] border border-edge">
-          <ZoneEditorMap center={CYPRUS} airport={null} zones={refZones} editing={draft && !pointMode ? draft.polygon : null} onChange={setPoly} onPick={(lat, lng) => {
+          <ZoneEditorMap center={CYPRUS} airport={null} zones={refZones} onPinMove={movePoint} editing={draft && !pointMode ? draft.polygon : null} onChange={setPoly} onPick={(lat, lng) => {
             if (!draft || !pointMode) return;
             // Each click adds a point; it must be inside the rounded territory and on land.
             if (!onCyprusIsland({ lat, lng }) || !pointInPolygon({ lat, lng }, smoothRing(draft.polygon).map(([a, b]) => ({ lat: a, lng: b })))) { setMsg(t('staff.noGo.pointOutside')); return; }
