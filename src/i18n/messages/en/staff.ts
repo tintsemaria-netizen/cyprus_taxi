@@ -7,7 +7,7 @@ const staff = {
     groupDrivers: 'Drivers & cars', groupPrices: 'Prices', groupReports: 'Reports', groupOwner: 'Superadmin', groupSettings: 'Settings',
     fleets: 'Fleets', myFleet: 'My fleet',
     dispatch: 'Dispatch', analytics: 'Analytics', reliability: 'Reliability', applications: 'Applications',
-    passengers: 'Clients', drivers: 'Drivers', vehicles: 'Vehicles', settings: 'Settings', fixedPrices: 'Fixed prices', minFares: 'Pre-booking minimum', noGo: 'No-go zone', accounting: 'Accounting', changes: 'Not your changes', staff: 'Staff', security: 'Security',
+    passengers: 'Clients', drivers: 'Drivers', vehicles: 'Vehicles', settings: 'Settings', fixedPrices: 'Fixed prices', minFares: 'Pre-booking minimum', noGo: 'No-go zone', pickupPoints: 'Pickup points', accounting: 'Accounting', changes: 'Not your changes', staff: 'Staff', security: 'Security',
   },
   role: { OWNER: 'Superadmin', ADMIN: 'Admin', DISPATCHER: 'Dispatcher', DRIVER: 'Driver', FLEET_OWNER: 'Fleet owner' },
   status: {

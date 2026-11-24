@@ -9,7 +9,7 @@ const staff: Catalog<typeof en> = {
     groupDrivers: 'Водители и машины', groupPrices: 'Цены', groupReports: 'Отчёты', groupOwner: 'Суперадмин', groupSettings: 'Настройки',
     fleets: 'Автопарки', myFleet: 'Мой автопарк',
     dispatch: 'Диспетчерская', analytics: 'Аналитика', reliability: 'Надёжность', applications: 'Заявки',
-    passengers: 'Клиенты', drivers: 'Водители', vehicles: 'Автомобили', settings: 'Настройки', fixedPrices: 'Фикс. цены', minFares: 'Минимум предзаказа', noGo: 'Запретная зона', accounting: 'Бухгалтерия', changes: 'Не ваши изменения', staff: 'Сотрудники', security: 'Безопасность',
+    passengers: 'Клиенты', drivers: 'Водители', vehicles: 'Автомобили', settings: 'Настройки', fixedPrices: 'Фикс. цены', minFares: 'Минимум предзаказа', noGo: 'Запретная зона', pickupPoints: 'Точки подачи', accounting: 'Бухгалтерия', changes: 'Не ваши изменения', staff: 'Сотрудники', security: 'Безопасность',
   },
   role: { OWNER: 'Суперадмин', ADMIN: 'Администратор', DISPATCHER: 'Диспетчер', DRIVER: 'Водитель', FLEET_OWNER: 'Владелец автопарка' },
   status: {
