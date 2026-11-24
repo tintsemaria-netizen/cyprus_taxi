@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-24 05:55 — operator decision: antivirus before store submission
+- ClamAV must be installed on the live server BEFORE sending the apps to App Store / Google Play
+  (recorded in docs/EXTERNAL-ENABLEMENT.md, «Before App Store / Google Play submission»). Not before that
+  is OK; this replaces the earlier «ClamAV: later» with a fixed deadline.
+
 ## 2026-11-24 — staff alerts + pre-booking robustness (deployed 2026-11-24 ~05:00)
 - Launch fixes §8 ported: conversions earliest pickup first, one failing ride never stalls the others. (A «paused driver» check was dropped: the app has no pause — operator 2026-11-24: decide when one exists.)
 - Staff alerts (AuditEvent ALERT_*): ALERT_PREBOOK_LAPSED (went to automatic search, with the reason), ALERT_PREBOOK_TOO_LATE (taken off a driver who could not make it), ALERT_PREBOOK_LATE_RELEASE (driver gave it back < 1 h before). GET /admin/signals (ADMIN, DISPATCHER; first deployed by mistake over the menu route /admin/alerts — restored 2026-11-24 ~05:45), list «Сигналы за 7 дней» on admin «Надёжность» with failed receipt e-mails; reasons shown in the staff language (en/ru).

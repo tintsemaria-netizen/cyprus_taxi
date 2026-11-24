@@ -9,6 +9,16 @@ state, or a correctly-blocked action), never a simulated success. Set the listed
 Deploy reminder: `export APP_RELEASE=$(git rev-parse HEAD)` then build + `up -d taxi-app taxi-worker`
 (the web entrypoint runs `prisma migrate deploy`; the worker waits for the schema).
 
+## Before App Store / Google Play submission (operator, 2026-11-24)
+
+These must be done BEFORE the native apps are sent to the stores — not optional, not "later":
+
+- [ ] **Antivirus (ClamAV, §2 below) installed and working on the live server.** Without it every
+      uploaded document stays unchecked, the admin cannot accept new or renewed driver documents, and a
+      driver who renewed a document keeps working on a document nobody could accept.
+      Verify: the admin «Состояние системы» screen no longer shows «нет антивируса»; a test upload
+      gets `CLEAN`.
+
 ---
 
 ## 1. Real SMS (passenger + driver OTP)
