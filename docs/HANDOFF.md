@@ -2840,6 +2840,14 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-24 22:55 — territory magnet, zoom-look limit, no blink (DEPLOYED 314f544)
+
+- Operator (island zoom): a drop on the airport circle acted like «sea», and re-entering with a slight zoom did not
+  zoom in. onCenterPick: `territoryNear(p, min(1.5 km, 30 px))` (area-client) is checked BEFORE `areaBlock`;
+  the «zoom only looks around» ignore applies only while the middle stays on the same territory.
+- `landTail`: overlay kept 300 ms after landing so the logo never blinks before the map marker appears.
+- Tests: tests/territory-near.test.ts. Suite 470 passed.
+
 ## 2026-11-24 22:45 — far pickup follows the passenger on return (DEPLOYED 82223e3)
 
 - Operator: came back to the app at the marina, the logo still at Paphos airport. BookingApp locate-on-return
