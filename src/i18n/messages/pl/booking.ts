@@ -209,6 +209,8 @@ const booking: Catalog<typeof en> = {
     myRides: "Moje przejazdy",
     open: "Otwórz rezerwację",
   },
+  pickupPoint: 'Odbiór tutaj tylko w jednym miejscu: {name}',
+  pickupPoints: 'Odbiór tutaj tylko w punktach «{name}» — wybierz jeden:',
   pickupAt: {
     title: 'O której ma przyjechać samochód?',
     time: 'Godzina odbioru',

@@ -2805,3 +2805,27 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Passenger: public GET /api/v1/no-go (active polygons) → src/lib/area-client.ts areaBlock() = island + no-go; RouteEditor,
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
+
+## 2026-11-24 17:10 — «Точки подачи»: несколько точек + закруглённая территория (branch `pickup-points`, NOT deployed)
+
+- NoGoZone kind POINT now has `points` JSONB `[{lat,lng,name}]` (1–20) instead of pointLat/pointLng. Migration
+  20261124170000_pickup_points was REWRITTEN (never deployed): adds `kind` + `points`. Local DBs that had the old
+  version: drop pointLat/pointLng/kind and delete the `_prisma_migrations` row, then `migrate deploy`.
+- `smoothRing` (src/lib/ring.ts, Chaikin ×3): territories are shown AND checked by the rounded outline (server
+  `pickupPoints`, `/api/v1/no-go` returns `territories: [{name, polygon(rounded), points}]`, admin validation).
+- Server `snapPickup`: keeps the point the passenger is on, else nearest; label «Территория · Точка».
+- Passenger: `territoryAt` (area-client) → blue panel `pickup-territory` with chips `pickup-spot` (8 languages,
+  `booking.pickupPoints`), rounded area (`areas` prop on MapView + GoogleMapView) and `spot` markers (`spotEl`).
+- Admin /admin/no-go «Точки подачи»: each tap adds a point; names + ✕ in the side list; rounded preview.
+- Tests: tests/smooth-ring.test.ts, updated no-go.db.test.ts. Full suite 456 passed / 1 skipped.
+- Not verified: Google map (live) polygon/spot rendering — only MapLibre locally.
+- Next: operator says «заливай» → merge to main per the usual routine.
+
+## 2026-11-24 16:10 — «Одна точка подачи» (branch `pickup-points`, NOT deployed — shown to operator)
+- Same tab «Запретная зона», second section (blue): a territory + ONE pickup point. NoGoZone.kind NOGO|POINT, pointLat/Lng
+  (migration 20261124170000_pickup_points). Admin form: «Углы территории» / «📍 Точка подачи» (click on map, onPick).
+- Server: snapPickup() in createBooking and /quote (pickup inside → the point, label = territory name).
+- Passenger: /api/v1/no-go returns points; area-client pickupSnap(); BookingApp moves the pickup to the point and shows a blue
+  note «Здесь подача только в одной точке: …» (booking.pickupPoint, 8 langs) for 5 s; map follows.
+- Tests: no-go.db.test.ts snap case. The pickup point must be inside its territory and on land (admin + server refine).
+  Not yet: driver sees nothing special (just the pickup address = point name).

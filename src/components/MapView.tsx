@@ -5,7 +5,7 @@ import type * as maplibregl from 'maplibre-gl';
 import { loadMaplibre } from '@/lib/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { publicMapConfig } from '@/lib/config';
-import { vehicleMarkerEl, personMarkerEl, orientVehicle, pickupPinEl, navArrowEl, numberedStopEl } from './carMarker';
+import { vehicleMarkerEl, personMarkerEl, orientVehicle, pickupPinEl, navArrowEl, numberedStopEl, spotEl } from './carMarker';
 import { useIdleReturn } from './useIdleReturn';
 import { smoothRoute } from './routeSmooth';
 import { compassEl } from './mapCompass';
@@ -17,7 +17,9 @@ export interface MapMarker {
   id: string;
   lat: number;
   lng: number;
-  kind: 'pickup' | 'dropoff' | 'vehicle' | 'person' | 'stop';
+  kind: 'pickup' | 'dropoff' | 'vehicle' | 'person' | 'stop' | 'spot';
+  /** spot: drawn as the chosen one. */
+  active?: boolean;
   label?: string;
   stale?: boolean;
   /** Visible label under a vehicle marker (e.g. plate number on staff maps). */
@@ -61,6 +63,8 @@ interface Props {
   fleetLikeSelf?: boolean;
   /** Route line width in px (default 7; driver navigation 8 = +15 %, 2026-11-19). */
   routeWidth?: number;
+  /** Shaded areas, e.g. a pickup territory (2026-11-24): [lat, lng] rings. */
+  areas?: { id: string; polygon: [number, number][]; color: string }[];
   focus?: { lat: number; lng: number } | null; // zoom the map to this point (e.g. the user's location)
   // Navigation camera (see GoogleMapView): centred, heading-up, tilted; suspends auto-fit.
   follow?: { lat: number; lng: number; heading: number; zoom?: number; tilt?: number } | null;
@@ -99,9 +103,9 @@ function demoStyle(): maplibregl.StyleSpecification {
   };
 }
 
-const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF' };
+const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF', spot: '#4C9AFF' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], fleetLikeSelf, routeWidth = 7, focus, focusZoom: focusZoomProp, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], fleetLikeSelf, routeWidth = 7, areas = [], focus, focusZoom: focusZoomProp, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
   const focusZoom = focusZoomProp ?? 15;
   // Re-frame / re-centre when the visible area changes (e.g. the sheet under the map grew or shrank).
   const padKey = fitPadding ? `${fitPadding.top},${fitPadding.right},${fitPadding.bottom},${fitPadding.left}` : '';
@@ -210,6 +214,8 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
           el = vehicleMarkerEl({ state: mk.self ? 'self' : mk.busy ? 'busy' : 'available', stale: mk.stale, title: mk.label || 'Your driver', tag: mk.tag });
           el.classList.add('ily-vehicle');
           if (mk.heading != null) orientVehicle(el, map.getBearing(), mk.heading);
+        } else if (mk.kind === 'spot') {
+          el = spotEl({ name: mk.label ?? '', active: mk.active });
         } else if (mk.num != null && mk.kind !== 'person') {
           el = numberedStopEl({ num: mk.num, kind: mk.kind, next: mk.next, title: mk.label });
         } else if (mk.kind === 'person') {
@@ -227,7 +233,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
           el.style.opacity = mk.stale ? '0.5' : '1';
           el.title = mk.label || mk.kind;
         }
-        const marker = new maplibre.Marker({ element: el, anchor: mk.kind === 'pickup' ? 'bottom' : 'center' }).setLngLat([mk.lng, mk.lat]).addTo(map);
+        const marker = new maplibre.Marker({ element: el, anchor: mk.kind === 'pickup' ? 'bottom' : mk.kind === 'spot' ? 'top' : 'center', offset: mk.kind === 'spot' ? [0, -8] : [0, 0] }).setLngLat([mk.lng, mk.lat]).addTo(map);
         if (mk.self) marker.getElement().style.zIndex = '1000';
         else if (mk.kind === 'pickup') marker.getElement().style.zIndex = '950'; // brand pin over the person (2026-11-17)
         else if (mk.kind === 'person') marker.getElement().style.zIndex = '900';
@@ -321,6 +327,20 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
       });
     }
   }, [route, ready, routeWidth]);
+
+  // Shaded areas (pickup territory, 2026-11-24).
+  const areasKey = areas.map((a) => `${a.id}:${a.polygon.length}`).join('|');
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const data = { type: 'FeatureCollection', features: areas.filter((a) => a.polygon.length >= 3).map((a) => ({ type: 'Feature', properties: { color: a.color }, geometry: { type: 'Polygon', coordinates: [[...a.polygon, a.polygon[0]].map(([lat, lng]) => [lng, lat])] } })) };
+    const src = map.getSource('areas') as maplibregl.GeoJSONSource | undefined;
+    if (src) { src.setData(data as never); return; }
+    map.addSource('areas', { type: 'geojson', data: data as never });
+    map.addLayer({ id: 'areas-fill', type: 'fill', source: 'areas', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.16 } });
+    map.addLayer({ id: 'areas-line', type: 'line', source: 'areas', layout: { 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': 2.5, 'line-opacity': 0.9 } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [areasKey, ready]);
 
   if (failed) {
     return (

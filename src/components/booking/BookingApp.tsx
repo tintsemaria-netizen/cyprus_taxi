@@ -11,7 +11,7 @@ import { Logo } from '@/components/Brand';
 import { BRAND_PIN_SVG, BRAND_PIN_SVG_RED } from '@/components/carMarker';
 import { pinPoint } from '@/components/mapFit';
 import { onCyprusIsland } from '@/lib/cyprus-island';
-import { areaBlock, loadNoGo } from '@/lib/area-client';
+import { areaBlock, loadNoGo, territoryAt, spotLabel } from '@/lib/area-client';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import type { Selected } from './PlacesInput';
 import { setNearHint } from '@/lib/nearHint';
@@ -557,7 +557,23 @@ export default function BookingApp() {
   // The pin let go in the sea / abroad (2026-11-24, operator): no pickup there — the logo turns red while
   // the map glides back to the last pickup, then lime again. No text (operator: «убери надпись»).
   const [offIsland, setOffIsland] = useState(false);
-  useEffect(() => { void loadNoGo(); }, []);
+  const [noGoReady, setNoGoReady] = useState(0);
+  useEffect(() => { void loadNoGo().then(() => setNoGoReady((n) => n + 1)); }, []);
+  // Pickup territories (2026-11-24, operator: airports, ports …): a pickup inside goes to the nearest of the
+  // territory's points; the passenger may pick another one. The rounded territory and its points are on the map.
+  const terr = useMemo(() => (pickup ? territoryAt(pickup) : null), [pickup?.lat, pickup?.lng, noGoReady]); // eslint-disable-line react-hooks/exhaustive-deps
+  const chooseSpot = (i: number) => {
+    if (!terr) return;
+    const sp = terr.t.points[i], label = spotLabel(terr.t, i);
+    pickSeq.current++; // a reverse-geocode still running must not overwrite the point's name
+    dragPick.current = null;
+    setPickup({ lat: sp.lat, lng: sp.lng, label });
+    setPickupText(label);
+  };
+  useEffect(() => {
+    if (terr && terr.on < 0) chooseSpot(terr.nearest);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [terr]);
   const offTimer = useRef<number | null>(null);
   function onCenterPick(p: { lat: number; lng: number; zoom: number }) {
     setPinLift(false);
@@ -589,6 +605,11 @@ export default function BookingApp() {
     if (dropoff) m.push({ id: 'd', lat: dropoff.lat, lng: dropoff.lng, kind: 'dropoff', label: dropoff.label });
     return m;
   }, [pickup, dropoff, stop, hasStop, centerMode]);
+  const mapMarkers = useMemo<MapMarker[]>(() => (!terr ? markers : [
+    ...markers,
+    ...terr.t.points.map((sp, i) => ({ id: `spot-${i}`, lat: sp.lat, lng: sp.lng, kind: 'spot' as const, label: sp.name || terr.t.name, active: terr.on === i, noFit: true })),
+  ]), [markers, terr]);
+  const mapAreas = useMemo(() => (terr ? [{ id: `terr-${terr.t.name}`, polygon: terr.t.polygon, color: '#4C9AFF' }] : []), [terr]);
   const centerModeRef = useRef(centerMode); centerModeRef.current = centerMode;
   // The pin overlay stands on the same point a padded focus centres on.
   const mapBoxRef = useRef<HTMLDivElement | null>(null);
@@ -1190,7 +1211,22 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-page" />
           ) : (
-            <AutoMapView markers={markers} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : camFocus} focusZoom={pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
+            <AutoMapView markers={mapMarkers} areas={mapAreas} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : camFocus} focusZoom={pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
+          )}
+          {terr && step === 'form' && (
+            <div className="absolute inset-x-3 top-3 z-[6] mx-auto max-w-sm rounded-[14px] border border-[#4C9AFF] bg-elevated/95 px-3 py-2 text-[13px] leading-snug text-ink shadow-lg" data-testid="pickup-territory">
+              <div className="font-medium">📍 {t(terr.t.points.length > 1 ? 'booking.pickupPoints' : 'booking.pickupPoint', { name: terr.t.name })}</div>
+              {terr.t.points.length > 1 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {terr.t.points.map((sp, i) => (
+                    <button key={i} type="button" onClick={() => chooseSpot(i)} data-testid="pickup-spot"
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold ${terr.on === i ? 'border-[#4C9AFF] bg-[#4C9AFF] text-[#0b0f10]' : 'border-[#4C9AFF]/60 text-ink'}`}>
+                      {sp.name || `${i + 1}`}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
           {centerMode && mapBox.w > 0 && (() => {
             const pt = pinPoint(fitPadding, mapBox.w, mapBox.h);

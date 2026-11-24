@@ -295,3 +295,19 @@ export function numberedStopEl(opts: { num: number; kind: 'pickup' | 'dropoff' |
   if (opts.title) el.title = opts.title;
   return el;
 }
+
+/** A pickup point of a territory (2026-11-24): a blue dot with its name. */
+export function spotEl(opts: { name: string; active?: boolean }): HTMLElement {
+  const el = document.createElement('div');
+  el.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;pointer-events:none';
+  const dot = document.createElement('div');
+  dot.style.cssText = `width:${opts.active ? 16 : 12}px;height:${opts.active ? 16 : 12}px;border-radius:50%;background:#4C9AFF;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5)`;
+  el.appendChild(dot);
+  if (opts.name) {
+    const tag = document.createElement('div');
+    tag.textContent = opts.name;
+    tag.style.cssText = `background:${opts.active ? '#4C9AFF' : 'rgba(16,25,28,.9)'};color:${opts.active ? '#0b0f10' : '#fff'};font:600 11.5px Inter,Arial,sans-serif;padding:2px 7px;border-radius:9px;white-space:nowrap;border:1px solid #4C9AFF`;
+    el.appendChild(tag);
+  }
+  return el;
+}
