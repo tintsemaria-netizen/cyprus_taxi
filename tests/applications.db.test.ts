@@ -251,7 +251,70 @@ describe('Task 015 — application lifecycle + provisioning', () => {
     const up2 = await uploadRenewal(d.id, 'insurance', PNG);
     expect(up2.ok).toBe(true);
     expect(await prisma.applicationDocument.count({ where: { applicationId: appId, slot: 'insurance' } })).toBe(2);
-    expect((await uploadRenewal(d.id, 'selfie', PNG)).ok).toBe(false); // only the four expiring documents
+    expect((await uploadRenewal(d.id, 'boot', PNG)).ok).toBe(false); // only the four expiring documents + selfie, car front / rear
+  });
+
+  // 2026-11-24 (operator): of the car photos only front and rear are required; selfie stays required.
+  it('car photos: only front and rear are required', async () => {
+    const { applicantId, appId } = await completeDraft();
+    await prisma.applicationDocument.deleteMany({ where: { applicationId: appId, slot: { in: ['vehicle_left', 'vehicle_right', 'cabin_front', 'cabin_rear', 'boot'] } } });
+    expect((await submitApplication(applicantId)).ok).toBe(true);
+  });
+  it('car photos: without the rear photo or the selfie it cannot be sent', async () => {
+    const { applicantId, appId } = await completeDraft();
+    await prisma.applicationDocument.deleteMany({ where: { applicationId: appId, slot: { in: ['vehicle_rear', 'selfie'] } } });
+    const r = await submitApplication(applicantId);
+    expect(r.ok).toBe(false);
+    if (!r.ok) { expect(r.message).toContain('photo.vehicle_rear'); expect(r.message).toContain('doc.selfie'); }
+  });
+
+  // One car, one registration (2026-11-24): same plate in another spelling, or the same VIN.
+  it('the same car cannot be registered twice (plate in any spelling, or VIN)', async () => {
+    const PHONE2 = '+35799000778';
+    const clean2 = async () => {
+      const a = await prisma.driverApplicant.findUnique({ where: { phone: PHONE2 }, include: { application: true } });
+      if (a?.application) { await prisma.applicationEvent.deleteMany({ where: { applicationId: a.application.id } }); await prisma.applicationDocument.deleteMany({ where: { applicationId: a.application.id } }); await prisma.driverApplication.delete({ where: { id: a.application.id } }); }
+      if (a) await prisma.driverApplicant.delete({ where: { id: a.id } });
+    };
+    await clean2();
+    try {
+      const { d } = await approvedDriver(); // car APP-TEST-1, VIN VIN123 is now registered
+      expect((await prisma.vehicle.findFirst({ where: { plate: PLATE } }))!.vin).toBe('VIN123');
+      const second = async (vehicle: Record<string, string>) => {
+        await clean2();
+        const ap = await prisma.driverApplicant.create({ data: { phone: PHONE2, phoneVerifiedAt: new Date() } });
+        await getOrCreateApplication(ap.id);
+        await saveDraft(ap.id, { identity: { legalName: 'Second', dateOfBirth: '1990-01-01', address: 'x', country: 'Cyprus' }, driving: { licenceNumber: 'DL2', licenceCountry: 'CY', licenceExpiry: '2030-01-01', taxiLicenceNumber: 'TX2' }, vehicle: { make: 'Toyota', model: 'Corolla', year: '2021', color: 'White', seats: '4', vClass: 'COMFORT', ...vehicle } });
+        const app = (await prisma.driverApplication.findUnique({ where: { applicantId: ap.id } }))!;
+        for (const slot of REQUIRED_DOCS) await prisma.applicationDocument.create({ data: { applicationId: app.id, slot, storageKey: `y/${slot}.jpg`, mime: 'image/jpeg', sizeBytes: 1, sha256: 'h', revision: 1 } });
+        return submitApplication(ap.id);
+      };
+      const r1 = await second({ plate: 'app test 1', vin: 'OTHERVIN' });
+      expect(r1.ok ? null : r1.code).toBe('DUPLICATE_VEHICLE');
+      const r2 = await second({ plate: 'NEW-999', vin: 'vin 123' });
+      expect(r2.ok ? null : r2.code).toBe('DUPLICATE_VEHICLE');
+      expect((await second({ plate: 'NEW-999', vin: 'OTHERVIN' })).ok).toBe(true);
+      // His own car is not a duplicate of himself.
+      const { findDuplicateVehicle } = await import('@/server/vehicle-dupes');
+      expect(await findDuplicateVehicle({ plate: PLATE, vin: 'VIN123' }, { exceptApplicationId: d.applicationId! })).toBeNull();
+    } finally { await clean2(); }
+  });
+
+  // The passenger's card (2026-11-24): selfie + car front, accepted ones only, and the car only if it's his.
+  it('passenger photos: accepted selfie and car front; no car photo on another car', async () => {
+    const { passengerPhotos } = await import('@/server/driver-photos');
+    const { uploadRenewal } = await import('@/server/doc-renewal');
+    const { d, appId } = await approvedDriver();
+    const selfie = (await prisma.applicationDocument.findFirst({ where: { applicationId: appId, slot: 'selfie' } }))!;
+    const front = (await prisma.applicationDocument.findFirst({ where: { applicationId: appId, slot: 'vehicle_front' } }))!;
+    expect(await passengerPhotos(d.id, 'app-test 1')).toEqual({ driver: selfie.id, car: front.id });
+    expect(await passengerPhotos(d.id, 'OTHER-1')).toEqual({ driver: selfie.id, car: null });
+    // He uploads a new selfie: the passenger keeps seeing the accepted one until the admin accepts.
+    const up = await uploadRenewal(d.id, 'selfie', PNG);
+    expect(up.ok).toBe(true);
+    expect((await passengerPhotos(d.id, PLATE)).driver).toBe(selfie.id);
+    expect((await uploadRenewal(d.id, 'vehicle_rear', PNG)).ok).toBe(true);
+    expect((await uploadRenewal(d.id, 'cabin_front', PNG)).ok).toBe(false);
   });
 
   it('request changes reopens editing with a new revision', async () => {

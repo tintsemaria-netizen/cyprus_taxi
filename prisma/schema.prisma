@@ -445,6 +445,8 @@ model ApplicationEvent {
 model Vehicle {
   id        String       @id @default(uuid())
   plate     String       @unique
+  /// VIN, upper-case without spaces (2026-11-24): the same car can't be registered twice.
+  vin       String?      @unique
   make      String
   model     String
   color     String

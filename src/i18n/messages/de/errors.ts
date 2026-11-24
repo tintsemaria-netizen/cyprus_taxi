@@ -2,6 +2,7 @@ import type { Catalog } from '../../types';
 import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
+  DUPLICATE_VEHICLE: "Dieses Auto ist bereits registriert (gleiches Kennzeichen oder gleiche FIN). Ein Auto kann nicht zweimal registriert werden — bitte wenden Sie sich an den Betreiber.",
   EXPIRY_REQUIRED: "Geben Sie ein künftiges Ablaufdatum an, um das Dokument anzunehmen.",
   AMOUNT_LOCKED: "Der Betrag wurde bei Fahrtende festgelegt und kann nicht geändert werden.",
   TOO_FAR_FROM_PICKUP: "Sie sind zu weit vom Abholort entfernt.",

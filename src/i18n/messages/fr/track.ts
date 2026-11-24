@@ -36,6 +36,7 @@ const track: Catalog<typeof en> = {
   reserving: "Réservation du chauffeur le plus proche…",
   ratingAria: { one: "Noté {avg} sur 5 sur {count} course", many: "Noté {avg} sur 5 sur {count} courses", other: "Noté {avg} sur 5 sur {count} courses" },
   plateAria: "Plaque d’immatriculation {plate}",
+  photo: { driver: "Photo du chauffeur", car: "Photo du véhicule" },
   startCodeToggle: "Code de confirmation",
   startCodeToggleHint: "Le chauffeur ne peut démarrer la course qu’avec votre code",
   startCodeFailed: "Impossible de modifier le code. Réessayez.",

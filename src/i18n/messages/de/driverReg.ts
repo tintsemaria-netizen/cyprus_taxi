@@ -45,6 +45,8 @@ const driverReg: Catalog<typeof en> = {
     redo: "Wiederholen",
     uploaded: "hochgeladen",
     required: "erforderlich",
+    optional: "optional",
+    oneOfId: "Reisepass oder Ausweis",
     uploading: "Wird hochgeladen…",
     replace: "Ersetzen",
     uploadOrPhoto: "Hochladen / Foto machen",

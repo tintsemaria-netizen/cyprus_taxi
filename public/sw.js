@@ -599,48 +599,72 @@ const MSG_TEXT = {
 // Document names for {slot} in pushes (2026-11-24).
 const SLOT_NAME = {
   "ru": {
+    "selfie": "селфи",
+    "vehicle_front": "фото машины спереди",
+    "vehicle_rear": "фото машины сзади",
     "licence_front": "водительское удостоверение",
     "taxi_licence": "лицензия такси",
     "insurance": "страховка",
     "roadworthiness": "техосмотр"
   },
   "en": {
+    "selfie": "selfie",
+    "vehicle_front": "car photo (front)",
+    "vehicle_rear": "car photo (rear)",
     "licence_front": "driving licence",
     "taxi_licence": "taxi licence",
     "insurance": "insurance",
     "roadworthiness": "roadworthiness (MOT)"
   },
   "el": {
+    "selfie": "selfie",
+    "vehicle_front": "φωτογραφία αυτοκινήτου (μπροστά)",
+    "vehicle_rear": "φωτογραφία αυτοκινήτου (πίσω)",
     "licence_front": "δίπλωμα οδήγησης",
     "taxi_licence": "άδεια ταξί",
     "insurance": "ασφάλεια",
     "roadworthiness": "ΜΟΤ"
   },
   "de": {
+    "selfie": "Selfie",
+    "vehicle_front": "Fahrzeugfoto (vorne)",
+    "vehicle_rear": "Fahrzeugfoto (hinten)",
     "licence_front": "Führerschein",
     "taxi_licence": "Taxilizenz",
     "insurance": "Versicherung",
     "roadworthiness": "TÜV (MOT)"
   },
   "fr": {
+    "selfie": "selfie",
+    "vehicle_front": "photo du véhicule (avant)",
+    "vehicle_rear": "photo du véhicule (arrière)",
     "licence_front": "permis de conduire",
     "taxi_licence": "licence de taxi",
     "insurance": "assurance",
     "roadworthiness": "contrôle technique"
   },
   "pl": {
+    "selfie": "selfie",
+    "vehicle_front": "zdjęcie auta (przód)",
+    "vehicle_rear": "zdjęcie auta (tył)",
     "licence_front": "prawo jazdy",
     "taxi_licence": "licencja taxi",
     "insurance": "ubezpieczenie",
     "roadworthiness": "przegląd techniczny"
   },
   "he": {
+    "selfie": "סלפי",
+    "vehicle_front": "תמונת רכב (חזית)",
+    "vehicle_rear": "תמונת רכב (אחור)",
     "licence_front": "רישיון נהיגה",
     "taxi_licence": "רישיון מונית",
     "insurance": "ביטוח",
     "roadworthiness": "טסט"
   },
   "ar": {
+    "selfie": "صورة ذاتية",
+    "vehicle_front": "صورة السيارة (الأمام)",
+    "vehicle_rear": "صورة السيارة (الخلف)",
     "licence_front": "رخصة القيادة",
     "taxi_licence": "رخصة التاكسي",
     "insurance": "التأمين",

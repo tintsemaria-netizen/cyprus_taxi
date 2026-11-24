@@ -2,6 +2,7 @@ import type { Catalog } from '../../types';
 import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
+  DUPLICATE_VEHICLE: "Αυτό το αυτοκίνητο είναι ήδη καταχωρημένο (ίδια πινακίδα ή VIN). Ένα αυτοκίνητο δεν καταχωρείται δύο φορές — επικοινωνήστε με τον διαχειριστή.",
   EXPIRY_REQUIRED: "Συμπληρώστε ημερομηνία λήξης (μελλοντική) για αποδοχή.",
   AMOUNT_LOCKED: "Το ποσό ορίστηκε με την ολοκλήρωση και δεν αλλάζει.",
   TOO_FAR_FROM_PICKUP: "Είστε πολύ μακριά από το σημείο παραλαβής.",

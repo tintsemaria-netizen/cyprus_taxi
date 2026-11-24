@@ -234,6 +234,8 @@ const driver = {
       fleet_authorization: "Fleet authorisation",
       taxi_sign: "Taxi sign",
       photo: "Car photo",
+      vehicle_front: "Car photo — front",
+      vehicle_rear: "Car photo — rear",
     },
     renew: {
       upload: "Upload new",

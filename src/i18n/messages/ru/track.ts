@@ -36,6 +36,7 @@ const track: Catalog<typeof en> = {
     other: 'Рейтинг {avg} из 5 по {count} поездки',
   },
   plateAria: 'Госномер {plate}',
+  photo: { driver: "Фото водителя", car: "Фото машины" },
   startCodeToggle: 'Код подтверждения',
   startCodeToggleHint: 'Водитель сможет начать поездку только с вашим кодом',
   startCodeFailed: 'Не удалось изменить код. Попробуйте ещё раз.',

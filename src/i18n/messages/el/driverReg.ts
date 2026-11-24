@@ -45,6 +45,8 @@ const driverReg: Catalog<typeof en> = {
     redo: 'Ξανά',
     uploaded: 'ανέβηκε',
     required: 'υποχρεωτικό',
+    optional: "προαιρετικό",
+    oneOfId: "διαβατήριο ή ταυτότητα",
     uploading: 'Μεταφόρτωση…',
     replace: 'Αντικατάσταση',
     uploadOrPhoto: 'Ανέβασμα / φωτογραφία',

@@ -2,6 +2,7 @@ import type { Catalog } from '../../types';
 import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
+  DUPLICATE_VEHICLE: "Эта машина уже зарегистрирована (тот же номер или VIN). Одну машину нельзя зарегистрировать дважды — напишите оператору.",
   EXPIRY_REQUIRED: "Чтобы принять документ, укажите срок его действия (дата в будущем).",
   AMOUNT_LOCKED: "Сумма зафиксирована при завершении поездки, изменить её нельзя.",
   TOO_FAR_FROM_PICKUP: "Вы находитесь слишком далеко от точки подачи.",

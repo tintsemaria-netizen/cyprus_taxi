@@ -45,6 +45,8 @@ const driverReg: Catalog<typeof en> = {
     redo: "إعادة",
     uploaded: "تم الرفع",
     required: "مطلوب",
+    optional: "اختياري",
+    oneOfId: "جواز السفر أو بطاقة الهوية",
     uploading: "جارٍ الرفع…",
     replace: "استبدال",
     uploadOrPhoto: "رفع / التقاط صورة",

@@ -16,7 +16,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     include: { applicant: true, documents: { orderBy: { slot: 'asc' } }, events: { orderBy: { createdAt: 'asc' } } },
   });
   if (!app) return Errors.notFound();
+  // The car he drives now (an approved driver may have been moved to another car) — for the cross-check.
+  const drv = await prisma.driver.findFirst({ where: { applicationId: app.id }, select: { bindings: { where: { endedAt: null }, take: 1, select: { vehicle: { select: { plate: true, make: true, model: true, color: true } } } } } });
+  // The same car (plate / VIN) already in the system or in another application (2026-11-24).
+  const { findDuplicateVehicle } = await import('@/server/vehicle-dupes');
+  const duplicate = await findDuplicateVehicle(parse(app.vehicle), { exceptApplicationId: app.id });
   return apiOk({
+    duplicate,
+    currentVehicle: drv?.bindings[0]?.vehicle ?? null,
     id: app.id,
     status: app.status,
     revision: app.revision,

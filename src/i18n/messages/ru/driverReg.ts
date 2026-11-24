@@ -45,6 +45,8 @@ const driverReg: Catalog<typeof en> = {
     redo: 'Переделать',
     uploaded: 'загружено',
     required: 'обязательно',
+    optional: "по желанию",
+    oneOfId: "паспорт или ID-карта",
     uploading: 'Загрузка…',
     replace: 'Заменить',
     uploadOrPhoto: 'Загрузить / сфотографировать',

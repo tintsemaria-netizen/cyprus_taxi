@@ -36,6 +36,7 @@ const track: Catalog<typeof en> = {
   reserving: "Der nächste Fahrer wird für Sie reserviert…",
   ratingAria: { one: "Bewertet mit {avg} von 5 aus {count} Fahrt", other: "Bewertet mit {avg} von 5 aus {count} Fahrten" },
   plateAria: "Kennzeichen {plate}",
+  photo: { driver: "Foto des Fahrers", car: "Foto des Autos" },
   startCodeToggle: "Bestätigungscode",
   startCodeToggleHint: "Der Fahrer kann die Fahrt nur mit Ihrem Code starten",
   startCodeFailed: "Der Code konnte nicht geändert werden. Bitte versuchen Sie es erneut.",

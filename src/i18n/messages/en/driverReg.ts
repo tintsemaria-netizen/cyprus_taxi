@@ -42,6 +42,8 @@ const driverReg = {
     redo: 'Redo',
     uploaded: 'uploaded',
     required: 'required',
+    optional: "optional",
+    oneOfId: "passport or ID card",
     uploading: 'Uploading…',
     replace: 'Replace',
     uploadOrPhoto: 'Upload / take photo',

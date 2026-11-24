@@ -36,6 +36,7 @@ const track: Catalog<typeof en> = {
   reserving: "Rezerwujemy dla Ciebie najbliższego kierowcę…",
   ratingAria: { one: "Ocena {avg} na 5 z {count} przejazdu", few: "Ocena {avg} na 5 z {count} przejazdów", many: "Ocena {avg} na 5 z {count} przejazdów", other: "Ocena {avg} na 5 z {count} przejazdu" },
   plateAria: "Numer rejestracyjny {plate}",
+  photo: { driver: "Zdjęcie kierowcy", car: "Zdjęcie auta" },
   startCodeToggle: "Kod potwierdzenia",
   startCodeToggleHint: "Kierowca może rozpocząć przejazd tylko z Twoim kodem",
   startCodeFailed: "Nie udało się zmienić kodu. Spróbuj ponownie.",

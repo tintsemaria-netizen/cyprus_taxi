@@ -21,12 +21,14 @@ describe('document slot states', () => {
     const back = slotStates([row('a', 'insurance', 'ACCEPTED', 300, -1), row('b', 'insurance', 'CHANGES', 1, null)], now)[0];
     expect(back).toMatchObject({ blocking: true, renewal: { decision: 'CHANGES' } });
   });
-  it('only the four expiring documents, and only once accepted', () => {
-    expect(slotStates([row('a', 'selfie', 'ACCEPTED', 300, -1), row('b', 'taxi_licence', 'PENDING', 1, null)], now)).toEqual([]);
+  it('only renewable documents (four with a date, selfie, car front / rear), and only once accepted', () => {
+    expect(slotStates([row('a', 'boot', 'ACCEPTED', 300, -1), row('b', 'taxi_licence', 'PENDING', 1, null)], now)).toEqual([]);
     const s = slotStates([row('old', 'licence_front', 'ACCEPTED', 900, -400), row('new', 'licence_front', 'ACCEPTED', 300, 200)], now)[0];
     expect(s).toMatchObject({ accepted: { id: 'new' }, blocking: false, renewal: null });
   });
-  it('taxi licence, insurance, roadworthiness belong to the car; the driving licence to the driver', () => {
-    expect([...CAR_SLOTS].sort()).toEqual(['insurance', 'roadworthiness', 'taxi_licence']);
+  it('taxi licence, insurance, roadworthiness and the car photos belong to the car; licence and selfie to the driver', () => {
+    expect([...CAR_SLOTS].sort()).toEqual(['insurance', 'roadworthiness', 'taxi_licence', 'vehicle_front', 'vehicle_rear']);
+    // A photo without a date never blocks and never asks for renewal.
+    expect(slotStates([row('s', 'selfie', 'ACCEPTED', 300, null)], now)[0]).toMatchObject({ blocking: false, needsRenewal: false, daysLeft: null });
   });
 });

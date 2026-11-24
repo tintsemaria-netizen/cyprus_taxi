@@ -2,6 +2,7 @@ import type { Catalog } from '../../types';
 import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
+  DUPLICATE_VEHICLE: "هذه السيارة مسجّلة بالفعل (نفس اللوحة أو رقم VIN). لا يمكن تسجيل السيارة مرتين — تواصل مع المشغّل.",
   EXPIRY_REQUIRED: "أدخل تاريخ انتهاء مستقبلياً لقبول المستند.",
   AMOUNT_LOCKED: "تم تثبيت المبلغ عند إنهاء الرحلة ولا يمكن تغييره.",
   TOO_FAR_FROM_PICKUP: "أنت بعيد جداً عن نقطة الاستلام.",

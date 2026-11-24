@@ -36,6 +36,7 @@ const track: Catalog<typeof en> = {
   reserving: "שומרים עבורכם את הנהג הקרוב ביותר…",
   ratingAria: { one: "דירוג {avg} מתוך 5 על סמך {count} נסיעה", two: "דירוג {avg} מתוך 5 על סמך {count} נסיעות", many: "דירוג {avg} מתוך 5 על סמך {count} נסיעות", other: "דירוג {avg} מתוך 5 על סמך {count} נסיעות" },
   plateAria: "לוחית רישוי {plate}",
+  photo: { driver: "תמונת הנהג", car: "תמונת הרכב" },
   startCodeToggle: "קוד אישור",
   startCodeToggleHint: "הנהג יכול להתחיל את הנסיעה רק עם הקוד שלכם",
   startCodeFailed: "לא ניתן לשנות את הקוד. נסו שוב.",

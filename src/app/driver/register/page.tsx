@@ -155,6 +155,10 @@ function Field({ label, value, onChange, type = 'text' }: { label: string; value
   const id = useId();
   return <div><label className="label" htmlFor={id}>{label}</label><input id={id} type={type} className="field mt-1" value={value || ''} onChange={(e) => onChange(e.target.value)} onBlur={() => { /* saved by step */ }} /></div>;
 }
+// What the application can't be sent without (2026-11-24, operator: of the car photos only front and rear).
+const REQUIRED_SLOTS = new Set(['selfie', 'licence_front', 'taxi_licence', 'vehicle_reg', 'insurance', 'vehicle_front', 'vehicle_rear']);
+const ID_SLOTS = new Set(['passport', 'id_front', 'id_back']);
+
 function Upload({ slot, app, reload, label }: { slot: string; app: AppData; reload: () => void; label: string }) {
   const { t, tError } = useT();
   const [busy, setBusy] = useState(false);
@@ -178,7 +182,7 @@ function Upload({ slot, app, reload, label }: { slot: string; app: AppData; relo
     <div className="rounded-[12px] border border-edge bg-elevated p-3">
       <div className="flex items-center justify-between">
         <span className="text-sm">{label}</span>
-        {has ? <span className={`chip ${has.decision === 'ACCEPTED' ? '!text-accent' : has.decision === 'CHANGES' ? '!text-danger' : ''}`}>{has.decision === 'CHANGES' ? t('driverReg.upload.redo') : has.decision === 'ACCEPTED' ? '✓' : t('driverReg.upload.uploaded')}</span> : <span className="text-xs text-muted">{t('driverReg.upload.required')}</span>}
+        {has ? <span className={`chip ${has.decision === 'ACCEPTED' ? '!text-accent' : has.decision === 'CHANGES' ? '!text-danger' : ''}`}>{has.decision === 'CHANGES' ? t('driverReg.upload.redo') : has.decision === 'ACCEPTED' ? '✓' : t('driverReg.upload.uploaded')}</span> : <span className={`text-xs ${REQUIRED_SLOTS.has(slot) ? 'text-warn' : 'text-muted'}`}>{REQUIRED_SLOTS.has(slot) ? t('driverReg.upload.required') : ID_SLOTS.has(slot) ? t('driverReg.upload.oneOfId') : t('driverReg.upload.optional')}</span>}
       </div>
       {has?.decisionNote && <p className="mt-1 text-xs text-danger">{has.decisionNote}</p>}
       <label className="mt-2 block">

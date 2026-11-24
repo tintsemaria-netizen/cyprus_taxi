@@ -31,6 +31,7 @@ const track: Catalog<typeof en> = {
   reserving: 'Δεσμεύουμε τον πλησιέστερο οδηγό για εσάς…',
   ratingAria: { one: 'Βαθμολογία {avg} στα 5 από {count} διαδρομή', other: 'Βαθμολογία {avg} στα 5 από {count} διαδρομές' },
   plateAria: 'Πινακίδα {plate}',
+  photo: { driver: "Φωτογραφία οδηγού", car: "Φωτογραφία αυτοκινήτου" },
   startCodeToggle: 'Κωδικός επιβεβαίωσης',
   startCodeToggleHint: 'Ο οδηγός θα ξεκινήσει τη διαδρομή μόνο με τον κωδικό σας',
   startCodeFailed: 'Δεν ήταν δυνατή η αλλαγή του κωδικού. Δοκιμάστε ξανά.',

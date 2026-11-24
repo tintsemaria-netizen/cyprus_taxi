@@ -20,9 +20,11 @@ type Docs = { available: boolean; note?: string; documents: DriverDoc[] };
 export function useSlotName() {
   const { t } = useT();
   return (slot: string) => {
-    const k = (/^vehicle_/.test(slot) ? 'driver.profile.slot.photo' : `driver.profile.slot.${slot}`) as MsgKey;
+    const k = `driver.profile.slot.${slot}` as MsgKey;
     const v = t(k);
-    return v === k ? slot.replace(/_/g, ' ') : v;
+    if (v !== k) return v;
+    if (/^(vehicle_|cabin_|boot)/.test(slot)) return t('driver.profile.slot.photo');
+    return slot.replace(/_/g, ' ');
   };
 }
 

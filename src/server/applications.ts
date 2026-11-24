@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { normVin } from '@/server/vehicle-dupes';
 import { Prisma, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { generateToken } from '@/lib/crypto';
@@ -9,6 +10,7 @@ import { generateToken } from '@/lib/crypto';
 // Required documents (IL-Y onboarding policy — configurable; see
 // docs/research/DRIVER-ONBOARDING-REQUIREMENTS.md for the government-vs-platform split).
 // REQUIRED vehicle photos (all applicants). taxi_sign is conditional → accepted but not required.
+export const REQUIRED_VEHICLE_PHOTOS = ['vehicle_front', 'vehicle_rear'];
 export const VEHICLE_PHOTO_SLOTS = ['vehicle_front', 'vehicle_rear', 'vehicle_left', 'vehicle_right', 'cabin_front', 'cabin_rear', 'boot'];
 export const DOC_SLOTS = [
   'id_front', 'id_back', 'passport', 'selfie', 'right_to_work',
@@ -58,7 +60,8 @@ export function missingRequirements(app: { identity: string | null; driving: str
   for (const f of ['plate', 'vin', 'make', 'model', 'year', 'seats', 'vClass']) if (!ve[f]) miss.push(`vehicle.${f}`);
   if (!slots.has('vehicle_reg')) miss.push('doc.vehicle_reg');
   if (!slots.has('insurance')) miss.push('doc.insurance');
-  for (const s of VEHICLE_PHOTO_SLOTS) if (!slots.has(s)) miss.push(`photo.${s}`);
+  // Car photos: only front and rear are required (operator 2026-11-24); the rest are welcome.
+  for (const s of REQUIRED_VEHICLE_PHOTOS) if (!slots.has(s)) miss.push(`photo.${s}`);
   return miss;
 }
 
@@ -69,6 +72,10 @@ export async function submitApplication(applicantId: string): Promise<Result> {
   const slots = new Set(app.documents.map((d) => d.slot));
   const missing = missingRequirements(app, slots);
   if (missing.length) return err(422, 'INCOMPLETE', `Missing: ${missing.join(', ')}`);
+  // One car, one registration (2026-11-24).
+  { const { findDuplicateVehicle } = await import('@/server/vehicle-dupes');
+    let ve: Record<string, unknown> = {}; try { ve = app.vehicle ? JSON.parse(app.vehicle) : {}; } catch { /* checked above */ }
+    if (await findDuplicateVehicle(ve, { exceptApplicationId: app.id })) return err(409, 'DUPLICATE_VEHICLE', 'This car is already registered.'); }
   await prisma.$transaction([
     prisma.driverApplication.update({ where: { id: app.id }, data: { status: 'SUBMITTED', submittedAt: new Date(), decisionReason: null } }),
     prisma.applicationEvent.create({ data: { applicationId: app.id, type: 'SUBMITTED', actorType: 'APPLICANT', revision: app.revision } }),
@@ -154,6 +161,10 @@ export async function approveApplication(applicationId: string, adminId: string,
       if (requiredDocs.some((d) => EXPIRING_SLOTS.has(d.slot) && !d.expiresAt)) return err(422, 'EXPIRY_REQUIRED', 'Licence, taxi licence, insurance and roadworthiness need an expiry date before approval.');
 
       const ve = JSON.parse(app.vehicle || '{}');
+      // One car, one registration (2026-11-24): same plate (any spelling) or VIN already in the system.
+      const { findDuplicateVehicle } = await import('@/server/vehicle-dupes');
+      const dupe = await findDuplicateVehicle(ve, { exceptApplicationId: app.id });
+      if (dupe?.where === 'vehicle') return err(409, 'DUPLICATE_VEHICLE', `This car (${dupe.plate}) is already registered.`);
       const id = JSON.parse(app.identity || '{}');
       const phone = app.applicant.phone;
 
@@ -169,7 +180,7 @@ export async function approveApplication(applicationId: string, adminId: string,
           return err(409, 'ACCOUNT_CONFLICT', 'A non-driver account already uses this phone.');
         }
         if (await tx.driver.findUnique({ where: { userId: user.id } })) return err(409, 'ALREADY_DRIVER', 'This account is already a driver.');
-        const vehicle = await tx.vehicle.create({ data: { plate: ve.plate, make: ve.make, model: ve.model, color: ve.color || 'Unknown', vClass: ve.vClass, seats: Number(ve.seats), active: true } });
+        const vehicle = await tx.vehicle.create({ data: { plate: ve.plate, vin: normVin(ve.vin) || null, make: ve.make, model: ve.model, color: ve.color || 'Unknown', vClass: ve.vClass, seats: Number(ve.seats), active: true } });
         driver = await tx.driver.create({ data: { userId: user.id, publicName: id.legalName || 'Driver', phone, active: true, onDuty: false, available: false, eligibility: 'APPROVED', applicationId } });
         await tx.driverVehicleBinding.create({ data: { driverId: driver.id, vehicleId: vehicle.id, activeDriverId: driver.id, activeVehicleId: vehicle.id } });
       } else if (driver.eligibility !== 'APPROVED') {

@@ -45,6 +45,8 @@ const driverReg: Catalog<typeof en> = {
     redo: "שוב",
     uploaded: "הועלה",
     required: "חובה",
+    optional: "לא חובה",
+    oneOfId: "דרכון או תעודת זהות",
     uploading: "מעלה…",
     replace: "החלפה",
     uploadOrPhoto: "העלאה / צילום",

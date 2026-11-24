@@ -2,6 +2,7 @@ import type { Catalog } from '../../types';
 import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
+  DUPLICATE_VEHICLE: "Ce véhicule est déjà enregistré (même plaque ou même VIN). Un véhicule ne peut pas être enregistré deux fois — contactez l'opérateur.",
   EXPIRY_REQUIRED: "Indiquez une date d’expiration future pour accepter le document.",
   AMOUNT_LOCKED: "Le montant a été fixé à la fin de la course et ne peut plus être modifié.",
   TOO_FAR_FROM_PICKUP: "Vous êtes trop loin du point de prise en charge.",

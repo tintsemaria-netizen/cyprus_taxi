@@ -14,6 +14,8 @@ interface Doc { id: string; slot: string; decision: string; decisionNote: string
 interface Detail {
   id: string; status: string; revision: number; submittedAt: string | null; decisionReason: string | null; phone: string;
   identity: Record<string, string>; driving: Record<string, string>; vehicle: Record<string, string>;
+  currentVehicle: { plate: string; make: string; model: string; color: string } | null;
+  duplicate: { by: 'plate' | 'vin'; where: 'vehicle' | 'application'; plate: string } | null;
   documents: Doc[]; events: { type: string; actorType: string; visibility: string; detail: string | null; at: string }[];
 }
 
@@ -44,6 +46,12 @@ function Detail() {
       await act(`documents/${docId}/decision`, { decision, note });
       return;
     }
+    // Car documents and photos (2026-11-24, operator): first compare them with THIS car — the number,
+    // VIN and taxi-licence number in the document must be this car's, the photo must show this car.
+    if (CAR_CHECK_SLOTS.includes(slot) && d) {
+      const ok = await ask({ title: t('staff.apps.match.title'), body: <MatchFacts d={d} slot={slot} />, confirmLabel: t('staff.apps.match.confirm') });
+      if (!ok) return;
+    }
     // Capture an expiry date on accept where the document type has one (drives DOCUMENTS_EXPIRED).
     let expiresAt: string | undefined;
     if (EXPIRY_SLOTS.includes(slot)) {
@@ -53,7 +61,7 @@ function Detail() {
       if (d === null) return; // cancelled → nothing is accepted
       if (d) { const dt = new Date(d); if (!Number.isNaN(dt.getTime())) expiresAt = dt.toISOString(); }
     }
-    await act(`documents/${docId}/decision`, { decision, expiresAt });
+    await act(`documents/${docId}/decision`, { decision, expiresAt, vehicleChecked: CAR_CHECK_SLOTS.includes(slot) || undefined });
   }
 
   // From «Проверить» (2026-11-24): scroll to that document.
@@ -81,6 +89,9 @@ function Detail() {
           <section className="card p-4"><h2 className="label mb-2">{t('staff.apps.identity')}</h2>{kv(d.identity)}</section>
           <section className="card p-4"><h2 className="label mb-2">{t('staff.apps.driving')}</h2>{kv(d.driving)}</section>
           <section className="card p-4"><h2 className="label mb-2">{t('staff.apps.vehicle')}</h2>{kv(d.vehicle)}</section>
+          {/* Cross-check (2026-11-24): the car's facts next to its documents and photos. */}
+          {d.duplicate && d.status !== 'APPROVED' && <section className="card border-danger p-4 text-sm text-danger" role="alert" data-testid="dup-vehicle">{t(d.duplicate.where === 'vehicle' ? 'staff.apps.match.dupVehicle' : 'staff.apps.match.dupApplication', { plate: d.duplicate.plate, by: d.duplicate.by === 'vin' ? 'VIN' : t('staff.apps.match.byPlate') })}</section>}
+          <section className="card border-warn/50 p-4" data-testid="match-facts"><h2 className="label mb-2">{t('staff.apps.match.box')}</h2><MatchFacts d={d} /></section>
           <section className="card p-4">
             <h2 className="label mb-2">{t('staff.apps.documents')}</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -136,6 +147,28 @@ function Detail() {
           </section>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Car documents and photos to compare with the car before accepting (2026-11-24).
+const CAR_CHECK_SLOTS = ['vehicle_reg', 'insurance', 'taxi_licence', 'roadworthiness', 'fleet_authorization', 'vehicle_front', 'vehicle_rear', 'vehicle_left', 'vehicle_right', 'taxi_sign'];
+
+function MatchFacts({ d, slot }: { d: { vehicle: Record<string, string>; driving: Record<string, string>; currentVehicle: { plate: string; make: string; model: string; color: string } | null }; slot?: string }) {
+  const { t } = useT();
+  const v = d.vehicle;
+  const cur = d.currentVehicle;
+  const norm = (p?: string) => (p || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const moved = cur && norm(cur.plate) !== norm(v.plate);
+  const photo = slot ? /^vehicle_|taxi_sign/.test(slot) : false;
+  return (
+    <div className="space-y-1 text-sm text-ink">
+      <div><span className="text-muted">{t('staff.apps.match.plate')}: </span><b className="font-mono">{cur?.plate || v.plate || '—'}</b></div>
+      {v.vin && <div><span className="text-muted">VIN: </span><b className="font-mono">{v.vin}</b></div>}
+      <div><span className="text-muted">{t('staff.apps.match.car')}: </span>{[cur?.make || v.make, cur?.model || v.model, v.year, cur?.color || v.color].filter(Boolean).join(' · ')}</div>
+      {d.driving.taxiLicenceNumber && <div><span className="text-muted">{t('staff.apps.match.taxiLicence')}: </span><b className="font-mono">{d.driving.taxiLicenceNumber}</b></div>}
+      {moved && <div className="text-warn">{t('staff.apps.match.moved', { plate: v.plate })}</div>}
+      <p className="pt-1 text-xs text-muted">{photo ? t('staff.apps.match.hintPhoto') : t('staff.apps.match.hintDoc')}</p>
     </div>
   );
 }

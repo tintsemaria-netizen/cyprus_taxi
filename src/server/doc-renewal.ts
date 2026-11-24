@@ -17,8 +17,11 @@ export const WARN_DAYS = 7;
 const DAY = 86_400_000;
 /** Car documents go to «Машины» (taxi licence too — it belongs to the car, operator 2026-11-24); the
  *  driving licence to «Водители». Without a bound car everything shows in «Водители». */
-export const CAR_SLOTS = new Set(['insurance', 'roadworthiness', 'taxi_licence']);
-export const RENEWABLE_SLOTS = [...EXPIRING_SLOTS];
+export const CAR_SLOTS = new Set(['insurance', 'roadworthiness', 'taxi_licence', 'vehicle_front', 'vehicle_rear']);
+/** Photos without a date the driver may replace himself (2026-11-24): his selfie, the car from the front / rear. */
+export const PHOTO_RENEW_SLOTS = new Set(['selfie', 'vehicle_front', 'vehicle_rear']);
+const RENEWABLE = new Set([...EXPIRING_SLOTS, ...PHOTO_RENEW_SLOTS]);
+export const RENEWABLE_SLOTS = [...RENEWABLE];
 
 export interface SlotState {
   slot: string;
@@ -40,7 +43,7 @@ type Row = { id: string; slot: string; decision: string; scanStatus: string; exp
 /** One state per expiring slot, from all rows of an application (newest wins). Pure — tested directly. */
 export function slotStates(rows: Row[], now: Date = new Date()): SlotState[] {
   const out: SlotState[] = [];
-  const slots = [...new Set(rows.map((r) => r.slot))].filter((s) => EXPIRING_SLOTS.has(s)).sort();
+  const slots = [...new Set(rows.map((r) => r.slot))].filter((s) => RENEWABLE.has(s)).sort();
   for (const slot of slots) {
     const mine = rows.filter((r) => r.slot === slot).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     const acc = mine.find((r) => r.decision === 'ACCEPTED') ?? null;
@@ -94,7 +97,7 @@ export type UploadResult = { ok: true; id: string; scanStatus: string } | { ok: 
 /** The driver uploads a new document for an expiring slot. The accepted one stays until the admin accepts
  *  the new one; an earlier upload that is still waiting (or was sent back) is replaced. */
 export async function uploadRenewal(driverId: string, slot: string, buf: Buffer): Promise<UploadResult> {
-  if (!EXPIRING_SLOTS.has(slot)) return { ok: false, code: 'BAD_SLOT', message: 'This document cannot be renewed here.' };
+  if (!RENEWABLE.has(slot)) return { ok: false, code: 'BAD_SLOT', message: 'This document cannot be renewed here.' };
   const d = await prisma.driver.findUnique({ where: { id: driverId }, select: { id: true, applicationId: true, publicName: true } });
   if (!d?.applicationId) return { ok: false, code: 'NO_APPLICATION', message: 'No documents on file.' };
   const st = (await statesFor(d.applicationId)).find((s) => s.slot === slot);
@@ -192,7 +195,7 @@ function dayMonth(iso: string): string {
   return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Nicosia', day: '2-digit', month: '2-digit' }).format(new Date(iso)).replace('/', '.');
 }
 
-const SLOT_EN: Record<string, string> = { licence_front: 'driving licence', taxi_licence: 'taxi licence', insurance: 'insurance', roadworthiness: 'roadworthiness (MOT)' };
+const SLOT_EN: Record<string, string> = { licence_front: 'driving licence', taxi_licence: 'taxi licence', insurance: 'insurance', roadworthiness: 'roadworthiness (MOT)', selfie: 'selfie', vehicle_front: 'car photo (front)', vehicle_rear: 'car photo (rear)' };
 
 async function notifyStaffUpload(driverId: string, slot: string) {
   const a = (await docAttention()).find((x) => x.driverId === driverId && x.slot === slot && x.kind === 'UPLOADED');

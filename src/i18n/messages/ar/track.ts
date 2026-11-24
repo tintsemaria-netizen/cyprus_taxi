@@ -36,6 +36,7 @@ const track: Catalog<typeof en> = {
   reserving: "نحجز لك أقرب سائق…",
   ratingAria: { zero: "تقييم {avg} من 5 من {count} رحلة", one: "تقييم {avg} من 5 من {count} رحلة", two: "تقييم {avg} من 5 من {count} رحلة", few: "تقييم {avg} من 5 من {count} رحلات", many: "تقييم {avg} من 5 من {count} رحلة", other: "تقييم {avg} من 5 من {count} رحلة" },
   plateAria: "لوحة الأرقام {plate}",
+  photo: { driver: "صورة السائق", car: "صورة السيارة" },
   startCodeToggle: "رمز التأكيد",
   startCodeToggleHint: "لا يمكن للسائق بدء الرحلة إلا برمزك",
   startCodeFailed: "تعذّر تغيير الرمز. حاول مرة أخرى.",

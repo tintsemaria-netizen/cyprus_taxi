@@ -1,6 +1,7 @@
 // Translations for API error codes shown to passengers/drivers. Unknown codes fall back to the
 // server's English message (see tError in I18nProvider).
 const errors = {
+  DUPLICATE_VEHICLE: "This car is already registered (same plate or VIN). One car can't be registered twice — please contact the operator.",
   EXPIRY_REQUIRED: "Enter the document’s expiry date (in the future) to accept it.",
   AMOUNT_LOCKED: "The amount was fixed when the ride was completed and cannot be changed.",
   TOO_FAR_FROM_PICKUP: "You are too far from the pickup.",

@@ -237,6 +237,8 @@ const driver: Catalog<typeof en> = {
       fleet_authorization: "הרשאת צי",
       taxi_sign: "שלט מונית",
       photo: "תמונת רכב",
+      vehicle_front: "תמונת רכב — חזית",
+      vehicle_rear: "תמונת רכב — אחור",
     },
     renew: {
       upload: "העלאת חדש",

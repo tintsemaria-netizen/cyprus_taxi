@@ -237,6 +237,8 @@ const driver: Catalog<typeof en> = {
       fleet_authorization: "Доверенность автопарка",
       taxi_sign: "Знак такси",
       photo: "Фото автомобиля",
+      vehicle_front: "Фото машины спереди",
+      vehicle_rear: "Фото машины сзади",
     },
     renew: {
       upload: "Загрузить новый",

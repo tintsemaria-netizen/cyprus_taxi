@@ -58,6 +58,8 @@ export async function trackingView(bookingId: string) {
     vClass: string;
     phone: string | null;
     rating: { average: number; count: number } | null;
+    /** Photo ids (cache keys) for /api/v1/tracking/photo — null when there is none (2026-11-24). */
+    photos: { driver: string | null; car: string | null };
   };
   let location = null as null | {
     lat: number;
@@ -80,6 +82,7 @@ export async function trackingView(bookingId: string) {
       vClass: active.vehicleClass,
       phone: active.driverPhone || null,
       rating: await publicDriverRating(active.driverId),
+      photos: await (await import('@/server/driver-photos')).passengerPhotos(active.driverId, active.vehiclePlate),
     };
     const loc = await prisma.latestDriverLocation.findUnique({ where: { driverId: active.driverId } });
     if (loc) {

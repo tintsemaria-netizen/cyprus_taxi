@@ -45,6 +45,8 @@ const driverReg: Catalog<typeof en> = {
     redo: "Powtórz",
     uploaded: "przesłano",
     required: "wymagane",
+    optional: "opcjonalnie",
+    oneOfId: "paszport lub dowód",
     uploading: "Przesyłanie…",
     replace: "Zamień",
     uploadOrPhoto: "Prześlij / zrób zdjęcie",
