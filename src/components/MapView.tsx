@@ -75,6 +75,8 @@ interface Props {
   onFollowBreak?: () => void;
   /** Bump to bring the camera back to its automatic view (focus point / route) — «my location» button. */
   recenterTick?: number;
+  /** Duration of a re-centre glide (recenterTick), ms. Default 500. */
+  glideMs?: number;
   /** The user dragged the map by hand. */
   onUserMove?: () => void;
   /** Centre-pin pick (2026-11-23): after the user moves the map by hand and it stops, the point under the
@@ -105,7 +107,7 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF', spot: '#4C9AFF' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], fleetLikeSelf, routeWidth = 7, areas = [], focus, focusZoom: focusZoomProp, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], fleetLikeSelf, routeWidth = 7, areas = [], focus, focusZoom: focusZoomProp, follow, onFollowBreak, recenterTick = 0, glideMs = 500, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
   const focusZoom = focusZoomProp ?? 15;
   // Re-frame / re-centre when the visible area changes (e.g. the sheet under the map grew or shrank).
   const padKey = fitPadding ? `${fitPadding.top},${fitPadding.right},${fitPadding.bottom},${fitPadding.left}` : '';
@@ -286,11 +288,14 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
 
   // Zoom to a focus point (e.g. the passenger's detected location), once per change.
   const focusKey = focus ? `${focus.lat.toFixed(5)},${focus.lng.toFixed(5)}` : '';
+  const lastRecenter = useRef(recenterTick);
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready || !focus || followRef.current || idle.active.current) return;
+    const glide = recenterTick !== lastRecenter.current;
+    lastRecenter.current = recenterTick;
     // Centre in the visible area (between overlays / above a sheet) — fitPadding, 2026-11-16.
-    map.easeTo({ center: [focus.lng, focus.lat], zoom: focusZoom, duration: 500, ...(fitPadding ? { padding: safePadding(fitPadding, map.getContainer().clientWidth, map.getContainer().clientHeight) } : {}) });
+    map.easeTo({ center: [focus.lng, focus.lat], zoom: focusZoom, duration: glide ? glideMs : 500, easing: (k) => 1 - Math.pow(1 - k, 3), ...(fitPadding ? { padding: safePadding(fitPadding, map.getContainer().clientWidth, map.getContainer().clientHeight) } : {}) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusKey, ready, idle.returnTick, padKey, recenterTick]);
 

@@ -53,6 +53,8 @@ interface Props {
   onFollowBreak?: () => void;
   /** Bump to bring the camera back to its automatic view (focus point / route) — «my location» button. */
   recenterTick?: number;
+  /** Duration of a re-centre glide (recenterTick), ms. Default 700. */
+  glideMs?: number;
   /** The user dragged the map by hand. */
   onUserMove?: () => void;
   /** Centre-pin pick (2026-11-23): after the user moves the map by hand and it stops, the point under the
@@ -142,7 +144,7 @@ function markerEl(mk: MapMarker): HTMLElement {
 /** Fitting never zooms out past the whole island. */
 const MIN_FIT_ZOOM = 8;
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], fleetLikeSelf, routeWidth = 7, areas = [], focus, focusZoom, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], fleetLikeSelf, routeWidth = 7, areas = [], focus, focusZoom, follow, onFollowBreak, recenterTick = 0, glideMs = 700, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const lastUpd = useRef(new Map<string, number>());
@@ -464,7 +466,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     // «Моё местоположение» / back from the sea (recenterTick): glide; anything else: one exact move.
     const glide = recenterTick !== lastRecenter.current;
     lastRecenter.current = recenterTick;
-    if (focusZoom != null) centerPointAt(map, focus.lat, focus.lng, fpad, focusZoom, glide ? 700 : 0);
+    if (focusZoom != null) centerPointAt(map, focus.lat, focus.lng, fpad, focusZoom, glide ? glideMs : 0);
     else framePoint(map, g, focus.lat, focus.lng, fpad);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusKey, ready, idle.returnTick, padKey, recenterTick]);
