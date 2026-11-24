@@ -14,6 +14,7 @@ export async function GET() {
   return apiOk({
     applications: a.applications,
     changes: a.changes,
+    docs: a.docs,
     last: a.last ? { id: a.last.id, actor: a.last.actorName, method: a.last.method, area: areaOf(a.last.path) } : null,
   });
 }

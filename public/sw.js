@@ -94,6 +94,77 @@ const MSG_TEXT = {
     he: ["תוקף מסמך יפוג בקרוב", "תוקפו של מסמך חובה יפוג בעוד {days} ימים. חדשו אותו כדי להמשיך לנהוג."],
     ar: ["مستند ستنتهي صلاحيته قريبًا", "تنتهي صلاحية مستند مطلوب خلال {days} يوم. جدّده لتستمر في القيادة."],
   },
+  // Document renewal (2026-11-24): {slot} is the document's name in the reader's language (SLOT_NAME).
+  "drv.docExpiring": {
+    ru: ["Документ скоро истекает", "{slot}: срок истекает через {days} дн. Загрузите новый: меню → Документы."],
+    en: ["Document expiring", "{slot} expires in {days} day(s). Upload the new one: menu → Documents."],
+    el: ["Έγγραφο λήγει", "{slot}: λήγει σε {days} ημ. Ανεβάστε το νέο: μενού → Έγγραφα."],
+    de: ["Dokument läuft ab", "{slot} läuft in {days} Tag(en) ab. Laden Sie das neue hoch: Menü → Dokumente."],
+    fr: ["Document bientôt expiré", "{slot} expire dans {days} jour(s). Envoyez le nouveau : menu → Documents."],
+    pl: ["Dokument wygasa", "{slot}: wygasa za {days} dn. Wgraj nowy: menu → Dokumenty."],
+    he: ["תוקף מסמך עומד לפוג", "{slot}: התוקף פג בעוד {days} ימים. העלו את החדש: תפריט ← מסמכים."],
+    ar: ["مستند ستنتهي صلاحيته", "{slot}: تنتهي الصلاحية خلال {days} يوم. ارفع الجديد: القائمة ← المستندات."],
+  },
+  "drv.docExpired": {
+    ru: ["Документ просрочен", "{slot}: срок истёк. Загрузите новый (меню → Документы), чтобы снова брать заказы."],
+    en: ["Document expired", "{slot} has expired. Upload the new one (menu → Documents) to take rides again."],
+    el: ["Το έγγραφο έληξε", "{slot}: έληξε. Ανεβάστε το νέο (μενού → Έγγραφα) για να παίρνετε ξανά διαδρομές."],
+    de: ["Dokument abgelaufen", "{slot} ist abgelaufen. Laden Sie das neue hoch (Menü → Dokumente), um wieder Fahrten zu bekommen."],
+    fr: ["Document expiré", "{slot} a expiré. Envoyez le nouveau (menu → Documents) pour reprendre des courses."],
+    pl: ["Dokument wygasł", "{slot}: wygasł. Wgraj nowy (menu → Dokumenty), aby znów brać kursy."],
+    he: ["תוקף המסמך פג", "{slot}: התוקף פג. העלו את החדש (תפריט ← מסמכים) כדי לקבל שוב נסיעות."],
+    ar: ["انتهت صلاحية المستند", "{slot}: انتهت الصلاحية. ارفع الجديد (القائمة ← المستندات) لتستقبل الرحلات مجددًا."],
+  },
+  "drv.docReturned": {
+    ru: ["Документ не принят", "Оператор не принял новый документ ({slot}). Загрузите его ещё раз: меню → Документы."],
+    en: ["Document not accepted", "The operator did not accept your new document ({slot}). Upload it again: menu → Documents."],
+    el: ["Το έγγραφο δεν έγινε δεκτό", "Ο διαχειριστής δεν δέχτηκε το νέο έγγραφο ({slot}). Ανεβάστε το ξανά: μενού → Έγγραφα."],
+    de: ["Dokument nicht angenommen", "Der Betreiber hat Ihr neues Dokument ({slot}) nicht angenommen. Bitte erneut hochladen: Menü → Dokumente."],
+    fr: ["Document refusé", "L'opérateur n'a pas accepté votre nouveau document ({slot}). Renvoyez-le : menu → Documents."],
+    pl: ["Dokument nieprzyjęty", "Operator nie przyjął nowego dokumentu ({slot}). Wgraj go ponownie: menu → Dokumenty."],
+    he: ["המסמך לא אושר", "המפעיל לא אישר את המסמך החדש ({slot}). העלו אותו שוב: תפריט ← מסמכים."],
+    ar: ["لم يُقبل المستند", "لم يقبل المشغّل مستندك الجديد ({slot}). ارفعه مرة أخرى: القائمة ← المستندات."],
+  },
+  "staff.docUploaded": {
+    ru: ["Новый документ на проверку", "{who}: загружен новый документ — {slot}. Проверить"],
+    en: ["New document to check", "{who}: new {slot} — check it"],
+    el: ["Νέο έγγραφο για έλεγχο", "{who}: νέο έγγραφο — {slot}. Έλεγχος"],
+    de: ["Neues Dokument zu prüfen", "{who}: neues Dokument — {slot}. Prüfen"],
+    fr: ["Nouveau document à vérifier", "{who} : nouveau document — {slot}. Vérifier"],
+    pl: ["Nowy dokument do sprawdzenia", "{who}: nowy dokument — {slot}. Sprawdź"],
+    he: ["מסמך חדש לבדיקה", "{who}: מסמך חדש — {slot}. לבדוק"],
+    ar: ["مستند جديد للمراجعة", "{who}: مستند جديد — {slot}. راجِعه"],
+  },
+  "staff.docReminder": {
+    ru: ["Документ ждёт проверки", "{who}: новый документ ({slot}) ждёт проверки"],
+    en: ["Document still to check", "{who}: new {slot} waits for you"],
+    el: ["Έγγραφο περιμένει έλεγχο", "{who}: το νέο έγγραφο ({slot}) περιμένει έλεγχο"],
+    de: ["Dokument wartet auf Prüfung", "{who}: neues Dokument ({slot}) wartet auf Prüfung"],
+    fr: ["Document en attente", "{who} : le nouveau document ({slot}) attend votre vérification"],
+    pl: ["Dokument czeka na sprawdzenie", "{who}: nowy dokument ({slot}) czeka na sprawdzenie"],
+    he: ["מסמך ממתין לבדיקה", "{who}: המסמך החדש ({slot}) ממתין לבדיקה"],
+    ar: ["مستند بانتظار المراجعة", "{who}: المستند الجديد ({slot}) بانتظار المراجعة"],
+  },
+  "staff.docUrgent": {
+    ru: ["Срочно: непроверенный документ", "{who} работает с непроверенным документом ({slot}) — старый истёк {date}"],
+    en: ["Urgent: unchecked document", "{who} works with an unchecked {slot}; the old one expired {date}"],
+    el: ["Επείγον: μη ελεγμένο έγγραφο", "{who} δουλεύει με μη ελεγμένο έγγραφο ({slot}) — το παλιό έληξε {date}"],
+    de: ["Dringend: ungeprüftes Dokument", "{who} fährt mit ungeprüftem Dokument ({slot}) — das alte ist am {date} abgelaufen"],
+    fr: ["Urgent : document non vérifié", "{who} roule avec un document non vérifié ({slot}) — l'ancien a expiré le {date}"],
+    pl: ["Pilne: niesprawdzony dokument", "{who} pracuje z niesprawdzonym dokumentem ({slot}) — stary wygasł {date}"],
+    he: ["דחוף: מסמך לא נבדק", "{who} עובד עם מסמך שלא נבדק ({slot}) — הישן פג ב-{date}"],
+    ar: ["عاجل: مستند غير مُراجَع", "{who} يعمل بمستند غير مُراجَع ({slot}) — انتهى القديم في {date}"],
+  },
+  "staff.docExpiring": {
+    ru: ["Документ истекает", "{who}: срок документа ({slot}) истекает через {days} дн., новый не загружен"],
+    en: ["Document expiring", "{who}: {slot} expires in {days} day(s), nothing new uploaded"],
+    el: ["Έγγραφο λήγει", "{who}: το έγγραφο ({slot}) λήγει σε {days} ημ., δεν ανέβηκε νέο"],
+    de: ["Dokument läuft ab", "{who}: Dokument ({slot}) läuft in {days} Tag(en) ab, nichts Neues hochgeladen"],
+    fr: ["Document bientôt expiré", "{who} : le document ({slot}) expire dans {days} jour(s), rien de nouveau envoyé"],
+    pl: ["Dokument wygasa", "{who}: dokument ({slot}) wygasa za {days} dn., nowego nie wgrano"],
+    he: ["תוקף מסמך עומד לפוג", "{who}: תוקף המסמך ({slot}) פג בעוד {days} ימים, לא הועלה חדש"],
+    ar: ["مستند ستنتهي صلاحيته", "{who}: تنتهي صلاحية المستند ({slot}) خلال {days} يوم، ولم يُرفع جديد"],
+  },
   'pre.active': {
     ru: ["Предзаказ активен", "Подача в {timeT}: {place}. Выезжайте к месту подачи вовремя."],
     en: ["Pre-booked ride is now active", "Pickup {timeT} at {place}. Head to the pickup in time."],
@@ -525,6 +596,57 @@ const MSG_TEXT = {
     ar: ["⏱ {left}:00", "متبقٍ حتى الاتصال · {place}، {timeT}"],
   },
 };
+// Document names for {slot} in pushes (2026-11-24).
+const SLOT_NAME = {
+  "ru": {
+    "licence_front": "водительское удостоверение",
+    "taxi_licence": "лицензия такси",
+    "insurance": "страховка",
+    "roadworthiness": "техосмотр"
+  },
+  "en": {
+    "licence_front": "driving licence",
+    "taxi_licence": "taxi licence",
+    "insurance": "insurance",
+    "roadworthiness": "roadworthiness (MOT)"
+  },
+  "el": {
+    "licence_front": "δίπλωμα οδήγησης",
+    "taxi_licence": "άδεια ταξί",
+    "insurance": "ασφάλεια",
+    "roadworthiness": "ΜΟΤ"
+  },
+  "de": {
+    "licence_front": "Führerschein",
+    "taxi_licence": "Taxilizenz",
+    "insurance": "Versicherung",
+    "roadworthiness": "TÜV (MOT)"
+  },
+  "fr": {
+    "licence_front": "permis de conduire",
+    "taxi_licence": "licence de taxi",
+    "insurance": "assurance",
+    "roadworthiness": "contrôle technique"
+  },
+  "pl": {
+    "licence_front": "prawo jazdy",
+    "taxi_licence": "licencja taxi",
+    "insurance": "ubezpieczenie",
+    "roadworthiness": "przegląd techniczny"
+  },
+  "he": {
+    "licence_front": "רישיון נהיגה",
+    "taxi_licence": "רישיון מונית",
+    "insurance": "ביטוח",
+    "roadworthiness": "טסט"
+  },
+  "ar": {
+    "licence_front": "رخصة القيادة",
+    "taxi_licence": "رخصة التاكسي",
+    "insurance": "التأمين",
+    "roadworthiness": "الفحص الفني"
+  }
+};
 function msgText(msg, L) {
   const byLang = msg && MSG_TEXT[msg.k];
   const t = byLang && (byLang[L] || null);
@@ -533,6 +655,7 @@ function msgText(msg, L) {
   const fill = (str) => str.replace(/\{(\w+)\}/g, (_m, k) => {
     const v = p[k];
     if (v == null) return '';
+    if (k === 'slot' && typeof v === 'string') return (SLOT_NAME[L] && SLOT_NAME[L][v]) || (SLOT_NAME.en[v]) || v.replace(/_/g, ' ');
     if (/C$/.test(k) && typeof v === 'number') {
       try { return new Intl.NumberFormat(L, { style: 'currency', currency: 'EUR' }).format(v / 100); } catch (_e) { return `€${(v / 100).toFixed(2)}`; }
     }
@@ -543,7 +666,8 @@ function msgText(msg, L) {
     }
     return String(v);
   });
-  return { title: fill(t[0]), body: fill(t[1]) };
+  const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1); // «{slot}: …» at the start
+  return { title: fill(t[0]), body: cap(fill(t[1])) };
 }
 
 async function appLocale() {

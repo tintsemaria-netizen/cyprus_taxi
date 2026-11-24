@@ -21,6 +21,7 @@ export async function GET() {
     isOwner: ctx.user.role === 'ADMIN' && ctx.user.isOwner, // superadmin: «Бухгалтерия», «Сотрудники», «Изменения» (2026-11-23)
     unreadChanges: alerts.changes,
     pendingApplications: alerts.applications, // «Заявки» red (2026-11-23)
+    docAlerts: alerts.docs, // «Водители» / «Машины» red for documents (2026-11-24)
     fleet: ctx.user.role === 'FLEET_OWNER' || ctx.user.role === 'DRIVER' ? await ownedFleet(ctx.user.id) : null,
     mfa: { eligible: isPrivileged(ctx.user), enabled: !!ctx.user.totpEnabledAt, setupRequired: mfaSetupRequired(ctx.user) },
   });

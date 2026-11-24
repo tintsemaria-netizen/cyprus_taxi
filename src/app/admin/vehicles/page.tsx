@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { StaffShell } from '@/components/staff/StaffShell';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import { useDocAttention, withDocsFirst, DocAttentionLines } from '@/components/staff/DocAttention';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +20,8 @@ function Vehicles() {
   const [msg, setMsg] = useState<string | null>(null);
   const [form, setForm] = useState({ plate: '', make: '', model: '', color: '', vClass: 'COMFORT', seats: 4 });
   const [busy, setBusy] = useState(false);
+  // Insurance / roadworthiness to renew or check (2026-11-24): the car's row blinks red, on top.
+  const docs = useDocAttention('vehicles');
 
   const load = useCallback(async () => {
     setRows((await api<{ vehicles: VehicleRow[] }>('/admin/vehicles')).vehicles);
@@ -74,8 +77,9 @@ function Vehicles() {
       </form>
 
       <div className="card mt-4 divide-y divide-edge">
-        {rows.map((v) => (
-          <div key={v.id} className="flex flex-wrap items-center gap-3 p-3">
+        {withDocsFirst(rows, (v) => v.id, docs).map((v) => (
+          <div key={v.id} className={`flex flex-wrap items-center gap-3 p-3 ${docs[v.id] ? 'row-alert' : ''}`} data-doc-alert={docs[v.id] ? '' : undefined}>
+            <DocAttentionLines items={docs[v.id]} />
             <div className="min-w-[160px] flex-1">
               <div className="font-medium">{v.color} {v.make} {v.model} <span className="font-mono text-xs text-muted">{v.plate}</span></div>
               <div className="text-xs text-muted">{v.vClass} · {t('staff.vehicles.seatsN', { n: v.seats })} · {v.boundDriver ? t('staff.vehicles.boundTo', { name: v.boundDriver }) : t('staff.vehicles.unbound')}</div>

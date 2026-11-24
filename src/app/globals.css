@@ -145,3 +145,8 @@ input[type='time']::-webkit-date-and-time-value, input[type='date']::-webkit-dat
 }
 .ily-pin-shake { animation: ily-pin-shake 0.5s ease-in-out 2; transform-origin: 50% 100%; }
 @media (prefers-reduced-motion: reduce) { .ily-pin-shake { animation: none; } }
+
+/* Admin lists (2026-11-24): a driver / car whose document needs a look blinks red and sits on top. */
+@keyframes ily-row-alert { 0%,100% { background-color: rgb(255 69 58 / .10); box-shadow: inset 3px 0 0 rgb(255 69 58) } 50% { background-color: rgb(255 69 58 / .28); box-shadow: inset 3px 0 0 rgb(255 69 58) } }
+.row-alert { animation: ily-row-alert 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .row-alert { animation: none; background-color: rgb(255 69 58 / .18); box-shadow: inset 3px 0 0 rgb(255 69 58); } }

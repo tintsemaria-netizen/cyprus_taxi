@@ -15,7 +15,7 @@ import { driverRatingSummary } from '@/server/ratings';
 
 type DriverRow = { id: string; publicName: string; onDuty: boolean; available: boolean; active: boolean; eligibility: string; applicationId: string | null };
 
-export interface DashboardAlert { level: 'blocker' | 'warning' | 'info'; code: string; message: string; action?: { label: string; href: string } }
+export interface DashboardAlert { level: 'blocker' | 'warning' | 'info'; code: string; message: string; action?: { label: string; href: string }; slot?: string; daysLeft?: number | null; expiresAt?: string | null }
 
 
 const BLOCKER_MESSAGES: Record<string, string> = {
@@ -41,13 +41,14 @@ export async function driverDashboard(driver: DriverRow) {
   if (eligible && !binding?.vehicle.active) {
     alerts.push({ level: 'blocker', code: 'NO_VEHICLE', message: 'No vehicle is assigned to you, so you won’t receive ride offers. Contact the operator.' });
   }
-  // Document expiry warnings for approved drivers with an application (LEGACY drivers have none).
+  // Documents (2026-11-24): a marker from 7 days before expiry; once he uploaded the new one, nothing
+  // more is asked of him (option «б»). The screen words come from the app's language (slot, days, date).
   if (driver.applicationId) {
-    const soon = new Date(now.getTime() + 14 * 86_400_000);
-    const docs = await prisma.applicationDocument.findMany({ where: { applicationId: driver.applicationId, expiresAt: { not: null, lt: soon } }, select: { slot: true, expiresAt: true } });
-    for (const d of docs) {
-      const expired = d.expiresAt! < now;
-      alerts.push({ level: expired ? 'blocker' : 'warning', code: expired ? 'DOC_EXPIRED' : 'DOC_EXPIRING', message: `${prettySlot(d.slot)} ${expired ? 'has expired' : `expires ${d.expiresAt!.toISOString().slice(0, 10)}`}.`, action: { label: 'Update document', href: '/driver#documents' } });
+    const { statesFor } = await import('@/server/doc-renewal');
+    for (const st of await statesFor(driver.applicationId, now)) {
+      if (!st.needsRenewal) continue;
+      const exp = st.accepted?.expiresAt?.toISOString() ?? null;
+      alerts.push({ level: st.blocking ? 'blocker' : 'warning', code: st.blocking ? 'DOC_EXPIRED' : 'DOC_EXPIRING', slot: st.slot, daysLeft: st.daysLeft, expiresAt: exp, message: `${prettySlot(st.slot)} ${st.blocking ? 'has expired' : `expires ${exp?.slice(0, 10)}`}.`, action: { label: 'Update document', href: '/driver#documents' } });
     }
   }
 

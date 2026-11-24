@@ -122,6 +122,11 @@ export async function setDocumentDecision(applicationId: string, docId: string, 
   }
   await prisma.applicationDocument.update({ where: { id: docId }, data: { decision, decisionNote: note ?? null, ...(exp && !Number.isNaN(exp.getTime()) ? { expiresAt: exp } : {}) } });
   await prisma.applicationEvent.create({ data: { applicationId, type: 'DOC_DECISION', actorType: 'ADMIN', actorId: adminId, visibility: 'INTERNAL', detail: `${doc.slot}:${decision}` } });
+  // A renewal by an approved driver (2026-11-24): accepted → the old one goes and he may work again;
+  // sent back → he is told, and blocked if the old one has already expired.
+  const { afterRenewalAccepted, afterRenewalReturned } = await import('@/server/doc-renewal');
+  if (decision === 'ACCEPTED') await afterRenewalAccepted(applicationId, docId);
+  else await afterRenewalReturned(applicationId, docId);
   return ok({ decision });
 }
 
@@ -189,28 +194,7 @@ export async function approveApplication(applicationId: string, adminId: string,
 // active trip (the assignment is left intact; only new work is blocked). Sends 30/7/1-day
 // reminders via the outbox.
 export async function enforceDocumentExpiries(now: Date = new Date()): Promise<void> {
-  const drivers = await prisma.driver.findMany({ where: { eligibility: 'APPROVED', applicationId: { not: null } }, select: { id: true, userId: true, applicationId: true } });
-  for (const d of drivers) {
-    const docs = await prisma.applicationDocument.findMany({ where: { applicationId: d.applicationId!, expiresAt: { not: null } }, select: { expiresAt: true } });
-    if (!docs.length) continue;
-    if (docs.some((x) => x.expiresAt! < now)) {
-      await prisma.$transaction(async (tx) => {
-        await tx.driver.update({ where: { id: d.id }, data: { eligibility: 'DOCUMENTS_EXPIRED', onDuty: false, available: false } });
-        // Close any open duty session so online-time doesn't keep accruing (Task 017).
-        const { goOffline } = await import('@/server/driver/duty');
-        await goOffline(tx, d.id, 'system');
-        const offers = await tx.driverOffer.findMany({ where: { activeDriverId: d.id, status: 'OFFERED' } });
-        for (const o of offers) await tx.driverOffer.update({ where: { id: o.id }, data: { status: 'EXPIRED', respondedAt: new Date(), activeBookingId: null, activeDriverId: null } });
-      });
-      const { enqueue } = await import('@/server/outbox');
-      await enqueue(prisma, { audience: `DRIVER:${d.userId}`, title: 'Documents expired', body: 'A required document expired. You cannot take new rides until it is renewed and re-reviewed.', url: '/driver', tag: 'ride', dedupeKey: `expired:${d.id}`, msg: { k: 'driver.docExpired', p: {} } });
-    } else {
-      const soonest = docs.reduce((m, x) => (x.expiresAt! < m ? x.expiresAt! : m), new Date(8.64e15));
-      const days = Math.ceil((soonest.getTime() - now.getTime()) / 86400000);
-      if ([30, 7, 1].includes(days)) {
-        const { enqueue } = await import('@/server/outbox');
-        await enqueue(prisma, { audience: `DRIVER:${d.userId}`, title: 'Document expiring soon', body: `A required document expires in ${days} day(s). Renew it to keep driving.`, url: '/driver', tag: 'ride', dedupeKey: `expiry:${d.id}:${days}`, msg: { k: 'driver.docExpiring', p: { days } } });
-      }
-    }
-  }
+  // Per document type, newest wins; an upload waiting for the admin keeps the driver working (2026-11-24).
+  const { runDocExpiry } = await import('@/server/doc-renewal');
+  await runDocExpiry(now);
 }

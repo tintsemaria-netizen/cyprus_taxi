@@ -27,7 +27,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     identity: parse(app.identity),
     driving: parse(app.driving),
     vehicle: parse(app.vehicle),
-    documents: app.documents.map((d) => ({ id: d.id, slot: d.slot, decision: d.decision, decisionNote: d.decisionNote, mime: d.mime, scanStatus: d.scanStatus, sizeBytes: d.sizeBytes })),
+    documents: app.documents.map((d) => ({ id: d.id, slot: d.slot, decision: d.decision, decisionNote: d.decisionNote, mime: d.mime, scanStatus: d.scanStatus, sizeBytes: d.sizeBytes, expiresAt: d.expiresAt?.toISOString() ?? null, createdAt: d.createdAt.toISOString() })),
     events: app.events.map((e) => ({ type: e.type, actorType: e.actorType, visibility: e.visibility, detail: e.detail, at: e.createdAt.toISOString() })),
   });
 }

@@ -6,6 +6,7 @@ import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { useDriverFigures, FiguresTotals, DriverFiguresLine } from '@/components/reports/DriversFigures';
 import type { DriverFigures } from '@/server/reports/driver-report';
+import { useDocAttention, withDocsFirst, DocAttentionLines } from '@/components/staff/DocAttention';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,8 @@ function Drivers() {
   // Today + this week per driver (2026-11-20): the shared report tool (also the fleet owner's list).
   const figs = useDriverFigures(() => api<{ figures: DriverFigures[] }>('/admin/drivers/figures').then((r) => r.figures));
   const [fleets, setFleets] = useState<FleetRow[]>([]);
+  // Licence / taxi licence to renew or check (2026-11-24): the row blinks red, on top.
+  const docs = useDocAttention('drivers');
   useEffect(() => { api<{ fleets: FleetRow[] }>('/admin/fleets').then((r) => setFleets(r.fleets)).catch(() => {}); }, []);
 
   const load = useCallback(async () => {
@@ -95,8 +98,9 @@ function Drivers() {
       </form>
 
       <div className="card mt-4 divide-y divide-edge">
-        {drivers.map((d) => (
-          <div key={d.id} className="flex flex-wrap items-center gap-3 p-3">
+        {withDocsFirst(drivers, (d) => d.id, docs).map((d) => (
+          <div key={d.id} className={`flex flex-wrap items-center gap-3 p-3 ${docs[d.id] ? 'row-alert' : ''}`} data-doc-alert={docs[d.id] ? '' : undefined}>
+            <DocAttentionLines items={docs[d.id]} />
             <a href={`/admin/drivers/${d.id}`} className="min-w-[140px] flex-1" data-testid={`driver-report-${d.login}`}>
               <div className="font-medium">{d.publicName} <span className="text-xs text-muted">@{d.login}</span></div>
               <div className="text-xs text-muted">{d.phone} · {d.onDuty ? t('staff.drivers.onDuty') : t('staff.drivers.off')} · {d.vehicle ? `${d.vehicle.label} (${d.vehicle.plate})` : t('staff.drivers.noVehicle')}</div>

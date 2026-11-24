@@ -504,5 +504,25 @@ const staff = {
     popup: 'New change',
     newMark: 'new',
   },
+  // Driver documents to renew / check (2026-11-24): «Водители», «Машины», the red bar on top.
+  docs: {
+    bar: "New documents to check: {n}",
+    open: "open",
+    slot: {
+      licence_front: "Driving licence",
+      taxi_licence: "Taxi licence",
+      insurance: "Insurance",
+      roadworthiness: "Roadworthiness (MOT)",
+    },
+    uploaded: "New document to check",
+    uploadedExpired: "Working on an unchecked one — the old one expired {date}",
+    expiring: "Expires {date} · days left: {days}",
+    expired: "Expired {date}, nothing new uploaded — cannot take rides",
+    check: "Check",
+    notify: "Document notifications",
+    newLabel: "New · uploaded {date}",
+    currentLabel: "Current · until {date}",
+    noScan: "No antivirus on the server — this file cannot be accepted.",
+  },
 };
 export default staff;

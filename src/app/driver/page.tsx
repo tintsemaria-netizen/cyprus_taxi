@@ -19,6 +19,7 @@ import type { PairStops } from '@/lib/pair-stops';
 import { OPEN_CO_RIDER } from '@/components/share/ShareDriver';
 import { filterFix, initialFilterState, accuracyLevel, type FilterState } from '@/lib/gpsFilter';
 import { DriverHomeMap } from '@/components/driver/DriverHomeMap';
+import { DriverDocs, useSlotName } from '@/components/driver/DriverDocs';
 import { unlockOfferSound, playOfferChime, vibrateOffer, keepScreenOn } from '@/lib/driver-alerts';
 import { formatFlight } from '@/lib/flight';
 import { useT, useLocale, MsgKey } from '@/i18n/I18nProvider';
@@ -63,7 +64,7 @@ interface Dashboard {
   vehicle: { plate: string; vClass: string; seats: number; label: string } | null;
   today: { recordedEarnings: { currency: string; cents: number }[]; pendingFinalTrips: number; completedTrips: number; onlineSeconds: number; cash?: { currency: string; cents: number }[]; card?: { currency: string; cents: number }[]; canceledTrips?: number };
   latestTrips: TripCard[];
-  alerts: { level: string; code: string; message: string; action?: { label: string; href: string } }[];
+  alerts: { level: string; code: string; message: string; action?: { label: string; href: string }; slot?: string; daysLeft?: number | null }[];
   support: { operatorName: string | null; phone: string | null; email: string | null };
 }
 
@@ -413,6 +414,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
           data={data} dash={dash} gps={gps} pos={pos} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
           onDuty={setDuty} onStartGps={startGps} onStopGps={stopGps}
           onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => { setProfileView('trips'); setDrawer(true); }}
+          openDocs={() => { setProfileView('me'); setDrawer(true); window.setTimeout(() => document.getElementById('driver-docs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 350); }}
           goEarnings={(to) => { setEarnEntry(to ?? 'summary'); setTab('earnings'); }}
           refreshDash={loadDash}
         />
@@ -487,7 +489,7 @@ function HomeSection(props: {
   pos: { lat: number; lng: number } | null;
   offer: Offer | null; offerSecs: number; offerBusy: boolean;
   onDuty: (v: boolean) => void; onStartGps: () => void; onStopGps: () => void;
-  onAccept: (id: string) => void; onDecline: (id: string) => void; goTrips: () => void; goEarnings: (to?: 'summary' | 'analytics') => void; refreshDash?: () => void;
+  onAccept: (id: string) => void; onDecline: (id: string) => void; goTrips: () => void; openDocs?: () => void; goEarnings: (to?: 'summary' | 'analytics') => void; refreshDash?: () => void;
 }) {
   const { data, dash, gps, offer, offerSecs, offerBusy } = props;
   const { t, fmt } = useT();
@@ -495,11 +497,14 @@ function HomeSection(props: {
   const [earnPop, setEarnPop] = useState(false); // today's earnings card under the pill (2026-11-20)
   const [earnView, setEarnView] = useState<'main' | 'time'>('main'); // «Время на линии» opens inside the card
   const trip = data.trip;
-  const blocker = dash?.alerts.find((a) => a.level === 'blocker');
+  // Documents (2026-11-24): one red line on the map, in the app's language; a tap opens «Документы».
+  const docAlert = dash?.alerts.find((a) => a.code === 'DOC_EXPIRED') ?? dash?.alerts.find((a) => a.code === 'DOC_EXPIRING');
+  const slotName = useSlotName();
+  const blocker = dash?.alerts.find((a) => a.level === 'blocker' && !(docAlert && (a.code === 'DOCUMENTS_EXPIRED' || a.code === 'DOC_EXPIRED')));
 
   const [counts, setCounts] = useState({ free: 0, busy: 0 });
   const onCounts = useCallback((free: number, busy: number) => setCounts({ free, busy }), []);
-  const warning = dash?.alerts.find((a) => a.level === 'warning');
+  const warning = dash?.alerts.find((a) => a.level === 'warning' && a.code !== 'DOC_EXPIRING');
   const pill = 'pointer-events-auto rounded-full border border-edge bg-page/90 shadow-card backdrop-blur';
 
   // Full-screen map with single floating controls on top (2026-11-12). The header (z-30) and the
@@ -576,6 +581,18 @@ function HomeSection(props: {
           </>
         )}
         {props.banner && <button className="pointer-events-auto rounded-[12px] border border-warn/40 bg-page/95 px-3 py-2 text-start text-sm text-warn" onClick={props.onDismissBanner}>{props.banner}</button>}
+        {!offer && docAlert?.slot && (
+          <button type="button" onClick={props.openDocs} data-testid="doc-banner"
+            className="pointer-events-auto flex w-full items-center gap-2 rounded-[12px] border border-danger/60 bg-page/95 px-3 py-2 text-start text-sm">
+            <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-danger" aria-hidden />
+            <span className="min-w-0 flex-1 font-medium text-danger">
+              {docAlert.code === 'DOC_EXPIRED' ? t('driver.profile.renew.bannerExpired', { slot: slotName(docAlert.slot) })
+                : (docAlert.daysLeft ?? 2) <= 1 ? t('driver.profile.renew.bannerLast', { slot: slotName(docAlert.slot) })
+                : t('driver.profile.renew.bannerSoon', { slot: slotName(docAlert.slot), days: docAlert.daysLeft ?? '' })}
+            </span>
+            <span className="shrink-0 rounded-full bg-danger px-2.5 py-1 text-xs font-semibold text-white">{t('driver.profile.renew.open')}</span>
+          </button>
+        )}
         {blocker && (
           <div className="pointer-events-auto rounded-[12px] border border-danger/40 bg-page/95 px-3 py-2 text-sm">
             <p className="font-medium text-danger">{blocker.code === 'NO_VEHICLE' ? t('driver.alerts.noVehicle') : blocker.message}</p>
@@ -946,10 +963,7 @@ function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string;
 function ProfileSection({ dash }: { dash: Dashboard | null }) {
   const { t, tp } = useT();
   const { tOr } = useDriverFmt();
-  const [docs, setDocs] = useState<{ available: boolean; note?: string; documents: { slot: string; status: string; expiresAt: string | null }[] } | null>(null);
-  useEffect(() => { api<typeof docs>('/driver/documents').then(setDocs).catch(() => {}); }, []);
   async function signOut() { await api('/auth/logout', { method: 'POST' }).catch(() => {}); window.location.href = '/driver/login'; }
-  const statusColor: Record<string, string> = { VALID: 'text-accent', EXPIRING: 'text-warn', EXPIRED: 'text-danger', UNDER_REVIEW: 'text-muted', ACTION_NEEDED: 'text-warn' };
 
   return (
     <div className="space-y-3">
@@ -989,13 +1003,8 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
         <p className="mt-1 text-xs text-muted">{t('driver.profile.vehicleNote')}</p>
       </div>
 
-      <div className="card p-4">
-        <div className="mb-1 font-medium">{t('driver.profile.documents')}</div>
-        {!docs ? <p className="text-sm text-muted">{t('common.loading')}</p> : !docs.available ? <p className="text-sm text-muted">{docs.note}</p> : docs.documents.length === 0 ? <p className="text-sm text-muted">{t('driver.profile.noDocuments')}</p> : (
-          <ul className="space-y-1 text-sm">{docs.documents.map((d) => <li key={d.slot} className="flex items-center justify-between"><span>{d.slot.replace(/_/g, ' ')}</span><span className={statusColor[d.status] ?? 'text-muted'}>{tOr(`driver.profile.docStatus.${d.status}`, d.status.replace(/_/g, ' ').toLowerCase())}{d.expiresAt ? ` · ${d.expiresAt.slice(0, 10)}` : ''}</span></li>)}</ul>
-        )}
-        {docs?.documents.some((d) => d.status === 'EXPIRING' || d.status === 'EXPIRED' || d.status === 'ACTION_NEEDED') && <p className="mt-2 text-xs text-muted">{t('driver.profile.renewNote')}</p>}
-      </div>
+      {/* Documents (2026-11-24): marker from 7 days before expiry; the driver uploads the new one himself. */}
+      <DriverDocs />
 
       <div className="card p-4">
         <div className="mb-1 font-medium">{t('driver.profile.help')}</div>

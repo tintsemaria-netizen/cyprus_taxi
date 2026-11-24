@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { StaffShell, APPS_CHANGED } from '@/components/staff/StaffShell';
+import { StaffShell, APPS_CHANGED, DOCS_CHANGED } from '@/components/staff/StaffShell';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useDialog } from '@/components/useDialog';
 import { useT } from '@/i18n/I18nProvider';
@@ -10,7 +10,7 @@ import { statusLabel } from '@/components/staff/StatusBadge';
 
 export const dynamic = 'force-dynamic';
 
-interface Doc { id: string; slot: string; decision: string; decisionNote: string | null; mime: string; scanStatus: string; sizeBytes: number }
+interface Doc { id: string; slot: string; decision: string; decisionNote: string | null; mime: string; scanStatus: string; sizeBytes: number; expiresAt: string | null; createdAt: string }
 interface Detail {
   id: string; status: string; revision: number; submittedAt: string | null; decisionReason: string | null; phone: string;
   identity: Record<string, string>; driving: Record<string, string>; vehicle: Record<string, string>;
@@ -33,7 +33,7 @@ function Detail() {
 
   async function act(path: string, body?: unknown) {
     setBusy(true); setBanner(null);
-    try { await api(`/admin/applications/${id}/${path}`, { method: 'POST', body: body ?? {} }); await load(); window.dispatchEvent(new Event(APPS_CHANGED)); }
+    try { await api(`/admin/applications/${id}/${path}`, { method: 'POST', body: body ?? {} }); await load(); window.dispatchEvent(new Event(APPS_CHANGED)); window.dispatchEvent(new Event(DOCS_CHANGED)); }
     catch (e) { if (e instanceof ApiRequestError) setBanner(e.body.message); } finally { setBusy(false); }
   }
   const EXPIRY_SLOTS = ['licence_front', 'licence_back', 'taxi_licence', 'insurance', 'roadworthiness', 'vehicle_reg', 'right_to_work', 'passport', 'id_front'];
@@ -56,7 +56,13 @@ function Detail() {
     await act(`documents/${docId}/decision`, { decision, expiresAt });
   }
 
+  // From «Проверить» (2026-11-24): scroll to that document.
+  useEffect(() => { if (d && window.location.hash.startsWith('#doc-')) document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: 'center' }); }, [d]);
   if (!d) return <div className="p-8 text-muted">{t('staff.loading')}</div>;
+  // An approved driver's renewal: a slot with an accepted document and a newer one waiting (2026-11-24).
+  const isRenewal = (doc: Doc) => doc.decision !== 'ACCEPTED' && d.documents.some((x) => x.slot === doc.slot && x.decision === 'ACCEPTED' && x.createdAt < doc.createdAt);
+  const hasRenewal = (doc: Doc) => doc.decision === 'ACCEPTED' && d.documents.some((x) => x.slot === doc.slot && x.id !== doc.id && x.createdAt > doc.createdAt);
+  const docsSorted = [...d.documents].sort((a, b) => Number(isRenewal(b)) - Number(isRenewal(a)) || a.slot.localeCompare(b.slot) || b.createdAt.localeCompare(a.createdAt));
   const kv = (o: Record<string, string>) => Object.entries(o).map(([k, v]) => <div key={k} className="flex justify-between gap-4 text-sm"><span className="text-muted">{k}</span><span className="text-end">{v || '—'}</span></div>);
 
   return (
@@ -78,9 +84,11 @@ function Detail() {
           <section className="card p-4">
             <h2 className="label mb-2">{t('staff.apps.documents')}</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {d.documents.map((doc) => (
-                <div key={doc.id} className="rounded-[12px] border border-edge p-2">
+              {docsSorted.map((doc) => (
+                <div key={doc.id} id={`doc-${doc.id}`} className={`rounded-[12px] border p-2 ${isRenewal(doc) && doc.decision === 'PENDING' ? 'row-alert border-danger' : 'border-edge'}`} data-renewal={isRenewal(doc) ? '' : undefined}>
                   <div className="text-xs font-medium">{doc.slot}</div>
+                  {isRenewal(doc) && <div className="text-[11px] font-semibold text-danger">{t('staff.docs.newLabel', { date: fmt.dateTime(doc.createdAt) })}</div>}
+                  {hasRenewal(doc) && doc.expiresAt && <div className="text-[11px] text-muted">{t('staff.docs.currentLabel', { date: fmt.date(doc.expiresAt) })}</div>}
                   {doc.mime.startsWith('image/') ? (
                     <a href={`/api/v1/admin/applications/${id}/documents/${doc.id}`} target="_blank" rel="noreferrer">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -90,6 +98,7 @@ function Detail() {
                     <a href={`/api/v1/admin/applications/${id}/documents/${doc.id}`} target="_blank" rel="noreferrer" className="mt-1 block text-xs text-accent hover:underline">{t('staff.apps.openPdf')}</a>
                   )}
                   <div className="mt-1 text-xs text-muted">{t('staff.apps.scan', { s: doc.scanStatus })}</div>
+                  {doc.scanStatus === 'UNAVAILABLE' && doc.decision !== 'ACCEPTED' && <div className="mt-0.5 text-[11px] text-warn">{t('staff.docs.noScan')}</div>}
                   <div className="mt-1 flex gap-1">
                     <button className={`flex-1 rounded px-1 py-1 text-xs ${doc.decision === 'ACCEPTED' ? 'bg-accent text-[#10191C]' : 'bg-elevated'}`} disabled={busy} onClick={() => decide(doc.id, 'ACCEPTED', doc.slot)}>{t('staff.apps.accept')}</button>
                     <button className={`flex-1 rounded px-1 py-1 text-xs ${doc.decision === 'CHANGES' ? '!bg-danger/20 text-danger' : 'bg-elevated'}`} disabled={busy} onClick={() => decide(doc.id, 'CHANGES', doc.slot)}>{t('staff.apps.changes')}</button>

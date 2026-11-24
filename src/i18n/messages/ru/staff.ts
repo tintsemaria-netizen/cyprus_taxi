@@ -506,5 +506,25 @@ const staff: Catalog<typeof en> = {
     popup: 'Новое изменение',
     newMark: 'новое',
   },
+  // Driver documents to renew / check (2026-11-24): «Водители», «Машины», the red bar on top.
+  docs: {
+    bar: "Новые документы на проверку: {n}",
+    open: "открыть",
+    slot: {
+      licence_front: "Водительское удостоверение",
+      taxi_licence: "Лицензия такси",
+      insurance: "Страховка",
+      roadworthiness: "Техосмотр",
+    },
+    uploaded: "Новый документ на проверку",
+    uploadedExpired: "Работает с непроверенным — старый истёк {date}",
+    expiring: "Истекает {date} · осталось дн.: {days}",
+    expired: "Истёк {date}, новый не загружен — не может брать заказы",
+    check: "Проверить",
+    notify: "Уведомления о документах",
+    newLabel: "Новый · загружен {date}",
+    currentLabel: "Текущий · до {date}",
+    noScan: "Антивирус на сервере не подключён — этот файл принять нельзя.",
+  },
 };
 export default staff;

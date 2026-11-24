@@ -161,6 +161,98 @@ describe('Task 015 — application lifecycle + provisioning', () => {
     expect(after.onDuty).toBe(false);
   });
 
+  // Document renewal by the driver himself (2026-11-24, operator, option «б»).
+  async function approvedDriver() {
+    const { applicantId, appId } = await completeDraft();
+    await submitApplication(applicantId);
+    await startReview(appId, 'admin');
+    await prisma.applicationDocument.updateMany({ where: { applicationId: appId }, data: { decision: 'ACCEPTED', scanStatus: 'CLEAN', expiresAt: new Date(Date.now() + 365 * 86_400_000) } });
+    const rev = (await prisma.driverApplication.findUnique({ where: { id: appId } }))!.revision;
+    expect((await approveApplication(appId, 'admin', rev)).ok).toBe(true);
+    const d = (await prisma.driver.findFirst({ where: { applicationId: appId } }))!;
+    const ins = (await prisma.applicationDocument.findFirst({ where: { applicationId: appId, slot: 'insurance' } }))!;
+    return { appId, d, ins };
+  }
+  const PNG = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c63000100000500010d0a2db40000000049454e44ae426082', 'hex');
+  const outbox = (k: string) => prisma.notificationOutbox.findMany({ where: { msg: { path: ['k'], equals: k } } });
+
+  it('renewal: pushes at 7 and 1 day only; expired → blocked; upload → works again on the unchecked one; accept → old one gone', async () => {
+    const { runDocExpiry, docAttention } = await import('@/server/doc-renewal');
+    const { uploadRenewal } = await import('@/server/doc-renewal');
+    await prisma.notificationOutbox.deleteMany({});
+    const { appId, d, ins } = await approvedDriver();
+    const admin = await prisma.staffUser.findFirst({ where: { role: 'ADMIN', active: true } });
+
+    // 10 days left: nothing. 6 days: the «7» push, once. 20 hours: the «1» push.
+    const exp = new Date(Date.now() + 10 * 86_400_000);
+    await prisma.applicationDocument.update({ where: { id: ins.id }, data: { expiresAt: exp } });
+    await runDocExpiry(new Date());
+    expect(await outbox('drv.docExpiring')).toHaveLength(0);
+    const at = (daysBefore: number) => new Date(exp.getTime() - daysBefore * 86_400_000);
+    await runDocExpiry(at(6)); await runDocExpiry(at(5));
+    expect(await outbox('drv.docExpiring')).toHaveLength(1);
+    await runDocExpiry(at(0.8));
+    expect(await outbox('drv.docExpiring')).toHaveLength(2);
+    // The admin sees the car in «Машины» (insurance), and gets the 7-day push once.
+    const soon = (await docAttention(at(5))).filter((a) => a.driverId === d.id);
+    expect(soon.map((a) => [a.slot, a.kind])).toEqual([['insurance', 'EXPIRING']]);
+    if (admin) expect((await outbox('staff.docExpiring')).length).toBeGreaterThanOrEqual(1);
+
+    // Expired, nothing uploaded → blocked.
+    await prisma.applicationDocument.update({ where: { id: ins.id }, data: { expiresAt: new Date(Date.now() - 3_600_000) } });
+    await runDocExpiry();
+    expect((await prisma.driver.findUnique({ where: { id: d.id } }))!.eligibility).toBe('DOCUMENTS_EXPIRED');
+    expect(await outbox('drv.docExpired')).toHaveLength(1);
+
+    // He uploads the new insurance → works again at once (option «б»), the old accepted row stays.
+    const up = await uploadRenewal(d.id, 'insurance', PNG);
+    expect(up.ok).toBe(true);
+    expect((await prisma.driver.findUnique({ where: { id: d.id } }))!.eligibility).toBe('APPROVED');
+    expect(await prisma.applicationDocument.count({ where: { applicationId: appId, slot: 'insurance' } })).toBe(2);
+    const waiting = (await docAttention()).find((a) => a.driverId === d.id)!;
+    expect(waiting.kind).toBe('UPLOADED');
+    expect(waiting.oldExpired).toBe(true);
+    if (admin) expect(await outbox('staff.docUploaded')).not.toHaveLength(0);
+    // Still working later, no more driver pushes; the admin gets the urgent reminder twice a day.
+    const later = new Date(Date.now() + 13 * 3_600_000);
+    await runDocExpiry(later); await runDocExpiry(new Date(later.getTime() + 60_000));
+    expect((await prisma.driver.findUnique({ where: { id: d.id } }))!.eligibility).toBe('APPROVED');
+    expect(await outbox('drv.docExpired')).toHaveLength(1);
+    if (admin) {
+      const n = (await outbox('staff.docUrgent')).length;
+      expect(n).toBeGreaterThanOrEqual(1);
+      await runDocExpiry(new Date(later.getTime() + 13 * 3_600_000));
+      expect((await outbox('staff.docUrgent')).length).toBeGreaterThan(n);
+    }
+
+    // The admin can accept only a clean scan with a new date; then the old one goes.
+    expect((await setDocumentDecision(appId, up.ok ? up.id : '', 'ACCEPTED', undefined, 'admin', new Date(Date.now() + 365 * 86_400_000).toISOString())).ok).toBe(up.ok && up.scanStatus === 'CLEAN');
+    await prisma.applicationDocument.update({ where: { id: up.ok ? up.id : '' }, data: { scanStatus: 'CLEAN' } });
+    expect((await setDocumentDecision(appId, up.ok ? up.id : '', 'ACCEPTED', undefined, 'admin', new Date(Date.now() + 365 * 86_400_000).toISOString())).ok).toBe(true);
+    expect(await prisma.applicationDocument.count({ where: { applicationId: appId, slot: 'insurance' } })).toBe(1);
+    expect((await docAttention()).filter((a) => a.driverId === d.id)).toHaveLength(0);
+    expect((await prisma.driver.findUnique({ where: { id: d.id } }))!.eligibility).toBe('APPROVED');
+  });
+
+  it('renewal sent back by the admin: the driver is told and blocked again if the old one expired', async () => {
+    const { uploadRenewal } = await import('@/server/doc-renewal');
+    await prisma.notificationOutbox.deleteMany({});
+    const { appId, d, ins } = await approvedDriver();
+    await prisma.applicationDocument.update({ where: { id: ins.id }, data: { expiresAt: new Date(Date.now() - 86_400_000) } });
+    await enforceDocumentExpiries();
+    expect((await prisma.driver.findUnique({ where: { id: d.id } }))!.eligibility).toBe('DOCUMENTS_EXPIRED');
+    const up = await uploadRenewal(d.id, 'insurance', PNG);
+    expect((await prisma.driver.findUnique({ where: { id: d.id } }))!.eligibility).toBe('APPROVED');
+    expect((await setDocumentDecision(appId, up.ok ? up.id : '', 'CHANGES', 'Blurry', 'admin')).ok).toBe(true);
+    expect((await prisma.driver.findUnique({ where: { id: d.id } }))!.eligibility).toBe('DOCUMENTS_EXPIRED');
+    expect(await outbox('drv.docReturned')).toHaveLength(1);
+    // A second upload replaces the returned one (the accepted one stays).
+    const up2 = await uploadRenewal(d.id, 'insurance', PNG);
+    expect(up2.ok).toBe(true);
+    expect(await prisma.applicationDocument.count({ where: { applicationId: appId, slot: 'insurance' } })).toBe(2);
+    expect((await uploadRenewal(d.id, 'selfie', PNG)).ok).toBe(false); // only the four expiring documents
+  });
+
   it('request changes reopens editing with a new revision', async () => {
     const { applicantId, appId } = await completeDraft();
     await submitApplication(applicantId);

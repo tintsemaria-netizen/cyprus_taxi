@@ -42,6 +42,10 @@ describe('notification texts on the phone', () => {
     expect(msgText({ k: 'driver.docExpiring', p: { days: 7 } }, 'el')?.body).toContain('7 ημ');
     expect(msgText({ k: 'driver.docExpired', p: {} }, 'ru')?.title).toBe('Документы просрочены');
     expect(msgText({ k: 'pre.active', p: { timeT: '2026-11-24T11:00:00.000Z', place: 'LCA' } }, 'ru')?.body).toBe('Подача в 13:00: LCA. Выезжайте к месту подачи вовремя.');
+    // 2026-11-24: document renewal — the document's name in the reader's language, capitalised at the start
+    expect(msgText({ k: 'drv.docExpiring', p: { slot: 'insurance', days: 7 } }, 'ru')?.body).toBe('Страховка: срок истекает через 7 дн. Загрузите новый: меню → Документы.');
+    expect(msgText({ k: 'drv.docExpired', p: { slot: 'taxi_licence' } }, 'en')?.body).toContain('Taxi licence has expired');
+    expect(msgText({ k: 'staff.docUrgent', p: { who: 'Andreas · ABC-123', slot: 'insurance', date: '01.12' } }, 'ru')?.body).toBe('Andreas · ABC-123 работает с непроверенным документом (страховка) — старый истёк 01.12');
     expect(msgText({ k: 'chat.fromDriver', p: { text: 'Я на месте {x}' } }, 'el')).toEqual({ title: 'Μήνυμα από τον οδηγό', body: 'Я на месте {x}' });
   });
 });
