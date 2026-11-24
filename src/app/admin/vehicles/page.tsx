@@ -20,7 +20,7 @@ function Vehicles() {
   const [msg, setMsg] = useState<string | null>(null);
   const [form, setForm] = useState({ plate: '', make: '', model: '', color: '', vClass: 'COMFORT', seats: 4 });
   const [busy, setBusy] = useState(false);
-  // Insurance / roadworthiness to renew or check (2026-11-24): the car's row blinks red, on top.
+  // Taxi licence / insurance / roadworthiness to renew or check (2026-11-24): the car's row blinks red, on top.
   const docs = useDocAttention('vehicles');
 
   const load = useCallback(async () => {

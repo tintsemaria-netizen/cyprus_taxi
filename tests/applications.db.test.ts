@@ -196,6 +196,7 @@ describe('Task 015 — application lifecycle + provisioning', () => {
     // The admin sees the car in «Машины» (insurance), and gets the 7-day push once.
     const soon = (await docAttention(at(5))).filter((a) => a.driverId === d.id);
     expect(soon.map((a) => [a.slot, a.kind])).toEqual([['insurance', 'EXPIRING']]);
+    expect(soon[0].section).toBe(soon[0].vehicleId ? 'vehicles' : 'drivers');
     if (admin) expect((await outbox('staff.docExpiring')).length).toBeGreaterThanOrEqual(1);
 
     // Expired, nothing uploaded → blocked.

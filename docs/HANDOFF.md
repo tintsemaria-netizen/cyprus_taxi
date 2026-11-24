@@ -1,5 +1,21 @@
 # Session handoff
 
+## 2026-11-24 ~14:55 — driver document renewal (deployed)
+- src/server/doc-renewal.ts: per document type newest wins (`slotStates`); driver marker from 7 days, pushes at 7
+  and 1 day (drv.docExpiring / drv.docExpired / drv.docReturned, 8 languages, {slot} named in sw SLOT_NAME).
+- The driver uploads licence / taxi licence / insurance / roadworthiness himself: POST /api/v1/driver/documents?slot=
+  → PENDING row, the accepted one stays. Option «б»: blocked (DOCUMENTS_EXPIRED) only when the accepted one expired
+  AND nothing waits; upload restores APPROVED at once. Accept (needs CLEAN scan + date) deletes the old row; «Исправить»
+  pushes the driver and re-blocks if expired.
+- Admin: driving licence → «Водители»; taxi licence, insurance, roadworthiness → «Машины» (operator 14:48: taxi licence
+  belongs to the car). Nav counters, blinking rows on top (.row-alert), red bar «Новые документы на проверку» on
+  every admin page, GET /admin/doc-attention, counts via /admin/alerts `docs`.
+- Staff push: POST /api/v1/staff/push (STAFF:<id>), «Включить уведомления» in the admin header; pushes on upload,
+  reminders every 12 h (urgent once the old one expired), 7/1-day pushes when nothing uploaded (staff.doc* keys).
+- Limitation: no ClamAV on prod → scan UNAVAILABLE → the admin cannot accept renewals; the driver keeps working.
+  ClamAV is due before store submission (docs/EXTERNAL-ENABLEMENT.md).
+- Offered, not built: the same highlight for a fleet owner's drivers, documents on the admin per-driver report.
+
 ## 2026-11-24 05:55 — operator decision: antivirus before store submission
 - ClamAV must be installed on the live server BEFORE sending the apps to App Store / Google Play
   (recorded in docs/EXTERNAL-ENABLEMENT.md, «Before App Store / Google Play submission»). Not before that

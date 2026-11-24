@@ -10,13 +10,14 @@ import { EXPIRING_SLOTS } from '@/server/applications';
 //  - option «б»: once he has uploaded, he keeps working — even past the old date — while the admin has
 //    not looked yet. He is blocked only when the accepted document has expired AND nothing new waits;
 //  - the admin is told: a push, a red bar on every admin page, red counters on «Водители» (licence,
-//    taxi licence) and «Машины» (insurance, roadworthiness) with the row blinking on top, and a reminder
+//    licence) and «Машины» (taxi licence, insurance, roadworthiness) with the row blinking on top, and a reminder
 //    twice a day — urgent once the old document has expired.
 
 export const WARN_DAYS = 7;
 const DAY = 86_400_000;
-/** Car documents go to «Машины», the driver's own to «Водители». */
-export const CAR_SLOTS = new Set(['insurance', 'roadworthiness']);
+/** Car documents go to «Машины» (taxi licence too — it belongs to the car, operator 2026-11-24); the
+ *  driving licence to «Водители». Without a bound car everything shows in «Водители». */
+export const CAR_SLOTS = new Set(['insurance', 'roadworthiness', 'taxi_licence']);
 export const RENEWABLE_SLOTS = [...EXPIRING_SLOTS];
 
 export interface SlotState {

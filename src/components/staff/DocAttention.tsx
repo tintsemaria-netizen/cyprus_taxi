@@ -6,7 +6,7 @@ import { useT } from '@/i18n/I18nProvider';
 import type { MsgKey } from '@/i18n/I18nProvider';
 import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
-// Driver documents in «Водители» / «Машины» (2026-11-24, operator): the row blinks red and moves to the
+// Driver documents in «Водители» (driving licence) / «Машины» (taxi licence, insurance, roadworthiness) (2026-11-24, operator): the row blinks red and moves to the
 // top while a new document waits for a check, or one expires within 7 days / has expired with nothing
 // uploaded. One shared piece for both lists.
 

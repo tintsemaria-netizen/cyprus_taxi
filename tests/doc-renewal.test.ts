@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { slotStates } from '@/server/doc-renewal';
+import { slotStates, CAR_SLOTS } from '@/server/doc-renewal';
 
 // Per document type, newest wins; an upload waiting for the admin keeps the driver working (2026-11-24).
 const now = new Date('2026-12-01T10:00:00Z');
@@ -25,5 +25,8 @@ describe('document slot states', () => {
     expect(slotStates([row('a', 'selfie', 'ACCEPTED', 300, -1), row('b', 'taxi_licence', 'PENDING', 1, null)], now)).toEqual([]);
     const s = slotStates([row('old', 'licence_front', 'ACCEPTED', 900, -400), row('new', 'licence_front', 'ACCEPTED', 300, 200)], now)[0];
     expect(s).toMatchObject({ accepted: { id: 'new' }, blocking: false, renewal: null });
+  });
+  it('taxi licence, insurance, roadworthiness belong to the car; the driving licence to the driver', () => {
+    expect([...CAR_SLOTS].sort()).toEqual(['insurance', 'roadworthiness', 'taxi_licence']);
   });
 });

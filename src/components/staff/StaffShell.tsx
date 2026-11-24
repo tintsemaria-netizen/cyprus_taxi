@@ -139,7 +139,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
           one('/dispatch', t('staff.nav.dispatch')),
           { key: 'drivers', label: t('staff.nav.groupDrivers'), alert: pendingApps + drvDocs + carDocs > 0, tabs: [
             { href: '/admin/applications', label: `${t('staff.nav.applications')}${pendingApps ? ` (${pendingApps})` : ''}`, alert: pendingApps > 0 },
-            // Documents (2026-11-24): licence / taxi licence → «Водители», insurance / roadworthiness → «Машины».
+            // Documents (2026-11-24): driving licence → «Водители»; taxi licence, insurance, roadworthiness → «Машины».
             { href: '/admin/drivers', label: `${t('staff.nav.drivers')}${drvDocs ? ` (${drvDocs})` : ''}`, alert: drvDocs > 0 },
             { href: '/admin/vehicles', label: `${t('staff.nav.vehicles')}${carDocs ? ` (${carDocs})` : ''}`, alert: carDocs > 0 },
             { href: '/admin/fleets', label: t('staff.nav.fleets') },

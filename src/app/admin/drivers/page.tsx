@@ -28,7 +28,7 @@ function Drivers() {
   // Today + this week per driver (2026-11-20): the shared report tool (also the fleet owner's list).
   const figs = useDriverFigures(() => api<{ figures: DriverFigures[] }>('/admin/drivers/figures').then((r) => r.figures));
   const [fleets, setFleets] = useState<FleetRow[]>([]);
-  // Licence / taxi licence to renew or check (2026-11-24): the row blinks red, on top.
+  // Driving licence to renew or check (2026-11-24): the row blinks red, on top.
   const docs = useDocAttention('drivers');
   useEffect(() => { api<{ fleets: FleetRow[] }>('/admin/fleets').then((r) => setFleets(r.fleets)).catch(() => {}); }, []);
 
