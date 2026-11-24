@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-24 ~16:00 — documents for the fleet owner + on the driver report (deployed)
+- «Мой автопарк»: GET /api/v1/fleet/doc-attention (docAttention(now, fleetId): his drivers + anyone driving his cars);
+  red rows on top, read-only («ждёт проверки оператором», no «Проверить»). Car documents of a car outside his fleet
+  show on the driver row.
+- DriverReportScreen (admin /admin/drivers/[id] and /fleet/drivers/[id]): block «Документы» with dates
+  (driverHead → documents from driverDocuments). Dot only when nothing new waits.
+
 ## 2026-11-24 ~14:55 — driver document renewal (deployed)
 - src/server/doc-renewal.ts: per document type newest wins (`slotStates`); driver marker from 7 days, pushes at 7
   and 1 day (drv.docExpiring / drv.docExpired / drv.docReturned, 8 languages, {slot} named in sw SLOT_NAME).
