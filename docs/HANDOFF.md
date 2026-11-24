@@ -2714,7 +2714,7 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   old SVG). InstallPrompt shows the driver icon in the driver app. Phones keep the old shortcut icon until it is removed
   from the home screen and added again (iOS) / the PWA updates (Android, can take a day).
 
-## 2026-11-24 — Zone rings never twist (branch `zone-ring`, NOT deployed — shown to operator)
+## 2026-11-24 — Zone rings never twist — DEPLOYED (operator «Заливай»)
 - Operator: a zone drawn by clicking turned into a figure-8. `src/lib/ring.ts`: `addToRing` puts a new corner into the edge it
   lengthens least; `untangle` (2-opt) removes any crossing. ZoneEditorMap (Google + MapLibre): clicks use addToRing, a dragged
   corner / Google mid-edge insert goes through untangle. Fixed prices + pre-booking minimum: an old twisted zone opens untangled.
