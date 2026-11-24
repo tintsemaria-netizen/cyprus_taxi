@@ -116,5 +116,8 @@ export async function driverHead(driverId: string) {
   const d = await prisma.driver.findUnique({ where: { id: driverId }, include: { user: true, bindings: { where: { endedAt: null }, include: { vehicle: true } } } });
   if (!d) return null;
   const v = d.bindings[0]?.vehicle;
-  return { id: d.id, login: d.user.login, publicName: d.publicName, phone: d.phone, active: d.active && d.user.active, onDuty: d.onDuty, fleetId: d.fleetId, vehicle: v ? { plate: v.plate, label: `${v.make} ${v.model}` } : null };
+  // His documents with dates (2026-11-24): the same list the driver sees, for the admin's and the fleet owner's report.
+  const { driverDocuments } = await import('@/server/driver/documents');
+  const docs = await driverDocuments({ applicationId: d.applicationId });
+  return { id: d.id, login: d.user.login, publicName: d.publicName, phone: d.phone, active: d.active && d.user.active, onDuty: d.onDuty, fleetId: d.fleetId, vehicle: v ? { plate: v.plate, label: `${v.make} ${v.model}` } : null, documents: docs.available ? docs.documents : null };
 }
