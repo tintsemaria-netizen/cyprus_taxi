@@ -559,6 +559,7 @@ export default function BookingApp() {
     // (operator 2026-11-24 20:08); SEVERAL — zoom out so the whole rounded territory stays on screen around the
     // chosen point, so switching points does not lose it.
     const tz = pickup ? territoryAt(pickup) : null;
+    if (tz && tz.on >= 0) setRecenterTick((n) => n + 1); // glide: the logo «arrives» into the point's silhouette
     setCamFocus({ lat: p.lat, lng: p.lng }); setCamZoom(!tz || tz.on < 0 ? HOME_ZOOM : tz.t.points.length === 1 ? SPOT_ZOOM : Math.min(HOME_ZOOM, fitZoom(p, tz.t.polygon)));
   }, [pickup?.lat, pickup?.lng, myLoc?.lat, myLoc?.lng, noGoReady]); // eslint-disable-line react-hooks/exhaustive-deps
   const [pinLift, setPinLift] = useState(false);
@@ -611,6 +612,17 @@ export default function BookingApp() {
     setCamFocus({ lat: p.lat, lng: p.lng }); setCamZoom(p.zoom);
     void pickAt(p.lat, p.lng, true);
   }
+  // The logo must stay on the pickup (2026-11-24, operator: «закрыл приложение, вернулся — логотип ушёл наверх»):
+  // after the app comes back, and when the sheet opens/closes (the logo moves to the middle of the visible map),
+  // the camera re-centres on the pickup once the layout has settled.
+  const recenterSoon = useRef<number | null>(null);
+  const recenterOnPickup = () => {
+    if (recenterSoon.current) window.clearTimeout(recenterSoon.current);
+    recenterSoon.current = window.setTimeout(() => { if (centerModeRef.current && pickupRef.current) setRecenterTick((n) => n + 1); }, 350);
+  };
+  useRefreshOnReturn(recenterOnPickup, 0);
+  const padSig = `${fitPadding.top},${fitPadding.bottom},${fitPadding.left},${fitPadding.right}`;
+  useEffect(() => { recenterOnPickup(); }, [padSig]); // eslint-disable-line react-hooks/exhaustive-deps
   // Centre pin (2026-11-23, operator): on the home screen (no destination yet) the IL-Y logo stays in the
   // middle of the map and the map moves under it; where the finger lets go is the pickup.
   const centerMode = step === 'form' && !dropoff && !picker && !!(pickup || myLoc);
@@ -1229,7 +1241,7 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-page" />
           ) : (
-            <AutoMapView markers={mapMarkers} areas={mapAreas} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : camFocus} focusZoom={pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
+            <AutoMapView markers={mapMarkers} areas={mapAreas} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : camFocus} focusZoom={pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} glideMs={terr && terr.on >= 0 ? 1600 : undefined} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
           )}
           {terr && step === 'form' && (
             <div className="absolute inset-x-3 top-3 z-[6] mx-auto max-w-sm rounded-[14px] border border-[#4C9AFF] bg-elevated/95 px-3 py-2 text-[13px] leading-snug text-ink shadow-lg" data-testid="pickup-territory">

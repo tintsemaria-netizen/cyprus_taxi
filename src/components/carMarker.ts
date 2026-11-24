@@ -296,18 +296,23 @@ export function numberedStopEl(opts: { num: number; kind: 'pickup' | 'dropoff' |
   return el;
 }
 
-/** A pickup point of a territory (2026-11-24): a blue dot with its name. */
+/** A pickup point of a territory (2026-11-24, operator): the SILHOUETTE of the IL-Y logo pin, the same size and
+ *  tip as the pickup logo, so the logo «arrives» and sits right in it. Name under the tip (chosen point only).
+ *  Anchor: bottom centre = the point (the label is absolute, outside the element's box). */
+export const BRAND_PIN_SILHOUETTE_SVG = '<svg viewBox="0 0 500 620" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="rgba(76,154,255,0.22)" stroke="#4C9AFF" stroke-width="26" stroke-dasharray="58 34" stroke-linejoin="round" d="M250 16C120 16 16 118 16 246C16 310 43 360 86 414L245 600Q250 607 255 600L414 414C457 360 484 310 484 246C484 118 380 16 250 16Z"/><path fill="rgba(76,154,255,0.55)" d="M82 126Q78 123 74 130L48 187Q44 196 51 202L169 300Q193 321 193 355V498L246 556Q250 561 254 556L307 498V355Q307 321 331 300L449 202Q456 196 452 187L426 130Q422 123 418 126L280 238Q258 256 258 280V345H242V280Q242 256 220 238Z"/></svg>';
 export function spotEl(opts: { name: string; active?: boolean }): HTMLElement {
+  // No `position` on the root: MapLibre positions its marker element absolutely (an inline `relative` broke that).
   const el = document.createElement('div');
-  el.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;pointer-events:none';
-  const dot = document.createElement('div');
-  dot.style.cssText = `width:${opts.active ? 16 : 12}px;height:${opts.active ? 16 : 12}px;border-radius:50%;background:#4C9AFF;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5)`;
-  el.appendChild(dot);
+  el.style.cssText = 'width:32px;height:40px;pointer-events:none';
+  const box = document.createElement('div');
+  box.style.cssText = 'position:relative;width:32px;height:40px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))';
+  box.innerHTML = BRAND_PIN_SILHOUETTE_SVG;
+  el.appendChild(box);
   if (opts.name) {
     const tag = document.createElement('div');
     tag.textContent = opts.name;
-    tag.style.cssText = `background:${opts.active ? '#4C9AFF' : 'rgba(16,25,28,.9)'};color:${opts.active ? '#0b0f10' : '#fff'};font:600 11.5px Inter,Arial,sans-serif;padding:2px 7px;border-radius:9px;white-space:nowrap;border:1px solid #4C9AFF`;
-    el.appendChild(tag);
+    tag.style.cssText = `position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);background:${opts.active ? '#4C9AFF' : 'rgba(16,25,28,.9)'};color:${opts.active ? '#0b0f10' : '#fff'};font:600 11.5px Inter,Arial,sans-serif;padding:2px 7px;border-radius:9px;white-space:nowrap;border:1px solid #4C9AFF`;
+    box.appendChild(tag);
   }
   return el;
 }
