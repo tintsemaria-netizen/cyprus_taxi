@@ -2806,7 +2806,7 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
-## 2026-11-24 17:10 — «Точки подачи»: несколько точек + закруглённая территория (branch `pickup-points`, NOT deployed)
+## 2026-11-24 17:10 — «Точки подачи»: несколько точек + закруглённая территория (DEPLOYED 4924a3a, 17:20)
 
 - NoGoZone kind POINT now has `points` JSONB `[{lat,lng,name}]` (1–20) instead of pointLat/pointLng. Migration
   20261124170000_pickup_points was REWRITTEN (never deployed): adds `kind` + `points`. Local DBs that had the old
@@ -2819,7 +2819,9 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Admin /admin/no-go «Точки подачи»: each tap adds a point; names + ✕ in the side list; rounded preview.
 - Tests: tests/smooth-ring.test.ts, updated no-go.db.test.ts. Full suite 456 passed / 1 skipped.
 - Not verified: Google map (live) polygon/spot rendering — only MapLibre locally.
-- Next: operator says «заливай» → merge to main per the usual routine.
+- Own admin block /admin/pickup-points (nav «Цены → Точки подачи»); /admin/no-go is red zones only. Shared editor
+  src/components/staff/AreaZones.tsx. Live check: /api/v1/no-go returns `territories` (empty — none drawn yet),
+  /admin/pickup-points 200, health ready 200. Not checked live: drawing in admin and Google-map rendering.
 
 ## 2026-11-24 16:10 — «Одна точка подачи» (branch `pickup-points`, NOT deployed — shown to operator)
 - Same tab «Запретная зона», second section (blue): a territory + ONE pickup point. NoGoZone.kind NOGO|POINT, pointLat/Lng
