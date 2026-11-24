@@ -2829,6 +2829,17 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-24 22:05 — pickup point landing: instant, 50 % zoom-in, territories always shown (DEPLOYED 32db4bf)
+
+- BookingApp `slidePin(from, to, zoom)`: one state batch — camFocus = point, camZoom = release zoom + log2(1.5)
+  (chips keep zoom), recenterTick glide 0.7 s (`glideMs`), `landing` true for the glide: the centre logo overlay
+  stays still while the map brings the point under it, then the pickup map marker replaces it (pixel-identical,
+  measured locally). After landing `holdCamera` (new map prop) — zooming is where the fingers are.
+- All territories + their silhouettes always on the passenger map (`allTerritories`), outline 4.5 px.
+- spotEl label: symmetric overflow (left/right -90px) — Google mis-placed the silhouette with an asymmetric label.
+- MapView keeps markers whose look did not change (only setLngLat) — no blinking.
+- Live: chunk has the new label, health ready 200. Operator re-checks on the iPhone.
+
 ## 2026-11-24 21:30 — logo as map marker on a pickup point; zoom where the fingers are (DEPLOYED 1207ba4)
 
 - BookingApp: `onSpot` (centre mode + pickup on a territory point). After the 1.6 s glide (`arriving`) the centre
