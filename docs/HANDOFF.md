@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-24 17:48 — operator decision: no document upload for old (manually added) drivers
+- Not needed: this is a test version; new drivers register through the app and get the document checks.
+- Checked the old backlog: co-rider stops on the driver map and RTL (he/ar) are already on main; branches
+  `earnings-chart-fix`, `min-snapshot`, `launch-fixes` are already on main in another form; only `share-map(-2)`
+  (deferred by the operator) is unmerged. Package updates need network (blocked in this session).
+
 ## 2026-11-24 ~16:00 — documents for the fleet owner + on the driver report (deployed)
 - «Мой автопарк»: GET /api/v1/fleet/doc-attention (docAttention(now, fleetId): his drivers + anyone driving his cars);
   red rows on top, read-only («ждёт проверки оператором», no «Проверить»). Car documents of a car outside his fleet
@@ -37,7 +43,7 @@
 - Map on the share board: rebased onto the new board (branch `share-map-2`), operator: later.
 - Operator 2026-11-24 reach rules (same branch): PREASSIGN_PROTECT_MINUTES default 60. (1) Taking a pre-booking that starts within the hour (and > convert+5 min) needs a live fix and road time with traffic (Google departing now; else straight line ×1.3 at 40 km/h; on a trip: via its pickup if not picked up yet, a stop not yet made and its drop-off — the time he drops that passenger off) + 5 min ≤ time left → else TOO_FAR_FROM_PICKUP / NO_GPS. Rides further ahead: no location check. (2) `checkReach` in runPreassignments: every 2 min from 60 to 30 min before; cannot make it → preassignment RELEASED «cannot make it in time», driver push `drv.preTooLate`; ride back in the pre-bookings; usual automatic search later. No live fix → nothing decided there. (3) Offers (findBestCandidate) and free orders: a driver holding a pre-booking within the hour gets only an order whose drop-off is closer to that pickup than he is and that still lets him arrive ≥ 5 min early (`fitsBeforePrebook`, preassign-core.ts). Passenger not warned (operator: an hour of reserve).
 
-## 2026-11-24 — one completed-ride amount with waiting (branch `ride-total`, LOCAL, not pushed)
+## 2026-11-24 — one completed-ride amount with waiting (deployed, e47b259)
 - Operator: the price is fixed when the driver presses «Завершить» (he is shown the sum to collect); it then goes on unchanged. Waiting counts everywhere.
 - `src/lib/fare-total.ts` `completedTotalCents`: fixed → price + waiting; meter → app fare + waiting; a driver's later correction of a meter ride replaces it. Used by: receipt + e-mail, ride history, `resolveFinal` (driver earnings, today card, analytics, trip list, admin per-driver, fleet, bookkeeping `driversTotal`), admin analytics (ClickHouse fare.recorded: final or estimate + waiting).
 - Meter rides are no longer «pending» until the driver types a meter amount. Commission: 0 % (operator).
