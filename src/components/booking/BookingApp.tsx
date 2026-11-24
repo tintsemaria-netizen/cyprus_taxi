@@ -54,6 +54,18 @@ function withSlot(template: string, slot: string, node: React.ReactNode): React.
 
 const PEEK_PX = 170;
 
+/** Zoom at which a ring is fully visible around point c (the pin stays in the middle): the map's visible part
+ *  above the bottom sheet is about 60 % of the screen height. 512-px tiles (MapLibre; the Google view converts). */
+function fitZoom(c: { lat: number; lng: number }, ring: [number, number][]): number {
+  if (typeof window === 'undefined' || !ring.length) return 15;
+  const k = Math.cos((c.lat * Math.PI) / 180);
+  let dx = 1, dy = 1; // metres from the pin to the farthest edge
+  for (const [la, ln] of ring) { dx = Math.max(dx, Math.abs(ln - c.lng) * 111320 * k); dy = Math.max(dy, Math.abs(la - c.lat) * 110540); }
+  const halfW = window.innerWidth / 2 - 28, halfH = window.innerHeight * 0.3 - 30;
+  const mpp = Math.max(dx / halfW, dy / halfH);
+  return Math.log2((78271.5 * k) / mpp);
+}
+
 export default function BookingApp() {
   const kbBox = useKeyboardViewport(); // keep the header below the status bar while typing (iOS)
   const router = useRouter();
@@ -532,6 +544,8 @@ export default function BookingApp() {
   // Where the map camera centres before a route is shown: the pickup (or the detected position), at
   // street zoom. A pickup made by moving the map keeps the zoom the passenger chose, so a later
   // re-centre (the sheet opening) stays put instead of jumping back or zooming.
+  const [noGoReady, setNoGoReady] = useState(0);
+  useEffect(() => { void loadNoGo().then(() => setNoGoReady((n) => n + 1)); }, []);
   const HOME_ZOOM = 15.49; // 2026-11-17: 30 % further out than 16 (16 + log2 0.7)
   const dragPick = useRef<{ lat: number; lng: number } | null>(null);
   const [camFocus, setCamFocus] = useState<{ lat: number; lng: number } | null>(null);
@@ -540,8 +554,11 @@ export default function BookingApp() {
     const p = pickup ?? myLoc;
     if (!p) return;
     if (pickup && dragPick.current && dragPick.current.lat === pickup.lat && dragPick.current.lng === pickup.lng) return;
-    setCamFocus({ lat: p.lat, lng: p.lng }); setCamZoom(HOME_ZOOM);
-  }, [pickup?.lat, pickup?.lng, myLoc?.lat, myLoc?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+    // On a pickup point of a territory (airport, port …) the camera zooms out so the whole rounded territory
+    // stays on screen around the chosen point (2026-11-24, operator) — switching points does not lose it.
+    const tz = pickup ? territoryAt(pickup) : null;
+    setCamFocus({ lat: p.lat, lng: p.lng }); setCamZoom(tz && tz.on >= 0 ? Math.min(HOME_ZOOM, fitZoom(p, tz.t.polygon)) : HOME_ZOOM);
+  }, [pickup?.lat, pickup?.lng, myLoc?.lat, myLoc?.lng, noGoReady]); // eslint-disable-line react-hooks/exhaustive-deps
   const [pinLift, setPinLift] = useState(false);
   const pickSeq = useRef(0);
   async function pickAt(lat: number, lng: number, fromDrag: boolean) {
@@ -557,8 +574,6 @@ export default function BookingApp() {
   // The pin let go in the sea / abroad (2026-11-24, operator): no pickup there — the logo turns red while
   // the map glides back to the last pickup, then lime again. No text (operator: «убери надпись»).
   const [offIsland, setOffIsland] = useState(false);
-  const [noGoReady, setNoGoReady] = useState(0);
-  useEffect(() => { void loadNoGo().then(() => setNoGoReady((n) => n + 1)); }, []);
   // Pickup territories (2026-11-24, operator: airports, ports …): a pickup inside goes to the nearest of the
   // territory's points; the passenger may pick another one. The rounded territory and its points are on the map.
   const terr = useMemo(() => (pickup ? territoryAt(pickup) : null), [pickup?.lat, pickup?.lng, noGoReady]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -607,7 +622,8 @@ export default function BookingApp() {
   }, [pickup, dropoff, stop, hasStop, centerMode]);
   const mapMarkers = useMemo<MapMarker[]>(() => (!terr ? markers : [
     ...markers,
-    ...terr.t.points.map((sp, i) => ({ id: `spot-${i}`, lat: sp.lat, lng: sp.lng, kind: 'spot' as const, label: sp.name || terr.t.name, active: terr.on === i, noFit: true })),
+    ...terr.t.points.map((sp, i) => ({ id: `spot-${i}`, lat: sp.lat, lng: sp.lng, kind: 'spot' as const, label: terr.on === i ? sp.name || terr.t.name : '', active: terr.on === i, // names are on the chips; on the map only the chosen one, so nothing overlaps
+      noFit: true })),
   ]), [markers, terr]);
   const mapAreas = useMemo(() => (terr ? [{ id: `terr-${terr.t.name}`, polygon: terr.t.polygon, color: '#4C9AFF' }] : []), [terr]);
   const centerModeRef = useRef(centerMode); centerModeRef.current = centerMode;
