@@ -2850,6 +2850,14 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-25 01:10 — flaky tests fixed (tests only)
+
+- Cause: tests share one DB and run in a cache-based order. cars.db.test left ~570 PENDING pushes (tag 'cars') →
+  superadmin counted the owner's pushes (expected 0) and outbox drains (oldest 50 first) skipped their own rows.
+- Fix: cars cleanup deletes tag 'cars' outbox rows; outbox test drains until nothing is claimed; superadmin
+  compares the owner's push count before/after. Full suite 3× in a row: 474 passed.
+- Seen once: the local Postgres stopped mid-run (environment, not code) — restart with the usual pg_ctl command.
+
 ## 2026-11-25 00:35 — only the selected kind of point is draggable (DEPLOYED 6be3149)
 
 - AreaZones: draggable = mode === 'pick' / 'drop'; movePoint ignores the other kind. Live admin chunk has
