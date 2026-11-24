@@ -3,12 +3,13 @@
 // Map editor for fixed-fare zones (2026-11-17). Tap the map to add a corner, drag a corner to
 // move it. Other zones are drawn faded for reference. Google Maps when a browser key is set
 // (editable polygon with draggable corners and mid-points), MapLibre otherwise.
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { loadMaplibre } from '@/lib/maplibre';
 import { googleEnabled, loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { BRAND_PIN_SVG, BRAND_PIN_SVG_CHECKER } from '@/components/carMarker';
+import { useTwoFingerCamera } from '@/components/useTwoFingerCamera';
 import { publicMapConfig } from '@/lib/config';
 import { currentTheme } from '@/lib/theme';
 // New corners go where the ring stays one loop; crossings are untangled (2026-11-24, operator).
@@ -69,6 +70,10 @@ function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange
   const ref = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const st = useRef<{ g: any; map: any; edit: any; refs: any[]; airport: any; labels: any[] } | null>(null);
+  // Two fingers turn the map 360° and zoom at the same time, like on the passenger and driver maps (2026-11-25).
+  const gmapRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [gReady, setGReady] = useState(false);
+  useTwoFingerCamera(ref, gmapRef, gReady);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const onPickRef = useRef(onPick);
@@ -83,7 +88,9 @@ function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange
       const map = new g.Map(ref.current, {
         center, zoom: 12, mapId: MAP_ID || undefined, colorScheme: 'DARK', disableDefaultUI: true,
         zoomControl: true, gestureHandling: 'greedy', clickableIcons: false,
+        headingInteractionEnabled: true, tiltInteractionEnabled: false, rotateControl: true,
       });
+      gmapRef.current = map; setGReady(true);
       map.addListener('click', (e: { latLng: { lat: () => number; lng: () => number } }) => {
         if (!editingRef.current) { onPickRef.current?.(e.latLng.lat(), e.latLng.lng()); return; }
         onChangeRef.current(addToRing(editingRef.current, [e.latLng.lat(), e.latLng.lng()]));
