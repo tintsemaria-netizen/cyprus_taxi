@@ -12,6 +12,8 @@ import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { Poly, RefZone } from '@/components/staff/ZoneEditorMap';
 import { centroid } from '@/lib/zone-shapes';
+import { onCyprusIsland } from '@/lib/cyprus-island';
+import { pointInPolygon } from '@/lib/geo';
 
 const ZoneEditorMap = dynamicImport(() => import('@/components/staff/ZoneEditorMap'), { ssr: false });
 
@@ -148,7 +150,12 @@ function NoGo() {
 
       <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="relative h-[62vh] min-h-[380px] overflow-hidden rounded-[14px] border border-edge">
-          <ZoneEditorMap center={CYPRUS} airport={null} zones={refZones} editing={draft && !pointMode ? draft.polygon : null} onChange={setPoly} onPick={(lat, lng) => { if (draft && pointMode) setDraft({ ...draft, point: { lat, lng } }); }} fit={fit} editColor={KCOL} className="h-full w-full" />
+          <ZoneEditorMap center={CYPRUS} airport={null} zones={refZones} editing={draft && !pointMode ? draft.polygon : null} onChange={setPoly} onPick={(lat, lng) => {
+            if (!draft || !pointMode) return;
+            // The point must be inside the territory and on land.
+            if (!onCyprusIsland({ lat, lng }) || !pointInPolygon({ lat, lng }, draft.polygon.map(([a, b]) => ({ lat: a, lng: b })))) { setMsg(t('staff.noGo.pointOutside')); return; }
+            setMsg(null); setDraft({ ...draft, point: { lat, lng } });
+          }} fit={fit} editColor={KCOL} className="h-full w-full" />
           {draft && (
             <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start gap-2">
               <button type="button" onClick={stepBack} disabled={histLen === 0} aria-label={t('staff.fixed.stepBack')}

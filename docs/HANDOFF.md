@@ -2805,4 +2805,5 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Server: snapPickup() in createBooking and /quote (pickup inside → the point, label = territory name).
 - Passenger: /api/v1/no-go returns points; area-client pickupSnap(); BookingApp moves the pickup to the point and shows a blue
   note «Здесь подача только в одной точке: …» (booking.pickupPoint, 8 langs) for 5 s; map follows.
-- Tests: no-go.db.test.ts snap case. Not yet: driver sees nothing special (just the pickup address = point name).
+- Tests: no-go.db.test.ts snap case. The pickup point must be inside its territory and on land (admin + server refine).
+  Not yet: driver sees nothing special (just the pickup address = point name).

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { pointInPolygon } from '@/lib/geo';
+import { onCyprusIsland } from '@/lib/cyprus-island';
 import { parsePolygon } from '@/server/fixed-fares';
 
 // «Запретная зона» (2026-11-24, operator): red areas the taxi does not go to. No pickup, stop or destination
@@ -62,7 +63,9 @@ export const noGoSchema = z.object({
   polygon: z.array(z.tuple([z.number().min(-90).max(90), z.number().min(-180).max(180)])).min(3).max(400),
   point: z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }).nullish(),
   active: z.boolean().optional(),
-}).refine((d) => d.kind !== 'POINT' || !!d.point, { message: 'A pickup point is required.' });
+}).refine((d) => d.kind !== 'POINT' || !!d.point, { message: 'A pickup point is required.' })
+  // The pickup point must be inside its territory and on land (2026-11-24).
+  .refine((d) => d.kind !== 'POINT' || !d.point || (onCyprusIsland(d.point) && pointInPolygon(d.point, d.polygon.map(([lat, lng]) => ({ lat, lng })))), { message: 'The pickup point must be inside the territory, on land.' });
 export function noGoData(d: z.infer<typeof noGoSchema>) {
   const point = d.kind === 'POINT' ? d.point : null;
   return { name: d.name, kind: d.kind ?? 'NOGO', polygon: d.polygon, pointLat: point?.lat ?? null, pointLng: point?.lng ?? null, active: d.active ?? true };

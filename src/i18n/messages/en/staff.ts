@@ -154,6 +154,7 @@ const staff = {
     empty: 'No vehicles yet.',
   },
   noGo: {
+    pointOutside: 'The pickup point must be inside the territory, on land.',
     kindNoGo: 'No-go zones',
     kindPoint: 'One pickup point',
     subPoint: 'A territory with pickup at one point only (an airport exit, hotel gates). The passenger sets the pickup anywhere inside — the car comes to this point and he sees its name.',
