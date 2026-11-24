@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-24 — pre-booking hand-off needs live GPS and reach (branch `prebook-gps`, LOCAL, not pushed)
+- `convertOne` (preassign.ts): besides on duty / not busy, the driver needs a position received ≤ 90 s ago and must reach the pickup in time (straight line ×1.3 at 45 km/h, +10 min grace; no road call under the lock). Not ready → waits like a busy driver, then lapses at the usual cutoff with reason «no live GPS at conversion» / «driver too far at conversion» and driver push `drv.preLapsedNoGps` / `drv.preLapsedFar` (sw.js, 8 languages). Covers ride-share pairs too (same conversion).
+- Map on the share board: rebased onto the new board (branch `share-map-2`), operator: later.
+
 ## 2026-11-24 — one completed-ride amount with waiting (branch `ride-total`, LOCAL, not pushed)
 - Operator: the price is fixed when the driver presses «Завершить» (he is shown the sum to collect); it then goes on unchanged. Waiting counts everywhere.
 - `src/lib/fare-total.ts` `completedTotalCents`: fixed → price + waiting; meter → app fare + waiting; a driver's later correction of a meter ride replaces it. Used by: receipt + e-mail, ride history, `resolveFinal` (driver earnings, today card, analytics, trip list, admin per-driver, fleet, bookkeeping `driversTotal`), admin analytics (ClickHouse fare.recorded: final or estimate + waiting).

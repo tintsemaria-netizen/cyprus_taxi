@@ -125,8 +125,14 @@ describe('scheduled-ride board + commitment', () => {
 });
 
 describe('conversion near pickup', () => {
+  // Launch fixes §8 (2026-11-24): the hand-off needs a live phone position near enough to make it.
+  async function at(d: string, p: { lat: number; lng: number }, ageSec = 0) {
+    const t = new Date(Date.now() - ageSec * 1000);
+    await prisma.latestDriverLocation.upsert({ where: { driverId: d }, update: { lat: p.lat, lng: p.lng, accuracyM: 8, sampledAt: t, receivedAt: t, gpsSession: `pa-${RUN}`, sequence: ++n }, create: { driverId: d, lat: p.lat, lng: p.lng, accuracyM: 8, sampledAt: t, receivedAt: t, gpsSession: `pa-${RUN}`, sequence: ++n } });
+  }
   async function committed(minutes: number, onDuty: boolean) {
     const d = await driver('Andreas', { onDuty });
+    await at(d, lca); // at the pickup, live
     const b = await scheduledRide(240);
     expect((await claimScheduled(d, b.id)).ok).toBe(true);
     await prisma.booking.update({ where: { id: b.id }, data: { scheduledAt: new Date(Date.now() + minutes * MIN) } });
@@ -163,6 +169,21 @@ describe('conversion near pickup', () => {
     // Operator 2026-11-22: the passenger IS told — «the driver did not get online in time, we assign another».
     const n = await prisma.notificationOutbox.findMany({ where: { audience: `PASSENGER:${b.id}`, title: 'Finding you a driver' } });
     expect(n.map((x) => (x.msg as { k: string }).k)).toEqual(['pre.lapsedLate']);
+  });
+
+  it('2026-11-24: no live GPS or too far to make it → waits like a busy driver, then lapses with the reason', async () => {
+    const { d, b } = await committed(P.convertMinutes - 5, true);
+    await at(d, lca, 300); // last position 5 min old
+    expect((await runPreassignments(new Date())).converted).toBe(0);
+    expect((await prisma.preAssignment.findFirst({ where: { bookingId: b.id } }))!.status).toBe('COMMITTED');
+    await at(d, { lat: 34.7180, lng: 32.4857 }); // live, but in Paphos — about 1 h 50 min from Larnaca airport at 45 km/h
+    expect((await runPreassignments(new Date())).converted).toBe(0);
+    await prisma.preAssignment.updateMany({ where: { bookingId: b.id }, data: { pickupAt: new Date(Date.now() + (config.dispatch.scheduleLeadMinutes - 1) * MIN) } });
+    expect((await runPreassignments(new Date())).lapsed).toBe(1);
+    expect((await prisma.preAssignment.findFirst({ where: { bookingId: b.id } }))!.endReason).toBe('driver too far at conversion');
+    const u = await prisma.driver.findUniqueOrThrow({ where: { id: d }, select: { userId: true } });
+    const msgs = await prisma.notificationOutbox.findMany({ where: { audience: `DRIVER:${u.userId}` } });
+    expect(msgs.some((m) => (m.msg as { k: string } | null)?.k === 'drv.preLapsedFar')).toBe(true);
   });
 
   it('an offline driver at the cutoff lapses too', async () => {

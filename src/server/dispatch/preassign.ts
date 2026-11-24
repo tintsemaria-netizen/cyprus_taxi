@@ -243,6 +243,13 @@ export async function runPreassignments(now: Date = new Date()): Promise<{ remin
   return { reminded, converted, lapsed };
 }
 
+/** A driver's phone position older than this is not «live» for a pre-booked hand-off. */
+const PREBOOK_GPS_FRESH_SEC = 90;
+/** Rough minutes to drive to the pickup: straight line ×1.3 at 45 km/h (no road call under a lock). */
+function reachMin(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  return (haversineMeters(a, b) * 1.3) / 1000 / 45 * 60;
+}
+
 async function convertOne(bookingId: string, now: Date): Promise<'converted' | 'lapsed' | 'waiting' | 'gone'> {
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
@@ -275,12 +282,22 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
     const busy = !driver.onDuty
       || !!(await tx.assignment.findFirst({ where: { activeDriverId: pa.driverId }, select: { id: true } }))
       || !!(await tx.driverOffer.findFirst({ where: { activeDriverId: pa.driverId }, select: { id: true } }));
-    if (busy) {
+    // Launch fixes §8 (ported 2026-11-24): hand the ride over only to a driver whose phone sends a live
+    // position and who can still reach the pickup in time (straight line ×1.3 at 45 km/h, +10 min grace).
+    // No road call under the row lock. Not ready → wait like a busy driver, then automatic search.
+    const loc = busy ? null : await tx.latestDriverLocation.findUnique({ where: { driverId: pa.driverId }, select: { lat: true, lng: true, receivedAt: true } });
+    const gpsStale = !busy && (!loc || now.getTime() - loc.receivedAt.getTime() > PREBOOK_GPS_FRESH_SEC * 1000);
+    const tooFar = !busy && !gpsStale && !!loc && now.getTime() + reachMin(loc, { lat: b.pickupLat, lng: b.pickupLng }) * MIN > pa.pickupAt.getTime() + 10 * MIN;
+    if (busy || gpsStale || tooFar) {
       // Keep trying until the normal scheduled-search lead; then fall back to automatic search.
       // A ride-share pair waits for its driver until pairLapseMinutes, other rides until the normal lead.
       const isPair = !!(await tx.shareGroup.findFirst({ where: { activeHostBookingId: bookingId, status: 'MATCHED' }, select: { id: true } }));
       const cutoff = isPair ? config.share.pairLapseMinutes : config.dispatch.scheduleLeadMinutes;
       if (pa.pickupAt.getTime() - now.getTime() > cutoff * MIN) return 'waiting';
+      if (gpsStale) return lapse('no live GPS at conversion', 'Sorry, the driver did not get online in time. We are assigning you another driver now.',
+        'Your pre-booked ride was handed to automatic dispatch: no live location from your phone.', { pax: 'pre.lapsedLate', drv: 'drv.preLapsedNoGps' });
+      if (tooFar) return lapse('driver too far at conversion', 'Sorry, the driver could not make it in time. We are assigning you another driver now.',
+        'Your pre-booked ride was handed to automatic dispatch: you were too far from the pickup to make it in time.', { pax: 'pre.lapsedLate', drv: 'drv.preLapsedFar' });
       return lapse(driver.onDuty ? 'driver busy at conversion' : 'driver offline at conversion',
         'Sorry, the driver did not get online in time. We are assigning you another driver now.',
         driver.onDuty ? 'Your pre-booked ride was handed to automatic dispatch because you were still on another trip.' : 'Your pre-booked ride was handed to automatic dispatch because you were offline.',
