@@ -22,6 +22,8 @@ async function cleanup() {
   await prisma.driver.deleteMany({ where: { id: { in: dIds } } });
   await prisma.vehicle.deleteMany({ where: { id: { in: vIds } } });
   await prisma.staffUser.deleteMany({ where: { id: { in: users.map((u) => u.id) } } });
+  // Its pushes too: ~570 left PENDING piled up and pushed other files' notifications out of a drain batch (2026-11-25).
+  await prisma.notificationOutbox.deleteMany({ where: { tag: 'cars' } });
 }
 
 async function driver(n: string) {

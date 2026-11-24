@@ -58,14 +58,16 @@ describe('superadmin', () => {
 
   it('a normal admin\'s change is logged — no push (operator: red section, no sound); the owner\'s own are not', async () => {
     await prisma.notificationOutbox.deleteMany({ where: { tag: 'staff-changes' } });
+    const owner = (await prisma.staffUser.findUnique({ where: { login: 'admin' } }))!;
+    // Pushes to the owner from other files (docs, cars, …) are not about changes: compare before / after.
+    const ownerPushes = () => prisma.notificationOutbox.count({ where: { audience: `STAFF:${owner.id}` } });
+    const pushesBefore = await ownerPushes();
     await as(adminLogin);
     hdr.h = new Headers({ 'x-ily-mutation': 'POST /api/v1/admin/min-fares' });
     await minFares.POST(new Request('http://localhost:3000/api/v1/admin/min-fares', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }));
     await minFares.POST(new Request('http://localhost:3000/api/v1/admin/min-fares', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }));
     expect(await prisma.staffAction.count({ where: { actorName: 'Nikos' } })).toBe(2);
-    const owner = (await prisma.staffUser.findUnique({ where: { login: 'admin' } }))!;
-    // Document pushes (tag 'docs', 2026-11-24) from other tests are not about changes.
-    expect(await prisma.notificationOutbox.count({ where: { audience: `STAFF:${owner.id}`, tag: { not: 'docs' } } })).toBe(0);
+    expect(await ownerPushes()).toBe(pushesBefore);
     // A plain read is not a change; the owner's own changes are not logged.
     hdr.h = new Headers();
     await as(adminLogin);
