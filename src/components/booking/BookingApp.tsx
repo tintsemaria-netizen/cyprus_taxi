@@ -714,13 +714,16 @@ export default function BookingApp() {
   // Every pickup territory is on the passenger map all the time (2026-11-24, operator), with its points as
   // silhouettes; the chosen one carries its name.
   const terrList = useMemo(() => allTerritories(), [noGoReady]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The faint point logos only while the pickup is being chosen; once a route is shown they are not needed
+  // (2026-11-24 23:18, operator). The territory outline stays.
+  const showSpots = !dropoff;
   const mapMarkers = useMemo<MapMarker[]>(() => [
     ...markers,
-    ...terrList.flatMap((t, ti) => t.points.map((sp, i) => {
+    ...(!showSpots ? [] : terrList).flatMap((t, ti) => t.points.map((sp, i) => {
       const active = !!terr && terr.t === t && terr.on === i;
       return { id: `spot-${ti}-${i}`, lat: sp.lat, lng: sp.lng, kind: 'spot' as const, label: active ? sp.name || t.name : '', active, noFit: true };
     })),
-  ], [markers, terr, terrList]);
+  ], [markers, terr, terrList, showSpots]);
   const mapAreas = useMemo(() => terrList.map((t, ti) => ({ id: `terr-${ti}-${t.name}`, polygon: t.polygon, color: '#4C9AFF' })), [terrList]);
   const centerModeRef = useRef(centerMode); centerModeRef.current = centerMode;
   // The pin overlay stands on the same point a padded focus centres on.
