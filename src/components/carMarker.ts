@@ -309,10 +309,15 @@ export function spotEl(opts: { name: string; active?: boolean }): HTMLElement {
   box.innerHTML = BRAND_PIN_SILHOUETTE_SVG;
   el.appendChild(box);
   if (opts.name) {
-    const tag = document.createElement('div');
+    // Symmetric overflow (left/right -90px, centred text): the marker box stays centred on the tip however the
+    // map measures it (Google showed the silhouette ~20 px beside the point).
+    const row = document.createElement('div');
+    row.style.cssText = 'position:absolute;top:calc(100% + 4px);left:-90px;right:-90px;text-align:center;pointer-events:none';
+    const tag = document.createElement('span');
+    row.appendChild(tag);
     tag.textContent = opts.name;
-    tag.style.cssText = `position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);background:${opts.active ? '#4C9AFF' : 'rgba(16,25,28,.9)'};color:${opts.active ? '#0b0f10' : '#fff'};font:600 11.5px Inter,Arial,sans-serif;padding:2px 7px;border-radius:9px;white-space:nowrap;border:1px solid #4C9AFF`;
-    box.appendChild(tag);
+    tag.style.cssText = `display:inline-block;background:${opts.active ? '#4C9AFF' : 'rgba(16,25,28,.9)'};color:${opts.active ? '#0b0f10' : '#fff'};font:600 11.5px Inter,Arial,sans-serif;padding:2px 7px;border-radius:9px;white-space:nowrap;border:1px solid #4C9AFF`;
+    box.appendChild(row);
   }
   return el;
 }
