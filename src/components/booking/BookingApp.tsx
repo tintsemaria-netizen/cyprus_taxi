@@ -547,7 +547,9 @@ export default function BookingApp() {
   const [noGoReady, setNoGoReady] = useState(0);
   useEffect(() => { void loadNoGo().then(() => setNoGoReady((n) => n + 1)); }, []);
   // Landing on a point (2026-11-24 21:46, operator): at once, smoothly, and 50 % closer than the zoom it was at.
-  const SPOT_ZOOM_IN = Math.log2(1.5);
+  // Landing on a point always ends at the same close zoom (2026-11-24 22:11, operator's screenshot), whatever
+  // the zoom before.
+  const SPOT_ZOOM = 19;
   const SPOT_GLIDE_MS = 700;
   // On a territory's pickup point (2026-11-24 20:45, operator) the logo is a MAP MARKER standing in the point's
   // silhouette (exactly — the centre overlay was ~20 px off on Google), and zooming happens where the fingers
@@ -567,7 +569,9 @@ export default function BookingApp() {
     setRecenterTick((n) => n + 1);
     setLanding(true);
     if (landTimer.current) window.clearTimeout(landTimer.current);
-    landTimer.current = window.setTimeout(() => setLanding(false), SPOT_GLIDE_MS + 80);
+    // The logo turns into the map marker only when the map says the glide reached the point (a timer alone ran
+    // out before a slow phone's glide ended → the jerk the operator saw); the timer is only a fallback.
+    landTimer.current = window.setTimeout(() => setLanding(false), SPOT_GLIDE_MS + 1500);
   };
 
   const HOME_ZOOM = 15.49; // 2026-11-17: 30 % further out than 16 (16 + log2 0.7)
@@ -590,13 +594,13 @@ export default function BookingApp() {
       const key = `${pickup.lat},${pickup.lng}`;
       if (landedKey.current !== key) {
         landedKey.current = key;
-        const z = spotZoom.current ?? Math.min(19, (zoomRef.current ?? HOME_ZOOM) + SPOT_ZOOM_IN);
+        const z = spotZoom.current ?? SPOT_ZOOM;
         spotZoom.current = null;
         setCamFocus({ lat: pickup.lat, lng: pickup.lng }); setCamZoom(z); zoomRef.current = z;
         setRecenterTick((n) => n + 1); // glide, not a jump
         setLanding(true);
         if (landTimer.current) window.clearTimeout(landTimer.current);
-        landTimer.current = window.setTimeout(() => setLanding(false), SPOT_GLIDE_MS + 120);
+        landTimer.current = window.setTimeout(() => setLanding(false), SPOT_GLIDE_MS + 1500);
       }
       return;
     }
@@ -625,7 +629,7 @@ export default function BookingApp() {
     if (!terr) return;
     const sp = terr.t.points[i], label = spotLabel(terr.t, i);
     const start = pickupRef.current;
-    if (start && centerModeRef.current) slidePin(start, sp, Math.min(19, (zoomRef.current ?? HOME_ZOOM) + (zoomIn ? SPOT_ZOOM_IN : 0)));
+    if (start && centerModeRef.current) slidePin(start, sp, zoomIn ? SPOT_ZOOM : (zoomRef.current ?? SPOT_ZOOM));
     pickSeq.current++; // a reverse-geocode still running must not overwrite the point's name
     dragPick.current = null;
     setPickup({ lat: sp.lat, lng: sp.lng, label });
@@ -656,7 +660,7 @@ export default function BookingApp() {
     const tz = territoryAt(p);
     if (tz) { // let go inside a pickup territory: the logo slides straight to the nearest point
       const i = tz.nearest, sp = tz.t.points[i], label = spotLabel(tz.t, i);
-      slidePin(p, sp, Math.min(19, p.zoom + SPOT_ZOOM_IN));
+      slidePin(p, sp, SPOT_ZOOM);
       pickSeq.current++; dragPick.current = null;
       setPickup({ lat: sp.lat, lng: sp.lng, label }); setPickupText(label); setAutoPickup(false);
       return;
@@ -1303,7 +1307,7 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-page" />
           ) : (
-            <AutoMapView markers={mapMarkers} areas={mapAreas} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : camFocus} focusZoom={pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} holdCamera={onSpot && !landing} glideMs={landing ? SPOT_GLIDE_MS : undefined} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
+            <AutoMapView markers={mapMarkers} areas={mapAreas} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : camFocus} focusZoom={pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} holdCamera={onSpot && !landing} onGlideEnd={() => { if (landTimer.current) window.clearTimeout(landTimer.current); setLanding(false); }} glideMs={landing ? SPOT_GLIDE_MS : undefined} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
           )}
           {terr && step === 'form' && (
             <div className="absolute inset-x-3 top-3 z-[6] mx-auto max-w-sm rounded-[14px] border border-[#4C9AFF] bg-elevated/95 px-3 py-2 text-[13px] leading-snug text-ink shadow-lg" data-testid="pickup-territory">
