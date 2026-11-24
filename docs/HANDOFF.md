@@ -2704,3 +2704,12 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   Map pickers / address search keep their red line (only the home logo changed).
 - + vibration `navigator.vibrate([70,50,70])` (Android browsers; iPhone Safari has no web vibration → remind for the native app)
   and the red logo shakes (CSS `ily-pin-shake`, 2×0.5 s, off with prefers-reduced-motion).
+
+## 2026-11-24 — App icons — DEPLOYED (operator «2 и заливай»)
+- Client icons (icon-192/512, maskable-512, apple-touch-icon): colours swapped — muted lime tile #9CC83E (operator chose
+  variant 2: pure lime too bright), charcoal pin, road in the same muted lime.
+- Admin icons (admin-*): the pin is white (road charcoal), ADMIN label kept. Driver icons unchanged.
+- Made by recolouring the existing PNGs (lime/charcoal/white mixes kept for smooth edges; script kept out of the repo).
+- Cache bust `?v=2` in manifests, layouts, sw.js push icon; client manifest no longer lists favicon.svg (Android picked the
+  old SVG). InstallPrompt shows the driver icon in the driver app. Phones keep the old shortcut icon until it is removed
+  from the home screen and added again (iOS) / the PWA updates (Android, can take a day).
