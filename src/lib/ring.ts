@@ -60,3 +60,19 @@ export function selfCrossing(poly: Pt[]): boolean {
   }
   return false;
 }
+
+/** Rounded outline (2026-11-24, operator: «чтобы круг закруглялся — красиво, клиенты видят»): Chaikin corner
+ *  cutting on the closed ring. The rounded shape is also the one checked (what the passenger sees is what counts). */
+export function smoothRing(poly: Pt[], iterations = 3): Pt[] {
+  let r = poly;
+  if (r.length < 3) return r;
+  for (let it = 0; it < iterations; it++) {
+    const out: Pt[] = [];
+    for (let i = 0; i < r.length; i++) {
+      const a = r[i], b = r[(i + 1) % r.length];
+      out.push([0.75 * a[0] + 0.25 * b[0], 0.75 * a[1] + 0.25 * b[1]], [0.25 * a[0] + 0.75 * b[0], 0.25 * a[1] + 0.75 * b[1]]);
+    }
+    r = out;
+  }
+  return r.map(([a, b]) => [Math.round(a * 1e6) / 1e6, Math.round(b * 1e6) / 1e6] as Pt);
+}

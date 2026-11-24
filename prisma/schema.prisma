@@ -689,14 +689,13 @@ model MinFareZone {
 
 // «Запретная зона» (2026-11-24, operator): red areas the taxi does not go to — no pickup, stop or
 // destination inside an active one. Edited in admin «Запретная зона».
-// kind POINT (2026-11-24, operator): a territory with ONE pickup point — any pickup inside goes to that point.
+// kind POINT (2026-11-24, operator): a territory with its pickup point(s) — any pickup inside goes to the nearest one.
 model NoGoZone {
   id        String   @id @default(uuid())
   name      String
   kind      String   @default("NOGO") // NOGO | POINT
   polygon   Json // [[lat, lng], …] ≥ 3 points
-  pointLat  Float?
-  pointLng  Float?
+  points    Json? // POINT: [{ lat, lng, name }] — one or more pickup points (e.g. airport exits)
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt

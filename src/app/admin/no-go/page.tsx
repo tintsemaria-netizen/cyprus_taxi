@@ -2,9 +2,10 @@
 
 // Admin «Запретная зона» (2026-11-24, operator): two sections on one map —
 //  • «Запретные зоны» (red): no pickup, stop or destination inside (server error NO_GO_ZONE);
-//  • «Одна точка подачи» (blue): a territory with ONE pickup point — every pickup inside goes there.
+//  • «Точки подачи» (blue): a territory (rounded outline, the way passengers see it) with one or more named
+//    pickup points (airport exits, port gates …) — every pickup inside goes to the nearest one.
 // Server: src/server/no-go.ts.
-import { untangle } from '@/lib/ring';
+import { smoothRing, untangle } from '@/lib/ring';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamicImport from 'next/dynamic';
 import { StaffShell } from '@/components/staff/StaffShell';
@@ -21,8 +22,9 @@ export const dynamic = 'force-dynamic';
 
 type Kind = 'NOGO' | 'POINT';
 type Pt = { lat: number; lng: number };
-interface Zone { id: string; name: string; kind: Kind; polygon: Poly; point: Pt | null; active: boolean }
-interface Draft { id: string | null; name: string; kind: Kind; active: boolean; polygon: Poly; point: Pt | null }
+interface Spot { lat: number; lng: number; name: string }
+interface Zone { id: string; name: string; kind: Kind; polygon: Poly; points: Spot[]; active: boolean }
+interface Draft { id: string | null; name: string; kind: Kind; active: boolean; polygon: Poly; points: Spot[] }
 
 const RED = '#FF4D4D';
 const BLUE = '#4C9AFF';
@@ -75,17 +77,19 @@ function NoGo() {
   // Every zone is red; a switched-off one is grey.
   const colorOf = (z: Zone) => (!z.active ? '#8A9499' : z.kind === 'NOGO' ? RED : BLUE);
 
-  const pointLabel = (name: string, p: Pt): RefZone => ({ id: `pt-${name}-${p.lat}`, name, polygon: [], color: BLUE, label: `📍 ${name || t('staff.noGo.point')}`, labelAt: [p.lat, p.lng], strong: true });
+  const pointLabel = (name: string, p: Pt, i: number): RefZone => ({ id: `pt-${i}-${p.lat}-${p.lng}`, name, polygon: [], color: BLUE, label: `📍 ${name || `${t('staff.noGo.point')} ${i + 1}`}`, labelAt: [p.lat, p.lng], strong: true });
+  // Pickup territories are shown rounded — exactly as passengers will see them.
+  const shape = (z: { kind: Kind; polygon: Poly }) => (z.kind === 'POINT' ? smoothRing(z.polygon) : z.polygon);
   const refZones: RefZone[] = [
     ...otherZones.filter((z) => z.polygon.length >= 3).map((z) => ({ id: z.id, name: z.name, polygon: z.polygon, color: colorOf(z) })),
     ...zones.filter((z) => z.id !== draft?.id && z.polygon.length >= 3).map((z) => ({
-      id: z.id, name: z.name, polygon: z.polygon, color: colorOf(z),
+      id: z.id, name: z.name, polygon: shape(z), color: colorOf(z),
       label: z.kind === 'POINT' ? undefined : z.active ? z.name : `${z.name} · ${t('staff.fixed.off')}`, labelAt: centroid(z.polygon), strong: z.active,
     })),
-    ...zones.filter((z) => z.id !== draft?.id && z.point).map((z) => pointLabel(z.name, z.point!)),
-    // the territory being drawn, shown while its pickup point is placed
-    ...(draft && pointMode && draft.polygon.length >= 3 ? [{ id: 'draft', name: draft.name, polygon: draft.polygon, color: BLUE, strong: true }] : []),
-    ...(draft?.point ? [pointLabel(draft.name, draft.point)] : []),
+    ...zones.filter((z) => z.id !== draft?.id).flatMap((z) => z.points.map((p, i) => pointLabel(p.name, p, i))),
+    // the territory being drawn: its rounded outline (faint behind the corners; solid while points are placed)
+    ...(draft?.kind === 'POINT' && draft.polygon.length >= 3 ? [{ id: 'draft-round', name: draft.name, polygon: smoothRing(draft.polygon), color: BLUE, strong: pointMode }] : []),
+    ...(draft ? draft.points.map((p, i) => pointLabel(p.name, p, i)) : []),
   ];
 
   const fitKey = `${draft ? (draft.id ?? 'new') : ''}|${zones.length}`;
@@ -96,16 +100,16 @@ function NoGo() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitKey]);
 
-  function startNew() { setMsg(null); resetHist(); setDraft({ id: null, name: '', kind, active: true, polygon: [], point: null }); setPointMode(false); }
-  function startEdit(z: Zone) { setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, kind: z.kind, active: z.active, polygon: untangle(z.polygon), point: z.point }); setPointMode(false); }
+  function startNew() { setMsg(null); resetHist(); setDraft({ id: null, name: '', kind, active: true, polygon: [], points: [] }); setPointMode(false); }
+  function startEdit(z: Zone) { setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, kind: z.kind, active: z.active, polygon: untangle(z.polygon), points: z.points }); setPointMode(false); }
 
   async function save() {
     if (!draft) return;
     if (draft.polygon.length < 3) { setMsg(t('staff.noGo.needPoints')); return; }
-    if (draft.kind === 'POINT' && !draft.point) { setMsg(t('staff.noGo.needPickup')); setPointMode(true); return; }
+    if (draft.kind === 'POINT' && !draft.points.length) { setMsg(t('staff.noGo.needPickup')); setPointMode(true); return; }
     setBusy(true); setMsg(null);
     try {
-      const body = { name: draft.name.trim() || `${t(draft.kind === 'POINT' ? 'staff.noGo.pointTitle' : 'staff.noGo.title')} ${zones.length + 1}`, kind: draft.kind, polygon: draft.polygon, point: draft.point, active: draft.active };
+      const body = { name: draft.name.trim() || `${t(draft.kind === 'POINT' ? 'staff.noGo.pointTitle' : 'staff.noGo.title')} ${zones.length + 1}`, kind: draft.kind, polygon: draft.polygon, points: draft.points, active: draft.active };
       if (draft.id) await api(`/admin/no-go/${draft.id}`, { method: 'PUT', body });
       else await api('/admin/no-go', { method: 'POST', body });
       setDraft(null); setMsg(t('staff.noGo.saved'));
@@ -123,7 +127,7 @@ function NoGo() {
 
   async function toggle(z: Zone) {
     setMsg(null);
-    await api(`/admin/no-go/${z.id}`, { method: 'PUT', body: { name: z.name, kind: z.kind, polygon: z.polygon, point: z.point, active: !z.active } }).catch(() => null);
+    await api(`/admin/no-go/${z.id}`, { method: 'PUT', body: { name: z.name, kind: z.kind, polygon: z.polygon, points: z.points, active: !z.active } }).catch(() => null);
     await load();
   }
 
@@ -152,9 +156,10 @@ function NoGo() {
         <div className="relative h-[62vh] min-h-[380px] overflow-hidden rounded-[14px] border border-edge">
           <ZoneEditorMap center={CYPRUS} airport={null} zones={refZones} editing={draft && !pointMode ? draft.polygon : null} onChange={setPoly} onPick={(lat, lng) => {
             if (!draft || !pointMode) return;
-            // The point must be inside the territory and on land.
-            if (!onCyprusIsland({ lat, lng }) || !pointInPolygon({ lat, lng }, draft.polygon.map(([a, b]) => ({ lat: a, lng: b })))) { setMsg(t('staff.noGo.pointOutside')); return; }
-            setMsg(null); setDraft({ ...draft, point: { lat, lng } });
+            // Each click adds a point; it must be inside the rounded territory and on land.
+            if (!onCyprusIsland({ lat, lng }) || !pointInPolygon({ lat, lng }, smoothRing(draft.polygon).map(([a, b]) => ({ lat: a, lng: b })))) { setMsg(t('staff.noGo.pointOutside')); return; }
+            if (draft.points.length >= 20) return;
+            setMsg(null); setDraft({ ...draft, points: [...draft.points, { lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6, name: '' }] });
           }} fit={fit} editColor={KCOL} className="h-full w-full" />
           {draft && (
             <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start gap-2">
@@ -179,7 +184,18 @@ function NoGo() {
                   <button type="button" onClick={() => setPointMode(true)} disabled={draft.polygon.length < 3} className={`rounded-[8px] py-1.5 text-sm font-semibold ${pointMode ? 'bg-[#4C9AFF] text-[#0b0f10]' : 'text-muted'} disabled:opacity-40`} data-testid="nogo-mode-point">📍 {t('staff.noGo.modePoint')}</button>
                 </div>
               )}
-              {draft.kind === 'POINT' && <div className={`text-xs ${draft.point ? 'text-accent' : 'text-warn'}`}>{draft.point ? `📍 ${draft.point.lat.toFixed(5)}, ${draft.point.lng.toFixed(5)}` : t('staff.noGo.needPickup')}</div>}
+              {draft.kind === 'POINT' && (draft.points.length === 0 ? <div className="text-xs text-warn">{t('staff.noGo.needPickup')}</div> : (
+                <div className="space-y-1.5" data-testid="nogo-points">
+                  {draft.points.map((p, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <span className="w-5 shrink-0 text-center text-xs font-semibold text-[#4C9AFF]">{i + 1}</span>
+                      <input className="field !min-h-[36px] flex-1 !py-1 text-sm" value={p.name} placeholder={t('staff.noGo.pointName')} data-testid="nogo-point-name"
+                        onChange={(e) => setDraft({ ...draft, points: draft.points.map((q, j) => (j === i ? { ...q, name: e.target.value } : q)) })} />
+                      <button type="button" aria-label={t('staff.fixed.delete')} className="px-2 text-danger" onClick={() => setDraft({ ...draft, points: draft.points.filter((_, j) => j !== i) })}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              ))}
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />{t('staff.fixed.active')}</label>
               <div className="text-xs text-muted">{t('staff.fixed.points', { n: draft.polygon.length })}</div>
               <div className="flex gap-2">

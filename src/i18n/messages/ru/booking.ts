@@ -202,6 +202,7 @@ const booking: Catalog<typeof en> = {
     open: 'Открыть предзаказ',
   },
   pickupPoint: 'Здесь подача только в одной точке: {name}',
+  pickupPoints: 'Здесь подача только в точках подачи «{name}» — выберите удобную:',
   pickupAt: {
     title: 'Во сколько подать машину?',
     time: 'Время подачи',

@@ -210,6 +210,7 @@ const booking: Catalog<typeof en> = {
     open: "Vorbestellung öffnen",
   },
   pickupPoint: 'Abholung hier nur an einem Punkt: {name}',
+  pickupPoints: 'Abholung hier nur an den Abholpunkten «{name}» — wählen Sie einen:',
   pickupAt: {
     title: 'Wann soll der Wagen Sie abholen?',
     time: 'Abholzeit',

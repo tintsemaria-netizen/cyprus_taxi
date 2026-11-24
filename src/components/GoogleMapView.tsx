@@ -6,7 +6,7 @@ import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { CYPRUS_BOUNDS } from '@/lib/config';
 import type { MapMarker } from './MapView';
 import { pinPoint, fitKeyOf, safePadding } from './mapFit';
-import { vehicleMarkerEl, orientVehicle, steerVehicle, bearing, personMarkerEl, pickupPinEl, navArrowEl, numberedStopEl } from './carMarker';
+import { vehicleMarkerEl, orientVehicle, steerVehicle, bearing, personMarkerEl, pickupPinEl, navArrowEl, numberedStopEl, spotEl } from './carMarker';
 import { distanceM } from '@/lib/gpsFilter';
 import { useIdleReturn } from './useIdleReturn';
 import { useTwoFingerCamera } from './useTwoFingerCamera';
@@ -40,6 +40,8 @@ interface Props {
   fleetLikeSelf?: boolean;
   /** Route line width in px (default 7; driver navigation 8 = +15 %, 2026-11-19). */
   routeWidth?: number;
+  /** Shaded areas, e.g. a pickup territory (2026-11-24): [lat, lng] rings. */
+  areas?: { id: string; polygon: [number, number][]; color: string }[];
   // Zoom the map to this point (e.g. the passenger's detected location), padding-aware.
   focus?: { lat: number; lng: number } | null;
   // Navigation camera: keep this point centred, rotated to `heading` (heading-up), with tilt.
@@ -103,7 +105,7 @@ function framePoint(map: any, g: any, lat: number, lng: number, pad: any, maxZoo
     if (map.getZoom() > maxZoom) map.setZoom(maxZoom);
   });
 }
-const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF' };
+const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF', spot: '#4C9AFF' };
 
 // Google AdvancedMarkerElement anchors its content at the BOTTOM-centre, but our markers (cars,
 // dots) are drawn centred on their point. Without this shift a 84 px car was drawn 42 px north
@@ -126,6 +128,7 @@ function markerEl(mk: MapMarker): HTMLElement {
     el.classList.add('ily-vehicle');
     return centerOnPoint(el);
   }
+  if (mk.kind === 'spot') { const el = spotEl({ name: mk.label ?? '', active: mk.active }); el.style.transform = 'translateY(calc(100% - 8px))'; el.dataset.sig = `spot|${mk.active ? 1 : 0}|${mk.label ?? ''}`; return el; }
   if (mk.num != null && mk.kind !== 'person') return centerOnPoint(numberedStopEl({ num: mk.num, kind: mk.kind, next: mk.next, title: mk.label }));
   if (mk.kind === 'person') return centerOnPoint(personMarkerEl({ title: mk.label, stale: mk.stale }));
   // Pin: the needle tip (element bottom) is the point — Google's default bottom anchor, no shift.
@@ -139,7 +142,7 @@ function markerEl(mk: MapMarker): HTMLElement {
 /** Fitting never zooms out past the whole island. */
 const MIN_FIT_ZOOM = 8;
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], fleetLikeSelf, routeWidth = 7, focus, focusZoom, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], fleetLikeSelf, routeWidth = 7, areas = [], focus, focusZoom, follow, onFollowBreak, recenterTick = 0, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const lastUpd = useRef(new Map<string, number>());
@@ -528,6 +531,17 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       });
     }
   }, [shownRoute, ready, routeWidth]);
+
+  // Shaded areas (pickup territory, 2026-11-24).
+  const areaObjs = useRef<any[]>([]);
+  const areasKey = areas.map((a) => `${a.id}:${a.polygon.length}`).join('|');
+  useEffect(() => {
+    const map = mapRef.current, g = gRef.current;
+    if (!map || !g || !ready) return;
+    areaObjs.current.forEach((o) => o.setMap(null));
+    areaObjs.current = areas.filter((a) => a.polygon.length >= 3).map((a) => new g.Polygon({ map, paths: a.polygon.map(([lat, lng]) => ({ lat, lng })), strokeColor: a.color, strokeOpacity: 0.9, strokeWeight: 2.5, fillColor: a.color, fillOpacity: 0.16, clickable: false, zIndex: 0 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [areasKey, ready]);
 
   if (failed) {
     return (
