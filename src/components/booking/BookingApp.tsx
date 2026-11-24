@@ -10,6 +10,7 @@ import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
 import { BRAND_PIN_SVG, BRAND_PIN_SVG_RED } from '@/components/carMarker';
 import { pinPoint } from '@/components/mapFit';
+import { haversineMeters } from '@/lib/geo';
 import { onCyprusIsland } from '@/lib/cyprus-island';
 import { areaBlock, loadNoGo, territoryAt, spotLabel, allTerritories } from '@/lib/area-client';
 import { InstallPrompt } from '@/components/InstallPrompt';
@@ -332,6 +333,11 @@ export default function BookingApp() {
     // The untouched auto pickup may be replaced; anything the passenger chose or typed is kept.
     const untouched = () => !dropoffRef.current && autoPickupRef.current && !!autoPickupSaved.current
       && pickupRef.current?.lat === autoPickupSaved.current.sel.lat && pickupRef.current?.lng === autoPickupSaved.current.sel.lng;
+    // 2026-11-24 22:39 (operator): came back to the app at the marina, the logo still stood at Paphos airport. A
+    // pickup the passenger set himself also moves to where he is now when he is far from it (> 500 m) and no
+    // destination is chosen yet — that pickup was for a place he has left.
+    const replaceable = (pos: { lat: number; lng: number }) => untouched()
+      || (!dropoffRef.current && !!pickupRef.current && haversineMeters(pickupRef.current, pos) > 500);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         if (cancelled) return;
@@ -339,7 +345,7 @@ export default function BookingApp() {
         // Abroad / at sea (2026-11-24): no «my location» on the map and no pickup there — the island view stays.
         if (!onCyprusIsland({ lat, lng })) return;
         setMyLoc({ lat, lng });
-        if (again && !untouched()) return;
+        if (again && !replaceable({ lat, lng })) return;
         if (!again && (pickupRef.current || pickupTextRef.current.trim() !== '')) return; // passenger already acting
         // The stored label travels with the booking to the driver → language-neutral English; the
         // passenger sees their own language in the field.
@@ -348,7 +354,7 @@ export default function BookingApp() {
           const r = await api<{ place: { label: string } | null }>(`/places/reverse?lat=${lat}&lng=${lng}`, { timeoutMs: 6000 });
           if (r.place?.label) label = r.place.label;
         } catch { /* keep the generic label */ }
-        if (cancelled || (again ? !untouched() : (pickupRef.current || pickupTextRef.current.trim() !== ''))) return; // re-check after await
+        if (cancelled || (again ? !replaceable({ lat, lng }) : (pickupRef.current || pickupTextRef.current.trim() !== ''))) return; // re-check after await
         setPickup({ lat, lng, label: label ?? translate('en', 'booking.currentLocation') });
         setPickupText(label ?? t('booking.currentLocation'));
         setAutoPickup(true);
