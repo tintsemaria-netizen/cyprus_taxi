@@ -2790,3 +2790,11 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Operator: «Попутчик» max 3 people and 3 suitcases; label «Чемоданы до 10 кг». lib/share.ts SHARE_MAX_PEOPLE/BAGS = 3;
   ShareBookingOptions caps steppers (and trims values above the limit); createBooking refuses SHARE_TOO_BIG (errors.ts, 8 langs).
   Without «Попутчик» the usual car limits apply. Tests: share-limits.db.test.ts; ride-share «doesn't fit» cases now 2+3 > 4.
+
+## 2026-11-24 15:30 — «Запретная зона» — DEPLOYED (operator «Заливай» 15:57)
+- Admin tab «Цены → Запретная зона» (/admin/no-go): red zones drawn like min-fare areas (ZoneEditorMap editColor red, ring helpers),
+  on/off, rename, delete; audit NO_GO_ZONE_*; change-log area noGo. Model NoGoZone + migration 20261124150000_no_go_zones.
+- Server src/server/no-go.ts (30 s cache): booking create, /quote, /tracking/stop refuse NO_GO_ZONE (errors.ts 8 langs).
+- Passenger: public GET /api/v1/no-go (active polygons) → src/lib/area-client.ts areaBlock() = island + no-go; RouteEditor,
+  PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
+- Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.

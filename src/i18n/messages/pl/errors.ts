@@ -38,6 +38,7 @@ const errors: Catalog<typeof en> = {
   NO_RECEIPT: "Paragon jest dostępny po zakończeniu przejazdu.",
   OFF_ISLAND: 'Działamy tylko na wyspie Cypr. Wybierz punkt na lądzie.',
   SHARE_TOO_BIG: 'Ze współpasażerem — najwyżej 3 osoby i 3 walizki.',
+  NO_GO_ZONE: 'Taksówka nie jeździ w ten obszar. Wybierz inne miejsce.',
   NO_ROUTE: "Samochód nie dojedzie do tego punktu. Wybierz adres przy drodze.",
   OFFER_EXPIRED: "Ta oferta wygasła.",
   OFFER_GONE: "Ta oferta nie jest już dostępna.",

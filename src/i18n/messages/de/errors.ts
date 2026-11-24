@@ -38,6 +38,7 @@ const errors: Catalog<typeof en> = {
   NO_RECEIPT: "Eine Quittung ist nach Ende der Fahrt verfügbar.",
   OFF_ISLAND: 'Wir fahren nur auf der Insel Zypern. Wählen Sie einen Punkt an Land.',
   SHARE_TOO_BIG: 'Mit Mitfahrer — höchstens 3 Personen und 3 Koffer.',
+  NO_GO_ZONE: 'Das Taxi fährt nicht in dieses Gebiet. Bitte wählen Sie einen anderen Ort.',
   NO_ROUTE: "Ein Auto kann diesen Punkt nicht erreichen. Wählen Sie eine Adresse an einer Straße.",
   OFFER_EXPIRED: "Dieses Angebot ist abgelaufen.",
   OFFER_GONE: "Dieses Angebot ist nicht mehr verfügbar.",

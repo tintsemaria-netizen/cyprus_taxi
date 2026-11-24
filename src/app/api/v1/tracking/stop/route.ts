@@ -1,4 +1,5 @@
 import { onCyprusIsland } from '@/lib/cyprus-island';
+import { noGoAt } from '@/server/no-go';
 import { apiOk, apiError, Errors } from '@/lib/http';
 import { getTrackingBookingId } from '@/lib/tracking';
 import { rateLimit } from '@/lib/rate-limit';
@@ -18,6 +19,7 @@ export async function POST(req: Request) {
   const lat = Number(b.lat), lng = Number(b.lng), label = typeof b.label === 'string' ? b.label.trim() : '';
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return Errors.validation({ stop: 'Invalid coordinates.' });
   if (!onCyprusIsland({ lat, lng })) return apiError(422, 'OFF_ISLAND', 'The stop is not on the island of Cyprus.', { stop: 'Not on Cyprus.' }); // 2026-11-24
+  if (await noGoAt({ lat, lng })) return apiError(422, 'NO_GO_ZONE', 'The taxi does not go to this area.', { stop: 'No-go area.' }); // «Запретная зона»
   if (!label) return Errors.validation({ stop: 'Address required.' });
   const r = await passengerSetStop(bookingId, { lat, lng, label });
   return r.ok ? apiOk(r) : apiError(r.status, r.code, r.message);

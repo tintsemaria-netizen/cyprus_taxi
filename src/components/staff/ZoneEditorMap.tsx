@@ -34,19 +34,22 @@ interface Props {
   onPick?: (lat: number, lng: number) => void;
   /** Zones inside the one being drawn: shown cut out, so a belt looks like a band from its inner zone outwards. */
   editingHoles?: Poly[];
+  /** Colour of the zone being drawn (default lime; «Запретная зона» draws red). */
+  editColor?: string;
   /** Show this box ([south, west, north, east]); re-fitted whenever its value changes. */
   fit?: [number, number, number, number] | null;
   className?: string;
 }
 
-const LIME = '#C8FF46';
+const DEFAULT_EDIT = '#C8FF46';
 
 export default function ZoneEditorMap(props: Props) {
   return googleEnabled() ? <GoogleZoneMap {...props} /> : <LibreZoneMap {...props} />;
 }
 
 // ---------- Google ----------
-function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange, onPick, fit, className }: Props) {
+function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange, onPick, fit, className, editColor }: Props) {
+  const LIME = editColor ?? DEFAULT_EDIT;
   const ref = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const st = useRef<{ g: any; map: any; edit: any; refs: any[]; airport: any; labels: any[] } | null>(null);
@@ -127,7 +130,8 @@ function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange
 }
 
 // ---------- MapLibre ----------
-function LibreZoneMap({ center, airport, zones, editing, editingHoles, onChange, onPick, fit, className }: Props) {
+function LibreZoneMap({ center, airport, zones, editing, editingHoles, onChange, onPick, fit, className, editColor }: Props) {
+  const LIME = editColor ?? DEFAULT_EDIT;
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const libRef = useRef<typeof maplibregl | null>(null);

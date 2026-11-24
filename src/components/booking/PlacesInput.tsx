@@ -1,6 +1,6 @@
 'use client';
 
-import { onCyprusIsland } from '@/lib/cyprus-island';
+import { areaBlock, loadNoGo } from '@/lib/area-client';
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api, uuid, ApiRequestError } from '@/lib/api-client';
@@ -56,7 +56,8 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [demo, setDemo] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'none' | 'unavailable' | 'offIsland'>('idle');
+  const [status, setStatus] = useState<'idle' | 'none' | 'unavailable' | 'offIsland' | 'noGo'>('idle');
+  useEffect(() => { void loadNoGo(); }, []);
   const [active, setActive] = useState(-1); // keyboard-highlighted row
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reqSeq = useRef(0);
@@ -145,13 +146,13 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
         if (res.place) picked = { lat: res.place.lat, lng: res.place.lng, label: res.place.label || r.label };
       } catch (e) {
         picked = null;
-        if (e instanceof ApiRequestError && e.body.code === 'OFF_ISLAND') { sessionRef.current = ''; setStatus('offIsland'); setOpen(true); return; }
+        if (e instanceof ApiRequestError && (e.body.code === 'OFF_ISLAND' || e.body.code === 'NO_GO_ZONE')) { sessionRef.current = ''; setStatus(e.body.code === 'NO_GO_ZONE' ? 'noGo' : 'offIsland'); setOpen(true); return; }
       }
     }
     sessionRef.current = ''; // end the Places session after a resolution attempt
     if (!picked) { setStatus('unavailable'); setOpen(true); return; }
     // Only on the island of Cyprus (2026-11-24, operator).
-    if (!onCyprusIsland(picked)) { setStatus('offIsland'); setOpen(true); return; }
+    { const why = areaBlock(picked); if (why) { setStatus(why === 'NO_GO_ZONE' ? 'noGo' : 'offIsland'); setOpen(true); return; } }
     onSelect(picked);
     onText(picked.label);
     setOpen(false);
@@ -230,7 +231,7 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
           {loading && !results.length && <div className="px-4 py-3 text-sm text-muted">{t('booking.places.searching')}</div>}
           {!loading && status === 'none' && <div className="px-4 py-3 text-sm text-muted">{t('booking.places.none')}</div>}
           {!loading && status === 'unavailable' && <div className="px-4 py-3 text-sm text-warn">{t('booking.places.unavailable')}</div>}
-          {!loading && status === 'offIsland' && <div className="px-4 py-3 text-sm font-medium text-danger" data-testid="off-island">{t('errors.OFF_ISLAND')}</div>}
+          {!loading && (status === 'offIsland' || status === 'noGo') && <div className="px-4 py-3 text-sm font-medium text-danger" data-testid="off-island">{t(status === 'noGo' ? 'errors.NO_GO_ZONE' : 'errors.OFF_ISLAND')}</div>}
           {(!loading || results.length > 0) &&
             results.map((r, i) => (
               <button
