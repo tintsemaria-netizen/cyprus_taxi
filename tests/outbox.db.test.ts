@@ -4,7 +4,11 @@ const dbUrl = process.env.DATABASE_URL || '';
 const dbName = (() => { try { return new URL(dbUrl).pathname.replace(/^\//, '').split('?')[0]; } catch { return ''; } })();
 
 import { prisma } from '@/lib/db';
-import { enqueue, drainOutbox } from '@/server/outbox';
+import { enqueue, drainOutbox as drainOnce } from '@/server/outbox';
+
+// Drains every due row: other files' leftovers (older, drained first, 50 a batch) must not keep this file's
+// rows out of the batch (2026-11-25: the test failed after ~570 pushes from another file piled up).
+async function drainOutbox(now: Date) { for (let i = 0; i < 100; i++) { if ((await drainOnce(now)).claimed === 0) return; } }
 import { createBooking } from '@/server/bookings';
 import type { CreateBookingInput } from '@/lib/validation';
 
