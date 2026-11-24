@@ -249,6 +249,8 @@ const staff: Catalog<typeof en> = {
     googleReview: 'Отзыв в Google (Place ID или ссылка)',
     googleReviewPh: 'ChIJ… — не показывается, если пусто',
     schedMin: 'Предзаказ — не раньше чем за (мин)',
+    shareSlot: "Попутчик: окна прибытия по",
+    shareSlotOpt: "{m} мин",
     shareMin: 'Предзаказ с попутчиком — не раньше чем за (мин)',
     boardHide: 'Табло попутчиков: убирать поездку за (мин) до подачи',
     schedMax: 'Предзаказ макс. (дней)',

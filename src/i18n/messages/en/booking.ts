@@ -203,6 +203,18 @@ const booking = {
     hint: 'Choose when the car should be at your door.',
     tooSoon: 'Pickup can be no sooner than in {n} min.',
   },
+  // «Попутчик» arrival windows (2026-11-24).
+  slots: {
+    title: "When do you need to be there? Pick a window — co-riders meet in the same window.",
+    orders: {
+      one: "{count} order",
+      other: "{count} orders",
+    },
+    people: "{n} ppl",
+    none: "nobody yet",
+    tooSoon: "too late",
+    chosen: "Chosen: {from}–{to}",
+  },
   arrive: {
     modePickup: 'Pickup at',
     modeArrive: 'Be there',

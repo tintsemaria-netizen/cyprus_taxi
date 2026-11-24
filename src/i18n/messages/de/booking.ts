@@ -219,6 +219,18 @@ const booking: Catalog<typeof en> = {
     hint: 'Wählen Sie, wann der Wagen bei Ihnen sein soll.',
     tooSoon: 'Abholung frühestens in {n} Min.',
   },
+  // «Попутчик» arrival windows (2026-11-24).
+  slots: {
+    title: "Wann müssen Sie dort sein? Wählen Sie ein Fenster — im selben Fenster finden sich Mitfahrer leichter.",
+    orders: {
+      one: "{count} Auftrag",
+      other: "{count} Aufträge",
+    },
+    people: "{n} Pers.",
+    none: "noch niemand",
+    tooSoon: "zu spät",
+    chosen: "Gewählt: {from}–{to}",
+  },
   arrive: {
     modePickup: 'Abholung um',
     modeArrive: 'Dort sein',

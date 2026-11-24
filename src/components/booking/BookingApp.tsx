@@ -93,6 +93,7 @@ export default function BookingApp() {
   const [arriveDay, setArriveDay] = useState('');
   const [arriveFromT, setArriveFromT] = useState('');
   const [arriveToT, setArriveToT] = useState('');
+  const [arriveSlots, setArriveSlots] = useState<{ from: string; to: string; orders: number[] }[] | null>(null);
   const [scheduleOffsetMin, setScheduleOffsetMin] = useState<number | undefined>(undefined);
   const [ambiguous, setAmbiguous] = useState<string[] | null>(null);
   const [vClass, setVClass] = useState<'COMFORT' | 'XL'>('COMFORT');
@@ -1186,6 +1187,55 @@ export default function BookingApp() {
       {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
     </div>
   );
+  // «Попутчик» arrival windows (2026-11-24, operator): the passenger picks one of OUR windows (1 h by default,
+  // admin setting) — co-riders meet in the same window. Next to each: orders already there, people in each.
+  const slotsFor = arriveOn && when === 'SCHEDULE' && arriveDay && pickup && dropoff ? `${arriveDay}|${pickup.lat},${pickup.lng}|${dropoff.lat},${dropoff.lng}` : '';
+  useEffect(() => {
+    if (!slotsFor || !pickup || !dropoff) { setArriveSlots(null); return; }
+    let gone = false;
+    api<{ slotMinutes: number; slots: { from: string; to: string; orders: number[] }[] }>(`/share/slots?day=${arriveDay}&pLat=${pickup.lat}&pLng=${pickup.lng}&dLat=${dropoff.lat}&dLng=${dropoff.lng}`)
+      .then((r) => { if (!gone) setArriveSlots(r.slots); }).catch(() => { if (!gone) setArriveSlots([]); });
+    return () => { gone = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slotsFor]);
+  const slotTooSoon = (to: string) => {
+    const m = /^(\d{2}):(\d{2})$/.exec(to); if (!m) return true;
+    const leaveBy = wall(+m[1] * 60 + +m[2] - Math.ceil(route?.min ?? 0) - ARRIVE_MARGIN_MIN);
+    return leaveBy < scheduleMin;
+  };
+  const slotIsChosen = (x: { from: string; to: string }) => arriveFromT === x.from && arriveToT === x.to;
+  // Open the list at the chosen window, or at the first one that can still be reached.
+  const slotBoxRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const box = slotBoxRef.current; if (!box || !arriveSlots) return;
+    const el = (box.querySelector('[aria-pressed="true"]') ?? box.querySelector('button:not([disabled])')) as HTMLElement | null;
+    if (el) box.scrollTop = el.offsetTop - box.offsetTop - 4;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arriveSlots]);
+  const chosenOutside = !!arriveFromT && !!arriveToT && !!arriveSlots && !arriveSlots.some(slotIsChosen);
+  const slotList = (
+    <div className="mt-2" data-testid="arrive-slots">
+      <p className="mb-1.5 text-[13px] font-medium text-ink">{t('booking.slots.title')}</p>
+      {chosenOutside && <p className="mb-1.5 text-xs text-muted">{t('booking.slots.chosen', { from: fmt.clock(arriveFromT), to: fmt.clock(arriveToT) })}</p>}
+      <div ref={slotBoxRef} className="relative max-h-[264px] space-y-1.5 overflow-y-auto overscroll-contain rounded-[12px] pe-1">
+        {!arriveSlots ? <p className="text-xs text-muted">{t('common.loading')}</p> : arriveSlots.map((x) => {
+          const late = slotTooSoon(x.to);
+          const on = slotIsChosen(x);
+          return (
+            <button key={x.from} type="button" disabled={late} onClick={() => { setArriveFromT(x.from); setArriveToT(x.to); }} data-testid={`slot-${x.from}`} aria-pressed={on}
+              className={`flex w-full items-center justify-between gap-3 rounded-[10px] border px-3 py-2.5 text-start ${on ? 'border-accent bg-accent/15' : 'border-edge bg-elevated'} ${late ? 'opacity-40' : ''}`}>
+              <span className="font-mono text-[15px] font-bold">{fmt.clock(x.from)}–{fmt.clock(x.to)}</span>
+              <span className={`text-end text-xs ${x.orders.length ? 'font-semibold text-accent' : 'text-muted'}`}>
+                {late ? t('booking.slots.tooSoon') : x.orders.length
+                  ? `${tp('booking.slots.orders', x.orders.length)}: ${x.orders.map((n) => t('booking.slots.people', { n })).join(', ')}`
+                  : t('booking.slots.none')}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
   const arriveBox = (
     <div data-testid="arrive-window">
       {/* The hint sits ABOVE the date field until both times are set (2026-11-22, operator). */}
@@ -1193,10 +1243,8 @@ export default function BookingApp() {
       <input type="date" className="field block w-full min-w-0 max-w-full appearance-none" value={arriveDay} min={scheduleMin.slice(0, 10)} onChange={(e) => setArriveDay(e.target.value)} aria-label={t('booking.arrive.day')} />
       {/* Two equal columns that never overflow (iPhone draws time inputs wider than the column), a grey «00:00»
           until a time is chosen (2026-11-22, operator). */}
-      <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
-        <TimeBox label={t('booking.arrive.from')} testid="arrive-from" value={arriveFromT} onChange={setArriveFromT} bad={!!errors.scheduledAt} />
-        <TimeBox label={t('booking.arrive.to')} testid="arrive-to" value={arriveToT} onChange={setArriveToT} bad={!!errors.scheduledAt} />
-      </div>
+      {/* Our windows instead of typing «с … до …» (2026-11-24). Without a route yet: nothing to count. */}
+      {slotList}
       {arriveWindow() && (
         <p className={`mt-2 rounded-[10px] border px-3 py-2 text-[13px] font-medium text-ink ${arriveBadWidth ? 'border-warn/50 bg-warn/15' : 'border-accent/50 bg-accent/15'}`} data-testid="arrive-leave">
           {arriveBadWidth ? t('booking.arrive.badWidth') : arriveCalc

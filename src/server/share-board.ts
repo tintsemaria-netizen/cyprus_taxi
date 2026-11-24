@@ -27,7 +27,7 @@ const SEL = {
 } as const;
 
 /** Open (listable) co-rider pre-bookings: no proposal or pair, no pre-accepted driver, far enough ahead. */
-async function openRides(now: Date, where: object = {}) {
+export async function openRides(now: Date, where: object = {}) {
   const hideMin = await hideMinutes();
   const rows = await prisma.booking.findMany({
     where: {

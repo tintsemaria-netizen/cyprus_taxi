@@ -219,6 +219,18 @@ const booking: Catalog<typeof en> = {
     hint: 'Choisissez quand la voiture doit être chez vous.',
     tooSoon: 'Prise en charge au plus tôt dans {n} min.',
   },
+  // «Попутчик» arrival windows (2026-11-24).
+  slots: {
+    title: "Quand devez-vous être sur place ? Choisissez un créneau — les covoyageurs se trouvent dans le même créneau.",
+    orders: {
+      one: "{count} commande",
+      other: "{count} commandes",
+    },
+    people: "{n} pers.",
+    none: "personne pour l’instant",
+    tooSoon: "trop tard",
+    chosen: "Choisi : {from}–{to}",
+  },
   arrive: {
     modePickup: 'Prise en charge à',
     modeArrive: 'Être sur place',

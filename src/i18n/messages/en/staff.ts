@@ -247,6 +247,8 @@ const staff = {
     googleReview: 'Google review (Place ID or link)',
     googleReviewPh: 'ChIJ… — hidden if empty',
     schedMin: 'Pre-booking at least (min) ahead',
+    shareSlot: "Co-rider: arrival windows of",
+    shareSlotOpt: "{m} min",
     shareMin: 'Pre-booking with a co-rider at least (min) ahead',
     boardHide: 'Share board: remove a ride (min) before pickup',
     schedMax: 'Schedule max (days)',

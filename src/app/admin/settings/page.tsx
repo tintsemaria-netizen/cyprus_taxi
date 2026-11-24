@@ -15,6 +15,7 @@ interface Settings {
   scheduleMinMinutes: number;
   scheduleMaxDays: number;
   shareMinMinutes: number;
+  shareSlotMinutes: number;
   shareBoardHideMinutes: number;
   minStopDistanceMeters: number;
   serviceAreaPolygon: { lat: number; lng: number }[];
@@ -48,6 +49,7 @@ function SettingsForm() {
           scheduleMinMinutes: Number(s.scheduleMinMinutes),
           scheduleMaxDays: Number(s.scheduleMaxDays),
           shareMinMinutes: Number(s.shareMinMinutes),
+          shareSlotMinutes: Number(s.shareSlotMinutes),
           shareBoardHideMinutes: Number(s.shareBoardHideMinutes),
           minStopDistanceMeters: Number(s.minStopDistanceMeters),
         },
@@ -74,6 +76,12 @@ function SettingsForm() {
         <Row label={t('staff.settings.googleReview')}><input className="field" value={s.googleReviewUrl ?? ''} onChange={(e) => setS({ ...s, googleReviewUrl: e.target.value })} placeholder={t('staff.settings.googleReviewPh')} /></Row>
         <div className="grid grid-cols-3 gap-3">
           <Row label={t('staff.settings.schedMin')}><input type="number" className="field" value={s.scheduleMinMinutes} onChange={(e) => setS({ ...s, scheduleMinMinutes: Number(e.target.value) })} /></Row>
+          {/* «Попутчик» arrival windows (2026-11-24): the passenger picks one of these, so co-riders meet. */}
+          <Row label={t('staff.settings.shareSlot')}>
+            <select className="field" value={s.shareSlotMinutes ?? 60} onChange={(e) => setS({ ...s, shareSlotMinutes: Number(e.target.value) })} data-testid="set-share-slot">
+              {[30, 60, 90, 120, 180].map((m) => <option key={m} value={m}>{t('staff.settings.shareSlotOpt', { m })}</option>)}
+            </select>
+          </Row>
           <Row label={t('staff.settings.shareMin')}><input type="number" className="field" value={s.shareMinMinutes} onChange={(e) => setS({ ...s, shareMinMinutes: Number(e.target.value) })} data-testid="set-share-min" /></Row>
           <Row label={t('staff.settings.boardHide')}><input type="number" className="field" value={s.shareBoardHideMinutes} onChange={(e) => setS({ ...s, shareBoardHideMinutes: Number(e.target.value) })} data-testid="set-board-hide" /></Row>
           <Row label={t('staff.settings.schedMax')}><input type="number" className="field" value={s.scheduleMaxDays} onChange={(e) => setS({ ...s, scheduleMaxDays: Number(e.target.value) })} /></Row>

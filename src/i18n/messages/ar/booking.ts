@@ -219,6 +219,22 @@ const booking: Catalog<typeof en> = {
     hint: 'اختر متى يجب أن تكون السيارة عندك.',
     tooSoon: 'لا يمكن أن يكون الاستلام قبل {n} دقيقة.',
   },
+  // «Попутчик» arrival windows (2026-11-24).
+  slots: {
+    title: "متى يجب أن تكون هناك؟ اختر نافذة — في النافذة نفسها يسهل إيجاد رفيق رحلة.",
+    orders: {
+      zero: "{count} طلبات",
+      one: "طلب {count}",
+      two: "{count} طلبان",
+      few: "{count} طلبات",
+      many: "{count} طلبًا",
+      other: "{count} طلب",
+    },
+    people: "{n} أشخاص",
+    none: "لا أحد بعد",
+    tooSoon: "متأخر جدًا",
+    chosen: "المختار: {from}–{to}",
+  },
   arrive: {
     modePickup: 'الاستلام في',
     modeArrive: 'الوصول إلى هناك',

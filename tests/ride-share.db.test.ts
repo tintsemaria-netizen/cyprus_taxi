@@ -406,6 +406,25 @@ describe('pre-booked ride-share', () => {
     expect(guestArr).toBeGreaterThanOrEqual(guest.arriveFrom!.getTime() - 5 * MIN);
   });
 
+  // 2026-11-24 (operator): our windows (1 h) with the orders already in each and the people in each order.
+  it('arrival windows: each window counts the orders on the same route and the people in each', async () => {
+    const { shareSlots } = await import('@/server/share-slots');
+    const { nicosiaDayKey, nicosiaMidnightUtc } = await import('@/lib/timezone');
+    const a = await arriving(lca, marina, 300, 60);
+    await prisma.booking.update({ where: { id: a.id }, data: { passengerCount: 3 } });
+    const b = await arriving(lcaNear, limCentre, 300, 60);
+    await arriving(limassol, lca, 300, 60); // another route: not counted here
+    const day = nicosiaDayKey(a.arriveFrom!);
+    const r = await shareSlots(day, lca, marina);
+    expect(r.slotMinutes).toBe(60);
+    expect(r.slots).toHaveLength(24);
+    const idx = Math.floor(((a.arriveFrom!.getTime() + a.arriveBy!.getTime()) / 2 - nicosiaMidnightUtc(day).getTime()) / (60 * MIN));
+    expect(r.slots[idx].orders.sort()).toEqual([1, 3]);
+    expect(r.slots.reduce((n, x) => n + x.orders.length, 0)).toBe(2);
+    expect(r.slots[23].to).toBe('23:59');
+    void b;
+  });
+
   it('arrival windows that do not overlap → not paired', async () => {
     await arriving(lca, marina, 300, 30); // 4:30–5:00
     await arriving(lcaNear, limCentre, 380, 30); // 5:50–6:20
