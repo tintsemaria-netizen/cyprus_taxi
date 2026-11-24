@@ -2840,6 +2840,11 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-24 23:20 — point logos hidden on the route view (DEPLOYED 3b29bc2)
+
+- BookingApp `showSpots = !dropoff`: faint pickup-point logos only while choosing the pickup; outline stays.
+- superadmin.db.test.ts failed once in the full run, passed alone (flaky, unrelated).
+
 ## 2026-11-24 22:55 — territory magnet, zoom-look limit, no blink (DEPLOYED 314f544)
 
 - Operator (island zoom): a drop on the airport circle acted like «sea», and re-entering with a slight zoom did not
