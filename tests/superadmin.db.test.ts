@@ -64,7 +64,8 @@ describe('superadmin', () => {
     await minFares.POST(new Request('http://localhost:3000/api/v1/admin/min-fares', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }));
     expect(await prisma.staffAction.count({ where: { actorName: 'Nikos' } })).toBe(2);
     const owner = (await prisma.staffUser.findUnique({ where: { login: 'admin' } }))!;
-    expect(await prisma.notificationOutbox.count({ where: { audience: `STAFF:${owner.id}` } })).toBe(0);
+    // Document pushes (tag 'docs', 2026-11-24) from other tests are not about changes.
+    expect(await prisma.notificationOutbox.count({ where: { audience: `STAFF:${owner.id}`, tag: { not: 'docs' } } })).toBe(0);
     // A plain read is not a change; the owner's own changes are not logged.
     hdr.h = new Headers();
     await as(adminLogin);
