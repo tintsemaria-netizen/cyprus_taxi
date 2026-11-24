@@ -2840,6 +2840,14 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-24 22:20 — landing zoom 19, swap on glide end, faint-logo points (DEPLOYED c3655c1)
+
+- SPOT_ZOOM = 19 for every landing (operator screenshot); chips keep the zoom.
+- `landing` ends on the map's `onGlideEnd` (new prop; Google centerPointAt onDone, MapLibre moveend), fallback
+  timer glide+1.5 s — the old fixed timer ended before a slow phone's glide → jerk.
+- spotEl = IL-Y logo at 30 % opacity (silhouette removed).
+- Live: chunk has the faint logo, health ready 200. Operator re-checks on the iPhone.
+
 ## 2026-11-24 22:05 — pickup point landing: instant, 50 % zoom-in, territories always shown (DEPLOYED 32db4bf)
 
 - BookingApp `slidePin(from, to, zoom)`: one state batch — camFocus = point, camZoom = release zoom + log2(1.5)
