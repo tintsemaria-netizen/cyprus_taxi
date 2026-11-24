@@ -7,6 +7,7 @@ import { StaffShell } from '@/components/staff/StaffShell';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { Poly, RefZone } from '@/components/staff/ZoneEditorMap';
+import { untangle } from '@/lib/ring';
 import { centroid, growAround, nextBelt, polygonArea, polygonInside, shrinkInto } from '@/lib/zone-shapes';
 
 const ZoneEditorMap = dynamicImport(() => import('@/components/staff/ZoneEditorMap'), { ssr: false });
@@ -158,7 +159,7 @@ function FixedPrices() {
     setMsg(null); resetHist();
     const rest = mine.filter((o) => o.id !== z.id);
     const isCode = z.polygon.length < 3;
-    setDraft({ id: z.id, name: z.name, comfort: euro(z.comfortCents), xl: euro(z.xlCents), active: z.active, polygon: isCode ? [] : z.polygon,
+    setDraft({ id: z.id, name: z.name, comfort: euro(z.comfortCents), xl: euro(z.xlCents), active: z.active, polygon: isCode ? [] : untangle(z.polygon), // an old figure-8 opens as one loop (2026-11-24)
       codes: isCode ? z.postcodes.join(', ') : null, inner: isCode ? [] : directInner(z.polygon, rest), outer: isCode ? [] : directOuter(z.polygon, rest) });
   }
 
