@@ -82,7 +82,7 @@ function AreaZones({ kind }: { kind: Kind }) {
 
   // Pickup territories are shown rounded — exactly as passengers will see them.
   const shape = (z: { kind: Kind; polygon: Poly }) => (z.kind === 'POINT' ? smoothRing(z.polygon) : z.polygon);
-  const pointLabel = (name: string, p: Pt, i: number): RefZone => ({ id: `pt-${i}-${p.lat}-${p.lng}`, name, polygon: [], color: BLUE, label: `📍 ${name || `${t('staff.noGo.point')} ${i + 1}`}`, labelAt: [p.lat, p.lng], strong: true });
+  const pointLabel = (name: string, p: Pt, i: number): RefZone => ({ id: `pt-${i}-${p.lat}-${p.lng}`, name, polygon: [], color: BLUE, label: name || `${t('staff.noGo.point')} ${i + 1}`, labelAt: [p.lat, p.lng], strong: true, pin: true }); // the logo passengers see there
   const dropLabel = (name: string, p: Pt, i: number): RefZone => ({ id: `dp-${i}-${p.lat}-${p.lng}`, name, polygon: [], color: DROP, label: `🏁 ${name || `${t('staff.noGo.dropPoint')} ${i + 1}`}`, labelAt: [p.lat, p.lng], strong: true });
   const refZones: RefZone[] = [
     // the other block's zones, faint, for orientation
