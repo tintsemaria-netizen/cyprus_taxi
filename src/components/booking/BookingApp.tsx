@@ -1187,7 +1187,7 @@ export default function BookingApp() {
       {/* Simple (operator 2026-11-23): the window, the 15-minute limit and the board — no pickup editor. */}
       {arriveCalc ? (
         <p className="mt-1 text-[15px] font-bold leading-snug" data-testid="share-terms-times">{(departMode ? t('booking.slots.pickupSpan', { from: fmt.clock(arriveCalc.leaveFrom.slice(11)), to: fmt.clock(arriveCalc.leaveBy.slice(11)) }) : t('share.terms.arrive', { af: fmt.clock(arriveFromT), at: fmt.clock(arriveToT) }))}</p>
-      ) : <p className="mt-1 text-xs text-muted">{departMode ? t('booking.slots.needHour') : t('share.terms.needWindow')}</p>}
+      ) : departMode ? null /* no hint line here (operator 2026-11-25): the hour list below says it */ : <p className="mt-1 text-xs text-muted">{t('share.terms.needWindow')}</p>}
       <p className="mt-1 text-xs">{t('share.terms.extra', { n: cfg?.share?.termsMaxExtraMin ?? 15 })}</p>
       <p className="mt-1 text-xs">{t('share.terms.board')}</p>
       <p className="mt-1.5 text-xs text-muted" data-testid="share-min-note">{t('share.booking.minNote', { h: shareMinH })}</p>
