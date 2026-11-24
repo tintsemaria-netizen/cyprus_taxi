@@ -2720,13 +2720,13 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   corner / Google mid-edge insert goes through untangle. Fixed prices + pre-booking minimum: an old twisted zone opens untangled.
 - Tests: tests/ring.test.ts (figure-8 → loop, 16 corners in jumbled order → loop, clean ring unchanged).
 
-## 2026-11-24 — Collapsed pre-booking sheet (branch `sheet-collapsed`, WIP, NOT deployed)
+## 2026-11-24 — Collapsed pre-booking sheet — DEPLOYED (operator chose variant 1)
 - Bug: collapsed «Запланировать» sheet showed only the ⇅ arrow — the peek height was «content top + route box height», the
   heading above the box was not counted, the box was cut and useHideClipped hid it. Fixed: measure to the box's real bottom.
-- Operator: «карту не уменьшай» → two previews (PREVIEW flag localStorage `il-y-peek`, remove when chosen):
-  1) heading hidden when collapsed → the route box like a normal ride; 2) heading + one-line route & time card (smaller sheet).
+- Operator: «карту не уменьшай», chose variant 1: collapsed → «Запланировать» heading hidden, route box + order button like a
+  normal ride (variant 2 and the preview flag removed).
 - Other sheets checked: DriverNavigation (fixed max-h peek + useHideClipped), TrackApp (measured), SharePassenger (pill) —
   not the same pattern; the booking sheet's other states (stop, join banner) are covered by the bottom-rect fix.
 - iPhone Air dimmed logo/avatar: iOS 26 top «scroll edge» shadow. FixedTop (2026-11-20) already pins an opaque bar; WebKit bug
   305546 (Safari 26.2: after soft navigation the status bar tint is replaced by a page-colour shadow, no workaround, fix PR open).
-  Asked the operator when it appears (right after opening vs after going back from another screen).
+  Operator 2026-11-24 03:31: «пропала затемнёнка» — gone now, nothing changed on our side.
