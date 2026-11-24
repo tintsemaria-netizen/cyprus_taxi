@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-25 — ПП: pick the co-rider in the hour list (deployed)
+- Hour list (/api/v1/share/slots): each order has its own arrival time (Google road legs with traffic for that hour; fallback straight-line) and «Ехать»; unfit orders disabled with why ROOM/TIME. Chosen order is proposed right after booking (share-board POST fromHours:true, skips the 3 h rule).
+- Co-rider box: conditions lines removed; no hint before an hour is picked. 3 h rule only in shareTimeMode=ARRIVE (sample mode); admin label says so.
+- Tests: share-board (fromHours 2 h ahead; 3 h rule ARRIVE only), ride-share hours/terms.
+
 ## 2026-11-25 ~01:00 — ПП departure hours: arrival-version leftovers removed (deployed)
 - Co-rider box: «Выберите ниже час выезда…» (booking.slots.needHour) / «Подача 13:00–13:15» instead of the arrival
   hint; «Мои предзаказы» + rides list show the hour (sharePickupFrom) with «Подача …»; tracking (REQUESTED) shows
