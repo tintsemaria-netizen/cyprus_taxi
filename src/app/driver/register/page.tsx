@@ -260,7 +260,8 @@ function VehicleStep({ app, reload }: { app: AppData; reload: () => void }) {
 }
 function PhotosStep({ app, reload }: { app: AppData; reload: () => void }) {
   const { t } = useT();
-  const slots = ['vehicle_front', 'vehicle_rear', 'vehicle_left', 'vehicle_right', 'cabin_front', 'cabin_rear', 'boot', 'taxi_sign'] as const;
+  // Only front and rear (operator 2026-11-24): the other car photos are not asked for at all.
+  const slots = ['vehicle_front', 'vehicle_rear'] as const;
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted">{t('driverReg.photos.hint')}</p>

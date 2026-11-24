@@ -227,7 +227,8 @@ export async function shareView(bookingId: string) {
     status: v.status,
     pickup: { label: v.pickup.label, lat: v.pickup.lat, lng: v.pickup.lng },
     dropoff: { label: v.dropoff.label, lat: v.dropoff.lat, lng: v.dropoff.lng },
-    vehicle: v.vehicle ? { driverName: v.vehicle.driverName.split(' ')[0], make: v.vehicle.make, model: v.vehicle.model, color: v.vehicle.color, plate: v.vehicle.plate } : null,
+    // The car photo, never the driver's (operator 2026-11-24): family see name, car, plate and the car.
+    vehicle: v.vehicle ? { driverName: v.vehicle.driverName.split(' ')[0], make: v.vehicle.make, model: v.vehicle.model, color: v.vehicle.color, plate: v.vehicle.plate, carPhoto: live ? v.vehicle.photos.car : null } : null,
     location: live ? v.location : null,
     pickupEta: live ? v.pickupEta : null,
     pickupEtaMin: live ? v.pickupEtaMin : null,

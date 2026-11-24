@@ -75,7 +75,6 @@ export default function TrackApp() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [safety, setSafety] = useState(false);
-  const [photoOpen, setPhotoOpen] = useState<null | 'driver' | 'car'>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(0);
@@ -406,12 +405,6 @@ export default function TrackApp() {
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-page" style={kbBox}>
       <FixedTop top={kbBox?.top}><PassengerTopBar sticky={false} /></FixedTop>
-      {photoOpen && view.vehicle?.photos?.[photoOpen] && (
-        <button type="button" onClick={() => setPhotoOpen(null)} className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 p-4" aria-label={t('common.close')} data-testid="track-photo-big">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`/api/v1/tracking/photo?kind=${photoOpen}&v=${view.vehicle.photos[photoOpen]}`} alt={photoOpen === 'driver' ? t('track.photo.driver') : t('track.photo.car')} className="max-h-full max-w-full rounded-[12px] object-contain" />
-        </button>
-      )}
 
       <div className="relative flex-1">
         <div className="absolute inset-0">
@@ -505,12 +498,12 @@ export default function TrackApp() {
 
                 {view.vehicle ? (
                   <div className="mt-3 flex items-center gap-3 rounded-[12px] border border-edge bg-elevated p-3">
-                    {/* The driver's selfie and the car from the front (2026-11-24): easier to find the car. Tap = big. */}
+                    {/* The driver's selfie and the car from the front (2026-11-24): easier to find the car. Not enlarged (operator). */}
                     {view.vehicle.photos?.driver
-                      ? <button type="button" onClick={() => setPhotoOpen('driver')} className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-edge max-[359px]:hidden" data-testid="track-driver-photo" aria-label={t('track.photo.driver')}>
+                      ? <span className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-edge max-[359px]:hidden" data-testid="track-driver-photo">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={`/api/v1/tracking/photo?kind=driver&v=${view.vehicle.photos.driver}`} alt="" className="h-full w-full object-cover" />
-                        </button>
+                          <img src={`/api/v1/tracking/photo?kind=driver&v=${view.vehicle.photos.driver}`} alt={t('track.photo.driver')} className="h-full w-full object-cover" />
+                        </span>
                       : <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/20 text-lg max-[359px]:hidden" aria-hidden>🧑‍✈️</div>}
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-semibold">{view.vehicle.driverName}</div>
@@ -521,10 +514,10 @@ export default function TrackApp() {
                     </div>
                     <span className="shrink-0 rounded-[8px] border border-edge bg-page px-2.5 py-1.5 font-mono text-base font-bold tracking-wide max-[359px]:px-1.5 max-[359px]:text-sm" aria-label={t('track.plateAria', { plate: view.vehicle.plate })}>{view.vehicle.plate}</span>
                     {view.vehicle.photos?.car && (
-                      <button type="button" onClick={() => setPhotoOpen('car')} className="h-11 w-14 shrink-0 overflow-hidden rounded-[8px] border border-edge" data-testid="track-car-photo" aria-label={t('track.photo.car')}>
+                      <span className="h-11 w-14 shrink-0 overflow-hidden rounded-[8px] border border-edge" data-testid="track-car-photo">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`/api/v1/tracking/photo?kind=car&v=${view.vehicle.photos.car}`} alt="" className="h-full w-full object-cover" />
-                      </button>
+                        <img src={`/api/v1/tracking/photo?kind=car&v=${view.vehicle.photos.car}`} alt={t('track.photo.car')} className="h-full w-full object-cover" />
+                      </span>
                     )}
                   </div>
                 ) : null /* searching: the pulsing pin on the map says it — no «Закрепляем…» box (2026-11-15) */}

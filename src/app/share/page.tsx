@@ -18,7 +18,7 @@ interface ShareView {
   status: string;
   pickup: { label: string; lat: number; lng: number };
   dropoff: { label: string; lat: number; lng: number };
-  vehicle: null | { driverName: string; make: string; model: string; color: string; plate: string };
+  vehicle: null | { driverName: string; make: string; model: string; color: string; plate: string; carPhoto?: string | null };
   location: null | { lat: number; lng: number; freshness: string; sampledAt: string };
   pickupEta: string | null;
   pickupEtaMin: number | null;
@@ -98,7 +98,8 @@ export default function SharePage() {
                     <div className="font-semibold">{view.vehicle.driverName}</div>
                     <div className="truncate text-sm text-muted">{view.vehicle.color} {view.vehicle.make} {view.vehicle.model}</div>
                   </div>
-                  <span className="shrink-0 rounded-[8px] border border-edge px-2 py-1 font-mono text-base font-bold">{view.vehicle.plate}</span>
+                  <span className="ms-auto shrink-0 rounded-[8px] border border-edge px-2 py-1 font-mono text-base font-bold">{view.vehicle.plate}</span>
+                  {view.vehicle.carPhoto && <ShareCarPhoto token={token.current} v={view.vehicle.carPhoto} />}
                 </div>
               )}
               <div className="mt-3 space-y-1 text-sm">
@@ -117,5 +118,24 @@ export default function SharePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// The car from the front (2026-11-24) — never the driver's photo on a shared link.
+function ShareCarPhoto({ token, v }: { token: string; v: string }) {
+  const { t } = useT();
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let u: string | null = null; let gone = false;
+    fetch('/api/v1/share/photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
+      .then((r) => (r.ok ? r.blob() : null)).then((b) => { if (b && !gone) { u = URL.createObjectURL(b); setUrl(u); } }).catch(() => {});
+    return () => { gone = true; if (u) URL.revokeObjectURL(u); };
+  }, [token, v]);
+  if (!url) return null;
+  return (
+    <span className="h-11 w-14 shrink-0 overflow-hidden rounded-[8px] border border-edge" data-testid="share-car-photo">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={url} alt={t('track.photo.car')} className="h-full w-full object-cover" />
+    </span>
   );
 }
