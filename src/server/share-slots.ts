@@ -30,6 +30,9 @@ export async function shareSlots(day: string, pickup: LatLng, dropoff: LatLng, m
   const dayEnd = new Date(midnight.getTime() + 26 * 60 * MIN); // a DST day can be 25 h
   const rides = await openRides(now, { scheduledAt: { gt: midnight, lt: new Date(dayEnd.getTime() + 3 * 60 * MIN) } });
   for (const r of rides) {
+    // Old -30% bookings made before the terms (no terms version) are not paired automatically — they stay on
+    // the board only, so they are not promised here.
+    if (!r.shareTermsVersion) continue;
     if (shareZone({ lat: r.pickupLat, lng: r.pickupLng }) !== from || shareZone({ lat: r.dropoffLat, lng: r.dropoffLng }) !== to) continue;
     // Its earliest pickup decides the hour it sits in.
     const start = r.scheduledAt!.getTime() - (r.shareEarlyMin ?? 0) * MIN;

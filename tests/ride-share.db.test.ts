@@ -436,6 +436,23 @@ describe('pre-booked ride-share', () => {
     void a; void b;
   });
 
+  // Operator 23:56: after the switch, the -30% bookings already made must still pair with the new ones.
+  it('an existing arrival-window booking pairs with a new departure-hour booking; an old one without terms is not listed', async () => {
+    const { shareSlots } = await import('@/server/share-slots');
+    const { nicosiaDayKey } = await import('@/lib/timezone');
+    const old = await arriving(lca, marina, 330, 60); // made before: «быть на месте» 4:30–5:30 from now (has terms)
+    const legacy = await scheduled(lca, marina, 300, { old: true }); // made before the terms: board only
+    const drive = Math.ceil(approxLegMin(lcaNear, limCentre));
+    const hourAt = new Date(old.arriveBy!.getTime() - (drive + 25) * MIN); hourAt.setUTCSeconds(0, 0);
+    const neu = await prisma.booking.update({ where: { id: (await scheduled(lcaNear, limCentre, 300)).id }, data: { scheduledAt: new Date(hourAt.getTime() + 15 * MIN), shareEarlyMin: 15, shareWaitMin: 0 } });
+    const listed = (await shareSlots(nicosiaDayKey(hourAt), lca, marina)).slots.flatMap((x) => x.orders);
+    expect(listed.length).toBe(2); // the arrival-window one and the new hour one; not the legacy one
+    expect(await matchPrebookings()).toBe(1);
+    const g = (await prisma.shareGroup.findFirst({ where: { OR: [{ hostBookingId: old.id }, { guestBookingId: old.id }] } }))!;
+    expect([g.hostBookingId, g.guestBookingId].sort()).toEqual([old.id, neu.id].sort());
+    void legacy;
+  });
+
   it('a departure-hour booking stores the pickup span 13:00–13:15 as its terms', async () => {
     const day = (m: number) => { const d = new Date(Date.now() + m * MIN); return d.toLocaleString('sv-SE', { timeZone: 'Asia/Nicosia' }).slice(0, 16).replace(' ', 'T'); };
     const r = await createBooking(createBookingSchema.parse({ pickup: lca, dropoff: marina, when: 'SCHEDULE', vClass: 'COMFORT', passengerCount: 1, passengerName: 'P', phone: '+35799123456', shareOptIn: true, shareMaxExtraMin: 15, scheduledAt: day(215), sharePickupFrom: day(200), shareTerms: config.share.termsVersion }), `dep-${Date.now()}`);
