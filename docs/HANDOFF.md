@@ -2840,6 +2840,11 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-24 22:30 — landing glide 1.5 s, ease in-out (DEPLOYED 114b375)
+
+- SPOT_GLIDE_MS 1500; Google centerPointAt and MapLibre focus glides now ease in-out (cubic) — also used by
+  «Моё местоположение» and the return from the sea. Live: new easing in the served chunk, health ready 200.
+
 ## 2026-11-24 22:20 — landing zoom 19, swap on glide end, faint-logo points (DEPLOYED c3655c1)
 
 - SPOT_ZOOM = 19 for every landing (operator screenshot); chips keep the zoom.
