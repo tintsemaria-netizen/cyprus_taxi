@@ -221,6 +221,13 @@ const booking: Catalog<typeof en> = {
   },
   // «Попутчик» arrival windows (2026-11-24).
   slots: {
+    label: "Heure de départ",
+    titleDepart: "Choisissez une heure de départ — les covoyageurs se retrouvent dans la même heure. La voiture arrive dans les 15 minutes.",
+    pick: "Choisissez une heure de départ.",
+    pickupSpan: "Prise en charge {from}–{to}",
+    withArrive: "avec lui, arrivée ≈ {at}",
+    notOnWay: "pas sur votre trajet",
+    alone: "seul, arrivée ≈ {at}",
     title: "Quand devez-vous être sur place ? Choisissez un créneau — les covoyageurs se trouvent dans le même créneau.",
     orders: {
       one: "{count} commande",

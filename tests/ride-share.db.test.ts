@@ -406,23 +406,46 @@ describe('pre-booked ride-share', () => {
     expect(guestArr).toBeGreaterThanOrEqual(guest.arriveFrom!.getTime() - 5 * MIN);
   });
 
-  // 2026-11-24 (operator): our windows (1 h) with the orders already in each and the people in each order.
-  it('arrival windows: each window counts the orders on the same route and the people in each', async () => {
+  // 2026-11-24 (operator): departure HOURS — under each hour the orders on the same route, the people in each,
+  // and when I'd arrive riding with each one.
+  it('departure hours: orders on my route per hour, people in each, my arrival with each; the hour pairs', async () => {
     const { shareSlots } = await import('@/server/share-slots');
     const { nicosiaDayKey, nicosiaMidnightUtc } = await import('@/lib/timezone');
-    const a = await arriving(lca, marina, 300, 60);
-    await prisma.booking.update({ where: { id: a.id }, data: { passengerCount: 3 } });
-    const b = await arriving(lcaNear, limCentre, 300, 60);
-    await arriving(limassol, lca, 300, 60); // another route: not counted here
-    const day = nicosiaDayKey(a.arriveFrom!);
-    const r = await shareSlots(day, lca, marina);
+    // Two orders picked up 13:00–13:15 style (early 15 = the pickup span), one on another route.
+    const base = new Date(Date.now() + 300 * MIN); base.setUTCMinutes(0, 0, 0);
+    const at = (b: Awaited<ReturnType<typeof scheduled>>) => prisma.booking.update({ where: { id: b.id }, data: { scheduledAt: new Date(base.getTime() + 15 * MIN), shareEarlyMin: 15, shareWaitMin: 0 } });
+    const a = await at(await scheduled(lca, marina, 300, { pax: 2 }));
+    const b = await at(await scheduled(lcaNear, limCentre, 300, { pax: 1 }));
+    await at(await scheduled(limassol, lca, 300));
+    const day = nicosiaDayKey(base);
+    const r = await shareSlots(day, lca, marina, { people: 1, vClass: 'COMFORT' });
     expect(r.slotMinutes).toBe(60);
     expect(r.slots).toHaveLength(24);
-    const idx = Math.floor(((a.arriveFrom!.getTime() + a.arriveBy!.getTime()) / 2 - nicosiaMidnightUtc(day).getTime()) / (60 * MIN));
-    expect(r.slots[idx].orders.sort()).toEqual([1, 3]);
-    expect(r.slots.reduce((n, x) => n + x.orders.length, 0)).toBe(2);
-    expect(r.slots[23].to).toBe('23:59');
-    void b;
+    const idx = Math.floor((base.getTime() - nicosiaMidnightUtc(day).getTime()) / (60 * MIN));
+    const orders = r.slots[idx].orders;
+    expect(orders.map((o) => o.people).sort()).toEqual([1, 2]);
+    for (const o of orders) {
+      expect(o.myArrive).not.toBeNull();
+      expect(new Date(o.myArrive!).getTime()).toBeGreaterThan(base.getTime());
+    }
+    // Too many people for one car → that order is «not on the way».
+    const big = await shareSlots(day, lca, marina, { people: 3, vClass: 'COMFORT' });
+    expect(big.slots[idx].orders.find((o) => o.people === 2)!.myArrive).toBeNull();
+    // The two orders in that hour pair automatically.
+    expect(await matchPrebookings()).toBe(1);
+    void a; void b;
+  });
+
+  it('a departure-hour booking stores the pickup span 13:00–13:15 as its terms', async () => {
+    const day = (m: number) => { const d = new Date(Date.now() + m * MIN); return d.toLocaleString('sv-SE', { timeZone: 'Asia/Nicosia' }).slice(0, 16).replace(' ', 'T'); };
+    const r = await createBooking(createBookingSchema.parse({ pickup: lca, dropoff: marina, when: 'SCHEDULE', vClass: 'COMFORT', passengerCount: 1, passengerName: 'P', phone: '+35799123456', shareOptIn: true, shareMaxExtraMin: 15, scheduledAt: day(215), sharePickupFrom: day(200), shareTerms: config.share.termsVersion }), `dep-${Date.now()}`);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const b = await prisma.booking.findUniqueOrThrow({ where: { reference: r.body.reference } });
+    expect(b.arriveBy).toBeNull();
+    expect(b.shareTermsVersion).toBe(config.share.termsVersion);
+    expect([b.shareEarlyMin, b.shareWaitMin]).toEqual([15, 0]);
+    expect(b.sharePickupTo!.getTime() - b.sharePickupFrom!.getTime()).toBe(15 * MIN);
   });
 
   it('arrival windows that do not overlap → not paired', async () => {

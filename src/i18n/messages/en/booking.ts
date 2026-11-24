@@ -205,6 +205,13 @@ const booking = {
   },
   // «Попутчик» arrival windows (2026-11-24).
   slots: {
+    label: "Departure time",
+    titleDepart: "Pick a departure hour — co-riders meet in the same hour. The car comes within 15 minutes.",
+    pick: "Pick a departure hour.",
+    pickupSpan: "Pickup {from}–{to}",
+    withArrive: "with them you arrive ≈ {at}",
+    notOnWay: "not on your way",
+    alone: "alone you arrive ≈ {at}",
     title: "When do you need to be there? Pick a window — co-riders meet in the same window.",
     orders: {
       one: "{count} order",

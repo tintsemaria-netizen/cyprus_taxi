@@ -159,9 +159,10 @@ export async function createBooking(
   // «Изменить» may narrow it or make it one exact time. Only bookings that saw these terms are paired
   // without a question; the snapshot (version, time, interval, booked pickup and price) stays on the booking.
   let terms: { from: Date; to: Date } | null = null;
-  if (scheduledAt && shareOptIn && arrive && input.shareTerms === config.share.termsVersion) {
-    const width = arrive.by.getTime() - arrive.from.getTime();
-    let from = new Date(scheduledAt.getTime() - width);
+  // «Попутчик» departure hour (2026-11-24): no arrival window — the pickup interval itself (13:00–13:15) is sent.
+  if (scheduledAt && shareOptIn && (arrive || input.sharePickupFrom) && input.shareTerms === config.share.termsVersion) {
+    const width = arrive ? arrive.by.getTime() - arrive.from.getTime() : 60 * 60_000;
+    let from = new Date(scheduledAt.getTime() - (arrive ? width : 0));
     if (input.sharePickupFrom) {
       const pf = nicosiaWallTimeToUtc(input.sharePickupFrom);
       if (!pf.ok) return fail(422, 'VALIDATION', 'Invalid pickup time.', { sharePickupFrom: 'Pick a valid time.' });

@@ -36,7 +36,7 @@ interface PublicConfig {
   demoMode: boolean;
   timezone: string;
   classes: { key: 'COMFORT' | 'XL'; label: string; maxPassengers: number }[];
-  schedule: { minMinutes: number; maxDays: number; shareMinMinutes?: number };
+  schedule: { minMinutes: number; maxDays: number; shareMinMinutes?: number; shareSlotMinutes?: number };
   operatorName: string | null;
   share?: { discountPct: number; defaultMaxExtraMin: number; defaultWaitMin: number; termsVersion?: string; termsMaxExtraMin?: number; noShowFeeCents?: number };
 }
@@ -93,7 +93,9 @@ export default function BookingApp() {
   const [arriveDay, setArriveDay] = useState('');
   const [arriveFromT, setArriveFromT] = useState('');
   const [arriveToT, setArriveToT] = useState('');
-  const [arriveSlots, setArriveSlots] = useState<{ from: string; to: string; orders: number[] }[] | null>(null);
+  // «Попутчик» departure hour (2026-11-24, operator): «13:00» → the car comes 13:00–13:15.
+  const [departT, setDepartT] = useState('');
+  const [arriveSlots, setArriveSlots] = useState<{ at: string; orders: { people: number; myArrive: string | null }[] }[] | null>(null);
   const [scheduleOffsetMin, setScheduleOffsetMin] = useState<number | undefined>(undefined);
   const [ambiguous, setAmbiguous] = useState<string[] | null>(null);
   const [vClass, setVClass] = useState<'COMFORT' | 'XL'>('COMFORT');
@@ -908,9 +910,7 @@ export default function BookingApp() {
     // Email-only accounts have no verified phone: the contact number is entered per booking.
     if (passenger && !passenger.guest && !passenger.phone && !/^\+?[\d\s()-]{7,20}$/.test(phone.trim())) e.phone = t('booking.validation.phone');
     if (when === 'SCHEDULE' && arriveOn) {
-      const w = arriveWindow();
-      if (!w) e.scheduledAt = t('booking.arrive.needTimes');
-      else if (w.width < 15 || w.width > 180) e.scheduledAt = t('booking.arrive.badWidth');
+      if (!departT) e.scheduledAt = t('booking.slots.pick');
       else if (route?.min == null) e.scheduledAt = t('booking.arrive.needRoute');
     } else if (when === 'SCHEDULE' && !scheduledAt) e.scheduledAt = t('booking.validation.scheduledAt');
     else if (when === 'SCHEDULE' && scheduledAt < scheduleMin) e.scheduledAt = t('booking.pickupAt.tooSoon', { n: cfg?.schedule.minMinutes ?? 30 });
@@ -1089,7 +1089,14 @@ export default function BookingApp() {
     const d = new Date(Date.UTC(+arriveDay.slice(0, 4), +arriveDay.slice(5, 7) - 1, +arriveDay.slice(8, 10), 0, minOfDay));
     return d.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM, still Cyprus wall time
   };
+  const DEPART_SPAN = 15;
+  const minOf = (x: string) => { const m = /^(\d{2}):(\d{2})$/.exec(x); return m ? +m[1] * 60 + +m[2] : null; };
   const arriveCalc = (() => {
+    // Departure hour (2026-11-24): pickup between the hour and +15 min.
+    if (when === 'SCHEDULE' && arriveOn && departT && minOf(departT) != null) {
+      const m = minOf(departT)!;
+      return { leaveFrom: wall(m), leaveBy: wall(m + DEPART_SPAN), drive: Math.ceil(route?.min ?? 0) };
+    }
     const w = arriveWindow();
     if (when !== 'SCHEDULE' || !arriveOn || !w || w.width < 15 || w.width > 180 || route?.min == null) return null;
     const drive = Math.ceil(route.min) + ARRIVE_MARGIN_MIN;
@@ -1146,8 +1153,10 @@ export default function BookingApp() {
         setShareOpts((o) => ({ ...o, on: true }));
         const wallOf = (iso: string) => nicosiaInputValue(new Date(iso));
         setArriveMode(true);
-        if (r.arrive) { const f = wallOf(r.arrive.from), b = wallOf(r.arrive.by); setArriveDay(f.slice(0, 10)); setArriveFromT(f.slice(11, 16)); setArriveToT(b.slice(11, 16)); }
-        else setArriveDay(wallOf(r.at).slice(0, 10));
+        // Joining a ride on the board: the departure hour it sits in (2026-11-24).
+        const w = wallOf(r.at), step = cfg?.schedule.shareSlotMinutes ?? 60, m = +w.slice(11, 13) * 60 + +w.slice(14, 16);
+        const h = Math.floor(m / step) * step;
+        setArriveDay(w.slice(0, 10)); setDepartT(`${String(Math.floor(h / 60)).padStart(2, '0')}:${String(h % 60).padStart(2, '0')}`);
       })
       .catch(() => setFlash(t('share.board.joinFailed', { reason: t('errors.BOOKING_GONE') })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1167,7 +1176,7 @@ export default function BookingApp() {
       <p className="text-[13px] font-semibold text-accent">{t('share.terms.auto')}</p>
       {/* Simple (operator 2026-11-23): the window, the 15-minute limit and the board — no pickup editor. */}
       {arriveCalc ? (
-        <p className="mt-1 text-[15px] font-bold leading-snug" data-testid="share-terms-times">{t('share.terms.arrive', { af: fmt.clock(arriveFromT), at: fmt.clock(arriveToT) })}</p>
+        <p className="mt-1 text-[15px] font-bold leading-snug" data-testid="share-terms-times">{t('booking.slots.pickupSpan', { from: fmt.clock(arriveCalc.leaveFrom.slice(11)), to: fmt.clock(arriveCalc.leaveBy.slice(11)) })}</p>
       ) : <p className="mt-1 text-xs text-muted">{t('share.terms.needWindow')}</p>}
       <p className="mt-1 text-xs">{t('share.terms.extra', { n: cfg?.share?.termsMaxExtraMin ?? 15 })}</p>
       <p className="mt-1 text-xs">{t('share.terms.board')}</p>
@@ -1187,24 +1196,20 @@ export default function BookingApp() {
       {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
     </div>
   );
-  // «Попутчик» arrival windows (2026-11-24, operator): the passenger picks one of OUR windows (1 h by default,
-  // admin setting) — co-riders meet in the same window. Next to each: orders already there, people in each.
-  const slotsFor = arriveOn && when === 'SCHEDULE' && arriveDay && pickup && dropoff ? `${arriveDay}|${pickup.lat},${pickup.lng}|${dropoff.lat},${dropoff.lng}` : '';
+  // «Попутчик» departure hours (2026-11-24, operator): the passenger picks an hour (1 h by default, admin
+  // setting); the car comes within 15 min of it. Under each hour: orders already there, people in each, and
+  // when he would arrive riding with each one — so he sees who suits his flight.
+  const slotPax = Math.max(1, effPax);
+  const slotsFor = arriveOn && when === 'SCHEDULE' && arriveDay && pickup && dropoff ? `${arriveDay}|${pickup.lat},${pickup.lng}|${dropoff.lat},${dropoff.lng}|${slotPax}|${vClass}` : '';
   useEffect(() => {
     if (!slotsFor || !pickup || !dropoff) { setArriveSlots(null); return; }
     let gone = false;
-    api<{ slotMinutes: number; slots: { from: string; to: string; orders: number[] }[] }>(`/share/slots?day=${arriveDay}&pLat=${pickup.lat}&pLng=${pickup.lng}&dLat=${dropoff.lat}&dLng=${dropoff.lng}`)
+    api<{ slots: { at: string; orders: { people: number; myArrive: string | null }[] }[] }>(`/share/slots?day=${arriveDay}&pLat=${pickup.lat}&pLng=${pickup.lng}&dLat=${dropoff.lat}&dLng=${dropoff.lng}&pax=${slotPax}&vClass=${vClass}`)
       .then((r) => { if (!gone) setArriveSlots(r.slots); }).catch(() => { if (!gone) setArriveSlots([]); });
     return () => { gone = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slotsFor]);
-  const slotTooSoon = (to: string) => {
-    const m = /^(\d{2}):(\d{2})$/.exec(to); if (!m) return true;
-    const leaveBy = wall(+m[1] * 60 + +m[2] - Math.ceil(route?.min ?? 0) - ARRIVE_MARGIN_MIN);
-    return leaveBy < scheduleMin;
-  };
-  const slotIsChosen = (x: { from: string; to: string }) => arriveFromT === x.from && arriveToT === x.to;
-  // Open the list at the chosen window, or at the first one that can still be reached.
+  const slotTooSoon = (at: string) => { const m = minOf(at); return m == null || wall(m) < scheduleMin; };
   const slotBoxRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const box = slotBoxRef.current; if (!box || !arriveSlots) return;
@@ -1212,46 +1217,47 @@ export default function BookingApp() {
     if (el) box.scrollTop = el.offsetTop - box.offsetTop - 4;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [arriveSlots]);
-  const chosenOutside = !!arriveFromT && !!arriveToT && !!arriveSlots && !arriveSlots.some(slotIsChosen);
+  // Alone: the hour + the drive (+ the 15-minute pickup span at worst).
+  const aloneAt = (at: string) => { const m = minOf(at); return m == null || route?.min == null ? null : wall(m + DEPART_SPAN + Math.ceil(route.min)).slice(11, 16); };
   const slotList = (
     <div className="mt-2" data-testid="arrive-slots">
-      <p className="mb-1.5 text-[13px] font-medium text-ink">{t('booking.slots.title')}</p>
-      {chosenOutside && <p className="mb-1.5 text-xs text-muted">{t('booking.slots.chosen', { from: fmt.clock(arriveFromT), to: fmt.clock(arriveToT) })}</p>}
-      <div ref={slotBoxRef} className="relative max-h-[264px] space-y-1.5 overflow-y-auto overscroll-contain rounded-[12px] pe-1">
+      <p className="mb-1.5 text-[13px] font-medium text-ink">{t('booking.slots.titleDepart')}</p>
+      <div ref={slotBoxRef} className="relative max-h-[300px] space-y-1.5 overflow-y-auto overscroll-contain rounded-[12px] pe-1">
         {!arriveSlots ? <p className="text-xs text-muted">{t('common.loading')}</p> : arriveSlots.map((x) => {
-          const late = slotTooSoon(x.to);
-          const on = slotIsChosen(x);
+          const late = slotTooSoon(x.at);
+          const on = departT === x.at;
+          const alone = aloneAt(x.at);
           return (
-            <button key={x.from} type="button" disabled={late} onClick={() => { setArriveFromT(x.from); setArriveToT(x.to); }} data-testid={`slot-${x.from}`} aria-pressed={on}
-              className={`flex w-full items-center justify-between gap-3 rounded-[10px] border px-3 py-2.5 text-start ${on ? 'border-accent bg-accent/15' : 'border-edge bg-elevated'} ${late ? 'opacity-40' : ''}`}>
-              <span className="font-mono text-[15px] font-bold">{fmt.clock(x.from)}–{fmt.clock(x.to)}</span>
-              <span className={`text-end text-xs ${x.orders.length ? 'font-semibold text-accent' : 'text-muted'}`}>
-                {late ? t('booking.slots.tooSoon') : x.orders.length
-                  ? `${tp('booking.slots.orders', x.orders.length)}: ${x.orders.map((n) => t('booking.slots.people', { n })).join(', ')}`
-                  : t('booking.slots.none')}
-              </span>
+            <button key={x.at} type="button" disabled={late} onClick={() => setDepartT(x.at)} data-testid={`slot-${x.at}`} aria-pressed={on}
+              className={`w-full rounded-[10px] border px-3 py-2.5 text-start ${on ? 'border-accent bg-accent/15' : 'border-edge bg-elevated'} ${late ? 'opacity-40' : ''}`}>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-[16px] font-bold tabular-nums">{fmt.clock(x.at)}</span>
+                <span className="text-end text-xs text-muted">
+                  {late ? t('booking.slots.tooSoon') : x.orders.length ? tp('booking.slots.orders', x.orders.length) : alone ? t('booking.slots.alone', { at: fmt.clock(alone) }) : t('booking.slots.none')}
+                </span>
+              </div>
+              {!late && x.orders.length > 0 && (
+                <ul className="mt-1 space-y-0.5 text-xs">
+                  {x.orders.map((o, i) => (
+                    <li key={i} className={o.myArrive ? 'text-accent' : 'text-muted'}>
+                      • {t('booking.slots.people', { n: o.people })} — {o.myArrive ? t('booking.slots.withArrive', { at: fmt.clock(nicosiaInputValue(new Date(o.myArrive)).slice(11, 16)) }) : t('booking.slots.notOnWay')}
+                    </li>
+                  ))}
+                  {alone && <li className="text-muted">• {t('booking.slots.alone', { at: fmt.clock(alone) })}</li>}
+                </ul>
+              )}
             </button>
           );
         })}
       </div>
+      {arriveCalc && <p className="mt-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium text-ink" data-testid="arrive-leave">{t('booking.slots.pickupSpan', { from: fmt.clock(arriveCalc.leaveFrom.slice(11)), to: fmt.clock(arriveCalc.leaveBy.slice(11)) })}</p>}
     </div>
   );
   const arriveBox = (
     <div data-testid="arrive-window">
-      {/* The hint sits ABOVE the date field until both times are set (2026-11-22, operator). */}
-      {!arriveWindow() && <p className="mb-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium text-ink" data-testid="arrive-hint">{t('booking.arrive.hint')}</p>}
       <input type="date" className="field block w-full min-w-0 max-w-full appearance-none" value={arriveDay} min={scheduleMin.slice(0, 10)} onChange={(e) => setArriveDay(e.target.value)} aria-label={t('booking.arrive.day')} />
-      {/* Two equal columns that never overflow (iPhone draws time inputs wider than the column), a grey «00:00»
-          until a time is chosen (2026-11-22, operator). */}
-      {/* Our windows instead of typing «с … до …» (2026-11-24). Without a route yet: nothing to count. */}
+      {/* Departure hours instead of «быть на месте с … до …» (2026-11-24). */}
       {slotList}
-      {arriveWindow() && (
-        <p className={`mt-2 rounded-[10px] border px-3 py-2 text-[13px] font-medium text-ink ${arriveBadWidth ? 'border-warn/50 bg-warn/15' : 'border-accent/50 bg-accent/15'}`} data-testid="arrive-leave">
-          {arriveBadWidth ? t('booking.arrive.badWidth') : arriveCalc
-            ? t('booking.arrive.leave', { from: fmt.clock(arriveCalc.leaveFrom.slice(11)), to: fmt.clock(arriveCalc.leaveBy.slice(11)), n: arriveCalc.drive })
-            : t('booking.arrive.needRoute')}
-        </p>
-      )}
       {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{errors.scheduledAt}</p>}
     </div>
   );
@@ -1688,7 +1694,7 @@ export default function BookingApp() {
                       {/* Under the «Попутчик» switch: with a co-rider «Когда вам нужно быть на месте?» (window); without — «Во сколько подать машину?» (2026-11-23, operator). */}
                       {when === 'SCHEDULE' && (
                         <div className="mb-3 rounded-[12px] border border-edge bg-elevated px-3 py-2.5" data-testid="schedule-arrive">
-                          <p className="label mb-1">{arriveOn ? t('share.booking.arriveTitle') : t('booking.pickupAt.title')}</p>
+                          <p className="label mb-1">{arriveOn ? t('booking.slots.label') : t('booking.pickupAt.title')}</p>
                           {arriveOn ? arriveBox : pickupBox}
                         </div>
                       )}
