@@ -2840,6 +2840,16 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-24 23:58 — drop-off points in pickup territories (DEPLOYED b5f4f50)
+
+- Migration 20261124230000_drop_points: NoGoZone.dropPoints JSONB. `noGoSchema.dropPoints` (≤20, inside the rounded
+  territory, on land, ≥ MIN_PICK_DROP_M = 15 m from every pickup point). `snapDropoff` in createBooking + quote.
+- /api/v1/no-go territories carry dropPoints; area-client `dropTerritoryAt`, `dropLabel`; BookingApp `dropTerr`,
+  `chooseDrop`, yellow banner `drop-territory` with chips `drop-spot` (booking.dropPoint/dropPoints, 8 languages).
+- Admin AreaZones: modes corners / 📍 pick / 🏁 drop (yellow #FFC83D), two lists; ✕ on a point asks (window.confirm).
+- Stops are not snapped. Live: /api/v1/no-go has dropPoints, health ready, /admin/pickup-points 200.
+- tests/superadmin.db.test.ts is flaky in the full run (passes alone) — unrelated, not fixed.
+
 ## 2026-11-24 23:20 — point logos hidden on the route view (DEPLOYED 3b29bc2)
 
 - BookingApp `showSpots = !dropoff`: faint pickup-point logos only while choosing the pickup; outline stays.
