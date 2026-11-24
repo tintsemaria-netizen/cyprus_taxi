@@ -2840,6 +2840,13 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-25 00:20 — admin territory points as logo pins, draggable (DEPLOYED 4c839cd)
+
+- ZoneEditorMap RefZone `pin: 'pick' | 'drop'`, `draggable`, prop `onPinMove(id, lat, lng)`; Google: legacy Marker
+  with one SVG (logo + pill, anchor at the tip), MapLibre: anchor bottom. Drop-off = BRAND_PIN_SVG_CHECKER (lime →
+  black-and-white squares, carMarker.ts). AreaZones `movePoint`: same checks as placing; bad place → back.
+- Not checked live: Google admin map rendering of the SVG pins and dragging on the phone.
+
 ## 2026-11-24 23:58 — drop-off points in pickup territories (DEPLOYED b5f4f50)
 
 - Migration 20261124230000_drop_points: NoGoZone.dropPoints JSONB. `noGoSchema.dropPoints` (≤20, inside the rounded
