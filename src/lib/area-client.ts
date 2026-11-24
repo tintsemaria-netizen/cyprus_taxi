@@ -28,6 +28,8 @@ export function areaBlock(p: { lat: number; lng: number }): 'OFF_ISLAND' | 'NO_G
   return null;
 }
 
+/** All pickup territories — drawn on the passenger map all the time (2026-11-24, operator). */
+export const allTerritories = (): Territory[] => territories;
 export const spotLabel = (t: Territory, i: number) => (t.points[i].name ? `${t.name} · ${t.points[i].name}` : t.name);
 
 /** The pickup territory a point is in, with the point it is on (if any) and the nearest one. */

@@ -75,6 +75,8 @@ interface Props {
   onFollowBreak?: () => void;
   /** Bump to bring the camera back to its automatic view (focus point / route) — «my location» button. */
   recenterTick?: number;
+  /** Leave the camera where the passenger put it (a pickup point's logo is a map marker, 2026-11-24). */
+  holdCamera?: boolean;
   /** Duration of a re-centre glide (recenterTick), ms. Default 500. */
   glideMs?: number;
   /** The user dragged the map by hand. */
@@ -107,7 +109,7 @@ function demoStyle(): maplibregl.StyleSpecification {
 
 const COLORS = { pickup: '#C8FF46', dropoff: '#F5F7F6', vehicle: '#C8FF46', stop: '#FFC83D', person: '#4C9AFF', spot: '#4C9AFF' };
 
-export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], fleetLikeSelf, routeWidth = 7, areas = [], focus, focusZoom: focusZoomProp, follow, onFollowBreak, recenterTick = 0, glideMs = 500, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
+export default function MapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, fleet = [], fleetLikeSelf, routeWidth = 7, areas = [], focus, focusZoom: focusZoomProp, follow, onFollowBreak, recenterTick = 0, glideMs = 500, holdCamera = false, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
   const focusZoom = focusZoomProp ?? 15;
   // Re-frame / re-centre when the visible area changes (e.g. the sheet under the map grew or shrank).
   const padKey = fitPadding ? `${fitPadding.top},${fitPadding.right},${fitPadding.bottom},${fitPadding.left}` : '';
@@ -127,6 +129,9 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
   });
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerObjs = useRef<maplibregl.Marker[]>([]);
+  // Markers whose look did not change are kept and only moved (2026-11-24: the pickup logo slides into a
+  // pickup point frame by frame — rebuilding every marker each frame made it blink).
+  const markerByKey = useRef(new Map<string, maplibregl.Marker>());
   const fleetObjs = useRef<maplibregl.Marker[]>([]);
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
@@ -205,9 +210,14 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     if (!map || !ready) return;
     (async () => {
       const maplibre = await loadMaplibre();
-      markerObjs.current.forEach((m) => m.remove());
-      markerObjs.current = [];
+      const keyOf = (mk: MapMarker) => [mk.id, mk.kind, mk.label, mk.active, mk.num, mk.next, mk.stale, mk.busy, mk.tag, mk.pulse, mk.self, mk.nav, mk.moving, mk.heading].join('|');
+      const keep = new Map<string, maplibregl.Marker>();
+      for (const mk of markers) { const k = keyOf(mk), m = markerByKey.current.get(k); if (m) { m.setLngLat([mk.lng, mk.lat]); keep.set(k, m); } }
+      for (const [k, m] of markerByKey.current) if (!keep.has(k)) m.remove();
+      markerObjs.current = [...keep.values()];
+      markerByKey.current = keep;
       for (const mk of markers) {
+        if (keep.has(keyOf(mk))) continue;
         let el: HTMLElement;
         if (mk.kind === 'vehicle' && mk.nav) {
           el = navArrowEl({ moving: mk.moving, stale: mk.stale, title: mk.label });
@@ -241,10 +251,11 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         else if (mk.kind === 'spot' && mk.active) marker.getElement().style.zIndex = '940'; // chosen point's name over the other silhouettes
         else if (mk.kind === 'person') marker.getElement().style.zIndex = '900';
         markerObjs.current.push(marker);
+        markerByKey.current.set(keyOf(mk), marker);
       }
       // Fit to markers if more than one (not while the navigation camera is following). Moving
       // markers (cars, the live person) do not re-fit — only a change of the fixed points does.
-      if (followRef.current || idle.active.current) return;
+      if (followRef.current || idle.active.current || holdCamera) return;
       // The visible area (padding) is part of the key: a sheet that changes height re-frames (2026-11-16).
       const key = `${fitKeyOf(markers)}#${idle.returnTick}.${recenterTick}#${fitPadding ? `${fitPadding.top},${fitPadding.bottom}` : ''}#${fitRoute && route ? route.length : ''}`;
       if (key === lastFit.current) return;
@@ -291,7 +302,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
   const lastRecenter = useRef(recenterTick);
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready || !focus || followRef.current || idle.active.current) return;
+    if (!map || !ready || !focus || followRef.current || idle.active.current || holdCamera) return;
     const glide = recenterTick !== lastRecenter.current;
     lastRecenter.current = recenterTick;
     // Centre in the visible area (between overlays / above a sheet) — fitPadding, 2026-11-16.
@@ -344,7 +355,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     if (src) { src.setData(data as never); return; }
     map.addSource('areas', { type: 'geojson', data: data as never });
     map.addLayer({ id: 'areas-fill', type: 'fill', source: 'areas', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.16 } });
-    map.addLayer({ id: 'areas-line', type: 'line', source: 'areas', layout: { 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': 2.5, 'line-opacity': 0.9 } });
+    map.addLayer({ id: 'areas-line', type: 'line', source: 'areas', layout: { 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': 4.5, 'line-opacity': 0.95 } });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [areasKey, ready]);
 

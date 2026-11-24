@@ -11,7 +11,7 @@ import { Logo } from '@/components/Brand';
 import { BRAND_PIN_SVG, BRAND_PIN_SVG_RED } from '@/components/carMarker';
 import { pinPoint } from '@/components/mapFit';
 import { onCyprusIsland } from '@/lib/cyprus-island';
-import { areaBlock, loadNoGo, territoryAt, spotLabel } from '@/lib/area-client';
+import { areaBlock, loadNoGo, territoryAt, spotLabel, allTerritories } from '@/lib/area-client';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import type { Selected } from './PlacesInput';
 import { setNearHint } from '@/lib/nearHint';
@@ -546,14 +546,30 @@ export default function BookingApp() {
   // re-centre (the sheet opening) stays put instead of jumping back or zooming.
   const [noGoReady, setNoGoReady] = useState(0);
   useEffect(() => { void loadNoGo().then(() => setNoGoReady((n) => n + 1)); }, []);
-  const SPOT_ZOOM = 17;
-  const SPOT_GLIDE_MS = 1600;
+  // Landing on a point (2026-11-24 21:46, operator): at once, smoothly, and 50 % closer than the zoom it was at.
+  const SPOT_ZOOM_IN = Math.log2(1.5);
+  const SPOT_GLIDE_MS = 700;
   // On a territory's pickup point (2026-11-24 20:45, operator) the logo is a MAP MARKER standing in the point's
   // silhouette (exactly — the centre overlay was ~20 px off on Google), and zooming happens where the fingers
   // are, not around the logo: a zoom gesture does not move the pickup. Only a pan re-picks the map centre.
-  const [arriving, setArriving] = useState(false);
-  const arriveTimer = useRef<number | null>(null);
   const zoomRef = useRef<number | null>(null);
+  // Zoom for the current point: landing zooms in 50 % (2026-11-24, operator); switching points keeps it.
+  const spotZoom = useRef<number | null>(null);
+  const landedKey = useRef<string | null>(null);
+  const [landing, setLanding] = useState(false);
+  const landTimer = useRef<number | null>(null);
+  // Landing on a point (2026-11-24 21:46, operator: at once, no jerks, 50 % closer): the logo stays in the
+  // middle while the camera glides the point under it and zooms in there; when the glide ends the logo becomes a
+  // map marker standing in the point's silhouette (so zooming afterwards happens where the fingers are).
+  const slidePin = (_from: { lat: number; lng: number }, to: { lat: number; lng: number }, zoom: number) => {
+    landedKey.current = `${to.lat},${to.lng}`;
+    setCamFocus({ lat: to.lat, lng: to.lng }); setCamZoom(zoom); zoomRef.current = zoom;
+    setRecenterTick((n) => n + 1);
+    setLanding(true);
+    if (landTimer.current) window.clearTimeout(landTimer.current);
+    landTimer.current = window.setTimeout(() => setLanding(false), SPOT_GLIDE_MS + 80);
+  };
+
   const HOME_ZOOM = 15.49; // 2026-11-17: 30 % further out than 16 (16 + log2 0.7)
   const dragPick = useRef<{ lat: number; lng: number } | null>(null);
   const [camFocus, setCamFocus] = useState<{ lat: number; lng: number } | null>(null);
@@ -566,14 +582,26 @@ export default function BookingApp() {
     // (operator 2026-11-24 20:08); SEVERAL — zoom out so the whole rounded territory stays on screen around the
     // chosen point, so switching points does not lose it.
     const tz = pickup ? territoryAt(pickup) : null;
-    if (tz && tz.on >= 0) { // glide: the logo «arrives» into the point's silhouette, then stays there as a map marker
-      setRecenterTick((n) => n + 1);
-      setArriving(true);
-      if (arriveTimer.current) window.clearTimeout(arriveTimer.current);
-      arriveTimer.current = window.setTimeout(() => setArriving(false), SPOT_GLIDE_MS + 150);
+    if (pickup && tz && tz.on >= 0 && centerModeRef.current) {
+      // Landing on a point (2026-11-24 21:46, operator): at once and smoothly the camera brings the point under
+      // the logo and zooms in 50 % there, while the logo marker slides with the SAME timing and easing — so on the
+      // screen it stays where the finger left it and ends exactly in the silhouette. Once per landing: re-runs of
+      // this effect (a new GPS fix, the zones loading) must not zoom in again.
+      const key = `${pickup.lat},${pickup.lng}`;
+      if (landedKey.current !== key) {
+        landedKey.current = key;
+        const z = spotZoom.current ?? Math.min(19, (zoomRef.current ?? HOME_ZOOM) + SPOT_ZOOM_IN);
+        spotZoom.current = null;
+        setCamFocus({ lat: pickup.lat, lng: pickup.lng }); setCamZoom(z); zoomRef.current = z;
+        setRecenterTick((n) => n + 1); // glide, not a jump
+        setLanding(true);
+        if (landTimer.current) window.clearTimeout(landTimer.current);
+        landTimer.current = window.setTimeout(() => setLanding(false), SPOT_GLIDE_MS + 120);
+      }
+      return;
     }
-    const z = !tz || tz.on < 0 ? HOME_ZOOM : tz.t.points.length === 1 ? SPOT_ZOOM : Math.min(HOME_ZOOM, fitZoom(p, tz.t.polygon));
-    setCamFocus({ lat: p.lat, lng: p.lng }); setCamZoom(z); zoomRef.current = z;
+    landedKey.current = null; spotZoom.current = null;
+    setCamFocus({ lat: p.lat, lng: p.lng }); setCamZoom(HOME_ZOOM); zoomRef.current = HOME_ZOOM;
   }, [pickup?.lat, pickup?.lng, myLoc?.lat, myLoc?.lng, noGoReady]); // eslint-disable-line react-hooks/exhaustive-deps
   const [pinLift, setPinLift] = useState(false);
   const pickSeq = useRef(0);
@@ -593,9 +621,11 @@ export default function BookingApp() {
   // Pickup territories (2026-11-24, operator: airports, ports …): a pickup inside goes to the nearest of the
   // territory's points; the passenger may pick another one. The rounded territory and its points are on the map.
   const terr = useMemo(() => (pickup ? territoryAt(pickup) : null), [pickup?.lat, pickup?.lng, noGoReady]); // eslint-disable-line react-hooks/exhaustive-deps
-  const chooseSpot = (i: number) => {
+  const chooseSpot = (i: number, zoomIn = true) => {
     if (!terr) return;
     const sp = terr.t.points[i], label = spotLabel(terr.t, i);
+    const start = pickupRef.current;
+    if (start && centerModeRef.current) slidePin(start, sp, Math.min(19, (zoomRef.current ?? HOME_ZOOM) + (zoomIn ? SPOT_ZOOM_IN : 0)));
     pickSeq.current++; // a reverse-geocode still running must not overwrite the point's name
     dragPick.current = null;
     setPickup({ lat: sp.lat, lng: sp.lng, label });
@@ -623,6 +653,14 @@ export default function BookingApp() {
       return;
     }
     setOffIsland(false);
+    const tz = territoryAt(p);
+    if (tz) { // let go inside a pickup territory: the logo slides straight to the nearest point
+      const i = tz.nearest, sp = tz.t.points[i], label = spotLabel(tz.t, i);
+      slidePin(p, sp, Math.min(19, p.zoom + SPOT_ZOOM_IN));
+      pickSeq.current++; dragPick.current = null;
+      setPickup({ lat: sp.lat, lng: sp.lng, label }); setPickupText(label); setAutoPickup(false);
+      return;
+    }
     const cur = pickupRef.current;
     if (cur && Math.abs(cur.lat - p.lat) < 0.00003 && Math.abs(cur.lng - p.lng) < 0.00003) return; // ~3 m: not moved
     setCamFocus({ lat: p.lat, lng: p.lng }); setCamZoom(p.zoom);
@@ -644,21 +682,26 @@ export default function BookingApp() {
   const centerMode = step === 'form' && !dropoff && !picker && !!(pickup || myLoc);
   const onSpot = centerMode && !!terr && terr.on >= 0;
   const onSpotRef = useRef(onSpot); onSpotRef.current = onSpot;
-  const pinOverlay = centerMode && (!onSpot || arriving);
+  const pinOverlay = centerMode && (!onSpot || landing);
   // No «you are here» person on the passenger's maps (2026-11-17): only the IL-Y pickup logo.
   const markers = useMemo<MapMarker[]>(() => {
     const m: MapMarker[] = [];
-    if (pickup && (!centerMode || (onSpot && !arriving))) m.push({ id: 'p', lat: pickup.lat, lng: pickup.lng, kind: 'pickup', label: pickup.label, ...(onSpot ? { noFit: true } : {}) });
+    if (pickup && (!centerMode || (onSpot && !landing))) m.push({ id: 'p', lat: pickup.lat, lng: pickup.lng, kind: 'pickup', label: pickup.label, ...(onSpot ? { noFit: true } : {}) });
     if (stop && hasStop) m.push({ id: 's', lat: stop.lat, lng: stop.lng, kind: 'stop', label: stop.label });
     if (dropoff) m.push({ id: 'd', lat: dropoff.lat, lng: dropoff.lng, kind: 'dropoff', label: dropoff.label });
     return m;
-  }, [pickup, dropoff, stop, hasStop, centerMode, onSpot, arriving]);
-  const mapMarkers = useMemo<MapMarker[]>(() => (!terr ? markers : [
+  }, [pickup, dropoff, stop, hasStop, centerMode, onSpot, landing]);
+  // Every pickup territory is on the passenger map all the time (2026-11-24, operator), with its points as
+  // silhouettes; the chosen one carries its name.
+  const terrList = useMemo(() => allTerritories(), [noGoReady]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mapMarkers = useMemo<MapMarker[]>(() => [
     ...markers,
-    ...terr.t.points.map((sp, i) => ({ id: `spot-${i}`, lat: sp.lat, lng: sp.lng, kind: 'spot' as const, label: terr.on === i ? sp.name || terr.t.name : '', active: terr.on === i, // names are on the chips; on the map only the chosen one, so nothing overlaps
-      noFit: true })),
-  ]), [markers, terr]);
-  const mapAreas = useMemo(() => (terr ? [{ id: `terr-${terr.t.name}`, polygon: terr.t.polygon, color: '#4C9AFF' }] : []), [terr]);
+    ...terrList.flatMap((t, ti) => t.points.map((sp, i) => {
+      const active = !!terr && terr.t === t && terr.on === i;
+      return { id: `spot-${ti}-${i}`, lat: sp.lat, lng: sp.lng, kind: 'spot' as const, label: active ? sp.name || t.name : '', active, noFit: true };
+    })),
+  ], [markers, terr, terrList]);
+  const mapAreas = useMemo(() => terrList.map((t, ti) => ({ id: `terr-${ti}-${t.name}`, polygon: t.polygon, color: '#4C9AFF' })), [terrList]);
   const centerModeRef = useRef(centerMode); centerModeRef.current = centerMode;
   // The pin overlay stands on the same point a padded focus centres on.
   const mapBoxRef = useRef<HTMLDivElement | null>(null);
@@ -1260,7 +1303,7 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-page" />
           ) : (
-            <AutoMapView markers={mapMarkers} areas={mapAreas} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : camFocus} focusZoom={pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} glideMs={terr && terr.on >= 0 ? SPOT_GLIDE_MS : undefined} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
+            <AutoMapView markers={mapMarkers} areas={mapAreas} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : camFocus} focusZoom={pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} holdCamera={onSpot && !landing} glideMs={landing ? SPOT_GLIDE_MS : undefined} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
           )}
           {terr && step === 'form' && (
             <div className="absolute inset-x-3 top-3 z-[6] mx-auto max-w-sm rounded-[14px] border border-[#4C9AFF] bg-elevated/95 px-3 py-2 text-[13px] leading-snug text-ink shadow-lg" data-testid="pickup-territory">
@@ -1268,7 +1311,7 @@ export default function BookingApp() {
               {terr.t.points.length > 1 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {terr.t.points.map((sp, i) => (
-                    <button key={i} type="button" onClick={() => chooseSpot(i)} data-testid="pickup-spot"
+                    <button key={i} type="button" onClick={() => chooseSpot(i, false)} data-testid="pickup-spot"
                       className={`rounded-full border px-3 py-1 text-xs font-semibold ${terr.on === i ? 'border-[#4C9AFF] bg-[#4C9AFF] text-[#0b0f10]' : 'border-[#4C9AFF]/60 text-ink'}`}>
                       {sp.name || `${i + 1}`}
                     </button>

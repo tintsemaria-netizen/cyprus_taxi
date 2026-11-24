@@ -53,6 +53,8 @@ interface Props {
   onFollowBreak?: () => void;
   /** Bump to bring the camera back to its automatic view (focus point / route) — «my location» button. */
   recenterTick?: number;
+  /** Leave the camera where the passenger put it (a pickup point's logo is a map marker, 2026-11-24). */
+  holdCamera?: boolean;
   /** Duration of a re-centre glide (recenterTick), ms. Default 700. */
   glideMs?: number;
   /** The user dragged the map by hand. */
@@ -144,7 +146,7 @@ function markerEl(mk: MapMarker): HTMLElement {
 /** Fitting never zooms out past the whole island. */
 const MIN_FIT_ZOOM = 8;
 
-export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], fleetLikeSelf, routeWidth = 7, areas = [], focus, focusZoom, follow, onFollowBreak, recenterTick = 0, glideMs = 700, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], fleetLikeSelf, routeWidth = 7, areas = [], focus, focusZoom, follow, onFollowBreak, recenterTick = 0, glideMs = 700, holdCamera = false, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const lastUpd = useRef(new Map<string, number>());
@@ -390,7 +392,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   const routeKey = fitRoute && route && route.length ? `${route.length}:${route[0].join(',')}:${route[route.length - 1].join(',')}` : '';
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
-    if (!map || !g || !ready || followRef.current || idle.active.current) return;
+    if (!map || !g || !ready || followRef.current || idle.active.current || holdCamera) return;
     // A focus point with its own zoom owns the camera (2026-11-17): don't fit the markers around it.
     if (focus && focusZoom != null) return;
     const box = containerRef.current?.getBoundingClientRect();
@@ -460,7 +462,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
   const lastRecenter = useRef(recenterTick);
   useEffect(() => {
     const map = mapRef.current, g = gRef.current;
-    if (!map || !g || !ready || !focus || markers.filter((m) => !m.noFit).length >= 2 || followRef.current || idle.active.current) return;
+    if (!map || !g || !ready || !focus || holdCamera || markers.filter((m) => !m.noFit).length >= 2 || followRef.current || idle.active.current) return;
     const fbox = containerRef.current?.getBoundingClientRect();
     const fpad = safePadding(fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 }, fbox?.width ?? 0, fbox?.height ?? 0);
     // «Моё местоположение» / back from the sea (recenterTick): glide; anything else: one exact move.
@@ -544,7 +546,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     const map = mapRef.current, g = gRef.current;
     if (!map || !g || !ready) return;
     areaObjs.current.forEach((o) => o.setMap(null));
-    areaObjs.current = areas.filter((a) => a.polygon.length >= 3).map((a) => new g.Polygon({ map, paths: a.polygon.map(([lat, lng]) => ({ lat, lng })), strokeColor: a.color, strokeOpacity: 0.9, strokeWeight: 2.5, fillColor: a.color, fillOpacity: 0.16, clickable: false, zIndex: 0 }));
+    areaObjs.current = areas.filter((a) => a.polygon.length >= 3).map((a) => new g.Polygon({ map, paths: a.polygon.map(([lat, lng]) => ({ lat, lng })), strokeColor: a.color, strokeOpacity: 0.95, strokeWeight: 4.5, fillColor: a.color, fillOpacity: 0.16, clickable: false, zIndex: 0 }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [areasKey, ready]);
 
