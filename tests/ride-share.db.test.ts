@@ -328,7 +328,7 @@ describe('live ride-share', () => {
     await expireShares(new Date(t0.getTime() + 71_000));
     expect(await tryLiveShare(guest.id, new Date(t0.getTime() + 72_000))).toBe(false); // silence → ordinary car
 
-    const solo = await booking(lcaNear, limCentre, { pax: 4 }); // no car fits him: three passes, then an ordinary car
+    const solo = await booking(lcaNear, limCentre, { share: false }); await prisma.booking.update({ where: { id: solo.id }, data: { shareOptIn: true, passengerCount: 4 } }); // no car fits him: three passes, then an ordinary car
     const s0 = new Date();
     expect(await tryLiveShare(solo.id, s0)).toBe(true);
     expect(await tryLiveShare(solo.id, new Date(s0.getTime() + 10_000))).toBe(true);
@@ -350,8 +350,9 @@ describe('live ride-share', () => {
 
     await prisma.driver.update({ where: { id: d.driverId }, data: { acceptsShared: true } });
     expect(await tryLiveShare((await booking(lcaNear, limCentre, { share: false })).id)).toBe(false);
-    expect(await none((await booking(lcaNear, limCentre, { pax: 4 })).id)).toBe(0); // 1 + 4 > 4 seats
-    expect(await none((await booking(lcaNear, limCentre, { bags: 4 })).id)).toBe(0); // 1 + 4 > boot
+    await prisma.booking.updateMany({ where: { shareOptIn: true, status: { in: ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'] } }, data: { passengerCount: 2, luggageCount: 2 } });
+    expect(await none((await booking(lcaNear, limCentre, { pax: 3, bags: 1 })).id)).toBe(0); // 2 + 3 > 4 seats
+    expect(await none((await booking(lcaNear, limCentre, { pax: 1, bags: 3 })).id)).toBe(0); // 2 + 3 > boot (4)
     const city = await booking(larnacaTown, larnacaTown2);
     expect(city.shareOptIn).toBe(false); // not stored outside airport/intercity
     expect(await tryLiveShare(city.id)).toBe(false);

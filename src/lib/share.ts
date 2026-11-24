@@ -139,6 +139,10 @@ export function bestPrebookPlan(pts: Omit<SharePoints, 'start'>, leg: LegFn, opt
 }
 
 /** Seats and boot space for both bookings together. */
+/** «Попутчик» (operator 2026-11-24): at most 3 people and 3 suitcases (up to 10 kg each) per order. */
+export const SHARE_MAX_PEOPLE = 3;
+export const SHARE_MAX_BAGS = 3;
+
 export function shareFits(
   host: { passengerCount: number; luggageCount: number },
   guest: { passengerCount: number; luggageCount: number },

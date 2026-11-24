@@ -1,5 +1,6 @@
 'use client';
 
+import { SHARE_MAX_PEOPLE, SHARE_MAX_BAGS } from '@/lib/share';
 import { useEffect, useState } from 'react';
 import { useT } from '@/i18n/I18nProvider';
 import { RedBubble } from '@/components/RedBubble';
@@ -21,12 +22,21 @@ export const SHARE_FLEX_DEFAULT = SHARE_FLEX[1];
 // `disabled` (2026-11-20): the pre-booking window shows the switch even before / off a ride-share route —
 // greyed, with the list of places where it works.
 // `arrive` (2026-11-22, operator): in a pre-booking the «Быть на месте с … до …» window replaces the flexibility choice.
-export function ShareBookingOptions({ value, onChange, pct, maxPeople, prebook, disabled, arrive, blockMsg }: { value: ShareOpts; onChange: (v: ShareOpts) => void; pct: number; maxPeople: number; prebook?: boolean; disabled?: boolean; arrive?: React.ReactNode; blockMsg?: string | null }) {
+export function ShareBookingOptions({ value, onChange, pct, maxPeople: carMax, prebook, disabled, arrive, blockMsg }: { value: ShareOpts; onChange: (v: ShareOpts) => void; pct: number; maxPeople: number; prebook?: boolean; disabled?: boolean; arrive?: React.ReactNode; blockMsg?: string | null }) {
   const { t } = useT();
   // `blockMsg` (2026-11-23): the switch stays off and a small red note says why (e.g. a stop was added).
   const [warn, setWarn] = useState(false);
   useEffect(() => { if (!warn) return; const id = setTimeout(() => setWarn(false), 4000); return () => clearTimeout(id); }, [warn]);
+  const maxPeople = Math.min(carMax, SHARE_MAX_PEOPLE); // 3 people with a co-rider (2026-11-24)
   const set = (p: Partial<ShareOpts>) => onChange({ ...value, ...p });
+  // Over the co-rider limit (e.g. 4 set before, or an XL car) → brought down to 3 people / 3 suitcases.
+  const over = value.adults + value.children > maxPeople || value.bags > SHARE_MAX_BAGS;
+  useEffect(() => {
+    if (!over) return;
+    const adults = Math.min(value.adults, maxPeople);
+    onChange({ ...value, adults, children: Math.max(0, Math.min(value.children, maxPeople - adults)), bags: Math.min(value.bags, SHARE_MAX_BAGS) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [over]);
   const people = value.adults + value.children;
   const on = value.on && !disabled && !blockMsg;
   return (
@@ -56,7 +66,7 @@ export function ShareBookingOptions({ value, onChange, pct, maxPeople, prebook, 
         <div className="mt-3 space-y-2 border-t border-edge pt-3">
           <Stepper label={t('share.booking.adults')} n={value.adults} min={1} max={maxPeople - value.children} onChange={(adults) => set({ adults })} />
           <Stepper label={t('share.booking.children')} n={value.children} min={0} max={Math.max(0, maxPeople - value.adults)} onChange={(children) => set({ children })} />
-          <Stepper label={t('share.booking.luggage')} n={value.bags} min={0} max={6} onChange={(bags) => set({ bags })} />
+          <Stepper label={t('share.booking.luggage')} n={value.bags} min={0} max={SHARE_MAX_BAGS} onChange={(bags) => set({ bags })} />
           {arrive ? <div className="pt-1" data-testid="share-arrive">{arrive}</div> : !prebook ? (
             // A ride NOW (operator 2026-11-24): no 10/15/30 choice — ~20 s (3 passes) to find a car on the way, the car
             // with him within 15 min, at most 15 min longer on the road; else an ordinary car at the full price.

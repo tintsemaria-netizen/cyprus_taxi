@@ -44,7 +44,7 @@ const share: Catalog<typeof en> = {
     routes: "Le covoiturage fonctionne seulement entre les aéroports LCA et PFO, Larnaca, Nicosie, Paphos, Ayia Napa et Limassol.",
     adults: "Adultes",
     children: "Enfants",
-    luggage: "Valises",
+    luggage: "Valises jusqu'à 10 kg",
     liveTerms: "Nous cherchons pendant environ {sec} secondes une voiture avec covoyageur sur votre trajet. Elle vous prend en charge sous {min} min, le trajet dure au plus {min} min de plus. Aucune trouvée — une voiture normale au plein tarif.",
     maxExtra: "De combien le trajet peut-il s’allonger ?",
     wait: "Combien de temps pouvez-vous attendre un covoyageur ?",

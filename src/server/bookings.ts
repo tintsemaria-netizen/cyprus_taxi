@@ -1,4 +1,5 @@
 import { lookupPostcode } from '@/server/postcode';
+import { SHARE_MAX_PEOPLE, SHARE_MAX_BAGS } from '@/lib/share';
 import { onCyprusIsland } from '@/lib/cyprus-island';
 import { startSearchTx } from '@/server/dispatch/search';
 import { prisma } from '@/lib/db';
@@ -130,6 +131,9 @@ export async function createBooking(
   }
   // Pre-booking WITH a co-rider (operator 2026-11-22): at least settings.shareMinMinutes ahead (3 h), so there is time
   // to find the co-rider, wait for both answers and still give the pair to a driver.
+  if (shareOptIn && (input.passengerCount > SHARE_MAX_PEOPLE || (input.luggageCount ?? 0) > SHARE_MAX_BAGS)) {
+    return fail(422, 'SHARE_TOO_BIG', `With a co-rider: at most ${SHARE_MAX_PEOPLE} people and ${SHARE_MAX_BAGS} suitcases.`, { shareOptIn: 'Too many people or suitcases.' });
+  }
   if (scheduledAt && shareOptIn && scheduledAt.getTime() < Date.now() + settings.shareMinMinutes * 60_000) {
     return fail(422, 'SHARE_TOO_SOON', `A ride with a co-rider must be booked at least ${Math.round(settings.shareMinMinutes / 60 * 10) / 10} h ahead.`, { shareOptIn: `At least ${settings.shareMinMinutes} minutes ahead.` });
   }

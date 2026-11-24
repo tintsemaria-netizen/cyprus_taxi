@@ -44,7 +44,7 @@ const share: Catalog<typeof en> = {
     routes: "Mitfahren gibt es nur zwischen den Flughäfen LCA und PFO, Larnaka, Nikosia, Paphos, Ayia Napa und Limassol.",
     adults: "Erwachsene",
     children: "Kinder",
-    luggage: "Koffer",
+    luggage: 'Koffer bis 10 kg',
     liveTerms: 'Wir suchen etwa {sec} Sekunden lang ein Auto mit Mitfahrer auf Ihrem Weg. Es holt Sie innerhalb von {min} Min. ab, die Fahrt dauert höchstens {min} Min. länger. Keins gefunden — ein normales Auto zum vollen Preis.',
     maxExtra: "Wie viel länger darf die Fahrt dauern?",
     wait: "Wie lange können Sie auf einen Mitfahrer warten?",
