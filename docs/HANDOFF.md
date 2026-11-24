@@ -2856,6 +2856,11 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-25 01:20 — admin zone map rotates 360° + zooms together (DEPLOYED a1ce8cb)
+
+- ZoneEditorMap (Google): headingInteractionEnabled, rotateControl, useTwoFingerCamera. All other maps already
+  had it (GoogleMapView, GoogleMapPicker; MapLibre maps rotate by default). Not checked on the phone.
+
 ## 2026-11-25 01:10 — flaky tests fixed (tests only)
 
 - Cause: tests share one DB and run in a cache-based order. cars.db.test left ~570 PENDING pushes (tag 'cars') →
