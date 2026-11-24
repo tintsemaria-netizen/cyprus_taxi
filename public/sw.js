@@ -442,6 +442,16 @@ const MSG_TEXT = {
     he: ["עדכון לנסיעה שהוזמנה מראש", "הנסיעה הועברה לשיבוץ אוטומטי: היית רחוק מדי כדי להגיע בזמן."],
     ar: ["تحديث للرحلة المحجوزة", "تم تحويل رحلتك المحجوزة إلى التوزيع التلقائي: كنت بعيداً جداً للوصول في الوقت."],
   },
+  'drv.preTooLate': {
+    ru: ["Предзаказ снят с вас", "Вы не успеваете на предзаказ — он снят с вас и снова в предзаказах."],
+    en: ["Pre-booked ride removed", "You cannot make it to the pre-booked ride in time — it was taken off you and is back in the pre-bookings."],
+    el: ["Η προκράτηση αφαιρέθηκε", "Δεν προλαβαίνετε την προκράτηση — αφαιρέθηκε από εσάς και είναι ξανά στις προκρατήσεις."],
+    de: ["Vorbestellung entzogen", "Sie schaffen die vorbestellte Fahrt nicht rechtzeitig — sie wurde Ihnen entzogen und ist wieder bei den Vorbestellungen."],
+    fr: ["Course réservée retirée", "Vous n’arriverez pas à temps pour la course réservée — elle vous a été retirée et est de nouveau dans les réservations."],
+    pl: ["Rezerwacja odebrana", "Nie zdążysz na zarezerwowany przejazd — został ci odebrany i wrócił do rezerwacji."],
+    he: ["ההזמנה המוקדמת הוסרה", "לא תספיקו להגיע בזמן — הנסיעה הוסרה ממך וחזרה להזמנות המוקדמות."],
+    ar: ["أُزيلت الرحلة المحجوزة", "لن تصل في الوقت إلى الرحلة المحجوزة — أُزيلت منك وعادت إلى الحجوزات المسبقة."],
+  },
   'drv.preLapsedOffline': {
     ru: ["Изменение по предзаказу", "Предзаказ передан в автоматический поиск: вы были не на линии."],
     en: ["Pre-booked ride update", "Your pre-booked ride was handed to automatic dispatch because you were offline."],

@@ -4,9 +4,11 @@ import type en from '../en/errors';
 const errors: Catalog<typeof en> = {
   EXPIRY_REQUIRED: "Podaj przyszłą datę ważności, aby przyjąć dokument.",
   AMOUNT_LOCKED: "Kwota została ustalona przy zakończeniu przejazdu i nie można jej zmienić.",
+  TOO_FAR_FROM_PICKUP: "Jesteś za daleko od miejsca odbioru.",
+  NO_GPS: "Włącz lokalizację: potrzebujemy jej, by sprawdzić, czy zdążysz.",
   ORDER_GONE: "Ten przejazd został właśnie przyjęty lub nie jest już dostępny.",
   DRIVER_BUSY: "Masz już aktywny przejazd lub ofertę.",
-  DRIVER_PROTECTED: "Wkrótce masz zarezerwowany przejazd, więc nie możesz teraz przyjmować innych.",
+  DRIVER_PROTECTED: "Wkrótce twoja rezerwacja: możesz wziąć tylko kurs w stronę jej odbioru, jeśli zdążysz.",
   VEHICLE_INELIGIBLE: "Twój pojazd nie pasuje do tego przejazdu (klasa lub liczba miejsc).",
   ACCOUNT_CONFLICT: "Ten telefon lub e-mail jest już powiązany z innym kontem.",
   ACTIVE_RIDE: "Zakończ lub anuluj bieżący przejazd przed usunięciem konta.",

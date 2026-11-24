@@ -68,7 +68,7 @@ export const config = {
     preassign: {
       horizonHours: num('PREASSIGN_HORIZON_HOURS', 72), // how far ahead drivers can commit
       convertMinutes: num('PREASSIGN_CONVERT_MINUTES', 30), // convert into a real assignment this long before pickup
-      protectMinutes: num('PREASSIGN_PROTECT_MINUTES', 75), // no new immediate offers this close to a commitment
+      protectMinutes: num('PREASSIGN_PROTECT_MINUTES', 60), // operator 2026-11-24: from 1 h before, only orders towards the pickup that still make it; reach is checked
       remindMinutes: num('PREASSIGN_REMIND_MINUTES', 60), // driver reminder push
       lateReleaseMinutes: num('PREASSIGN_LATE_RELEASE_MINUTES', 60), // releasing later than this is flagged
       maxPerDriver: num('PREASSIGN_MAX_PER_DRIVER', 3),

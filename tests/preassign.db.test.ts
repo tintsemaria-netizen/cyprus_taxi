@@ -258,3 +258,59 @@ describe('cancellation, release and protection', () => {
     await prisma.latestDriverLocation.deleteMany({ where: { driverId: d } });
   });
 });
+
+// ---- Operator 2026-11-24: making it to a pre-booked pickup ----
+describe('reach: claim, the hour-before check, and orders in between', () => {
+  const larnacaTown = { lat: 34.9182, lng: 33.6233 };
+  const paphos = { lat: 34.7180, lng: 32.4857 };
+  const nicosia = { lat: 35.1667, lng: 33.3667 };
+  async function at(d: string, p: { lat: number; lng: number }, ageSec = 0) {
+    const t = new Date(Date.now() - ageSec * 1000);
+    await prisma.latestDriverLocation.upsert({ where: { driverId: d }, update: { lat: p.lat, lng: p.lng, accuracyM: 8, sampledAt: t, receivedAt: t, gpsSession: `rr-${RUN}`, sequence: ++n }, create: { driverId: d, lat: p.lat, lng: p.lng, accuracyM: 8, sampledAt: t, receivedAt: t, gpsSession: `rr-${RUN}`, sequence: ++n } });
+  }
+
+  it('taking a ride within the hour: too far → «too far from the pickup»; no position → «turn on location»; near → OK', async () => {
+    const d = await driver('Andreas', { onDuty: true });
+    const b = await scheduledRide(50);
+    await at(d, paphos);
+    expect(await claimScheduled(d, b.id)).toMatchObject({ ok: false, code: 'TOO_FAR_FROM_PICKUP' });
+    await at(d, larnacaTown, 600);
+    expect(await claimScheduled(d, b.id)).toMatchObject({ ok: false, code: 'NO_GPS' });
+    await at(d, larnacaTown);
+    expect((await claimScheduled(d, b.id)).ok).toBe(true);
+    // A ride days ahead: where the driver is now does not matter.
+    await at(d, paphos);
+    expect((await claimScheduled(d, (await scheduledRide(600)).id)).ok).toBe(true);
+  });
+
+  it('from an hour before: cannot make it → taken off him («вы не успеваете»), back in the pre-bookings; re-taking is checked again', async () => {
+    const d = await driver('Andreas', { onDuty: true });
+    const b = await scheduledRide(240);
+    expect((await claimScheduled(d, b.id)).ok).toBe(true);
+    await prisma.booking.update({ where: { id: b.id }, data: { scheduledAt: new Date(Date.now() + 50 * MIN) } });
+    await prisma.preAssignment.updateMany({ where: { bookingId: b.id }, data: { pickupAt: new Date(Date.now() + 50 * MIN) } });
+    await at(d, larnacaTown);
+    await runPreassignments(new Date());
+    expect((await prisma.preAssignment.findFirst({ where: { bookingId: b.id } }))!.status).toBe('COMMITTED'); // makes it
+    await at(d, paphos, -3 * 60); // a live fix at the time of the next check (checks run every 2 min)
+    await runPreassignments(new Date(Date.now() + 3 * MIN));
+    const pa = (await prisma.preAssignment.findFirst({ where: { bookingId: b.id } }))!;
+    expect(pa.status).toBe('RELEASED');
+    expect((await prisma.booking.findUniqueOrThrow({ where: { id: b.id } })).status).toBe('REQUESTED'); // back in the pre-bookings
+    const u = await prisma.driver.findUniqueOrThrow({ where: { id: d }, select: { userId: true } });
+    expect((await prisma.notificationOutbox.findMany({ where: { audience: `DRIVER:${u.userId}` } })).some((x) => (x.msg as { k: string } | null)?.k === 'drv.preTooLate')).toBe(true);
+    expect(await claimScheduled(d, b.id)).toMatchObject({ ok: false, code: 'TOO_FAR_FROM_PICKUP' });
+  });
+
+  it('within the hour: an order towards the pickup that still makes it is offered; one going away is not', async () => {
+    const d = await driver('Andreas', { onDuty: true });
+    const b = await scheduledRide(240);
+    expect((await claimScheduled(d, b.id)).ok).toBe(true);
+    await prisma.preAssignment.updateMany({ where: { bookingId: b.id }, data: { pickupAt: new Date(Date.now() + 55 * MIN) } });
+    await at(d, larnacaTown);
+    const toward = await findBestCandidate({ pickupLat: larnacaTown.lat + 0.003, pickupLng: larnacaTown.lng, dropoffLat: lca.lat + 0.01, dropoffLng: lca.lng, vClass: 'COMFORT', passengerCount: 1 }, 7, []);
+    expect(toward?.driverId).toBe(d);
+    const away = await findBestCandidate({ pickupLat: larnacaTown.lat + 0.003, pickupLng: larnacaTown.lng, dropoffLat: nicosia.lat, dropoffLng: nicosia.lng, vClass: 'COMFORT', passengerCount: 1 }, 7, []);
+    expect(away?.driverId).not.toBe(d);
+  });
+});

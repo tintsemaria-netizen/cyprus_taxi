@@ -3,9 +3,11 @@
 const errors = {
   EXPIRY_REQUIRED: "Enter the document’s expiry date (in the future) to accept it.",
   AMOUNT_LOCKED: "The amount was fixed when the ride was completed and cannot be changed.",
+  TOO_FAR_FROM_PICKUP: "You are too far from the pickup.",
+  NO_GPS: "Turn on location: we need your position to check you can make it.",
   ORDER_GONE: 'This ride was just taken or is no longer available.',
   DRIVER_BUSY: 'You already have an active trip or offer.',
-  DRIVER_PROTECTED: 'You have a pre-booked ride soon, so you can’t take other rides now.',
+  DRIVER_PROTECTED: "Your pre-booked ride is soon: you can only take a ride towards its pickup that still lets you make it.",
   VEHICLE_INELIGIBLE: 'Your vehicle doesn’t fit this ride (class or seats).',
   ACCOUNT_CONFLICT: 'This phone or email is already linked to another account.',
   ACTIVE_RIDE: 'Finish or cancel your current ride before deleting your account.',

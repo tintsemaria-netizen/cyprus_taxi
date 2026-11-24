@@ -8,7 +8,8 @@ import { createAssignment } from '@/server/assignments';
 import { enqueueDriver, enqueuePassenger, enqueuePassengerDriverNews } from '@/server/push';
 import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events';
 import { stopSearchTx } from './search';
-import { endPreAssignmentTx, protectedDriverIds } from './preassign-core';
+import { endPreAssignmentTx, protectedDriverIds, roughMin, PREBOOK_EARLY_MIN } from './preassign-core';
+import { computeFreshness } from '@/lib/freshness';
 import { haversineMeters } from '@/lib/geo';
 import { googleConfigured, googleRoute } from '@/server/google';
 import { attachMatchedGuestTx } from '@/server/share';
@@ -147,8 +148,40 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
   return { available, mine, blocked: null as string | null };
 }
 
+/**
+ * How many minutes the driver needs to reach a point, with traffic (operator 2026-11-24). On a trip: via
+ * that trip's drop-off. null = no live position from his phone (we cannot tell). Road time via Google when
+ * configured (traffic-aware, departing now), else a rough estimate. Never called under a DB lock.
+ */
+export async function reachMinutes(driverId: string, target: { lat: number; lng: number }, now: Date = new Date()): Promise<number | null> {
+  const loc = await prisma.latestDriverLocation.findUnique({ where: { driverId } });
+  if (!loc || computeFreshness(loc.sampledAt, loc.receivedAt, now) !== 'fresh') return null;
+  const cur = await prisma.assignment.findFirst({ where: { activeDriverId: driverId }, select: { booking: { select: { dropoffLat: true, dropoffLng: true } } } });
+  const legs: [{ lat: number; lng: number }, { lat: number; lng: number }][] = cur
+    ? [[loc, { lat: cur.booking.dropoffLat, lng: cur.booking.dropoffLng }], [{ lat: cur.booking.dropoffLat, lng: cur.booking.dropoffLng }, target]]
+    : [[loc, target]];
+  let total = cur ? 2 : 0; // a couple of minutes to drop the current passenger
+  for (const [a, b] of legs) {
+    let m: number | null = null;
+    if (googleConfigured()) {
+      try { const r = await googleRoute(a, b, new Date(Math.max(now.getTime(), Date.now()) + MIN).toISOString(), { timeoutMs: 4000 }); m = r?.etaMinutes ?? null; } catch { m = null; }
+    }
+    total += m ?? roughMin(a, b);
+  }
+  return total;
+}
+
 export async function claimScheduled(driverId: string, bookingId: string, now: Date = new Date()): Promise<PAResult> {
   const p = config.dispatch.preassign;
+  // Operator 2026-11-24: a ride starting within the hour is taken only by a driver who can reach the
+  // pickup at least 5 minutes early, with traffic — otherwise «you are too far from the pickup».
+  const soon = await prisma.booking.findUnique({ where: { id: bookingId }, select: { scheduledAt: true, pickupLat: true, pickupLng: true } });
+  const left = soon?.scheduledAt ? soon.scheduledAt.getTime() - now.getTime() : Infinity;
+  if (soon?.scheduledAt && left > (p.convertMinutes + 5) * MIN && left <= p.protectMinutes * MIN) {
+    const need = await reachMinutes(driverId, { lat: soon.pickupLat, lng: soon.pickupLng }, now);
+    if (need == null) return fail(409, 'NO_GPS', 'Turn on location: we need your position to check you can make it.');
+    if (now.getTime() + (need + PREBOOK_EARLY_MIN) * MIN > soon.scheduledAt.getTime()) return fail(409, 'TOO_FAR_FROM_PICKUP', 'You are too far from the pickup.');
+  }
   try {
     return await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
@@ -213,6 +246,13 @@ export async function runPreassignments(now: Date = new Date()): Promise<{ remin
   //    b) the last 5 minutes before the driver must be online (35 → 30 min before pickup, when the
   //       ride converts): a countdown «⏱ 5:00 … 1:00 — осталось до выхода на линию», one notification
   //       replaced every minute. Not sent to a driver who is already online.
+  // 0) Operator 2026-11-24: from an hour before pickup, check every couple of minutes that the driver can
+  //    still make it (live position, road time with traffic, ≥ 5 min early). If he cannot, the ride is taken
+  //    off him («вы не успеваете на предзаказ») and goes back to the pre-bookings for other drivers; if
+  //    nobody takes it, the usual automatic search starts. No position → nothing decided here (the hand-off
+  //    at conversion handles a silent phone).
+  await checkReach(now);
+
   const REMIND_AT = p.remindMinutes * MIN, GO_ONLINE_AT = p.convertMinutes * MIN;
   const soon = await prisma.preAssignment.findMany({ where: { status: 'COMMITTED', remindedAt: null, pickupAt: { gt: new Date(now.getTime() + GO_ONLINE_AT + COUNTDOWN_MIN * MIN), lte: new Date(now.getTime() + REMIND_AT) } }, include: { booking: { select: { pickupLabel: true, flightNumber: true } } }, take: 50 });
   for (const r of soon) {
@@ -248,6 +288,31 @@ const PREBOOK_GPS_FRESH_SEC = 90;
 /** Rough minutes to drive to the pickup: straight line ×1.3 at 45 km/h (no road call under a lock). */
 function reachMin(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   return (haversineMeters(a, b) * 1.3) / 1000 / 45 * 60;
+}
+
+const lastReach = new Map<string, number>();
+const REACH_EVERY_MS = 2 * MIN;
+async function checkReach(now: Date): Promise<void> {
+  const p = config.dispatch.preassign;
+  const due = await prisma.preAssignment.findMany({
+    where: { status: 'COMMITTED', pickupAt: { gt: new Date(now.getTime() + p.convertMinutes * MIN), lte: new Date(now.getTime() + p.protectMinutes * MIN) } },
+    select: { id: true, bookingId: true, driverId: true, pickupAt: true, booking: { select: { pickupLat: true, pickupLng: true } } }, take: 50,
+  });
+  for (const pa of due) {
+    if (now.getTime() - (lastReach.get(pa.id) ?? 0) < REACH_EVERY_MS) continue;
+    lastReach.set(pa.id, now.getTime());
+    const need = await reachMinutes(pa.driverId, { lat: pa.booking.pickupLat, lng: pa.booking.pickupLng }, now);
+    if (need == null || now.getTime() + (need + PREBOOK_EARLY_MIN) * MIN <= pa.pickupAt.getTime()) continue;
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${pa.bookingId} FOR UPDATE`;
+      const cur = await tx.preAssignment.findUnique({ where: { activeBookingId: pa.bookingId } });
+      if (cur?.id !== pa.id) return; // released / converted meanwhile
+      await endPreAssignmentTx(tx, pa.bookingId, 'RELEASED', `cannot make it in time (needs ~${Math.round(need)} min)`,
+        { notifyDriver: 'You cannot make it to the pre-booked ride in time — it was taken off you and is back in the pre-bookings.', notifyDriverKey: 'drv.preTooLate' });
+      await tx.bookingEvent.create({ data: { bookingId: pa.bookingId, type: 'PREASSIGN_RELEASED', actorType: 'SYSTEM', beforeStatus: 'REQUESTED', afterStatus: 'REQUESTED', reason: 'cannot make it in time' } });
+    });
+  }
+  if (lastReach.size > 2000) for (const [k, v] of lastReach) if (now.getTime() - v > 3 * 3600_000) lastReach.delete(k);
 }
 
 async function convertOne(bookingId: string, now: Date): Promise<'converted' | 'lapsed' | 'waiting' | 'gone'> {

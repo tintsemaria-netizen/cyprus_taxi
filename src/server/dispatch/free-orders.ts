@@ -7,7 +7,7 @@ import { canWork } from '@/lib/eligibility-policy';
 import { createAssignment } from '@/server/assignments';
 import { enqueuePassengerDriverNews } from '@/server/push';
 import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events';
-import { protectedDriverIds } from './preassign-core';
+import { prebookHolds, fitsBeforePrebook } from './preassign-core';
 import { googleConfigured, googleRoute } from '@/server/google';
 
 // "Free orders" board (2026-11-12). A ride lands here ONLY after automatic dispatch has offered it
@@ -147,8 +147,12 @@ export async function getFreeOrderDetail(bookingId: string, driverId: string, no
  * to the pickup: the booking goes ASSIGNED → EN_ROUTE in the same transaction.
  */
 export async function claimFreeOrder(bookingId: string, driverId: string, now: Date = new Date()): Promise<ClaimResult> {
-  // Drivers protected for an upcoming pre-booked ride can't take immediate work (same rule as offers).
-  if ((await protectedDriverIds(now)).includes(driverId)) return err(409, 'DRIVER_PROTECTED', 'You have a pre-booked ride soon.');
+  // A pre-booked ride within the hour: only a ride towards its pickup that still makes it (same rule as offers).
+  const hold = (await prebookHolds(now)).get(driverId);
+  if (hold) {
+    const [bk, loc] = await Promise.all([prisma.booking.findUnique({ where: { id: bookingId }, select: { pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true } }), prisma.latestDriverLocation.findUnique({ where: { driverId }, select: { lat: true, lng: true } })]);
+    if (!bk || !loc || !fitsBeforePrebook(hold, now, loc, { pickup: { lat: bk.pickupLat, lng: bk.pickupLng }, dropoff: { lat: bk.dropoffLat, lng: bk.dropoffLng } })) return err(409, 'DRIVER_PROTECTED', 'You have a pre-booked ride soon.');
+  }
   try {
     return await prisma.$transaction(async (tx): Promise<ClaimResult> => {
       await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;

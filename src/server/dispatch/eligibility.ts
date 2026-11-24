@@ -3,7 +3,7 @@ import { computeFreshness } from '@/lib/freshness';
 import { haversineMeters } from '@/lib/geo';
 import { googleConfigured, googleRoute } from '@/server/google';
 import { eligibleDriverWhere } from '@/lib/eligibility-policy';
-import { protectedDriverIds } from './preassign-core';
+import { prebookHolds, fitsBeforePrebook } from './preassign-core';
 import { blockedDriverIdsForPassenger } from './blocked-pairs';
 
 export const RADIUS_STAGES_KM = [3, 7, 15]; // expand search in stages (Task 012 §4.2)
@@ -27,7 +27,7 @@ export interface Candidate {
 export async function findBestCandidate(
   // requireAcceptsShared: a pre-booked ride-share pair is offered only to drivers who take co-riders
   // (passengerCount is then both bookings together).
-  booking: { pickupLat: number; pickupLng: number; vClass: 'COMFORT' | 'XL'; passengerCount: number; passengerId?: string | null; requireAcceptsShared?: boolean },
+  booking: { pickupLat: number; pickupLng: number; dropoffLat?: number; dropoffLng?: number; vClass: 'COMFORT' | 'XL'; passengerCount: number; passengerId?: string | null; requireAcceptsShared?: boolean },
   radiusKm: number,
   triedDriverIds: string[],
   etaCache: Map<string, { etaSec: number; approx: boolean; roadM?: number }> = new Map(),
@@ -38,8 +38,8 @@ export async function findBestCandidate(
   const [busyAssign, busyOffer, protectedIds, blockedIds, drivers] = await Promise.all([
     prisma.assignment.findMany({ where: { activeDriverId: { not: null } }, select: { activeDriverId: true } }),
     prisma.driverOffer.findMany({ where: { activeDriverId: { not: null } }, select: { activeDriverId: true } }),
-    // Drivers about to start a ride they pre-booked must not be pulled into a new immediate one.
-    protectedDriverIds(),
+    // A driver with a pre-booked ride within the hour gets only a ride towards its pickup that still makes it.
+    prebookHolds(),
     // A 1-star rating either way blocks the pair for good (blocked-pairs.ts).
     blockedDriverIdsForPassenger(booking.passengerId),
     prisma.driver.findMany({
@@ -47,7 +47,13 @@ export async function findBestCandidate(
       include: { user: true, location: true, bindings: { where: { endedAt: null }, include: { vehicle: true } } },
     }),
   ]);
-  const busy = new Set<string>([...busyAssign.map((b) => b.activeDriverId!), ...busyOffer.map((b) => b.activeDriverId!), ...protectedIds]);
+  const busy = new Set<string>([...busyAssign.map((b) => b.activeDriverId!), ...busyOffer.map((b) => b.activeDriverId!)]);
+  const now = new Date();
+  const dropoff = booking.dropoffLat != null && booking.dropoffLng != null ? { lat: booking.dropoffLat, lng: booking.dropoffLng } : null;
+  const holdOk = (driverId: string, from: { lat: number; lng: number }, approachMin?: number) => {
+    const h = protectedIds.get(driverId);
+    return !h || (!!dropoff && fitsBeforePrebook(h, now, from, { pickup, dropoff }, approachMin));
+  };
   const tried = new Set(triedDriverIds);
 
   // Spatial + hard-eligibility prefilter.
@@ -65,6 +71,7 @@ export async function findBestCandidate(
     if (computeFreshness(loc.sampledAt, loc.receivedAt) !== 'fresh') continue; // usable GPS only
     const distanceMeters = haversineMeters({ lat: loc.lat, lng: loc.lng }, pickup);
     if (distanceMeters > radiusKm * 1000) continue;
+    if (!holdOk(d.id, { lat: loc.lat, lng: loc.lng })) continue;
     prelim.push({ driverId: d.id, vehicleId: v.id, distanceMeters });
   }
   if (!prelim.length) return null;
@@ -97,6 +104,8 @@ export async function findBestCandidate(
   const scored: Candidate[] = [];
   shortlist.forEach((c, i) => {
     const { etaSec, approx, roadM } = etas[i];
+    const dl = drivers.find((x) => x.id === c.driverId)!.location!;
+    if (!holdOk(c.driverId, { lat: dl.lat, lng: dl.lng }, etaSec / 60)) return; // with the real approach time
     if (etaSec <= MAX_PICKUP_ETA_SEC) scored.push({ driverId: c.driverId, vehicleId: c.vehicleId, distanceMeters: c.distanceMeters, ...(roadM != null ? { roadDistanceMeters: roadM } : {}), etaSec, etaApproximate: approx });
   });
   if (!scored.length) return null;

@@ -4,9 +4,11 @@ import type en from '../en/errors';
 const errors: Catalog<typeof en> = {
   EXPIRY_REQUIRED: "Indiquez une date d’expiration future pour accepter le document.",
   AMOUNT_LOCKED: "Le montant a été fixé à la fin de la course et ne peut plus être modifié.",
+  TOO_FAR_FROM_PICKUP: "Vous êtes trop loin du point de prise en charge.",
+  NO_GPS: "Activez la localisation : nous en avons besoin pour vérifier que vous arriverez à temps.",
   ORDER_GONE: "Cette course vient d’être prise ou n’est plus disponible.",
   DRIVER_BUSY: "Vous avez déjà une course ou une offre en cours.",
-  DRIVER_PROTECTED: "Vous avez bientôt une course réservée, vous ne pouvez donc pas en prendre d’autres maintenant.",
+  DRIVER_PROTECTED: "Votre course réservée approche : seulement une course vers son point de prise en charge, si vous arrivez à temps.",
   VEHICLE_INELIGIBLE: "Votre véhicule ne convient pas à cette course (catégorie ou places).",
   ACCOUNT_CONFLICT: "Ce téléphone ou cet e-mail est déjà lié à un autre compte.",
   ACTIVE_RIDE: "Terminez ou annulez votre course en cours avant de supprimer votre compte.",

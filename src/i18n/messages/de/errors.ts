@@ -4,9 +4,11 @@ import type en from '../en/errors';
 const errors: Catalog<typeof en> = {
   EXPIRY_REQUIRED: "Geben Sie ein künftiges Ablaufdatum an, um das Dokument anzunehmen.",
   AMOUNT_LOCKED: "Der Betrag wurde bei Fahrtende festgelegt und kann nicht geändert werden.",
+  TOO_FAR_FROM_PICKUP: "Sie sind zu weit vom Abholort entfernt.",
+  NO_GPS: "Standort einschalten: wir brauchen ihn, um zu prüfen, ob Sie es schaffen.",
   ORDER_GONE: "Diese Fahrt wurde gerade vergeben oder ist nicht mehr verfügbar.",
   DRIVER_BUSY: "Sie haben bereits eine aktive Fahrt oder ein Angebot.",
-  DRIVER_PROTECTED: "Sie haben bald eine vorgebuchte Fahrt und können jetzt keine anderen Fahrten annehmen.",
+  DRIVER_PROTECTED: "Ihre Vorbestellung beginnt bald: nur eine Fahrt in Richtung ihres Abholorts, wenn Sie es schaffen.",
   VEHICLE_INELIGIBLE: "Ihr Fahrzeug passt nicht zu dieser Fahrt (Klasse oder Sitzplätze).",
   ACCOUNT_CONFLICT: "Diese Telefonnummer oder E-Mail ist bereits mit einem anderen Konto verknüpft.",
   ACTIVE_RIDE: "Beenden oder stornieren Sie Ihre aktuelle Fahrt, bevor Sie Ihr Konto löschen.",
