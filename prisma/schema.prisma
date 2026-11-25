@@ -698,7 +698,7 @@ model MinFareZone {
 model NoGoZone {
   id        String   @id @default(uuid())
   name      String
-  kind      String   @default("NOGO") // NOGO | POINT
+  kind      String   @default("NOGO") // NOGO | POINT | STAND (2026-11-25: «Стоянка с очередью» — see src/server/stands.ts)
   polygon   Json // [[lat, lng], …] ≥ 3 points
   points    Json? // POINT: [{ lat, lng, name }] — one or more pickup points (e.g. airport exits)
   dropPoints Json? // POINT: [{ lat, lng, name }] — drop-off points (2026-11-24), separate from the pickup points
@@ -706,6 +706,18 @@ model NoGoZone {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+}
+
+// «Стоянка с очередью» (2026-11-25, operator): a driver on duty who drives into a switched-on stand (NoGoZone kind
+// STAND) gets a place in its queue by the time he entered; orders from that stand's airport are offered to the queue
+// first, in this order. He loses the place 10 s after leaving the stand, when he goes off duty or gets a ride.
+model StandQueue {
+  driverId  String   @id
+  standId   String
+  enteredAt DateTime @default(now())
+  lastInAt  DateTime @default(now()) // last GPS sample inside the stand
+
+  @@index([standId, enteredAt])
 }
 
 // E-mailed trip receipt (2026-11-17). One row per completed booking, written in the completion

@@ -23,7 +23,7 @@ export async function PUT(req: Request) {
     if (!t || t.kind !== 'POINT') return Errors.validation({ territoryId: 'Not a pickup territory.' });
   }
   const name = await prisma.$transaction(async (tx) => {
-    await tx.noGoZone.updateMany({ where: { airport, ...(territoryId ? { id: { not: territoryId } } : {}) }, data: { airport: null } });
+    await tx.noGoZone.updateMany({ where: { airport, kind: 'POINT', ...(territoryId ? { id: { not: territoryId } } : {}) }, data: { airport: null } });
     if (!territoryId) return null;
     const row = await tx.noGoZone.update({ where: { id: territoryId }, data: { airport } });
     return row.name;

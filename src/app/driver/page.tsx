@@ -127,6 +127,8 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   // Notices like «Срок предложения истёк» go away by themselves after 6 s (2026-11-19).
   useEffect(() => { if (!banner) return; const id = setTimeout(() => setBanner(null), 6000); return () => clearTimeout(id); }, [banner]);
   const [gps, setGps] = useState<{ active: boolean; error: string | null; last: string | null; accuracyM?: number | null }>({ active: false, error: null, last: null });
+  // «Стоянка с очередью» (2026-11-25): the stand he is in and his place — returned with every GPS sample.
+  const [stand, setStand] = useState<StandState | null>(null);
   const [offer, setOffer] = useState<Offer | null>(null);
   const [nowMs, setNowMs] = useState<number>(0);
   const [offerBusy, setOfferBusy] = useState(false);
@@ -253,9 +255,10 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
     }
     seq.current += 1;
     try {
-      await api('/driver/location', { method: 'POST', body: { lat: p.coords.latitude, lng: p.coords.longitude, accuracyM: p.coords.accuracy ?? 0, heading: p.coords.heading ?? undefined, speed: p.coords.speed ?? undefined, sampledAt: new Date(p.timestamp).toISOString(), gpsSession: session.current, sequence: seq.current } });
+      const lr = await api<{ stand?: StandState | null }>('/driver/location', { method: 'POST', body: { lat: p.coords.latitude, lng: p.coords.longitude, accuracyM: p.coords.accuracy ?? 0, heading: p.coords.heading ?? undefined, speed: p.coords.speed ?? undefined, sampledAt: new Date(p.timestamp).toISOString(), gpsSession: session.current, sequence: seq.current } });
       setGps((g) => ({ ...g, last: new Date().toISOString(), error: null }));
-    } catch (e) { if (e instanceof ApiRequestError && (e.body.code === 'OFF_DUTY' || e.body.code === 'INACTIVE')) stopGps(); }
+      setStand(lr.stand ?? null);
+    } catch (e) { if (e instanceof ApiRequestError && (e.body.code === 'OFF_DUTY' || e.body.code === 'INACTIVE')) { stopGps(); setStand(null); } }
   }
   async function setDuty(onDuty: boolean) {
     if (onDuty) unlockOfferSound(); // user gesture: lets the offer chime play later
@@ -430,7 +433,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
       {tab === 'home' && (
         <HomeSection
           banner={banner} onDismissBanner={() => setBanner(null)}
-          data={data} dash={dash} gps={gps} pos={pos} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
+          data={data} dash={dash} gps={gps} pos={pos} stand={stand} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
           onDuty={setDuty} onStartGps={startGps} onStopGps={stopGps}
           onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => { setProfileView('trips'); setDrawer(true); }}
           openCars={() => setTab('cars')}
@@ -513,11 +516,14 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   );
 }
 
+type StandState = { name: string; on: boolean; place: number | null; total: number };
+
 // ---- Home ----
 function HomeSection(props: {
   banner: string | null; onDismissBanner: () => void;
   data: CurrentTrip; dash: Dashboard | null; gps: { active: boolean; error: string | null; last: string | null; accuracyM?: number | null };
   pos: { lat: number; lng: number } | null;
+  stand?: StandState | null;
   offer: Offer | null; offerSecs: number; offerBusy: boolean;
   onDuty: (v: boolean) => void; onStartGps: () => void; onStopGps: () => void;
   onAccept: (id: string) => void; onDecline: (id: string) => void; goTrips: () => void; openDocs?: () => void; openCars?: () => void; goEarnings: (to?: 'summary' | 'analytics') => void; refreshDash?: () => void;
@@ -673,6 +679,17 @@ function HomeSection(props: {
       <div className="pointer-events-none fixed inset-x-0 z-10 mx-auto max-w-lg px-3" style={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
         {!offer && (
           <div className="flex flex-col items-center gap-2">
+            {/* «Стоянка с очередью» (2026-11-25): his place in the queue, or that this stand gives no orders. */}
+            {data.onDuty && !trip && props.stand && (props.stand.on ? props.stand.place != null : true) && (
+              <div className={`${pill} max-w-full px-4 py-2 text-center ${props.stand.on ? '!border-[#A78BFA]' : '!border-warn/60'}`} data-testid="driver-stand">
+                {props.stand.on ? (
+                  <>
+                    <div className="text-sm font-semibold">🅿 {t('driver.stand.place', { name: props.stand.name, place: props.stand.place ?? 0, total: props.stand.total })}</div>
+                    <div className="text-[11px] text-muted">{t('driver.stand.keepOpen')}</div>
+                  </>
+                ) : <div className="text-sm font-medium text-warn">🅿 {t('driver.stand.off', { name: props.stand.name })}</div>}
+              </div>
+            )}
             <div className={`${pill} px-3 py-1 text-xs text-muted`}>
               <span className="me-1 inline-block h-2 w-2 rounded-full bg-accent align-middle" />{t('driver.map.free', { n: counts.free })}
               <span className="ms-3 me-1 inline-block h-2 w-2 rounded-full bg-muted align-middle" />{t('driver.map.busy', { n: counts.busy })}

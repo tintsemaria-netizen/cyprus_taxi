@@ -2,6 +2,7 @@ import { apiOk, apiError, Errors } from '@/lib/http';
 import { requireDriver, isDriverCtx } from '@/lib/driver-ctx';
 import { locationSampleSchema, zodFieldErrors } from '@/lib/validation';
 import { ingestLocation } from '@/server/location';
+import { updateStandQueue, standStateFor } from '@/server/stands';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,5 +22,9 @@ export async function POST(req: Request) {
   // Identity is bound to the authenticated driver — driverId is never trusted.
   const result = await ingestLocation(ctx.driver.id, parsed.data);
   if (!result.ok) return apiError(result.status, result.code, result.message);
-  return apiOk({ ok: true });
+  // «Стоянка с очередью» (2026-11-25): join / keep / lose the place; the driver's screen shows it.
+  const p = { lat: parsed.data.lat, lng: parsed.data.lng };
+  await updateStandQueue(ctx.driver.id, p);
+  const stand = await standStateFor(ctx.driver.id, p).catch(() => null);
+  return apiOk({ ok: true, stand });
 }

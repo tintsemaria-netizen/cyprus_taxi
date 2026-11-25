@@ -44,6 +44,12 @@ const driver: Catalog<typeof en> = {
     start: "Zacznij udostępniać",
     note: "Tylko GPS na pierwszym planie, w czasie pracy. Prawdziwy GPS urządzenia — nigdy symulowany.",
   },
+  // «Стоянка с очередью» (2026-11-25).
+  stand: {
+    place: "«{name}»: jesteś {place}. z {total} w kolejce",
+    keepOpen: "Trzymaj aplikację otwartą — inaczej zlecenie trafi do następnego.",
+    off: "«{name}» jest wyłączony — tu nie przychodzą zlecenia.",
+  },
   map: {
     stop: "Przystanek",
     noGps: "Włącz udostępnianie GPS, aby zobaczyć swoją pozycję.",

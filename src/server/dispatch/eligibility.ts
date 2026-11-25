@@ -5,6 +5,8 @@ import { googleConfigured, googleRoute } from '@/server/google';
 import { eligibleDriverWhere } from '@/lib/eligibility-policy';
 import { prebookHolds, fitsBeforePrebook } from './preassign-core';
 import { blockedDriverIdsForPassenger } from './blocked-pairs';
+import { taxiStands } from '@/server/no-go';
+import { inStand, standsForPickup, standQueueOrder, STAND_LEAVE_MS } from '@/server/stands';
 
 export const RADIUS_STAGES_KM = [3, 7, 15]; // expand search in stages (Task 012 §4.2)
 export const MAX_PICKUP_ETA_SEC = 20 * 60; // exclude candidates worse than 20 min
@@ -28,6 +30,8 @@ export interface Candidate {
   etaApproximate: boolean;
   /** Offered to a driver still on a trip: the ride becomes his next one (seconds until he drops his passenger). */
   afterTrip?: { finishInSec: number };
+  /** Taken from a stand's queue (src/server/stands.ts). */
+  fromStand?: boolean;
 }
 
 // Find the single best candidate for a booking under the given radius, EXCLUDING the
@@ -64,20 +68,49 @@ export async function findBestCandidate(
     return !h || (!!dropoff && fitsBeforePrebook(h, now, from, { pickup, dropoff }, approachMin));
   };
   const tried = new Set(triedDriverIds);
+  // «Стоянка с очередью» (2026-11-25): drivers standing in a switched-off stand get no orders.
+  const stands = await taxiStands();
+  const offStands = stands.filter((s) => !s.active);
+  // Hard eligibility (everything but the distance): the vehicle this driver would come with, or null.
+  const usable = (d: (typeof drivers)[number]) => {
+    if (!d.user.active || busy.has(d.id) || tried.has(d.id) || blockedIds.has(d.id)) return null;
+    if (booking.requireAcceptsShared && !d.acceptsShared) return null;
+    const binding = d.bindings[0];
+    if (!binding || !binding.vehicle.active) return null;
+    const v = binding.vehicle;
+    if (v.vClass !== booking.vClass) return null;
+    if (v.seats < booking.passengerCount) return null;
+    const loc = d.location;
+    if (!loc) return null;
+    if (computeFreshness(loc.sampledAt, loc.receivedAt) !== 'fresh') return null; // usable GPS only
+    if (offStands.some((s) => inStand(loc, s))) return null;
+    return v;
+  };
+
+  // An order from an airport with a switched-on stand goes to its queue first, in order (2026-11-25, operator):
+  // the first one there who can take it. A driver who refused / missed it is in `tried` — the next one gets it,
+  // and he stays first for the next order. Nobody there → the usual search below.
+  const queueStands = await standsForPickup(pickup);
+  if (queueStands.length) {
+    for (const e of await standQueueOrder(queueStands.map((s) => s.id))) {
+      const d = drivers.find((x) => x.id === e.driverId);
+      const v = d ? usable(d) : null;
+      if (!d || !v) continue;
+      const loc = d.location!, stand = queueStands.find((s) => s.id === e.standId)!;
+      if (!inStand(loc, stand) && now.getTime() - e.lastInAt.getTime() > STAND_LEAVE_MS) continue; // left the stand
+      const from = { lat: loc.lat, lng: loc.lng };
+      const leg = await legSec(from, pickup);
+      if (!holdOk(d.id, from, leg.sec / 60)) continue;
+      return { driverId: d.id, vehicleId: v.id, distanceMeters: haversineMeters(from, pickup), ...(leg.m != null ? { roadDistanceMeters: leg.m } : {}), etaSec: leg.sec, etaApproximate: leg.approx, fromStand: true };
+    }
+  }
 
   // Spatial + hard-eligibility prefilter.
   const prelim: { driverId: string; vehicleId: string; distanceMeters: number }[] = [];
   for (const d of drivers) {
-    if (!d.user.active || busy.has(d.id) || tried.has(d.id) || blockedIds.has(d.id)) continue;
-    if (booking.requireAcceptsShared && !d.acceptsShared) continue;
-    const binding = d.bindings[0];
-    if (!binding || !binding.vehicle.active) continue;
-    const v = binding.vehicle;
-    if (v.vClass !== booking.vClass) continue;
-    if (v.seats < booking.passengerCount) continue;
-    const loc = d.location;
-    if (!loc) continue;
-    if (computeFreshness(loc.sampledAt, loc.receivedAt) !== 'fresh') continue; // usable GPS only
+    const v = usable(d);
+    if (!v) continue;
+    const loc = d.location!;
     const distanceMeters = haversineMeters({ lat: loc.lat, lng: loc.lng }, pickup);
     if (distanceMeters > radiusKm * 1000) continue;
     if (!holdOk(d.id, { lat: loc.lat, lng: loc.lng })) continue;

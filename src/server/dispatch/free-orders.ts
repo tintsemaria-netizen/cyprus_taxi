@@ -9,6 +9,7 @@ import { enqueuePassengerDriverNews } from '@/server/push';
 import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events';
 import { prebookHolds, fitsBeforePrebook } from './preassign-core';
 import { googleConfigured, googleRoute } from '@/server/google';
+import { standAt } from '@/server/stands';
 
 // "Free orders" board (2026-11-12). A ride lands here ONLY after automatic dispatch has offered it
 // to every eligible free driver nearby without anyone accepting (or there was nobody to offer it
@@ -73,6 +74,8 @@ export async function listFreeOrders(driverId: string, now: Date = new Date()): 
   const blockedPax = await blockedPassengerIdsForDriver(driverId);
   if (blockedPax.size) jobs.splice(0, jobs.length, ...jobs.filter((j) => !j.booking.passengerId || !blockedPax.has(j.booking.passengerId)));
   const here = driver.location ? { lat: driver.location.lat, lng: driver.location.lng } : null;
+  // Standing in a switched-off «Стоянка с очередью» (2026-11-25): no orders there, the board included.
+  if (here && (await standAt(here))?.active === false) return [];
   return jobs
     .map(({ booking: b, openedAt, deadlineAt }) => ({
       bookingId: b.id,
@@ -152,6 +155,10 @@ export async function claimFreeOrder(bookingId: string, driverId: string, now: D
   if (hold) {
     const [bk, loc] = await Promise.all([prisma.booking.findUnique({ where: { id: bookingId }, select: { pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true } }), prisma.latestDriverLocation.findUnique({ where: { driverId }, select: { lat: true, lng: true } })]);
     if (!bk || !loc || !fitsBeforePrebook(hold, now, loc, { pickup: { lat: bk.pickupLat, lng: bk.pickupLng }, dropoff: { lat: bk.dropoffLat, lng: bk.dropoffLng } })) return err(409, 'DRIVER_PROTECTED', 'You have a pre-booked ride soon.');
+  }
+  {
+    const loc = await prisma.latestDriverLocation.findUnique({ where: { driverId }, select: { lat: true, lng: true } });
+    if (loc && (await standAt(loc))?.active === false) return err(409, 'ORDER_GONE', 'This ride is no longer available.');
   }
   try {
     return await prisma.$transaction(async (tx): Promise<ClaimResult> => {

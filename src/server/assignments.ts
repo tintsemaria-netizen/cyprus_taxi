@@ -117,6 +117,8 @@ export async function createAssignment(
   reason?: string,
   opts: { queued?: boolean } = {},
 ) {
+  // A ride ends his place in a stand's queue (2026-11-25).
+  await tx.standQueue.deleteMany({ where: { driverId: driver.id } });
   await tx.assignment.create({
     data: {
       bookingId: booking.id,

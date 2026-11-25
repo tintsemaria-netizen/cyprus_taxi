@@ -44,6 +44,12 @@ const driver: Catalog<typeof en> = {
     start: "Freigabe starten",
     note: "Nur GPS im Vordergrund, während des Dienstes. Echtes Geräte-GPS — niemals simuliert.",
   },
+  // «Стоянка с очередью» (2026-11-25).
+  stand: {
+    place: "«{name}»: Sie sind {place}. von {total} in der Warteschlange",
+    keepOpen: "Lassen Sie die App geöffnet — sonst geht der Auftrag an den Nächsten.",
+    off: "«{name}» ist ausgeschaltet — hier kommen keine Aufträge.",
+  },
   map: {
     stop: "Zwischenstopp",
     noGps: "Schalten Sie die GPS-Freigabe ein, um Ihre Position zu sehen.",

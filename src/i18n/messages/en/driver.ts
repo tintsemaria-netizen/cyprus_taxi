@@ -41,6 +41,12 @@ const driver = {
     start: 'Start sharing',
     note: 'Foreground GPS only, while on duty. Real device GPS — never simulated.',
   },
+  // «Стоянка с очередью» (2026-11-25).
+  stand: {
+    place: "«{name}»: you are {place} of {total} in the queue",
+    keepOpen: "Keep the app open — otherwise the order goes to the next driver.",
+    off: "«{name}» is off — no orders come here.",
+  },
   map: {
     stop: 'Stop',
     noGps: 'Turn on GPS sharing to see your position.',

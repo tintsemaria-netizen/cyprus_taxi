@@ -30,6 +30,7 @@ export async function goOnline(tx: Tx, driverId: string): Promise<void> {
 
 // Close the open duty session, recording online seconds. Idempotent (no-op if already closed).
 export async function goOffline(tx: Tx, driverId: string, source: 'driver' | 'system' = 'driver'): Promise<void> {
+  await tx.standQueue.deleteMany({ where: { driverId } }); // off duty = no place in a stand's queue (2026-11-25)
   const open = await tx.dutySession.findUnique({ where: { activeDriverId: driverId } });
   if (!open) return;
   const now = new Date();
