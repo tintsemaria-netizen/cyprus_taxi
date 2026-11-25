@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-25 ~17:00 — price range ±12 %, co-rider price as a range (deployed 4ac98ec)
+- TARIFF.estimateBandPct 0.15 → 0.12; price-type.fareRangeCents uses it (driver/admin/passenger texts). Booking: classes show the usual range (no co-rider note); share box «С попутчиком −30%» shows sharedCents(low)–sharedCents(high), «Без попутчика» the range. The charged co-rider price is still ONE amount (70 % of the quote total, share.ts) — operator chose the range display while there is no real meter.
+- Suite 501 passed / 1 skipped; live quote high/total = 1.12; health ready.
+
 ## 2026-11-25 — zone tabs: ☰ «Инфо» and ✕ fold (deployed)
 - ZoneWorkspace `PanelHead` (title, ☰ → «Инфо» shows the description; ✕ folds the side panel, «‹» on the map reopens; content stays mounted). Used by all five zone tabs.
 
