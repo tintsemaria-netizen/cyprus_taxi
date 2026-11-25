@@ -156,6 +156,7 @@ const staff = {
   zoneMap: { close: "Close", saveFirst: "There are unsaved changes — save them first or press «Cancel».", discard: "Discard the unsaved changes?",menu: "Menu", info: "Info", hide: "Hide the panel", show: "Show the panel"},
   confirm: { on: "Switch on «{name}»?", off: "Switch off «{name}»?", activate: "Activate «{name}»?", deactivate: "Deactivate «{name}»?" },
   noGo: {
+    pickTool: "Press «Territory corners», «Pickup points» or «Drop-off points» to change them on the map.",
     pointsSwitch: "Pickup and drop-off points",
     pointsSwitchHint: "Off: the passenger is not moved — pickup and drop-off where they put them. The points are kept.",
     pointsOnConfirm: "Switch on the pickup and drop-off points of «{name}»? Passengers inside the territory will be moved to the points.",

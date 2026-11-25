@@ -28,7 +28,8 @@ interface Zone { id: string; name: string; kind: Kind; polygon: Poly; points: Sp
 interface Draft { id: string | null; name: string; kind: Kind; active: boolean; polygon: Poly; points: Spot[]; dropPoints: Spot[]; airport: string | null; forZoneId: string | null; minComfort: string; minXl: string; minOn: boolean; pointsOn: boolean }
 // ✈ in the list (2026-11-25): this territory is chosen as an airport's point on «Фиксированные цены».
 // What a tap on the map adds while editing a territory: corners, pickup points or drop-off points (2026-11-24).
-type Mode = 'corners' | 'pick' | 'drop';
+// 'none' (operator 2026-11-26): the territory tools are toggles — a second press switches the tool off and hides it.
+type Mode = 'corners' | 'pick' | 'drop' | 'none';
 const DROP = '#FFC83D';
 const MIN_PICK_DROP_M = 15;
 const metres = (a: Pt, b: Pt) => Math.hypot((a.lat - b.lat) * 110540, (a.lng - b.lng) * 111320 * Math.cos((a.lat * Math.PI) / 180));
@@ -53,7 +54,8 @@ function AreaZones({ kind }: { kind: Kind }) {
     territories.find((z) => z.id === d.forZoneId) ?? (d.airport ? territories.find((z) => z.airport === d.airport) : undefined);
   // While a pickup territory is drawn: «Углы» puts corners, «Точка подачи» puts the one pickup point.
   const [mode, setMode] = useState<Mode>('corners');
-  const pointMode = mode !== 'corners';
+  const pointMode = mode === 'pick' || mode === 'drop';
+  const cornersOn = mode === 'corners';
   const KCOL = kind === 'NOGO' ? RED : kind === 'STAND' ? STAND : BLUE;
   const [draft, setDraft] = useState<Draft | null>(null);
   const { dirty, reset: resetDirty } = useDirty(draft); // ✕ and «Отмена» do not drop unsaved changes silently
@@ -113,7 +115,7 @@ function AreaZones({ kind }: { kind: Kind }) {
     })),
     ...zones.filter((z) => z.id !== draft?.id).flatMap((z) => [...z.points.map((p, i) => pointLabel(p.name, p, i)), ...(z.dropPoints ?? []).map((p, i) => dropLabel(p.name, p, i))]),
     // the territory being drawn: its rounded outline (faint behind the corners; solid while points are placed)
-    ...(draft?.kind === 'POINT' && draft.polygon.length >= 3 ? [{ id: 'draft-round', name: draft.name, polygon: smoothRing(draft.polygon), color: BLUE, strong: pointMode }] : []),
+    ...(draft?.kind === 'POINT' && draft.polygon.length >= 3 ? [{ id: 'draft-round', name: draft.name, polygon: smoothRing(draft.polygon), color: BLUE, strong: !cornersOn }] : []),
     // The territory being edited: its points can be dragged to a new place (2026-11-25, operator).
     // Only the kind chosen in the switch moves (operator 2026-11-25): «📍 Точки подачи» → pickup points,
     // «🏁 Точки высадки» → drop-off points, «Углы» → none.
@@ -130,7 +132,7 @@ function AreaZones({ kind }: { kind: Kind }) {
   }, [fitKey]);
 
   function startNew() { if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } resetDirty(); setMsg(null); resetHist(); setDraft({ id: null, name: '', kind, active: true, polygon: [], points: [], dropPoints: [], airport: null, forZoneId: null, minComfort: '', minXl: '', minOn: true, pointsOn: true }); setMode('corners'); }
-  function startEdit(z: Zone) { if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } resetDirty(); setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, kind: z.kind, active: z.active, polygon: untangle(z.polygon), points: z.points, dropPoints: z.dropPoints ?? [], airport: z.airport ?? null, forZoneId: z.forZoneId ?? null, minComfort: centsText(z.minComfortCents), minXl: centsText(z.minXlCents), minOn: z.minActive ?? true, pointsOn: z.pointsActive ?? true }); setMode('corners'); }
+  function startEdit(z: Zone) { if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } resetDirty(); setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, kind: z.kind, active: z.active, polygon: untangle(z.polygon), points: z.points, dropPoints: z.dropPoints ?? [], airport: z.airport ?? null, forZoneId: z.forZoneId ?? null, minComfort: centsText(z.minComfortCents), minXl: centsText(z.minXlCents), minOn: z.minActive ?? true, pointsOn: z.pointsActive ?? true }); setMode(z.kind === 'POINT' ? 'none' : 'corners'); }
 
   // A point dragged on the map: same rules as placing one (inside the rounded territory, on land, 15 m from the
   // other kind); a bad place puts it back.
@@ -189,7 +191,7 @@ function AreaZones({ kind }: { kind: Kind }) {
   }
 
   // The tab draws on the shared map of the zone tabs (2026-11-25).
-  useZoneMap({ center: CYPRUS, zones: refZones, onPinMove: movePoint, editing: draft && !pointMode ? draft.polygon : null, onChange: setPoly, onPick: (lat, lng) => {
+  useZoneMap({ center: CYPRUS, zones: refZones, onPinMove: movePoint, editing: draft && cornersOn ? draft.polygon : null, onChange: setPoly, onPick: (lat, lng) => {
             if (!draft || !pointMode) return;
             // Each click adds a point; it must be inside the rounded territory and on land.
             if (!onCyprusIsland({ lat, lng }) || !pointInPolygon({ lat, lng }, smoothRing(draft.polygon).map(([a, b]) => ({ lat: a, lng: b })))) { setMsg(t('staff.noGo.pointOutside')); return; }
@@ -221,7 +223,7 @@ function AreaZones({ kind }: { kind: Kind }) {
                 className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-[10px] bg-accent px-3 py-2 text-sm font-semibold text-[#0b0f10] shadow-lg disabled:bg-page/90 disabled:text-muted">
                 <span className="text-lg leading-none">↶</span>{t('staff.fixed.stepBack')}
               </button>
-              <div className="min-w-0 flex-1 rounded-[10px] bg-page/90 px-3 py-2 text-xs text-ink">{mode === 'drop' ? t('staff.noGo.dropHint') : pointMode ? t('staff.noGo.pointHint') : t('staff.fixed.hint')}</div>
+              <div className="min-w-0 flex-1 rounded-[10px] bg-page/90 px-3 py-2 text-xs text-ink">{mode === 'drop' ? t('staff.noGo.dropHint') : mode === 'pick' ? t('staff.noGo.pointHint') : mode === 'none' ? t('staff.noGo.pickTool') : t('staff.fixed.hint')}</div>
             </div>
           )}
         
@@ -255,12 +257,18 @@ function AreaZones({ kind }: { kind: Kind }) {
               )}
               {draft.kind === 'POINT' && (
                 <div className={`grid grid-cols-3 gap-1 rounded-[10px] border border-edge p-1 ${draft.pointsOn ? '' : 'opacity-60'}`} data-testid="nogo-mode">
-                  <button type="button" onClick={() => setMode('corners')} className={`rounded-[8px] px-1 py-1.5 text-xs font-semibold ${mode === 'corners' ? 'bg-[#4C9AFF] text-[#0b0f10]' : 'text-muted'}`}>{t('staff.noGo.modeCorners')}</button>
-                  <button type="button" onClick={() => setMode('pick')} disabled={draft.polygon.length < 3} className={`rounded-[8px] px-1 py-1.5 text-xs font-semibold ${mode === 'pick' ? 'bg-[#4C9AFF] text-[#0b0f10]' : 'text-muted'} disabled:opacity-40`} data-testid="nogo-mode-point">📍 {t('staff.noGo.modePoint')}</button>
-                  <button type="button" onClick={() => setMode('drop')} disabled={draft.polygon.length < 3} className={`rounded-[8px] px-1 py-1.5 text-xs font-semibold ${mode === 'drop' ? 'bg-[#FFC83D] text-[#0b0f10]' : 'text-muted'} disabled:opacity-40`} data-testid="nogo-mode-drop">🏁 {t('staff.noGo.modeDrop')}</button>
+                  <button type="button" onClick={() => setMode(mode === 'corners' ? 'none' : 'corners')} aria-pressed={mode === 'corners'} data-testid="mode-corners" className={`rounded-[8px] px-1 py-1.5 text-xs font-semibold ${mode === 'corners' ? 'bg-[#4C9AFF] text-[#0b0f10]' : 'text-muted'}`}>{t('staff.noGo.modeCorners')}</button>
+                  <button type="button" onClick={() => setMode(mode === 'pick' ? 'none' : 'pick')} aria-pressed={mode === 'pick'} disabled={draft.polygon.length < 3} className={`rounded-[8px] px-1 py-1.5 text-xs font-semibold ${mode === 'pick' ? 'bg-[#4C9AFF] text-[#0b0f10]' : 'text-muted'} disabled:opacity-40`} data-testid="nogo-mode-point">📍 {t('staff.noGo.modePoint')}</button>
+                  <button type="button" onClick={() => setMode(mode === 'drop' ? 'none' : 'drop')} aria-pressed={mode === 'drop'} disabled={draft.polygon.length < 3} className={`rounded-[8px] px-1 py-1.5 text-xs font-semibold ${mode === 'drop' ? 'bg-[#FFC83D] text-[#0b0f10]' : 'text-muted'} disabled:opacity-40`} data-testid="nogo-mode-drop">🏁 {t('staff.noGo.modeDrop')}</button>
                 </div>
               )}
-              {draft.kind === 'POINT' && (['pick', 'drop'] as const).map((which) => {
+              {/* The tools of the tool that is on, right under its button (2026-11-26). */}
+              {cornersOn && <div className="text-xs text-muted">{t('staff.fixed.points', { n: draft.polygon.length })}</div>}
+              {cornersOn && <div className="flex gap-2">
+                <button type="button" className="btn-ghost !min-h-[40px] flex-1 !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => { lastChange.current = 0; setPoly(draft.polygon.slice(0, -1)); }}>{t('staff.fixed.undo')}</button>
+                <button type="button" className="btn-ghost !min-h-[40px] !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => { lastChange.current = 0; setPoly([]); }}>{t('staff.fixed.clear')}</button>
+              </div>}
+              {draft.kind === 'POINT' && (['pick', 'drop'] as const).filter((which) => which === mode).map((which) => {
                 const list = which === 'pick' ? draft.points : draft.dropPoints;
                 const key = which === 'pick' ? 'points' : 'dropPoints';
                 const col = which === 'pick' ? 'text-[#4C9AFF]' : 'text-[#FFC83D]';
@@ -297,11 +305,6 @@ function AreaZones({ kind }: { kind: Kind }) {
               )}
               <Switch checked={draft.active} onChange={(on) => setDraft({ ...draft, active: on })} label={draft.kind === 'POINT' ? t('staff.noGo.territoryOn', { name: draft.name || '—' }) : t(draft.kind === 'STAND' ? 'staff.noGo.standOn' : 'staff.fixed.active')} testid="nogo-active"
                 confirmOn={t('staff.confirm.on', { name: draft.name || '—' })} confirmOff={t('staff.confirm.off', { name: draft.name || '—' })} />
-              <div className="text-xs text-muted">{t('staff.fixed.points', { n: draft.polygon.length })}</div>
-              <div className="flex gap-2">
-                <button type="button" className="btn-ghost !min-h-[40px] flex-1 !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => { lastChange.current = 0; setPoly(draft.polygon.slice(0, -1)); }}>{t('staff.fixed.undo')}</button>
-                <button type="button" className="btn-ghost !min-h-[40px] !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => { lastChange.current = 0; setPoly([]); }}>{t('staff.fixed.clear')}</button>
-              </div>
               <div className="flex gap-2">
                 <button type="button" className="btn-ghost !min-h-[44px] !py-2 text-sm" onClick={() => { if (dirty && !window.confirm(t('staff.zoneMap.discard'))) return; setDraft(null); }}>{t('staff.fixed.cancel')}</button>
                 <button type="button" className="btn-primary !min-h-[44px] flex-1 !py-2 text-sm" disabled={busy} onClick={save} data-testid="nogo-save">{t('staff.fixed.save')}</button>
