@@ -44,6 +44,21 @@ const driver: Catalog<typeof en> = {
     start: "Freigabe starten",
     note: "Nur GPS im Vordergrund, während des Dienstes. Echtes Geräte-GPS — niemals simuliert.",
   },
+  // «Стоянка с очередью» (2026-11-25).
+  // «Брать заказы Comfort» for an XL car (2026-11-25).
+  classes: {
+    comfort: "Comfort-Aufträge annehmen",
+    onHint: "Ihr Auto ist XL: Sie erhalten XL- und Comfort-Aufträge (Comfort zum Comfort-Preis).",
+    offHint: "Nur XL-Aufträge.",
+  },
+  stand: {
+    inQueue: "in einer Schlange von {total}",
+    wait: "Wartezeit ≈ {min} Min.",
+    ahead: "Autos vor Ihnen: {n}",
+    first: "Sie sind Erster — der nächste Flughafenauftrag gehört Ihnen",
+    keepOpen: "Lassen Sie die App geöffnet — sonst geht der Auftrag an den Nächsten.",
+    off: "«{name}» ist ausgeschaltet — hier kommen keine Aufträge.",
+  },
   map: {
     stop: "Zwischenstopp",
     noGps: "Schalten Sie die GPS-Freigabe ein, um Ihre Position zu sehen.",

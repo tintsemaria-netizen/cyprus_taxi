@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { carTakes } from '@/lib/vehicle-class';
 import { isPairBlocked } from './blocked-pairs';
 import { Prisma } from '@prisma/client';
 import { config } from '@/lib/config';
@@ -111,7 +112,8 @@ export async function acceptOffer(offerId: string, driverId: string): Promise<Of
       if (next && (await tx.assignment.findFirst({ where: { queuedDriverId: driverId }, select: { id: true } }))) return err(409, 'DRIVER_BUSY', 'You already have a next ride.');
       if (await isPairBlocked(driverId, booking.passengerId, tx)) return err(409, 'OFFER_GONE', 'This offer is no longer available.');
       const vehicle = await tx.vehicle.findUnique({ where: { id: offer.vehicleId } });
-      if (!vehicle || !vehicle.active || vehicle.vClass !== booking.vClass || vehicle.seats < booking.passengerCount) return err(409, 'VEHICLE_INELIGIBLE', 'Vehicle no longer eligible.');
+      const takesComfort = (await tx.driver.findUnique({ where: { id: driverId }, select: { takesComfort: true } }))?.takesComfort;
+      if (!vehicle || !vehicle.active || !carTakes(vehicle.vClass, takesComfort, booking.vClass) || vehicle.seats < booking.passengerCount) return err(409, 'VEHICLE_INELIGIBLE', 'Vehicle no longer eligible.');
       const binding = await tx.driverVehicleBinding.findFirst({ where: { driverId, vehicleId: vehicle.id, endedAt: null } });
       if (!binding) return err(409, 'NOT_BOUND', 'Vehicle no longer bound.');
 

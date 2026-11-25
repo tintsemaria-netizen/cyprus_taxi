@@ -44,6 +44,21 @@ const driver: Catalog<typeof en> = {
     start: "Démarrer le partage",
     note: "GPS au premier plan uniquement, pendant le service. Vrai GPS de l’appareil — jamais simulé.",
   },
+  // «Стоянка с очередью» (2026-11-25).
+  // «Брать заказы Comfort» for an XL car (2026-11-25).
+  classes: {
+    comfort: "Accepter les courses Comfort",
+    onHint: "Votre voiture est XL : vous recevez des courses XL et Comfort (Comfort au prix Comfort).",
+    offHint: "Courses XL uniquement.",
+  },
+  stand: {
+    inQueue: "dans une file de {total}",
+    wait: "Attente ≈ {min} min",
+    ahead: "Voitures devant vous : {n}",
+    first: "Vous êtes premier — la prochaine course de l’aéroport est pour vous",
+    keepOpen: "Gardez l’application ouverte — sinon la course passe au suivant.",
+    off: "«{name}» est désactivée — aucune course n’arrive ici.",
+  },
   map: {
     stop: "Arrêt",
     noGps: "Activez le partage GPS pour voir votre position.",

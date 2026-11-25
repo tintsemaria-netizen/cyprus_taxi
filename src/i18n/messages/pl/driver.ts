@@ -44,6 +44,21 @@ const driver: Catalog<typeof en> = {
     start: "Zacznij udostępniać",
     note: "Tylko GPS na pierwszym planie, w czasie pracy. Prawdziwy GPS urządzenia — nigdy symulowany.",
   },
+  // «Стоянка с очередью» (2026-11-25).
+  // «Брать заказы Comfort» for an XL car (2026-11-25).
+  classes: {
+    comfort: "Przyjmuj zlecenia Comfort",
+    onHint: "Masz auto XL: dostajesz zlecenia XL i Comfort (Comfort po cenie Comfort).",
+    offHint: "Tylko zlecenia XL.",
+  },
+  stand: {
+    inQueue: "w kolejce {total}",
+    wait: "Czekanie ≈ {min} min",
+    ahead: "Aut przed tobą: {n}",
+    first: "Jesteś pierwszy — następne zlecenie z lotniska jest twoje",
+    keepOpen: "Trzymaj aplikację otwartą — inaczej zlecenie trafi do następnego.",
+    off: "«{name}» jest wyłączony — tu nie przychodzą zlecenia.",
+  },
   map: {
     stop: "Przystanek",
     noGps: "Włącz udostępnianie GPS, aby zobaczyć swoją pozycję.",

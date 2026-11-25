@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { carTakes, takesClasses } from '@/lib/vehicle-class';
 import { blockedPassengerIdsForDriver, isPairBlocked } from './blocked-pairs';
 import { Prisma } from '@prisma/client';
 import { config } from '@/lib/config';
@@ -9,6 +10,7 @@ import { enqueuePassengerDriverNews } from '@/server/push';
 import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events';
 import { prebookHolds, fitsBeforePrebook } from './preassign-core';
 import { googleConfigured, googleRoute } from '@/server/google';
+import { standAt } from '@/server/stands';
 
 // "Free orders" board (2026-11-12). A ride lands here ONLY after automatic dispatch has offered it
 // to every eligible free driver nearby without anyone accepting (or there was nobody to offer it
@@ -18,8 +20,8 @@ import { googleConfigured, googleRoute } from '@/server/google';
 // Class rule: a COMFORT ride fits COMFORT and XL cars; an XL ride fits XL cars only.
 export const FREE_BOARD_SEC = 120;
 
-export function vehicleFits(vehicle: { vClass: string; seats: number }, booking: { vClass: string; passengerCount: number }): boolean {
-  const classOk = booking.vClass === 'XL' ? vehicle.vClass === 'XL' : vehicle.vClass === 'COMFORT' || vehicle.vClass === 'XL';
+export function vehicleFits(vehicle: { vClass: string; seats: number }, booking: { vClass: string; passengerCount: number }, takesComfort = true): boolean {
+  const classOk = carTakes(vehicle.vClass, takesComfort, booking.vClass);
   return classOk && vehicle.seats >= booking.passengerCount;
 }
 
@@ -63,7 +65,7 @@ export async function listFreeOrders(driverId: string, now: Date = new Date()): 
     where: {
       openedAt: { not: null },
       deadlineAt: { gte: now },
-      booking: { status: 'SEARCHING', vClass: { in: vehicle.vClass === 'XL' ? ['COMFORT', 'XL'] : ['COMFORT'] }, passengerCount: { lte: vehicle.seats } },
+      booking: { status: 'SEARCHING', vClass: { in: takesClasses(vehicle.vClass, driver.takesComfort) }, passengerCount: { lte: vehicle.seats } },
     },
     include: { booking: true },
     orderBy: { openedAt: 'asc' },
@@ -73,6 +75,8 @@ export async function listFreeOrders(driverId: string, now: Date = new Date()): 
   const blockedPax = await blockedPassengerIdsForDriver(driverId);
   if (blockedPax.size) jobs.splice(0, jobs.length, ...jobs.filter((j) => !j.booking.passengerId || !blockedPax.has(j.booking.passengerId)));
   const here = driver.location ? { lat: driver.location.lat, lng: driver.location.lng } : null;
+  // Standing in a switched-off «Стоянка с очередью» (2026-11-25): no orders there, the board included.
+  if (here && (await standAt(here))?.active === false) return [];
   return jobs
     .map(({ booking: b, openedAt, deadlineAt }) => ({
       bookingId: b.id,
@@ -153,6 +157,10 @@ export async function claimFreeOrder(bookingId: string, driverId: string, now: D
     const [bk, loc] = await Promise.all([prisma.booking.findUnique({ where: { id: bookingId }, select: { pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true } }), prisma.latestDriverLocation.findUnique({ where: { driverId }, select: { lat: true, lng: true } })]);
     if (!bk || !loc || !fitsBeforePrebook(hold, now, loc, { pickup: { lat: bk.pickupLat, lng: bk.pickupLng }, dropoff: { lat: bk.dropoffLat, lng: bk.dropoffLng } })) return err(409, 'DRIVER_PROTECTED', 'You have a pre-booked ride soon.');
   }
+  {
+    const loc = await prisma.latestDriverLocation.findUnique({ where: { driverId }, select: { lat: true, lng: true } });
+    if (loc && (await standAt(loc))?.active === false) return err(409, 'ORDER_GONE', 'This ride is no longer available.');
+  }
   try {
     return await prisma.$transaction(async (tx): Promise<ClaimResult> => {
       await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
@@ -169,7 +177,7 @@ export async function claimFreeOrder(bookingId: string, driverId: string, now: D
       const binding = await tx.driverVehicleBinding.findFirst({ where: { driverId, endedAt: null }, include: { vehicle: true } });
       const vehicle = binding?.vehicle;
       if (!vehicle || !vehicle.active) return err(409, 'NO_VEHICLE', 'No vehicle is assigned to you.');
-      if (!vehicleFits(vehicle, booking)) return err(409, 'VEHICLE_INELIGIBLE', 'Your vehicle does not fit this ride.');
+      if (!vehicleFits(vehicle, booking, driver.takesComfort)) return err(409, 'VEHICLE_INELIGIBLE', 'Your vehicle does not fit this ride.');
       if (await isPairBlocked(driverId, booking.passengerId, tx)) return err(409, 'ORDER_GONE', 'This ride is no longer available.');
 
       await createAssignment(tx, booking, driver, vehicle, 'SYSTEM', 'free-order claim');

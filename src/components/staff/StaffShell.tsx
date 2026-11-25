@@ -150,6 +150,7 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
             { href: '/admin/min-fares', label: t('staff.nav.minFares') },
             { href: '/admin/no-go', label: t('staff.nav.noGo') },
             { href: '/admin/pickup-points', label: t('staff.nav.pickupPoints') },
+            { href: '/admin/stands', label: t('staff.nav.stands') },
           ] },
           { key: 'reports', label: t('staff.nav.groupReports'), tabs: [
             { href: '/admin/analytics', label: t('staff.nav.analytics') },

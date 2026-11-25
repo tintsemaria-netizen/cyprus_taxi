@@ -18,7 +18,7 @@ import { pointInPolygon } from '@/lib/geo';
 
 const ZoneEditorMap = dynamicImport(() => import('@/components/staff/ZoneEditorMap'), { ssr: false });
 
-export type Kind = 'NOGO' | 'POINT';
+export type Kind = 'NOGO' | 'POINT' | 'STAND';
 type Pt = { lat: number; lng: number };
 interface Spot { lat: number; lng: number; name: string }
 interface Zone { id: string; name: string; kind: Kind; polygon: Poly; points: Spot[]; dropPoints?: Spot[]; active: boolean; airport?: string | null }
@@ -32,6 +32,7 @@ const metres = (a: Pt, b: Pt) => Math.hypot((a.lat - b.lat) * 110540, (a.lng - b
 
 const RED = '#FF4D4D';
 const BLUE = '#4C9AFF';
+const STAND = '#A78BFA'; // «Стоянки с очередью» (2026-11-25)
 const CYPRUS = { lat: 35.0, lng: 33.2 };
 
 export function AreaZonesPage({ kind }: { kind: Kind }) {
@@ -46,7 +47,7 @@ function AreaZones({ kind }: { kind: Kind }) {
   // While a pickup territory is drawn: «Углы» puts corners, «Точка подачи» puts the one pickup point.
   const [mode, setMode] = useState<Mode>('corners');
   const pointMode = mode !== 'corners';
-  const KCOL = kind === 'NOGO' ? RED : BLUE;
+  const KCOL = kind === 'NOGO' ? RED : kind === 'STAND' ? STAND : BLUE;
   const [draft, setDraft] = useState<Draft | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -76,10 +77,20 @@ function AreaZones({ kind }: { kind: Kind }) {
     const r = await api<{ zones: Zone[] }>('/admin/no-go');
     setZones(r.zones);
   }, []);
+  // The stands' queues right now (refreshed every 10 s on «Стоянки с очередью»).
+  const [queues, setQueues] = useState<Record<string, { driverId: string; name: string; plate: string | null; since: string }[]>>({});
+  useEffect(() => {
+    if (kind !== 'STAND') return;
+    let gone = false;
+    const tick = () => api<{ queues: typeof queues }>('/admin/stands').then((r) => { if (!gone) setQueues(r.queues); }).catch(() => null);
+    void tick(); const id = window.setInterval(tick, 10_000);
+    return () => { gone = true; window.clearInterval(id); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kind]);
   useEffect(() => { void load().catch((e) => setMsg(e instanceof ApiRequestError ? e.body.message : String(e))); }, [load]);
 
   // Every zone is red; a switched-off one is grey.
-  const colorOf = (z: Zone) => (!z.active ? '#8A9499' : z.kind === 'NOGO' ? RED : BLUE);
+  const colorOf = (z: Zone) => (!z.active ? '#8A9499' : z.kind === 'NOGO' ? RED : z.kind === 'STAND' ? STAND : BLUE);
 
   // Pickup territories are shown rounded — exactly as passengers will see them.
   const shape = (z: { kind: Kind; polygon: Poly }) => (z.kind === 'POINT' ? smoothRing(z.polygon) : z.polygon);
@@ -133,9 +144,10 @@ function AreaZones({ kind }: { kind: Kind }) {
     if (!draft) return;
     if (draft.polygon.length < 3) { setMsg(t('staff.noGo.needPoints')); return; }
     if (draft.kind === 'POINT' && !draft.points.length) { setMsg(t('staff.noGo.needPickup')); setMode('pick'); return; }
+    if (draft.kind === 'STAND' && !draft.airport) { setMsg(t('staff.noGo.needAirport')); return; }
     setBusy(true); setMsg(null);
     try {
-      const body = { name: draft.name.trim() || `${t(draft.kind === 'POINT' ? 'staff.noGo.pointTitle' : 'staff.noGo.title')} ${zones.length + 1}`, kind: draft.kind, polygon: draft.polygon, points: draft.points, dropPoints: draft.dropPoints, active: draft.active };
+      const body = { name: draft.name.trim() || `${t(draft.kind === 'POINT' ? 'staff.noGo.pointTitle' : draft.kind === 'STAND' ? 'staff.noGo.standTitle' : 'staff.noGo.title')} ${zones.length + 1}`, kind: draft.kind, polygon: draft.polygon, points: draft.points, dropPoints: draft.dropPoints, active: draft.active, ...(draft.kind === 'STAND' ? { airport: draft.airport } : {}) };
       if (draft.id) await api(`/admin/no-go/${draft.id}`, { method: 'PUT', body });
       else await api('/admin/no-go', { method: 'POST', body });
       setDraft(null); setMsg(t('staff.noGo.saved'));
@@ -153,18 +165,18 @@ function AreaZones({ kind }: { kind: Kind }) {
 
   async function toggle(z: Zone) {
     setMsg(null);
-    await api(`/admin/no-go/${z.id}`, { method: 'PUT', body: { name: z.name, kind: z.kind, polygon: z.polygon, points: z.points, dropPoints: z.dropPoints ?? [], active: !z.active } }).catch(() => null);
+    await api(`/admin/no-go/${z.id}`, { method: 'PUT', body: { name: z.name, kind: z.kind, polygon: z.polygon, points: z.points, dropPoints: z.dropPoints ?? [], active: !z.active, ...(z.kind === 'STAND' ? { airport: z.airport } : {}) } }).catch(() => null);
     await load();
   }
 
   return (
     <div className="mx-auto max-w-6xl p-4">
-      <h1 className="text-xl font-semibold">{t(kind === 'NOGO' ? 'staff.noGo.title' : 'staff.noGo.kindPoint')}</h1>
-      <p className="mt-2 text-sm text-muted">{t(kind === 'NOGO' ? 'staff.noGo.sub' : 'staff.noGo.subPoint')}</p>
+      <h1 className="text-xl font-semibold">{t(kind === 'NOGO' ? 'staff.noGo.title' : kind === 'STAND' ? 'staff.noGo.kindStand' : 'staff.noGo.kindPoint')}</h1>
+      <p className="mt-2 text-sm text-muted">{t(kind === 'NOGO' ? 'staff.noGo.sub' : kind === 'STAND' ? 'staff.noGo.subStand' : 'staff.noGo.subPoint')}</p>
 
       {!draft && (
         <div className="mt-4 flex">
-          <button type="button" onClick={startNew} className={`ms-auto rounded-[12px] px-4 !min-h-[40px] !py-2 text-sm font-semibold ${kind === 'NOGO' ? 'bg-danger text-white' : 'bg-[#4C9AFF] text-[#0b0f10]'}`} data-testid="nogo-new">{t(kind === 'NOGO' ? 'staff.noGo.newZone' : 'staff.noGo.newPoint')}</button>
+          <button type="button" onClick={startNew} className={`ms-auto rounded-[12px] px-4 !min-h-[40px] !py-2 text-sm font-semibold ${kind === 'NOGO' ? 'bg-danger text-white' : kind === 'STAND' ? 'bg-[#A78BFA] text-[#0b0f10]' : 'bg-[#4C9AFF] text-[#0b0f10]'}`} data-testid="nogo-new">{t(kind === 'NOGO' ? 'staff.noGo.newZone' : kind === 'STAND' ? 'staff.noGo.newStand' : 'staff.noGo.newPoint')}</button>
         </div>
       )}
 
@@ -226,7 +238,18 @@ function AreaZones({ kind }: { kind: Kind }) {
                   </div>
                 );
               })}
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />{t('staff.fixed.active')}</label>
+              {draft.kind === 'STAND' && (
+                <div className="space-y-1.5" data-testid="stand-airport">
+                  <div className="text-sm">{t('staff.noGo.standAirport')}</div>
+                  <div className="grid grid-cols-2 gap-1 rounded-[10px] border border-edge p-1">
+                    {(['PFO', 'LCA'] as const).map((c) => (
+                      <button key={c} type="button" onClick={() => setDraft({ ...draft, airport: c })} className={`rounded-[8px] px-1 py-1.5 text-xs font-semibold ${draft.airport === c ? 'bg-[#A78BFA] text-[#0b0f10]' : 'text-muted'}`}>✈ {t(`staff.noGo.airport${c}` as 'staff.noGo.airportLCA')}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} data-testid="nogo-active" />{t(draft.kind === 'STAND' ? 'staff.noGo.standOn' : 'staff.fixed.active')}</label>
+              {draft.kind === 'STAND' && <p className="text-xs text-muted">{t('staff.noGo.standOnHint')}</p>}
               <div className="text-xs text-muted">{t('staff.fixed.points', { n: draft.polygon.length })}</div>
               <div className="flex gap-2">
                 <button type="button" className="btn-ghost !min-h-[40px] flex-1 !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => { lastChange.current = 0; setPoly(draft.polygon.slice(0, -1)); }}>{t('staff.fixed.undo')}</button>
@@ -246,11 +269,23 @@ function AreaZones({ kind }: { kind: Kind }) {
               <div className="flex items-center gap-2">
                 <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: colorOf(z) }} />
                 <span className="min-w-0 flex-1 truncate font-semibold">{z.name}{z.airport ? <span className="ms-1.5 text-xs font-normal text-accent">✈ {t(`staff.noGo.airport${z.airport}` as 'staff.noGo.airportLCA')}</span> : null}</span>
-                {!z.active && <span className="text-xs text-muted">{t('staff.fixed.off')}</span>}
+                {!z.active && <span className="text-xs text-muted">{t(z.kind === 'STAND' ? 'staff.noGo.standOff' : 'staff.fixed.off')}</span>}
               </div>
+              {z.kind === 'STAND' && z.active && (
+                <div className="mt-2 rounded-[10px] border border-edge px-2.5 py-2 text-xs" data-testid="stand-queue">
+                  <div className="mb-1 font-semibold text-muted">{t('staff.noGo.queueTitle')}</div>
+                  {(queues[z.id] ?? []).length === 0 ? <div className="text-muted">{t('staff.noGo.queueEmpty')}</div> : (queues[z.id] ?? []).map((q, i) => (
+                    <div key={q.driverId} className="flex items-baseline gap-2">
+                      <span className="w-5 shrink-0 font-bold tabular-nums">{i + 1}.</span>
+                      <span className="min-w-0 flex-1 truncate">{q.name}{q.plate ? ` · ${q.plate}` : ''}</span>
+                      <span className="shrink-0 text-muted tabular-nums">{t('staff.noGo.queueSince', { t: new Date(q.since).toLocaleTimeString('en-GB', { timeZone: 'Asia/Nicosia', hour: '2-digit', minute: '2-digit' }) })}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="mt-2 flex gap-2 text-sm">
                 <button type="button" className="text-accent" onClick={() => startEdit(z)}>{t('staff.fixed.edit')}</button>
-                <button type="button" className="text-muted" onClick={() => toggle(z)}>{z.active ? t('staff.deactivate') : t('staff.activate')}</button>
+                <button type="button" className="text-muted" onClick={() => toggle(z)}>{z.kind === 'STAND' ? t(z.active ? 'staff.noGo.queueOffBtn' : 'staff.noGo.queueOnBtn') : z.active ? t('staff.deactivate') : t('staff.activate')}</button>
                 <button type="button" className="ms-auto text-danger" onClick={() => remove(z)}>{t('staff.fixed.delete')}</button>
               </div>
             </div>

@@ -41,6 +41,21 @@ const driver = {
     start: 'Start sharing',
     note: 'Foreground GPS only, while on duty. Real device GPS — never simulated.',
   },
+  // «Стоянка с очередью» (2026-11-25).
+  // «Брать заказы Comfort» for an XL car (2026-11-25).
+  classes: {
+    comfort: "Take Comfort orders",
+    onHint: "Your car is XL: you get XL and Comfort orders (Comfort orders at the Comfort price).",
+    offHint: "XL orders only.",
+  },
+  stand: {
+    inQueue: "in a queue of {total}",
+    wait: "Wait ≈ {min} min",
+    ahead: "Cars ahead of you: {n}",
+    first: "You are first — the next airport order is yours",
+    keepOpen: "Keep the app open — otherwise the order goes to the next driver.",
+    off: "«{name}» is off — no orders come here.",
+  },
   map: {
     stop: 'Stop',
     noGps: 'Turn on GPS sharing to see your position.',

@@ -44,6 +44,21 @@ const driver: Catalog<typeof en> = {
     start: "بدء المشاركة",
     note: "GPS في الواجهة فقط، أثناء العمل. GPS حقيقي من الجهاز — لا محاكاة أبدًا.",
   },
+  // «Стоянка с очередью» (2026-11-25).
+  // «Брать заказы Comfort» for an XL car (2026-11-25).
+  classes: {
+    comfort: "قبول طلبات Comfort",
+    onHint: "سيارتك XL: تصلك طلبات XL وComfort (Comfort بسعر Comfort).",
+    offHint: "طلبات XL فقط.",
+  },
+  stand: {
+    inQueue: "في طابور من {total}",
+    wait: "الانتظار ≈ {min} د",
+    ahead: "سيارات أمامك: {n}",
+    first: "أنت الأول — طلب المطار التالي لك",
+    keepOpen: "أبقِ التطبيق مفتوحًا — وإلا ينتقل الطلب إلى التالي.",
+    off: "«{name}» متوقف — لا تصل طلبات هنا.",
+  },
   map: {
     stop: "توقف",
     noGps: "شغّل مشاركة GPS لرؤية موقعك.",

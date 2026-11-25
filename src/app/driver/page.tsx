@@ -127,6 +127,8 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   // Notices like «Срок предложения истёк» go away by themselves after 6 s (2026-11-19).
   useEffect(() => { if (!banner) return; const id = setTimeout(() => setBanner(null), 6000); return () => clearTimeout(id); }, [banner]);
   const [gps, setGps] = useState<{ active: boolean; error: string | null; last: string | null; accuracyM?: number | null }>({ active: false, error: null, last: null });
+  // «Стоянка с очередью» (2026-11-25): the stand he is in and his place — returned with every GPS sample.
+  const [stand, setStand] = useState<StandState | null>(null);
   const [offer, setOffer] = useState<Offer | null>(null);
   const [nowMs, setNowMs] = useState<number>(0);
   const [offerBusy, setOfferBusy] = useState(false);
@@ -253,9 +255,10 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
     }
     seq.current += 1;
     try {
-      await api('/driver/location', { method: 'POST', body: { lat: p.coords.latitude, lng: p.coords.longitude, accuracyM: p.coords.accuracy ?? 0, heading: p.coords.heading ?? undefined, speed: p.coords.speed ?? undefined, sampledAt: new Date(p.timestamp).toISOString(), gpsSession: session.current, sequence: seq.current } });
+      const lr = await api<{ stand?: StandState | null }>('/driver/location', { method: 'POST', body: { lat: p.coords.latitude, lng: p.coords.longitude, accuracyM: p.coords.accuracy ?? 0, heading: p.coords.heading ?? undefined, speed: p.coords.speed ?? undefined, sampledAt: new Date(p.timestamp).toISOString(), gpsSession: session.current, sequence: seq.current } });
       setGps((g) => ({ ...g, last: new Date().toISOString(), error: null }));
-    } catch (e) { if (e instanceof ApiRequestError && (e.body.code === 'OFF_DUTY' || e.body.code === 'INACTIVE')) stopGps(); }
+      setStand(lr.stand ?? null);
+    } catch (e) { if (e instanceof ApiRequestError && (e.body.code === 'OFF_DUTY' || e.body.code === 'INACTIVE')) { stopGps(); setStand(null); } }
   }
   async function setDuty(onDuty: boolean) {
     if (onDuty) unlockOfferSound(); // user gesture: lets the offer chime play later
@@ -430,7 +433,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
       {tab === 'home' && (
         <HomeSection
           banner={banner} onDismissBanner={() => setBanner(null)}
-          data={data} dash={dash} gps={gps} pos={pos} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
+          data={data} dash={dash} gps={gps} pos={pos} stand={stand} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
           onDuty={setDuty} onStartGps={startGps} onStopGps={stopGps}
           onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => { setProfileView('trips'); setDrawer(true); }}
           openCars={() => setTab('cars')}
@@ -513,11 +516,42 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   );
 }
 
+/** An XL car takes Comfort orders too; the driver switches that off here (2026-11-25, operator). */
+function TakesComfortToggle() {
+  const { t } = useT();
+  const [st, setSt] = useState<{ vClass: string | null; takesComfort: boolean } | null>(null);
+  useEffect(() => { api<{ vClass: string | null; takesComfort: boolean }>('/driver/classes').then(setSt).catch(() => {}); }, []);
+  if (!st || st.vClass !== 'XL') return null;
+  const on = st.takesComfort;
+  async function toggle(v: boolean) {
+    setSt((x) => (x ? { ...x, takesComfort: v } : x));
+    try { const r = await api<{ takesComfort: boolean }>('/driver/classes', { method: 'PATCH', body: { takesComfort: v } }); setSt((x) => (x ? { ...x, takesComfort: r.takesComfort } : x)); }
+    catch { setSt((x) => (x ? { ...x, takesComfort: !v } : x)); }
+  }
+  return (
+    <div className="mt-3 border-t border-edge pt-3">
+      <label className="flex cursor-pointer items-center justify-between gap-3" data-testid="takes-comfort">
+        <span className="min-w-0">
+          <span className="block text-sm">{t('driver.classes.comfort')}</span>
+          <span className="block text-xs text-muted">{t(on ? 'driver.classes.onHint' : 'driver.classes.offHint')}</span>
+        </span>
+        <input type="checkbox" role="switch" className="sr-only" checked={on} onChange={(e) => toggle(e.target.checked)} />
+        <span aria-hidden className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? 'bg-accent' : 'bg-edge-strong'}`}>
+          <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? 'start-[22px]' : 'start-0.5'}`} />
+        </span>
+      </label>
+    </div>
+  );
+}
+
+type StandState = { name: string; on: boolean; place: number | null; total: number; polygon?: [number, number][]; ahead?: number; vClass?: string; waitMin?: number | null };
+
 // ---- Home ----
 function HomeSection(props: {
   banner: string | null; onDismissBanner: () => void;
   data: CurrentTrip; dash: Dashboard | null; gps: { active: boolean; error: string | null; last: string | null; accuracyM?: number | null };
   pos: { lat: number; lng: number } | null;
+  stand?: StandState | null;
   offer: Offer | null; offerSecs: number; offerBusy: boolean;
   onDuty: (v: boolean) => void; onStartGps: () => void; onStopGps: () => void;
   onAccept: (id: string) => void; onDecline: (id: string) => void; goTrips: () => void; openDocs?: () => void; openCars?: () => void; goEarnings: (to?: 'summary' | 'analytics') => void; refreshDash?: () => void;
@@ -541,6 +575,8 @@ function HomeSection(props: {
   const docSlot = docAlert?.slot ? `${slotName(docAlert.slot)}${docAlert.car ? ` (${docAlert.car})` : ''}` : '';
   const blocker = dash?.alerts.find((a) => a.level === 'blocker' && !(docAlert && (a.code === 'DOCUMENTS_EXPIRED' || a.code === 'DOC_EXPIRED')));
 
+  const st = props.stand ?? null;
+  const standShown = !!(data.onDuty && !trip && st && (st.on ? st.place != null : true));
   const [counts, setCounts] = useState({ free: 0, busy: 0 });
   const onCounts = useCallback((free: number, busy: number) => setCounts({ free, busy }), []);
   const warning = dash?.alerts.find((a) => a.level === 'warning' && a.code !== 'DOC_EXPIRING');
@@ -673,6 +709,22 @@ function HomeSection(props: {
       <div className="pointer-events-none fixed inset-x-0 z-10 mx-auto max-w-lg px-3" style={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
         {!offer && (
           <div className="flex flex-col items-center gap-2">
+            {/* «Стоянка с очередью» (2026-11-25, operator chose the big number): his place among the cars of his
+                class (orders are matched by class), the cars ahead and the stand. Switched off: no orders here. */}
+            {standShown && st && (
+              <div className={`${pill} flex max-w-full items-center gap-3 !rounded-[18px] px-4 py-2.5 ${st.on ? '!border-[#A78BFA]' : '!border-warn/60'}`} data-testid="driver-stand">
+                {st.on ? (
+                  <>
+                    <span className="text-[40px] font-extrabold leading-none tabular-nums text-[#A78BFA]">{(st.ahead ?? 0) + 1}</span>
+                    <span className="min-w-0 text-start">
+                      <span className="block text-sm font-semibold">{st.ahead ? t('driver.stand.ahead', { n: st.ahead }) : t('driver.stand.first')}</span>
+                      <span className="block truncate text-[11px] text-muted">🅿 {st.name} · {t('driver.stand.inQueue', { total: st.total })}</span>
+                      {st.waitMin != null && <span className="block text-[11px] text-muted">{t('driver.stand.wait', { min: st.waitMin })}</span>}
+                    </span>
+                  </>
+                ) : <span className="text-sm font-medium text-warn">🅿 {t('driver.stand.off', { name: st.name })}</span>}
+              </div>
+            )}
             <div className={`${pill} px-3 py-1 text-xs text-muted`}>
               <span className="me-1 inline-block h-2 w-2 rounded-full bg-accent align-middle" />{t('driver.map.free', { n: counts.free })}
               <span className="ms-3 me-1 inline-block h-2 w-2 rounded-full bg-muted align-middle" />{t('driver.map.busy', { n: counts.busy })}
@@ -1031,6 +1083,8 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
         <div className="mt-3 border-t border-edge pt-3">
           <AcceptsSharedToggle />
         </div>
+        {/* «Брать заказы Comfort» — only for an XL car (2026-11-25). */}
+        <TakesComfortToggle />
         {/* App colour (2026-11-19): chosen at registration, changed here. */}
         <div className="mt-3 border-t border-edge pt-3">
           <div className="mb-2 text-sm">{t('common.theme.title')}</div>
