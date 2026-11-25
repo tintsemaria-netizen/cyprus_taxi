@@ -39,16 +39,17 @@ export function ShareBookingOptions({ value, onChange, pct, maxPeople: carMax, p
   }, [over]);
   const people = value.adults + value.children;
   const on = value.on && !disabled && !blockMsg;
+  // Why it cannot be switched on — only when he tries (operator 2026-11-25: no text under the box, like ПП).
+  const whyNot = blockMsg ?? (disabled ? t('share.booking.routes') : null);
   return (
     <div className={`relative mt-4 rounded-[14px] border px-3 py-3 transition ${on ? 'border-accent bg-accent/10' : 'border-edge bg-elevated'} ${disabled ? 'opacity-60' : ''}`} data-testid="share-options">
-      <label className={`flex items-center gap-3 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+      <label className="flex cursor-pointer items-center gap-3" onClick={(e) => { if (disabled) { e.preventDefault(); setWarn(true); } }}>
         <span className="min-w-0 flex-1">
           {/* 2026-11-22 (operator): the discount must be noticed — a lime badge + a highlighted note. */}
           <span className="flex items-center gap-2 font-semibold">
             {t('share.booking.name')}
             <span className="rounded-full bg-accent px-2 py-0.5 text-sm font-bold text-black">−{pct}%</span>
           </span>
-          {disabled && <span className="block text-xs text-muted">{t('share.booking.routes')}</span>}
         </span>
         <input type="checkbox" role="switch" aria-checked={on} checked={on} disabled={disabled} onChange={(e) => { if (e.target.checked && blockMsg) { setWarn(true); return; } set({ on: e.target.checked }); }}
           className="peer sr-only" />
@@ -56,7 +57,7 @@ export function ShareBookingOptions({ value, onChange, pct, maxPeople: carMax, p
           <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? 'start-[22px]' : 'start-0.5'}`} />
         </span>
       </label>
-      {warn && blockMsg && <span className="absolute end-3 top-12"><RedBubble text={blockMsg} align="end" testid="share-blocked" /></span>}
+      {warn && whyNot && <span className="absolute end-3 top-12 z-10"><RedBubble text={whyNot} align="end" testid="share-blocked" /></span>}
       {/* Only once «Попутчик −30%» is switched on (operator 2026-11-25), not under the switched-off box. */}
       {on && (
         <p className="mt-2 flex items-start gap-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium leading-snug text-ink" data-testid="share-hint">
