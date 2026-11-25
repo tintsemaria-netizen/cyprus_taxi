@@ -65,6 +65,8 @@ export function ShareBookingOptions({ value, onChange, pct, maxPeople: carMax, p
           <span aria-hidden>💰</span><span>{t('share.booking.hint', { pct })}</span>
         </p>
       )}
+      {/* Where ride-share works — shown with the switch ON (operator 2026-11-25), not under the switched-off box. */}
+      {on && <p className="mt-2 text-xs text-muted" data-testid="share-routes">{t('share.booking.routes')}</p>}
       {on && (
         <div className="mt-3 space-y-2 border-t border-edge pt-3">
           <Stepper label={t('share.booking.adults')} n={value.adults} min={1} max={maxPeople - value.children} onChange={(adults) => set({ adults })} />
