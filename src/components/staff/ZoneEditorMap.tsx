@@ -20,13 +20,16 @@ export type Poly = [number, number][];
  *  pickup point (2026-11-24, operator). */
 export interface RefZone { id: string; name: string; polygon: Poly; color: string; label?: string; labelAt?: [number, number]; strong?: boolean; holes?: Poly[]; pin?: 'pick' | 'drop'; draggable?: boolean }
 
-// The logo pin with the name pill under it, as one image; the anchor is the logo's tip.
-function pinPillSvg(text: string, color: string, drop = false): { url: string; w: number; h: number; ax: number; ay: number } {
-  const pw = Math.round(text.length * 7.2 + 18), ph = 24, w = Math.max(pw, 32), h = 40 + 4 + ph;
+// The logo pin with the name pill under it, as one image; the anchor is the logo's tip. 10 px of room on top:
+// while the admin drags it (2026-11-25, operator) the logo rises there and a small shadow marks the tip — as the
+// passenger's logo does when the map is moved.
+function pinPillSvg(text: string, color: string, drop = false, lifted = false): { url: string; w: number; h: number; ax: number; ay: number } {
+  const L = 10, pw = Math.round(text.length * 7.2 + 18), ph = 24, w = Math.max(pw, 32), h = L + 40 + 4 + ph;
   const esc = text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  const logo = (drop ? BRAND_PIN_SVG_CHECKER : BRAND_PIN_SVG).replace('<svg viewBox="0 0 500 620" width="100%" height="100%"', `<svg viewBox="0 0 500 620" x="${(w - 32) / 2}" y="0" width="32" height="40"`);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${logo}<rect x="${(w - pw) / 2 + 0.5}" y="44.5" width="${pw - 1}" height="${ph - 1}" rx="11" fill="${color}" stroke="#0b0f10" stroke-opacity="0.4"/><text x="${w / 2}" y="61" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0b0f10">${esc}</text></svg>`;
-  return { url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`, w, h, ax: w / 2, ay: 40 };
+  const logo = (drop ? BRAND_PIN_SVG_CHECKER : BRAND_PIN_SVG).replace('<svg viewBox="0 0 500 620" width="100%" height="100%"', `<svg viewBox="0 0 500 620" x="${(w - 32) / 2}" y="${lifted ? 0 : L}" width="32" height="40"`);
+  const shadow = lifted ? `<ellipse cx="${w / 2}" cy="${L + 40}" rx="6" ry="3" fill="#000" fill-opacity="0.4"/>` : '';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${shadow}${logo}<rect x="${(w - pw) / 2 + 0.5}" y="${L + 44.5}" width="${pw - 1}" height="${ph - 1}" rx="11" fill="${color}" stroke="#0b0f10" stroke-opacity="0.4"/><text x="${w / 2}" y="${L + 61}" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="12.5" font-weight="700" fill="#0b0f10">${esc}</text></svg>`;
+  return { url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`, w, h, ax: w / 2, ay: L + 40 };
 }
 
 // Price label on the map (2026-11-21): a small pill in the zone's colour.
@@ -110,10 +113,12 @@ function GoogleZoneMap({ center, zones, editing, editingHoles, onChange, onPick,
     s.labels.forEach((m) => m.setMap(null));
     s.labels = zones.filter((z) => z.label && z.labelAt).map((z) => {
       if (z.pin) {
-        const pp = pinPillSvg(z.label!, z.color, z.pin === 'drop');
-        const mk = new g.Marker({ map, position: { lat: z.labelAt![0], lng: z.labelAt![1] }, clickable: !!z.draggable, draggable: !!z.draggable, zIndex: 40,
-          icon: { url: pp.url, scaledSize: new g.Size(pp.w, pp.h), anchor: new g.Point(pp.ax, pp.ay) } });
-        if (z.draggable) mk.addListener('dragend', (e: any) => pinMoveRef.current?.(z.id, e.latLng.lat(), e.latLng.lng()));
+        const icon = (lifted: boolean) => { const pp = pinPillSvg(z.label!, z.color, z.pin === 'drop', lifted); return { url: pp.url, scaledSize: new g.Size(pp.w, pp.h), anchor: new g.Point(pp.ax, pp.ay) }; };
+        const mk = new g.Marker({ map, position: { lat: z.labelAt![0], lng: z.labelAt![1] }, clickable: !!z.draggable, draggable: !!z.draggable, raiseOnDrag: false, zIndex: 40, icon: icon(false) });
+        if (z.draggable) {
+          mk.addListener('dragstart', () => mk.setIcon(icon(true)));
+          mk.addListener('dragend', (e: any) => { mk.setIcon(icon(false)); pinMoveRef.current?.(z.id, e.latLng.lat(), e.latLng.lng()); });
+        }
         return mk;
       }
       const pill = pillSvg(z.label!, z.color);
@@ -220,10 +225,15 @@ function LibreZoneMap({ center, zones, editing, editingHoles, onChange, onPick, 
       if (z.pin) {
         // Logo pin, tip on the point; the name under it (symmetric overflow keeps the tip centred).
         el.style.cssText = `width:32px;height:40px;pointer-events:${z.draggable ? 'auto' : 'none'};cursor:${z.draggable ? 'grab' : 'default'}`;
-        el.innerHTML = `<div style="position:relative;width:32px;height:40px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.55))">${z.pin === 'drop' ? BRAND_PIN_SVG_CHECKER : BRAND_PIN_SVG}<div style="position:absolute;top:calc(100% + 4px);left:-100px;right:-100px;text-align:center"><span style="display:inline-block;background:${z.color};color:#0b0f10;font:700 12.5px Inter,Arial,sans-serif;padding:3px 9px;border-radius:11px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)"></span></div></div>`;
+        el.innerHTML = `<div style="position:relative;width:32px;height:40px"><div class="ily-shadow" style="position:absolute;left:10px;top:37px;width:12px;height:6px;border-radius:50%;background:rgba(0,0,0,.4);opacity:0;transition:opacity .15s"></div><div class="ily-logo" style="width:32px;height:40px;transition:transform .15s;filter:drop-shadow(0 2px 3px rgba(0,0,0,.55))">${z.pin === 'drop' ? BRAND_PIN_SVG_CHECKER : BRAND_PIN_SVG}</div><div style="position:absolute;top:calc(100% + 4px);left:-100px;right:-100px;text-align:center"><span style="display:inline-block;background:${z.color};color:#0b0f10;font:700 12.5px Inter,Arial,sans-serif;padding:3px 9px;border-radius:11px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)"></span></div></div>`;
         (el.querySelector('span') as HTMLElement).textContent = z.label!;
         const mk = new lib.Marker({ element: el, anchor: 'bottom', draggable: !!z.draggable }).setLngLat([z.labelAt![1], z.labelAt![0]]).addTo(map);
-        if (z.draggable) mk.on('dragend', () => { const ll = mk.getLngLat(); pinMoveRef.current?.(z.id, ll.lat, ll.lng); });
+        if (z.draggable) {
+          // While dragged the logo rises 10 px and a shadow marks the tip (the point itself).
+          const lift = (up: boolean) => { (el.querySelector('.ily-logo') as HTMLElement).style.transform = up ? 'translateY(-10px)' : 'none'; (el.querySelector('.ily-shadow') as HTMLElement).style.opacity = up ? '1' : '0'; el.dataset.lift = up ? '1' : ''; };
+          mk.on('dragstart', () => lift(true));
+          mk.on('dragend', () => { lift(false); const ll = mk.getLngLat(); pinMoveRef.current?.(z.id, ll.lat, ll.lng); });
+        }
         return mk;
       }
       el.textContent = z.label!;
