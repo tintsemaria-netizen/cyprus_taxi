@@ -15,7 +15,7 @@ const ZoneEditorMap = dynamicImport(() => import('@/components/staff/ZoneEditorM
 export const dynamic = 'force-dynamic';
 
 interface Zone { id: string; airport: string; name: string; polygon: Poly; postcodes: string[]; comfortCents: number; xlCents: number; active: boolean }
-interface Airport { code: string; lat: number; lng: number }
+interface Airport { code: string; lat: number; lng: number; areas?: Poly[] }
 // codes != null → a zone by POSTCODE (no map). inner / outer: the neighbouring zones a belt is bounded by
 // (2026-11-21, operator: «пояс регулируется только до куда, а откуда — предыдущим поясом или центром»).
 interface Draft { id: string | null; name: string; comfort: string; xl: string; active: boolean; polygon: Poly; codes: string | null; inner: Zone[]; outer: Zone[] }
@@ -104,11 +104,13 @@ function FixedPrices() {
     return m;
   }, [draft]);
   const othersNow = others.map((z) => (adjusted.has(z.id) ? { ...z, polygon: adjusted.get(z.id)! } : z));
-  const refZones: RefZone[] = othersNow.map((z) => {
+  // The airport itself (2026-11-25): the pickup territory marked as this airport, in white — no 2.5 km circle any more.
+  const airportZones: RefZone[] = (ap.areas ?? []).map((p, i) => ({ id: `airport-${i}`, name: 'airport', polygon: p, color: '#ffffff', label: t('staff.fixed.airportArea'), labelAt: labelAt(p, false) }));
+  const refZones: RefZone[] = [...airportZones, ...othersNow.map((z) => {
     const holes = holesOf(z, othersNow);
     return { id: z.id, name: z.name, polygon: z.polygon, holes, color: z.active ? COLORS[mine.findIndex((o) => o.id === z.id) % COLORS.length] : '#8A969A',
       strong: adjusted.has(z.id), label: `${z.name} · ${euroS(z.comfortCents)} €`, labelAt: labelAt(z.polygon, holes.length > 0) };
-  });
+  })];
   // Postcode zones on the map (2026-11-21): the outline of our addresses with that postcode, in pink.
   const [areas, setAreas] = useState<Record<string, Poly | null>>({});
   const draftCodes = draft?.codes != null ? parseCodes(draft.codes).filter((c) => /^\d{4,5}$/.test(c)) : [];
@@ -228,9 +230,15 @@ function FixedPrices() {
         )}
       </div>
 
+      {airports.length > 0 && !(ap.areas ?? []).length && (
+        <p className="mt-3 rounded-[10px] border border-warn/50 bg-warn/10 p-3 text-sm" data-testid="no-airport-area">
+          {t('staff.fixed.noAirportArea')} <a href="/admin/pickup-points" className="font-semibold text-accent">{t('staff.fixed.toPickupPoints')} ›</a>
+        </p>
+      )}
+
       <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="relative h-[62vh] min-h-[380px] overflow-hidden rounded-[14px] border border-edge">
-          <ZoneEditorMap center={center} airport={ap} zones={refZones} editing={draft && draft.codes == null ? draft.polygon : null} editingHoles={draft?.inner.map((o) => adjusted.get(o.id) ?? o.polygon)}
+          <ZoneEditorMap center={center} zones={refZones} editing={draft && draft.codes == null ? draft.polygon : null} editingHoles={draft?.inner.map((o) => adjusted.get(o.id) ?? o.polygon)}
             onChange={setPoly} fit={fit} className="h-full w-full" />
           {draft && draft.codes == null && (
             <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start gap-2">

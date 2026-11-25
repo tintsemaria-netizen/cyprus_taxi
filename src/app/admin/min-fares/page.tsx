@@ -121,7 +121,7 @@ function MinFares() {
 
       <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="relative h-[62vh] min-h-[380px] overflow-hidden rounded-[14px] border border-edge">
-          <ZoneEditorMap center={CYPRUS} airport={null} zones={refZones} editing={draft ? draft.polygon : null} onChange={setPoly} fit={fit} className="h-full w-full" />
+          <ZoneEditorMap center={CYPRUS} zones={refZones} editing={draft ? draft.polygon : null} onChange={setPoly} fit={fit} className="h-full w-full" />
           {draft && (
             <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start gap-2">
               <button type="button" onClick={stepBack} disabled={histLen === 0} aria-label={t('staff.fixed.stepBack')}

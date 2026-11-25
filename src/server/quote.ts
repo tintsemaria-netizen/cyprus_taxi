@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { ensureAirportAreas } from '@/server/no-go';
 import { config } from '@/lib/config';
 import { sha256 } from '@/lib/crypto';
 import { haversineMeters } from '@/lib/geo';
@@ -75,6 +76,7 @@ function straightMeters(i: QuoteInput): number {
 }
 
 export async function createQuote(input: QuoteInput, at = new Date(), mode: PricingMode = config.pricing.mode): Promise<QuoteResult> {
+  await ensureAirportAreas(); // the airport = a territory marked «это аэропорт» (2026-11-25)
   // The quote is ISSUED at `at` (drives expiry). It is PRICED for the intended journey
   // time `pricingAt` (scheduled → future; else now) — day/night/holiday tariff and the
   // traffic-aware routing use pricingAt, not the moment the quote was requested.

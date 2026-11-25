@@ -3,6 +3,7 @@
 // time with the same road-time check as the hour list. The other passenger answers yes / no as before.
 // Automatic matching keeps running for all open rides.
 import { prisma } from '@/lib/db';
+import { ensureAirportAreas } from '@/server/no-go';
 import { getSettings } from '@/lib/settings';
 import { approxLegMin, arrivalFits, shareFits, shareZone, type LegFn } from '@/lib/share';
 import { shareCapable, planWithRoads, proposePrebook, fitPair, BOARD_REACH_MIN } from '@/server/share';
@@ -71,6 +72,7 @@ const fail = (status: number, code: string, message: string): BoardResult => ({ 
 
 /** «Ехать» with an order from the hour list: propose a pair at the other passenger's time; my answer counts as «yes». */
 export async function proposeFromBoard(passengerId: string, myBookingId: string, otherBookingId: string, now: Date = new Date(), confirmOutside = false): Promise<BoardResult> {
+  await ensureAirportAreas(); // the airport = a territory marked «это аэропорт» (2026-11-25)
   if (myBookingId === otherBookingId) return fail(422, 'SAME_RIDE', 'Choose another passenger’s ride.');
   const open = await openRides(now, { id: { in: [myBookingId, otherBookingId] } });
   const me = open.find((r) => r.id === myBookingId);

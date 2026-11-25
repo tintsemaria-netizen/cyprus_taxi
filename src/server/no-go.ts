@@ -4,6 +4,7 @@ import { pointInPolygon } from '@/lib/geo';
 import { onCyprusIsland } from '@/lib/cyprus-island';
 import { smoothRing } from '@/lib/ring';
 import { parsePolygon } from '@/server/fixed-fares';
+import { AIRPORT_CODES, setAirportAreas } from '@/lib/airports';
 
 // «Запретная зона» (2026-11-24, operator): red areas the taxi does not go to. No pickup, stop or destination
 // inside an active zone — the booking, the price and a stop added on the way are refused (NO_GO_ZONE).
@@ -11,7 +12,7 @@ import { parsePolygon } from '@/server/fixed-fares';
 export interface NoGo { id: string; name: string; polygon: [number, number][] }
 /** «Точки подачи» (2026-11-24): inside the territory every pickup goes to the nearest of its points. */
 export interface Spot { lat: number; lng: number; name: string }
-export interface PickupPoint extends NoGo { points: Spot[]; dropPoints: Spot[] }
+export interface PickupPoint extends NoGo { points: Spot[]; dropPoints: Spot[]; airport: string | null }
 export const spotLabel = (zone: string, s: Spot) => (s.name ? `${zone} · ${s.name}` : zone);
 function parseSpots(v: unknown): Spot[] {
   if (!Array.isArray(v)) return [];
@@ -38,9 +39,13 @@ async function load(now: number) {
   cache = {
     at: now,
     rows: rows.filter((r) => r.kind !== 'POINT').map(z),
-    points: rows.filter((r) => r.kind === 'POINT').map((r) => ({ ...z(r), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints) })).filter((t) => t.points.length > 0),
+    points: rows.filter((r) => r.kind === 'POINT').map((r) => ({ ...z(r), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints), airport: r.airport ?? null })).filter((t) => t.points.length > 0),
   };
+  // The airport is a territory marked «это аэропорт» (2026-11-25) — by the same rounded outline the passenger sees.
+  setAirportAreas(cache.points.filter((t) => t.airport).map((t) => ({ code: t.airport!, polygon: t.polygon })));
 }
+/** Load (or refresh, 30 s cache) the airport areas before a synchronous airportAt / isAirportPoint / shareZone. */
+export async function ensureAirportAreas(now = Date.now()): Promise<void> { await load(now); }
 
 const inside = (p: { lat: number; lng: number }, poly: [number, number][]) => poly.length >= 3 && pointInPolygon(p, poly.map(([lat, lng]) => ({ lat, lng })));
 
@@ -92,13 +97,16 @@ export const noGoSchema = z.object({
   points: z.array(z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), name: z.string().trim().max(60).default('') })).max(20).optional(),
   dropPoints: z.array(z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), name: z.string().trim().max(60).default('') })).max(20).optional(),
   active: z.boolean().optional(),
+  airport: z.enum(AIRPORT_CODES).nullable().optional(), // POINT only: «это аэропорт» (2026-11-25)
 }).refine((d) => d.kind !== 'POINT' || (d.points?.length ?? 0) > 0, { message: 'At least one pickup point is required.' })
   // Every pickup point inside its (rounded) territory and on land (2026-11-24).
   .refine((d) => d.kind !== 'POINT' || [...(d.points ?? []), ...(d.dropPoints ?? [])].every((s) => onCyprusIsland(s) && pointInPolygon(s, smoothRing(d.polygon).map(([lat, lng]) => ({ lat, lng })))), { message: 'Pickup and drop-off points must be inside the territory, on land.' })
   // Pickup and drop-off points do not mix (operator: «чтобы не переплетались»): at least 15 m apart.
   .refine((d) => (d.points ?? []).every((a) => (d.dropPoints ?? []).every((b) => Math.hypot((a.lat - b.lat) * 110540, (a.lng - b.lng) * 111320 * Math.cos((a.lat * Math.PI) / 180)) >= MIN_PICK_DROP_M)), { message: `A drop-off point must be at least ${MIN_PICK_DROP_M} m from every pickup point.` });
 export function noGoData(d: z.infer<typeof noGoSchema>) {
-  return { name: d.name, kind: d.kind ?? 'NOGO', polygon: d.polygon, points: d.kind === 'POINT' ? (d.points ?? []) : undefined, dropPoints: d.kind === 'POINT' ? (d.dropPoints ?? []) : undefined, active: d.active ?? true };
+  return { name: d.name, kind: d.kind ?? 'NOGO', polygon: d.polygon, points: d.kind === 'POINT' ? (d.points ?? []) : undefined, dropPoints: d.kind === 'POINT' ? (d.dropPoints ?? []) : undefined, active: d.active ?? true,
+    // Not sent (e.g. the on/off switch) → unchanged; a no-go zone is never an airport.
+    ...(d.kind === 'POINT' ? (d.airport !== undefined ? { airport: d.airport } : {}) : { airport: null }) };
 }
 export const zoneView = (r: { points: unknown; dropPoints?: unknown; polygon: unknown } & Record<string, unknown>) =>
   ({ ...r, polygon: parsePolygon(r.polygon), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints) });

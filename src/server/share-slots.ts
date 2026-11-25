@@ -1,4 +1,5 @@
 import { getSettings } from '@/lib/settings';
+import { ensureAirportAreas } from '@/server/no-go';
 import { config } from '@/lib/config';
 import { shareFits, shareZone } from '@/lib/share';
 import { nicosiaMidnightUtc } from '@/lib/timezone';
@@ -29,6 +30,7 @@ export interface SlotOrder {
 export interface ShareSlot { at: string; orders: SlotOrder[] }
 
 export async function shareSlots(day: string, pickup: LatLng, dropoff: LatLng, me: { people: number; bags?: number; vClass: 'COMFORT' | 'XL' } = { people: 1, vClass: 'COMFORT' }, now: Date = new Date()): Promise<{ slotMinutes: number; spanMinutes: number; slots: ShareSlot[] }> {
+  await ensureAirportAreas(); // the airport = a territory marked «это аэропорт» (2026-11-25)
   const settings = await getSettings();
   const slotMinutes = settings.shareSlotMinutes || 60;
   const from = shareZone(pickup), to = shareZone(dropoff);

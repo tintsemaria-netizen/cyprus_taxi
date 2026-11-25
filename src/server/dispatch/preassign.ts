@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { ensureAirportAreas } from '@/server/no-go';
 import { blockedPassengerIdsForDriver, isPairBlocked } from './blocked-pairs';
 import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
@@ -93,6 +94,7 @@ async function sharePairs(bookingIds: string[]) {
 
 // The driver's view: rides they can still commit to, and their own live commitments.
 export async function scheduledBoard(driverId: string, now: Date = new Date()) {
+  await ensureAirportAreas(); // the airport = a territory marked «это аэропорт» (2026-11-25)
   const driver = await prisma.driver.findUnique({ where: { id: driverId } });
   const vehicle = await boundVehicle(prisma, driverId);
   const mineRows = await prisma.preAssignment.findMany({

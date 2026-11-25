@@ -20,6 +20,6 @@ export async function POST(req: Request) {
   if (!parsed.success) return Errors.validation({ _: 'A name, at least 3 corners and (for a pickup territory) the pickup point are required.' });
   const row = await prisma.noGoZone.create({ data: noGoData(parsed.data) });
   invalidateNoGoCache();
-  await prisma.auditEvent.create({ data: { actorId: ctx.user.id, actorRole: 'ADMIN', action: 'NO_GO_ZONE_CREATED', target: row.id, detail: row.name } });
+  await prisma.auditEvent.create({ data: { actorId: ctx.user.id, actorRole: 'ADMIN', action: 'NO_GO_ZONE_CREATED', target: row.id, detail: `${row.name}${row.airport ? ` airport=${row.airport}` : ''}` } });
   return apiOk(zoneView(row), 201);
 }

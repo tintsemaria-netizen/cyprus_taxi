@@ -39,7 +39,6 @@ function pillSvg(text: string, color: string): { url: string; w: number; h: numb
 
 interface Props {
   center: { lat: number; lng: number };
-  airport?: { lat: number; lng: number } | null; // a faint 2.5 km circle around it (fixed airport fares); none when null
   zones: RefZone[];
   editing: Poly | null; // null = not editing
   onChange: (p: Poly) => void;
@@ -63,13 +62,13 @@ export default function ZoneEditorMap(props: Props) {
 }
 
 // ---------- Google ----------
-function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange, onPick, onPinMove, fit, className, editColor }: Props) {
+function GoogleZoneMap({ center, zones, editing, editingHoles, onChange, onPick, onPinMove, fit, className, editColor }: Props) {
   const pinMoveRef = useRef(onPinMove);
   pinMoveRef.current = onPinMove;
   const LIME = editColor ?? DEFAULT_EDIT;
   const ref = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const st = useRef<{ g: any; map: any; edit: any; refs: any[]; airport: any; labels: any[] } | null>(null);
+  const st = useRef<{ g: any; map: any; edit: any; refs: any[]; labels: any[] } | null>(null);
   // Two fingers turn the map 360° and zoom at the same time, like on the passenger and driver maps (2026-11-25).
   const gmapRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [gReady, setGReady] = useState(false);
@@ -95,7 +94,7 @@ function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange
         if (!editingRef.current) { onPickRef.current?.(e.latLng.lat(), e.latLng.lng()); return; }
         onChangeRef.current(addToRing(editingRef.current, [e.latLng.lat(), e.latLng.lng()]));
       });
-      st.current = { g, map, edit: null, refs: [], airport: null, labels: [] };
+      st.current = { g, map, edit: null, refs: [], labels: [] };
       draw();
     });
     return () => { dead = true; };
@@ -121,8 +120,6 @@ function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange
       return new g.Marker({ map, position: { lat: z.labelAt![0], lng: z.labelAt![1] }, clickable: false, zIndex: z.strong ? 30 : 20,
         icon: { url: pill.url, scaledSize: new g.Size(pill.w, pill.h), anchor: new g.Point(pill.w / 2, pill.h / 2) } });
     });
-    s.airport?.setMap?.(null);
-    s.airport = !airport ? null : new g.Circle({ map, center: airport, radius: 2500, strokeColor: '#ffffff', strokeOpacity: 0.6, strokeWeight: 1, fillOpacity: 0.05, clickable: false });
     if (s.edit) { const ep = s.edit.getPath(); if (ep) g.event.clearInstanceListeners(ep); s.edit.setMap(null); s.edit = null; }
     if (editing) {
       // paths as ONE explicit ring (2026-11-21 fix): with a flat empty array (a new zone, no corners yet)
@@ -160,7 +157,7 @@ function GoogleZoneMap({ center, airport, zones, editing, editingHoles, onChange
 }
 
 // ---------- MapLibre ----------
-function LibreZoneMap({ center, airport, zones, editing, editingHoles, onChange, onPick, onPinMove, fit, className, editColor }: Props) {
+function LibreZoneMap({ center, zones, editing, editingHoles, onChange, onPick, onPinMove, fit, className, editColor }: Props) {
   const pinMoveRef = useRef(onPinMove);
   pinMoveRef.current = onPinMove;
   const LIME = editColor ?? DEFAULT_EDIT;
@@ -207,18 +204,12 @@ function LibreZoneMap({ center, airport, zones, editing, editingHoles, onChange,
   }, []);
 
   function ring(p: Poly) { const r = p.map(([lat, lng]) => [lng, lat]); return r.length ? [...r, r[0]] : r; }
-  function circle(c: { lat: number; lng: number }, m: number) {
-    const pts: number[][] = [];
-    for (let i = 0; i <= 48; i++) { const a = (2 * Math.PI * i) / 48; pts.push([c.lng + (m / 111_320 / Math.cos((c.lat * Math.PI) / 180)) * Math.sin(a), c.lat + (m / 110_540) * Math.cos(a)]); }
-    return pts;
-  }
 
   function draw() {
     const map = mapRef.current;
     const lib = libRef.current;
     if (!map || !lib || !ready.current) return;
     const feats = [
-      ...(airport ? [{ type: 'Feature', properties: { color: '#ffffff', op: 0.05, w: 1 }, geometry: { type: 'Polygon', coordinates: [circle(airport, 2500)] } }] : []),
       ...zones.filter((z) => z.polygon.length >= 3).map((z) => ({ type: 'Feature', properties: { color: z.color, op: z.strong ? 0.2 : 0.08, w: z.strong ? 3 : 2 }, geometry: { type: 'Polygon', coordinates: [ring(z.polygon), ...(z.holes ?? []).map((h) => ring(h.slice().reverse()))] } })),
       ...(editing && editing.length >= 2 ? [{ type: 'Feature', properties: { color: LIME, op: editing.length >= 3 ? 0.2 : 0, w: 3 }, geometry: { type: 'Polygon', coordinates: [ring(editing), ...(editing.length >= 3 ? (editingHoles ?? []).map((h) => ring(h.slice().reverse())) : [])] } }] : []),
     ];

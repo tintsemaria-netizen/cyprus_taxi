@@ -1,4 +1,5 @@
 import { lookupPostcode } from '@/server/postcode';
+import { ensureAirportAreas } from '@/server/no-go';
 import { SHARE_MAX_PEOPLE, SHARE_MAX_BAGS } from '@/lib/share';
 import { onCyprusIsland } from '@/lib/cyprus-island';
 import { firstNoGo, snapPickup, snapDropoff } from '@/server/no-go';
@@ -40,6 +41,7 @@ export async function createBooking(
   baseUrl?: string, // origin the passenger is using (multi-domain); falls back to APP_BASE_URL
   passengerId?: string, // owning passenger account (Task 014)
 ): Promise<CreateResult> {
+  await ensureAirportAreas(); // the airport = a territory marked «это аэропорт» (2026-11-25)
   const settings = await getSettings();
 
   // 1. Class capacity

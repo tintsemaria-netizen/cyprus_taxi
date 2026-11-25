@@ -2,6 +2,7 @@ import { apiOk, Errors } from '@/lib/http';
 import { requireStaff, isStaffCtx } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { AIRPORTS } from '@/lib/airports';
+import { pickupPoints } from '@/server/no-go';
 import { invalidateFixedFareCache, parsePolygon, zoneData, zoneSchema } from '@/server/fixed-fares';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +13,10 @@ export async function GET() {
   const ctx = await requireStaff(['ADMIN']);
   if (!isStaffCtx(ctx)) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();
   const rows = await prisma.fixedFareZone.findMany({ orderBy: [{ airport: 'asc' }, { createdAt: 'asc' }] });
-  return apiOk({ airports: AIRPORTS, zones: rows.map((r) => ({ ...r, polygon: parsePolygon(r.polygon) })) });
+  // Where each airport is (2026-11-25): the pickup territories marked as that airport — shown instead of the old circle.
+  const terr = await pickupPoints();
+  const airports = AIRPORTS.map((a) => ({ ...a, areas: terr.filter((t) => t.airport === a.code).map((t) => t.polygon) }));
+  return apiOk({ airports, zones: rows.map((r) => ({ ...r, polygon: parsePolygon(r.polygon) })) });
 }
 
 export async function POST(req: Request) {

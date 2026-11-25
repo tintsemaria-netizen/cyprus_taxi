@@ -37,6 +37,7 @@ export type PostcodeOf = (p: LatLng) => Promise<string | null>;
 
 export async function findFixedFare(pickup: LatLng, dropoff: LatLng, vClass: string, stop?: LatLng | null,
   postcodeOf: PostcodeOf = (p) => lookupPostcode(p.lat, p.lng)): Promise<FixedFareMatch | null> {
+  await (await import('@/server/no-go')).ensureAirportAreas(); // the airport = a territory marked «это аэропорт» (2026-11-25)
   if (stop) return null; // a stop on the way is a different trip → meter
   const fromAirport = airportAt(pickup.lat, pickup.lng);
   const toAirport = airportAt(dropoff.lat, dropoff.lng);

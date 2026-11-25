@@ -8,6 +8,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    setupFiles: ['tests/setup/airports.ts'],
     testTimeout: 20000,
     // DB test files share one isolated Postgres; run files one at a time so their table cleanups
     // never race. (Vitest 4+: poolOptions.forks.singleFork → top-level maxWorkers.) Each file still

@@ -154,6 +154,11 @@ const staff = {
     empty: 'No vehicles yet.',
   },
   noGo: {
+    isAirport: "This is an airport",
+    airportNone: "No",
+    airportLCA: "Larnaca",
+    airportPFO: "Paphos",
+    airportHint: "The whole territory counts as the airport: fixed airport fares to and from it, the driver confirms «arrived» at the terminal, co-rider «airport ↔ town». Outside it — a normal trip.",
     deletePoint: 'Delete the point «{name}»?',
     dropName: 'Name (e.g. Departures)',
     noDrop: 'No drop-off points — the passenger is dropped where he chose.',
@@ -199,6 +204,9 @@ const staff = {
     row: 'Comfort from {comfort} € · XL from {xl} €',
   },
   fixed: {
+    airportArea: "Airport area",
+    noAirportArea: "No area is marked as this airport — its fixed fares do not apply now. Mark the airport pickup territory as «This is an airport».",
+    toPickupPoints: "Pickup territories",
     title: "Fixed prices",
     sub: "Airport ↔ zone trips (either direction, no stop) are charged exactly the zone price — same day and night. Zones are drawn corner by corner; «Next belt» starts where the previous zone ends. Where zones overlap, the smallest one applies. Outside all of them — meter estimate.",
     airport: "Airport",

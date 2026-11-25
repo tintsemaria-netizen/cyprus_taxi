@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { ensureAirportAreas } from '@/server/no-go';
 import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { getSettings } from '@/lib/settings';
@@ -106,6 +107,7 @@ async function activeGroupOf(db: Tx | typeof prisma, bookingId: string) {
  * share proposal for this booking is pending (the worker then waits instead of offering drivers).
  */
 export async function tryLiveShare(guestId: string, now: Date = new Date()): Promise<boolean> {
+  await ensureAirportAreas(); // the airport = a territory marked «это аэропорт» (2026-11-25)
   const guest = await prisma.booking.findUnique({ where: { id: guestId } });
   if (!guest || guest.status !== 'SEARCHING' || guest.scheduledAt || !shareCapable(guest)) return false;
   // Offers out (operator 2026-11-23): settle any driver who said yes; wait while others may still answer.
@@ -566,6 +568,7 @@ export function fitPair<T extends PairInput>(a: T, b: T, leg: LegFn, slack = 0, 
 }
 
 export async function matchPrebookings(now: Date = new Date()): Promise<number> {
+  await ensureAirportAreas(); // the airport = a territory marked «это аэропорт» (2026-11-25)
   const settings = await getSettings();
   // Leave room for both answers (≤ prebookAnswerMin) to end ≥ prebookAnswerBeforePickupMin before pickup.
   const earliest = new Date(now.getTime() + (S().prebookAnswerBeforePickupMin + 5) * MIN);

@@ -702,6 +702,7 @@ model NoGoZone {
   polygon   Json // [[lat, lng], …] ≥ 3 points
   points    Json? // POINT: [{ lat, lng, name }] — one or more pickup points (e.g. airport exits)
   dropPoints Json? // POINT: [{ lat, lng, name }] — drop-off points (2026-11-24), separate from the pickup points
+  airport   String? // POINT (2026-11-25): «это аэропорт» — LCA | PFO. The territory IS the airport (fixed fares, arrival at the terminal, ride-share place); no 2.5 km circle any more
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt

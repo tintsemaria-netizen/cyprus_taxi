@@ -1,4 +1,5 @@
 import { meterWaitingCents } from '@/lib/tariff';
+import { ensureAirportAreas } from '@/server/no-go';
 import { isFixedPrice } from '@/lib/price-type';
 import { enqueueReceiptEmail } from '@/server/email/receipts';
 import { completedTotalCents } from '@/lib/fare-total';
@@ -146,6 +147,7 @@ async function finalizeCompletion(
 // EN_ROUTE → ARRIVED. Requires the driver's own assignment and fresh GPS within the
 // arrival radius of pickup (airports exempt); opens a persisted waiting session.
 export async function arriveAtPickup(bookingId: string, driverId: string, expectedRevision: number): Promise<LifeResult> {
+  await ensureAirportAreas(); // the airport = a territory marked «это аэропорт» (2026-11-25)
   const r = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
     const b = await tx.booking.findUnique({ where: { id: bookingId } });
