@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-25 — no passenger↔driver links (deployed)
+- Driver login: «Стать водителем ›» is a line under the sign-in toggle (no join card); no «Я пассажир» link; logo not a link. Driver registration: back arrow to /driver/login, status card links to driver sign-in. Passenger /login: no driver link. Staff login still links to driver login (operator not asked).
+
 ## 2026-11-25 — co-rider note only when switched on (deployed)
 - ShareBookingOptions: «−30% включится, только когда найдётся попутчик» shows only when the switch is on (now and pre-booking).
 
