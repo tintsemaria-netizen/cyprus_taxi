@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-25 — zone tabs share one map (deployed)
+- Route group `src/app/admin/(zones)/` (fixed-prices, min-fares, no-go, pickup-points, stands; URLs unchanged) with layout = StaffShell + `ZoneWorkspace` (src/components/staff/ZoneWorkspace.tsx): one ZoneEditorMap kept across tabs; tabs call `useZoneMap(props)` and put step-back/hints in `<OverMap>`. Camera kept on tab switch (fit applied only when it changes within a tab; centre frozen to the first tab's). StaffShell sub-tabs use next/link between zone tabs.
+
 ## 2026-11-25 ~16:20 — stand tied to any pickup territory (deployed 6148c38)
 - `NoGoZone.forZoneId` (migration 20261125160000): a STAND takes the orders picked up inside the chosen POINT territory (src/server/stands.ts sourceArea; older stands fall back to their airport's territory). Admin: «Заказы с какой территории» select (AreaZones, kind STAND). Test added (port stand). Suite 501 passed / 1 skipped; live admin chunk has `stand-territory`; health ready.
 
