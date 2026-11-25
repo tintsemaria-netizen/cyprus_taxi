@@ -15,7 +15,7 @@ export const TARIFF = {
   holidaySurchargeCents: 200,
   // Passenger surcharge on the fare (regulated): 5 pax +20%, 6 pax +40%.
   paxSurcharge: (n: number) => (n >= 6 ? 0.4 : n === 5 ? 0.2 : 0),
-  estimateBandPct: 0.15, // ± band shown to the passenger (honest estimate, not exact)
+  estimateBandPct: 0.12, // ± band shown to the passenger (honest estimate, not exact); 15 % → 12 % (operator 2026-11-25)
   // XL (minivan, up to 6 pax) — OUR OWN commercial setting, not a regulated figure (2026-11-16,
   // owner's request for a separate XL price). +40 % on initial hire + distance, the same as the
   // regulated 6-passenger surcharge. It REPLACES the passenger surcharge (never both), so a full
