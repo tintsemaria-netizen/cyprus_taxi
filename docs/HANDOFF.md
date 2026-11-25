@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-25 — «Территории»; territory without pickup points; tools on top on narrow screens (deployed)
+- Tab «Точки подачи» renamed «Территории» (URL /admin/pickup-points kept). POINT zone may have no pickup points: server snapPickup / client territoryAt/Near skip it, not drawn for passengers (allTerritories), still a place for fixed fares / minimum / stands. Test in tests/point-min.db.test.ts.
+- ZoneWorkspace below lg: panel first (max-h 48vh, scrolls), map below.
+
 ## 2026-11-25 ~22:40 — XL + ride-share: topic dropped by the operator («эту тему убери»). Nothing changed on the site; branch `share-comfort-only` is unused (not merged; branch deletion via the proxy is refused — the owner can delete it). Do not bring it up again.
 
 ## 2026-11-25 — admin switches with confirmation; ✕ on edit forms (deployed)
