@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-25 — zone tabs: ☰ «Инфо» and ✕ fold (deployed)
+- ZoneWorkspace `PanelHead` (title, ☰ → «Инфо» shows the description; ✕ folds the side panel, «‹» on the map reopens; content stays mounted). Used by all five zone tabs.
+
 ## 2026-11-25 — zone tabs share one map (deployed)
 - Route group `src/app/admin/(zones)/` (fixed-prices, min-fares, no-go, pickup-points, stands; URLs unchanged) with layout = StaffShell + `ZoneWorkspace` (src/components/staff/ZoneWorkspace.tsx): one ZoneEditorMap kept across tabs; tabs call `useZoneMap(props)` and put step-back/hints in `<OverMap>`. Camera kept on tab switch (fit applied only when it changes within a tab; centre frozen to the first tab's). StaffShell sub-tabs use next/link between zone tabs.
 
