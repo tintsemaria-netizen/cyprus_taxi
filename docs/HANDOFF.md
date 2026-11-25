@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-25 — «Минимальный заказ отсюда» per pickup point (deployed)
+- NoGoZone.minComfortCents / minXlCents / minActive (migration 20261125160000_point_min). server/no-go `pointMin(pickup, vClass)`: pickup inside the territory or on an exit point (≤30 m), switched on → minimum; quote.ts takes the larger of it and «Минимум предзаказа» (not for fixed / shared). Flows through Quote.minCents → Booking.fareMinCents (close, settlement, driver/passenger lines).
+- Admin «Точки подачи»: Comfort / XL fields + switch with confirmation (form and list chip), audit detail min=on/off. Minimum texts no longer start with «Предзаказ —» (8 languages). Test: tests/point-min.db.test.ts. Prod points start without a minimum.
+
 ## 2026-11-25 ~15:30 — «Стоянки с очередью» + XL takes Comfort (deployed 24e72df)
 - Stand = NoGoZone kind STAND (+airport PFO|LCA; `active` = queue on; off = drivers inside get no orders, the free board included). Model `StandQueue` (migration 20261125120000). Logic: src/server/stands.ts (join on GPS sample via /driver/location, 10 s leave grace, removed on ride/off duty); dispatch: eligibility.ts queue path first for pickups at the stand's airport, refusal keeps the place (tried list). Admin /admin/stands (AreaZones kind STAND, live queue via /api/v1/admin/stands). Driver: big-number card (location response `stand`), 8 languages.
 - `Driver.takesComfort` (migration 20261125130000, default true): XL car takes Comfort orders (src/lib/vehicle-class.ts carTakes/takesClasses) in offers, accept, free board, pre-bookings, admin assign, market count; XL driver switch in profile (/api/v1/driver/classes).
