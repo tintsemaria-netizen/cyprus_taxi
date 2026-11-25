@@ -9,6 +9,8 @@
 ## 2026-11-26 — zone forms: ✕ closes the form, unsaved changes guarded (deployed)
 - ZoneWorkspace: panel fold removed (no top ✕ / ‹). `useDirty(draft)` + `FormClose` (✕ closes the form; with unsaved changes shows «сначала сохраните»). «Отмена» asks when dirty; startNew/startEdit/startCodes/startBelt and the airport switch refuse while dirty.
 
+## 2026-11-26 ~00:55 — pickup/drop-off points on one spot: operator declined («пусть будет как есть»). Branch `pins-overlap` (2f01a98) NOT merged, do not merge; the 15 m rule stays.
+
 ## 2026-11-25 — territory «Точки подачи и высадки» switch (deployed)
 - NoGoZone.pointsActive (migration 20261125230000_points_active): off → snapPickup/snapDropoff skip, /api/v1/no-go sends empty points; points kept. Main switch labelled «Территория «name»». Hint lines under switches and under «Точки высадки» removed (operator). Test in tests/point-min.db.test.ts.
 
