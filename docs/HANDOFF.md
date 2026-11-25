@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-25 — driver phone sign-in for applicants; driver data in the passenger app (deployed)
+- /driver/otp/verify: applicant number → applicant session + `{application:true}` → /driver/register; unknown → NOT_REGISTERED (login shows «Стать водителем ›»); switched-off driver → DRIVER_DISABLED (8 languages).
+- verifiedPassenger fills an empty name / e-mail from the driver account with the same SMS-verified phone (e-mail only if free). Passenger SMS is still OFF (features.PASSENGER_SMS) and Twilio is not configured, so neither works for real users until SMS is on. Test: tests/driver-phone-login.db.test.ts.
+
 ## 2026-11-25 ~11:55 — logo lift + shadow in the «На карте» pickers (deployed 99bc2e4)
 - New `src/components/LiftPin.tsx` (one component): start screen, MapPicker (MapLibre: dragstart→up, moveend→down), GoogleMapPicker (dragstart→up, idle→down).
 - Not changed: fixed pickup markers on tracking/driver maps; admin point logos (dragged themselves) — offered to the operator.
