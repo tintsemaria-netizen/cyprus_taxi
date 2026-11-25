@@ -23,8 +23,7 @@ type Pt = { lat: number; lng: number };
 interface Spot { lat: number; lng: number; name: string }
 interface Zone { id: string; name: string; kind: Kind; polygon: Poly; points: Spot[]; dropPoints?: Spot[]; active: boolean; airport?: string | null }
 interface Draft { id: string | null; name: string; kind: Kind; active: boolean; polygon: Poly; points: Spot[]; dropPoints: Spot[]; airport: string | null }
-// «Это аэропорт» (2026-11-25): the territory IS the airport — fixed fares, arrival at the terminal, co-rider place.
-const AIRPORT_CHOICES = ['LCA', 'PFO'] as const;
+// ✈ in the list (2026-11-25): this territory is chosen as an airport's point on «Фиксированные цены».
 // What a tap on the map adds while editing a territory: corners, pickup points or drop-off points (2026-11-24).
 type Mode = 'corners' | 'pick' | 'drop';
 const DROP = '#FFC83D';
@@ -136,7 +135,7 @@ function AreaZones({ kind }: { kind: Kind }) {
     if (draft.kind === 'POINT' && !draft.points.length) { setMsg(t('staff.noGo.needPickup')); setMode('pick'); return; }
     setBusy(true); setMsg(null);
     try {
-      const body = { name: draft.name.trim() || `${t(draft.kind === 'POINT' ? 'staff.noGo.pointTitle' : 'staff.noGo.title')} ${zones.length + 1}`, kind: draft.kind, polygon: draft.polygon, points: draft.points, dropPoints: draft.dropPoints, active: draft.active, ...(draft.kind === 'POINT' ? { airport: draft.airport } : {}) };
+      const body = { name: draft.name.trim() || `${t(draft.kind === 'POINT' ? 'staff.noGo.pointTitle' : 'staff.noGo.title')} ${zones.length + 1}`, kind: draft.kind, polygon: draft.polygon, points: draft.points, dropPoints: draft.dropPoints, active: draft.active };
       if (draft.id) await api(`/admin/no-go/${draft.id}`, { method: 'PUT', body });
       else await api('/admin/no-go', { method: 'POST', body });
       setDraft(null); setMsg(t('staff.noGo.saved'));
@@ -199,20 +198,6 @@ function AreaZones({ kind }: { kind: Kind }) {
               <label className="block text-sm">{t('staff.noGo.name')}
                 <input className="field mt-1" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder={t('staff.noGo.placeholder')} data-testid="nogo-name" />
               </label>
-              {draft.kind === 'POINT' && (
-                <div className="text-sm" data-testid="nogo-airport">
-                  <div>{t('staff.noGo.isAirport')}</div>
-                  <div className="mt-1 grid grid-cols-3 gap-1 rounded-[10px] border border-edge p-1">
-                    {([null, ...AIRPORT_CHOICES] as (string | null)[]).map((c) => (
-                      <button key={c ?? 'none'} type="button" onClick={() => setDraft({ ...draft, airport: c })} data-testid={`nogo-airport-${c ?? 'none'}`}
-                        className={`rounded-[8px] px-1 py-1.5 text-xs font-semibold ${draft.airport === c ? 'bg-[#4C9AFF] text-[#0b0f10]' : 'text-muted'}`}>
-                        {c ? t(`staff.noGo.airport${c}` as 'staff.noGo.airportLCA') : t('staff.noGo.airportNone')}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="mt-1 text-xs text-muted">{t('staff.noGo.airportHint')}</p>
-                </div>
-              )}
               {draft.kind === 'POINT' && (
                 <div className="grid grid-cols-3 gap-1 rounded-[10px] border border-edge p-1" data-testid="nogo-mode">
                   <button type="button" onClick={() => setMode('corners')} className={`rounded-[8px] px-1 py-1.5 text-xs font-semibold ${mode === 'corners' ? 'bg-[#4C9AFF] text-[#0b0f10]' : 'text-muted'}`}>{t('staff.noGo.modeCorners')}</button>

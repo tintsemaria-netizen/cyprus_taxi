@@ -15,7 +15,7 @@ const ZoneEditorMap = dynamicImport(() => import('@/components/staff/ZoneEditorM
 export const dynamic = 'force-dynamic';
 
 interface Zone { id: string; airport: string; name: string; polygon: Poly; postcodes: string[]; comfortCents: number; xlCents: number; active: boolean }
-interface Airport { code: string; lat: number; lng: number; areas?: Poly[] }
+interface Airport { code: string; lat: number; lng: number; areas?: { name: string; polygon: Poly }[] }
 // codes != null → a zone by POSTCODE (no map). inner / outer: the neighbouring zones a belt is bounded by
 // (2026-11-21, operator: «пояс регулируется только до куда, а откуда — предыдущим поясом или центром»).
 interface Draft { id: string | null; name: string; comfort: string; xl: string; active: boolean; polygon: Poly; codes: string | null; inner: Zone[]; outer: Zone[] }
@@ -31,6 +31,8 @@ export default function Page() {
 function FixedPrices() {
   const { t } = useT();
   const [airports, setAirports] = useState<Airport[]>([]);
+  // Pickup territories by name — one is chosen as «the point» of this airport's fixed fares (2026-11-25).
+  const [territories, setTerritories] = useState<{ id: string; name: string; airport: string | null }[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
   const [code, setCode] = useState('PFO');
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -60,8 +62,9 @@ function FixedPrices() {
   const resetHist = () => { hist.current = []; lastChange.current = 0; setHistLen(0); };
 
   const load = useCallback(async () => {
-    const r = await api<{ airports: Airport[]; zones: Zone[] }>('/admin/fixed-zones');
+    const r = await api<{ airports: Airport[]; territories?: { id: string; name: string; airport: string | null }[]; zones: Zone[] }>('/admin/fixed-zones');
     setAirports(r.airports);
+    setTerritories(r.territories ?? []);
     setZones(r.zones);
   }, []);
   useEffect(() => { void load().catch((e) => setMsg(e instanceof ApiRequestError ? e.body.message : String(e))); }, [load]);
@@ -105,7 +108,7 @@ function FixedPrices() {
   }, [draft]);
   const othersNow = others.map((z) => (adjusted.has(z.id) ? { ...z, polygon: adjusted.get(z.id)! } : z));
   // The airport itself (2026-11-25): the pickup territory marked as this airport, in white — no 2.5 km circle any more.
-  const airportZones: RefZone[] = (ap.areas ?? []).map((p, i) => ({ id: `airport-${i}`, name: 'airport', polygon: p, color: '#ffffff', label: t('staff.fixed.airportArea'), labelAt: labelAt(p, false) }));
+  const airportZones: RefZone[] = (ap.areas ?? []).map((a, i) => ({ id: `airport-${i}`, name: a.name, polygon: a.polygon, color: '#ffffff', label: a.name, labelAt: labelAt(a.polygon, false) }));
   const refZones: RefZone[] = [...airportZones, ...othersNow.map((z) => {
     const holes = holesOf(z, othersNow);
     return { id: z.id, name: z.name, polygon: z.polygon, holes, color: z.active ? COLORS[mine.findIndex((o) => o.id === z.id) % COLORS.length] : '#8A969A',
@@ -230,10 +233,24 @@ function FixedPrices() {
         )}
       </div>
 
+      {/* «Выберите точку к этим фикс ценам на выезд и въезд» (operator 2026-11-25): a pickup territory by name. */}
+      <label className="mt-3 flex flex-wrap items-center gap-2 text-sm" data-testid="airport-point">
+        <span className="text-muted">{t('staff.fixed.point')}:</span>
+        <select className="field !min-h-[40px] !w-auto !py-1.5" value={territories.find((x) => x.airport === code)?.id ?? ''} data-testid="airport-point-select"
+          onChange={async (e) => {
+            setMsg(null);
+            try { await api('/admin/fixed-zones/airport-area', { method: 'PUT', body: { airport: code, territoryId: e.target.value || null } }); await load(); }
+            catch (err) { setMsg(err instanceof ApiRequestError ? err.body.message : String(err)); }
+          }}>
+          <option value="">{t('staff.fixed.pointNone')}</option>
+          {territories.map((x) => (
+            <option key={x.id} value={x.id}>{x.name}{x.airport && x.airport !== code ? ` (${AIRPORT_NAMES[x.airport] ?? x.airport})` : ''}</option>
+          ))}
+        </select>
+        {!territories.length && <a href="/admin/pickup-points" className="font-semibold text-accent">{t('staff.fixed.toPickupPoints')} ›</a>}
+      </label>
       {airports.length > 0 && !(ap.areas ?? []).length && (
-        <p className="mt-3 rounded-[10px] border border-warn/50 bg-warn/10 p-3 text-sm" data-testid="no-airport-area">
-          {t('staff.fixed.noAirportArea')} <a href="/admin/pickup-points" className="font-semibold text-accent">{t('staff.fixed.toPickupPoints')} ›</a>
-        </p>
+        <p className="mt-2 rounded-[10px] border border-warn/50 bg-warn/10 p-3 text-sm" data-testid="no-airport-area">{t('staff.fixed.noAirportArea')}</p>
       )}
 
       <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_340px]">

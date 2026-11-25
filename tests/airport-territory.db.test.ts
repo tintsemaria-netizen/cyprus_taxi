@@ -26,6 +26,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await prisma.noGoZone.deleteMany({ where: { name: { startsWith: 'AP test' } } });
+  await prisma.noGoZone.updateMany({ where: { airport: { not: null } }, data: { airport: null } }); // only this file's territory counts
   await prisma.fixedFareZone.deleteMany({});
   await prisma.fixedFareZone.create({ data: { airport: 'PFO', name: 'Paphos', polygon: box, comfortCents: 3500, xlCents: 5000 } });
   invalidateNoGoCache(); invalidateFixedFareCache();
