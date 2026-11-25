@@ -471,6 +471,12 @@ export default function BookingApp() {
   const peekRoute = isMobile && collapsed && routeReady && step === 'form';
   const peekSched = peekRoute && when === 'SCHEDULE';
   const footerRef = useRef<HTMLDivElement | null>(null);
+  // A collapsed sheet always shows its top (2026-11-25, operator: after leaving a pre-booking form that had been
+  // scrolled down, the home sheet kept that scroll — «Куда едем?» was cut off above, empty space below — and the
+  // peek height was not measured again because the content was scrolled).
+  useEffect(() => {
+    if (isMobile && collapsed && contentRef.current) contentRef.current.scrollTop = 0;
+  }, [isMobile, collapsed, when, step]);
   useEffect(() => {
     const box = contentRef.current, sheet = sheetRef.current;
     if (!isMobile || !box || !sheet) return;
@@ -505,7 +511,7 @@ export default function BookingApp() {
     if (first) ro.observe(first);
     window.addEventListener('resize', measure);
     return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
-  }, [isMobile, step, routeReady, addrOpen, hasStop, destinations.length, places, passenger]);
+  }, [isMobile, step, routeReady, addrOpen, hasStop, destinations.length, places, passenger, collapsed, when, !!soonRide]); // eslint-disable-line react-hooks/exhaustive-deps
   useHideClipped(contentRef, isMobile && (collapsed || dragH != null));
   useEffect(() => {
     const el = contentRef.current;
