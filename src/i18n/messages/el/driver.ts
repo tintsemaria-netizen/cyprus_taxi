@@ -66,7 +66,7 @@ const driver: Catalog<typeof en> = {
   },
   offer: {
     nextTitle: 'Επόμενη κούρσα — μετά την αποβίβαση',
-    giveBackNext: 'Ακύρωση της επόμενης κούρσας',
+    cancelNext: 'Ακύρωση',
     giveBackConfirm: 'Να ακυρωθεί η επόμενη κούρσα; Ο πελάτης θα πάρει άλλον οδηγό.',
     nextHint: 'Αφήστε τον επιβάτη και πηγαίνετε κατευθείαν εκεί',
     minShort: '{min} λεπ.',

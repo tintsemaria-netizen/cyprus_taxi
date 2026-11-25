@@ -66,7 +66,7 @@ const driver: Catalog<typeof en> = {
   },
   offer: {
     nextTitle: 'Nächster Auftrag — nach dem Absetzen',
-    giveBackNext: 'Nächsten Auftrag abgeben',
+    cancelNext: 'Absagen',
     giveBackConfirm: 'Den nächsten Auftrag abgeben? Der Kunde bekommt einen anderen Fahrer.',
     nextHint: 'Fahrgast absetzen, dann direkt dorthin',
     minShort: "{min} Min.",

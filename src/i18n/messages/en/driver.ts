@@ -63,7 +63,7 @@ const driver = {
   },
   offer: {
     nextTitle: 'Next ride — after the drop-off',
-    giveBackNext: 'Give back the next ride',
+    cancelNext: 'Cancel',
     giveBackConfirm: 'Give back the next ride? The client will get another driver.',
     nextHint: 'Drop your passenger off, then straight there',
     minShort: '{min} min',

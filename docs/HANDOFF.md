@@ -2878,7 +2878,7 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Tests: tests/next-order.db.test.ts (3). Full suite 478 passed.
 - Driver gives the next ride back: lifecycle.driverReleaseNext → rematchBooking (search again without him);
   POST /api/v1/driver/next/release. Operator: nothing about the next ride on the main screen — the ≡ menu of the
-  navigation screen shows «Следующий заказ — после высадки» + address · name, then «Отказаться…» (confirm). Test added (4 in the file).
+  navigation screen: one small row — the next pickup address, a small «Отменить» on its right (confirm). Test added (4 in the file).
 - Passenger waiting for the finishing driver: trackingView.finishingAt = the bare drop-off point of the current trip
   (operator's decision) — no address/name; TrackApp draws an unlabelled dot. Test checks no label leaks.
 
