@@ -53,7 +53,7 @@ async function cleanup() {
   await prisma.driver.updateMany({ where: { publicName: { in: ['Andreas', 'Maria', 'Petros'] } }, data: { onDuty: false, available: false, takesComfort: true } });
 }
 beforeEach(cleanup);
-afterAll(async () => { await cleanup(); await prisma.noGoZone.deleteMany({ where: { kind: 'STAND' } }); invalidateNoGoCache(); });
+afterAll(async () => { await cleanup(); await prisma.noGoZone.deleteMany({ where: { OR: [{ kind: 'STAND' }, { name: 'Test port' }] } }); invalidateNoGoCache(); });
 
 describe('taxi stand queue', () => {
   it('the first in the queue gets the airport order before a nearer driver; a refusal keeps his place', async () => {
@@ -158,5 +158,27 @@ describe('taxi stand queue', () => {
     await runOnce();
     expect(await getDriverActiveOffer(p2)).toBeNull();
     expect(await getDriverActiveOffer(m2)).not.toBeNull();
+  });
+
+  it('a stand tied to a pickup territory (a port): orders picked up there go to its queue first', async () => {
+    // «Test port» in Limassol with one pickup point; the stand next to it takes its orders.
+    const P = { lat: 34.6550, lng: 33.0200 };
+    const port = await prisma.noGoZone.create({ data: { name: 'Test port', kind: 'POINT', polygon: [[P.lat - 0.003, P.lng - 0.003], [P.lat - 0.003, P.lng + 0.003], [P.lat + 0.003, P.lng + 0.003], [P.lat + 0.003, P.lng - 0.003]], points: [{ lat: P.lat, lng: P.lng, name: 'Gate' }], active: true } });
+    await prisma.noGoZone.deleteMany({ where: { kind: 'STAND' } });
+    const SP = { lat: P.lat + 0.01, lng: P.lng }; // ~1 km north, outside the port
+    await prisma.noGoZone.create({ data: { name: 'Port stand', kind: 'STAND', polygon: [[SP.lat - 0.001, SP.lng - 0.001], [SP.lat - 0.001, SP.lng + 0.001], [SP.lat + 0.001, SP.lng + 0.001], [SP.lat + 0.001, SP.lng - 0.001]], forZoneId: port.id, active: true } });
+    invalidateNoGoCache();
+    try {
+      const a = await at('Andreas', { lat: P.lat + 0.0005, lng: P.lng }); // at the port gate, outside the stand
+      const m = await at('Maria', SP);
+      expect((await standStateFor(m, SP))?.place).toBe(1);
+      await book({ lat: P.lat + 0.001, lng: P.lng + 0.001, label: 'In the port' }, town);
+      await runOnce();
+      expect(await getDriverActiveOffer(m)).not.toBeNull();
+      expect(await getDriverActiveOffer(a)).toBeNull();
+    } finally {
+      await prisma.noGoZone.deleteMany({ where: { id: port.id } });
+      invalidateNoGoCache();
+    }
   });
 });
