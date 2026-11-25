@@ -243,7 +243,6 @@ function AreaZones({ kind }: { kind: Kind }) {
                     <label className="text-xs text-muted">Comfort, €<input className="field mt-0.5" inputMode="decimal" value={draft.minComfort} onChange={(e) => setDraft({ ...draft, minComfort: e.target.value })} placeholder="—" data-testid="nogo-min-comfort" /></label>
                     <label className="text-xs text-muted">XL, €<input className="field mt-0.5" inputMode="decimal" value={draft.minXl} onChange={(e) => setDraft({ ...draft, minXl: e.target.value })} placeholder="—" data-testid="nogo-min-xl" /></label>
                   </div>
-                  <p className="mt-1 text-xs text-muted">{t('staff.noGo.minFromHint')}</p>
                 </div>
               )}
               {draft.kind === 'POINT' && (
@@ -251,7 +250,6 @@ function AreaZones({ kind }: { kind: Kind }) {
                 <div className="text-sm" data-testid="nogo-points">
                   <Switch checked={draft.pointsOn} onChange={(on) => setDraft({ ...draft, pointsOn: on })} label={t('staff.noGo.pointsSwitch')} testid="nogo-points-on"
                     confirmOn={t('staff.noGo.pointsOnConfirm', { name: draft.name || '—' })} confirmOff={t('staff.noGo.pointsOffConfirm', { name: draft.name || '—' })} />
-                  <p className="mt-1 text-xs text-muted">{t('staff.noGo.pointsSwitchHint')}</p>
                 </div>
               )}
               {draft.kind === 'POINT' && (
@@ -268,7 +266,7 @@ function AreaZones({ kind }: { kind: Kind }) {
                 return (
                   <div key={which} className="space-y-1.5" data-testid={which === 'pick' ? 'nogo-points' : 'nogo-drop-points'}>
                     <div className={`text-xs font-semibold ${col}`}>{which === 'pick' ? `📍 ${t('staff.noGo.modePoint')}` : `🏁 ${t('staff.noGo.modeDrop')}`}</div>
-                    {list.length === 0 && <div className="text-xs text-muted">{t(which === 'pick' ? 'staff.noGo.noPickup' : 'staff.noGo.noDrop')}</div>}
+                    {list.length === 0 && which === 'pick' && <div className="text-xs text-muted">{t('staff.noGo.noPickup')}</div>}
                     {list.map((p, i) => (
                       <div key={i} className="flex items-center gap-1.5">
                         <span className={`w-5 shrink-0 text-center text-xs font-semibold ${col}`}>{i + 1}</span>
@@ -298,8 +296,6 @@ function AreaZones({ kind }: { kind: Kind }) {
               )}
               <Switch checked={draft.active} onChange={(on) => setDraft({ ...draft, active: on })} label={draft.kind === 'POINT' ? t('staff.noGo.territoryOn', { name: draft.name || '—' }) : t(draft.kind === 'STAND' ? 'staff.noGo.standOn' : 'staff.fixed.active')} testid="nogo-active"
                 confirmOn={t('staff.confirm.on', { name: draft.name || '—' })} confirmOff={t('staff.confirm.off', { name: draft.name || '—' })} />
-              {draft.kind === 'STAND' && <p className="text-xs text-muted">{t('staff.noGo.standOnHint')}</p>}
-              {draft.kind === 'POINT' && <p className="text-xs text-muted">{t('staff.noGo.territoryOnHint')}</p>}
               <div className="text-xs text-muted">{t('staff.fixed.points', { n: draft.polygon.length })}</div>
               <div className="flex gap-2">
                 <button type="button" className="btn-ghost !min-h-[40px] flex-1 !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => { lastChange.current = 0; setPoly(draft.polygon.slice(0, -1)); }}>{t('staff.fixed.undo')}</button>
