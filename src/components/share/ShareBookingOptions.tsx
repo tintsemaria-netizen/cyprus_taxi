@@ -57,7 +57,8 @@ export function ShareBookingOptions({ value, onChange, pct, maxPeople: carMax, p
         </span>
       </label>
       {warn && blockMsg && <span className="absolute end-3 top-12"><RedBubble text={blockMsg} align="end" testid="share-blocked" /></span>}
-      {!disabled && (
+      {/* Only once «Попутчик −30%» is switched on (operator 2026-11-25), not under the switched-off box. */}
+      {on && (
         <p className="mt-2 flex items-start gap-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium leading-snug text-ink" data-testid="share-hint">
           <span aria-hidden>💰</span><span>{t('share.booking.hint', { pct })}</span>
         </p>
