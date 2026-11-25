@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-25 ~16:20 — stand tied to any pickup territory (deployed 6148c38)
+- `NoGoZone.forZoneId` (migration 20261125160000): a STAND takes the orders picked up inside the chosen POINT territory (src/server/stands.ts sourceArea; older stands fall back to their airport's territory). Admin: «Заказы с какой территории» select (AreaZones, kind STAND). Test added (port stand). Suite 501 passed / 1 skipped; live admin chunk has `stand-territory`; health ready.
+
 ## 2026-11-25 — «Минимальный заказ отсюда» per pickup point (deployed)
 - NoGoZone.minComfortCents / minXlCents / minActive (migration 20261125160000_point_min). server/no-go `pointMin(pickup, vClass)`: pickup inside the territory or on an exit point (≤30 m), switched on → minimum; quote.ts takes the larger of it and «Минимум предзаказа» (not for fixed / shared). Flows through Quote.minCents → Booking.fareMinCents (close, settlement, driver/passenger lines).
 - Admin «Точки подачи»: Comfort / XL fields + switch with confirmation (form and list chip), audit detail min=on/off. Minimum texts no longer start with «Предзаказ —» (8 languages). Test: tests/point-min.db.test.ts. Prod points start without a minimum.
