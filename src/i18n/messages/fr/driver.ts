@@ -45,6 +45,12 @@ const driver: Catalog<typeof en> = {
     note: "GPS au premier plan uniquement, pendant le service. Vrai GPS de l’appareil — jamais simulé.",
   },
   // «Стоянка с очередью» (2026-11-25).
+  // «Брать заказы Comfort» for an XL car (2026-11-25).
+  classes: {
+    comfort: "Accepter les courses Comfort",
+    onHint: "Votre voiture est XL : vous recevez des courses XL et Comfort (Comfort au prix Comfort).",
+    offHint: "Courses XL uniquement.",
+  },
   stand: {
     inQueue: "dans une file de {total}",
     wait: "Attente ≈ {min} min",

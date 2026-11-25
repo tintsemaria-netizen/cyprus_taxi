@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { pointInPolygon } from '@/lib/geo';
 import { airportAt } from '@/lib/airports';
 import { ensureAirportAreas, taxiStands, type Stand } from '@/server/no-go';
+import { takesClasses } from '@/lib/vehicle-class';
 
 // «Стоянка с очередью» (2026-11-25, operator). A stand is a NoGoZone of kind STAND, drawn in admin
 // «Стоянки с очередью», tied to one airport:
@@ -62,9 +63,9 @@ export async function standQueueOrder(standIds: string[]): Promise<{ driverId: s
 /** Queue entries with each driver's car class (orders are matched by class, so «cars ahead» counts his class). */
 async function queueWithClass(standIds: string[]) {
   const rows = await prisma.standQueue.findMany({ where: { standId: { in: standIds } }, orderBy: [{ enteredAt: 'asc' }, { driverId: 'asc' }] });
-  const b = await prisma.driverVehicleBinding.findMany({ where: { driverId: { in: rows.map((r) => r.driverId) }, endedAt: null }, select: { driverId: true, vehicle: { select: { vClass: true } } } });
-  const cls = new Map(b.map((x) => [x.driverId, x.vehicle.vClass as string]));
-  return rows.map((r) => ({ ...r, vClass: cls.get(r.driverId) ?? 'COMFORT' }));
+  const b = await prisma.driverVehicleBinding.findMany({ where: { driverId: { in: rows.map((r) => r.driverId) }, endedAt: null }, select: { driverId: true, driver: { select: { takesComfort: true } }, vehicle: { select: { vClass: true } } } });
+  const cls = new Map(b.map((x) => [x.driverId, { vClass: x.vehicle.vClass as string, takes: takesClasses(x.vehicle.vClass, x.driver.takesComfort) }]));
+  return rows.map((r) => ({ ...r, vClass: cls.get(r.driverId)?.vClass ?? 'COMFORT', takes: cls.get(r.driverId)?.takes ?? ['COMFORT'] }));
 }
 
 /** Rough wait (minutes) for the n-th car of a class: from the airport's orders of that class in the last 2 hours. */
@@ -85,7 +86,8 @@ export async function standStateFor(driverId: string, p: { lat: number; lng: num
   if (!stand) return null;
   if (!stand.active || !entry) return { name: stand.name, on: stand.active, place: null, total: 0, polygon: stand.polygon };
   const q = await queueWithClass([stand.id]);
-  const i = q.findIndex((r) => r.driverId === driverId), mine = q[i]?.vClass ?? 'COMFORT';
-  const ahead = q.slice(0, Math.max(0, i)).filter((r) => r.vClass === mine).length;
+  // «Cars ahead» = those before him who take some of the same orders (an XL car takes Comfort too, 2026-11-25).
+  const i = q.findIndex((r) => r.driverId === driverId), mine = q[i]?.vClass ?? 'COMFORT', myTakes = q[i]?.takes ?? ['COMFORT'];
+  const ahead = q.slice(0, Math.max(0, i)).filter((r) => r.takes.some((c) => myTakes.includes(c))).length;
   return { name: stand.name, on: true, place: i + 1, total: q.length, polygon: stand.polygon, ahead, vClass: mine, waitMin: await waitMinutes(stand.airport, mine, ahead + 1).catch(() => null) };
 }

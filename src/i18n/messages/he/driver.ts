@@ -45,6 +45,12 @@ const driver: Catalog<typeof en> = {
     note: "GPS בחזית בלבד, בזמן משמרת. GPS אמיתי של המכשיר — אף פעם לא מדומה.",
   },
   // «Стоянка с очередью» (2026-11-25).
+  // «Брать заказы Comfort» for an XL car (2026-11-25).
+  classes: {
+    comfort: "לקבל הזמנות Comfort",
+    onHint: "הרכב שלך XL: מגיעות הזמנות XL ו-Comfort (Comfort במחיר Comfort).",
+    offHint: "הזמנות XL בלבד.",
+  },
   stand: {
     inQueue: "בתור של {total}",
     wait: "המתנה ≈ {min} דק׳",

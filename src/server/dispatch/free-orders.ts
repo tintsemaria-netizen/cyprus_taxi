@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { carTakes, takesClasses } from '@/lib/vehicle-class';
 import { blockedPassengerIdsForDriver, isPairBlocked } from './blocked-pairs';
 import { Prisma } from '@prisma/client';
 import { config } from '@/lib/config';
@@ -19,8 +20,8 @@ import { standAt } from '@/server/stands';
 // Class rule: a COMFORT ride fits COMFORT and XL cars; an XL ride fits XL cars only.
 export const FREE_BOARD_SEC = 120;
 
-export function vehicleFits(vehicle: { vClass: string; seats: number }, booking: { vClass: string; passengerCount: number }): boolean {
-  const classOk = booking.vClass === 'XL' ? vehicle.vClass === 'XL' : vehicle.vClass === 'COMFORT' || vehicle.vClass === 'XL';
+export function vehicleFits(vehicle: { vClass: string; seats: number }, booking: { vClass: string; passengerCount: number }, takesComfort = true): boolean {
+  const classOk = carTakes(vehicle.vClass, takesComfort, booking.vClass);
   return classOk && vehicle.seats >= booking.passengerCount;
 }
 
@@ -64,7 +65,7 @@ export async function listFreeOrders(driverId: string, now: Date = new Date()): 
     where: {
       openedAt: { not: null },
       deadlineAt: { gte: now },
-      booking: { status: 'SEARCHING', vClass: { in: vehicle.vClass === 'XL' ? ['COMFORT', 'XL'] : ['COMFORT'] }, passengerCount: { lte: vehicle.seats } },
+      booking: { status: 'SEARCHING', vClass: { in: takesClasses(vehicle.vClass, driver.takesComfort) }, passengerCount: { lte: vehicle.seats } },
     },
     include: { booking: true },
     orderBy: { openedAt: 'asc' },
@@ -176,7 +177,7 @@ export async function claimFreeOrder(bookingId: string, driverId: string, now: D
       const binding = await tx.driverVehicleBinding.findFirst({ where: { driverId, endedAt: null }, include: { vehicle: true } });
       const vehicle = binding?.vehicle;
       if (!vehicle || !vehicle.active) return err(409, 'NO_VEHICLE', 'No vehicle is assigned to you.');
-      if (!vehicleFits(vehicle, booking)) return err(409, 'VEHICLE_INELIGIBLE', 'Your vehicle does not fit this ride.');
+      if (!vehicleFits(vehicle, booking, driver.takesComfort)) return err(409, 'VEHICLE_INELIGIBLE', 'Your vehicle does not fit this ride.');
       if (await isPairBlocked(driverId, booking.passengerId, tx)) return err(409, 'ORDER_GONE', 'This ride is no longer available.');
 
       await createAssignment(tx, booking, driver, vehicle, 'SYSTEM', 'free-order claim');

@@ -104,6 +104,8 @@ model Driver {
   ratingCount   Int     @default(0)
   // Driver takes co-riders on airport/intercity rides (Task 022). Off by default.
   acceptsShared Boolean @default(false)
+  // An XL car takes Comfort orders too (2026-11-25, operator); its driver can switch that off in settings.
+  takesComfort  Boolean @default(true)
 
   bindings       DriverVehicleBinding[]
   assignments    Assignment[]

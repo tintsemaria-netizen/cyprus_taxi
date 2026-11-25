@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { carTakes } from '@/lib/vehicle-class';
 import { Prisma, BookingStatus, Role } from '@prisma/client';
 import { canTransition, isTerminal, PASSENGER_CANCELABLE } from '@/lib/status-machine';
 import { computeFreshness } from '@/lib/freshness';
@@ -90,7 +91,7 @@ async function validateCandidate(
 
   const vehicle = await tx.vehicle.findUnique({ where: { id: vehicleId } });
   if (!vehicle || !vehicle.active) throw unprocessable('VEHICLE_UNAVAILABLE', 'Vehicle is not active.');
-  if (vehicle.vClass !== booking.vClass) throw unprocessable('CLASS_MISMATCH', 'Vehicle class does not match booking.');
+  if (!carTakes(vehicle.vClass, true, booking.vClass)) throw unprocessable('CLASS_MISMATCH', 'Vehicle class does not match booking.'); // an XL car may take a Comfort ride
   if (vehicle.seats < booking.passengerCount) throw unprocessable('CAPACITY', 'Vehicle does not have enough seats.');
   const vehicleBusy = await tx.assignment.findFirst({
     where: { activeVehicleId: vehicleId, ...(excludeBookingId ? { NOT: { activeBookingId: excludeBookingId } } : {}) },

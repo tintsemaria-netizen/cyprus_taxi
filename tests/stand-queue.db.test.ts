@@ -50,7 +50,7 @@ async function cleanup() {
     await (prisma[t] as unknown as { deleteMany: (a: object) => Promise<unknown> }).deleteMany({});
   }
   await prisma.booking.deleteMany({});
-  await prisma.driver.updateMany({ where: { publicName: { in: ['Andreas', 'Maria', 'Petros'] } }, data: { onDuty: false, available: false } });
+  await prisma.driver.updateMany({ where: { publicName: { in: ['Andreas', 'Maria', 'Petros'] } }, data: { onDuty: false, available: false, takesComfort: true } });
 }
 beforeEach(cleanup);
 afterAll(async () => { await cleanup(); await prisma.noGoZone.deleteMany({ where: { kind: 'STAND' } }); invalidateNoGoCache(); });
@@ -135,5 +135,28 @@ describe('taxi stand queue', () => {
     expect((await acceptOffer(o!.offerId, a)).ok).toBe(true);
     await at('Andreas', inStandP);
     expect(await prisma.standQueue.findUnique({ where: { driverId: a } })).toBeNull();
+  });
+
+  it('an XL car (Petros) first in the queue takes a Comfort order; switched off «Comfort» → the Comfort car gets it', async () => {
+    await stand(true);
+    const t0 = Date.now() - 60_000;
+    const p = await at('Petros', inStandP, new Date(t0));
+    const m = await at('Maria', { lat: S.lat + 0.0005, lng: S.lng }, new Date(t0 + 1000));
+    // Maria (Comfort) sees Petros (XL, takes Comfort) ahead of her.
+    expect((await standStateFor(m, inStandP))?.ahead).toBe(1);
+    await book(pfo, town);
+    await runOnce();
+    expect(await getDriverActiveOffer(p)).not.toBeNull();
+    expect(await getDriverActiveOffer(m)).toBeNull();
+    await cleanup();
+    await prisma.driver.updateMany({ where: { publicName: 'Petros' }, data: { takesComfort: false } });
+    const p2 = await at('Petros', inStandP, new Date(t0));
+    await prisma.driver.update({ where: { id: p2 }, data: { takesComfort: false } });
+    const m2 = await at('Maria', { lat: S.lat + 0.0005, lng: S.lng }, new Date(t0 + 1000));
+    expect((await standStateFor(m2, inStandP))?.ahead).toBe(0);
+    await book(pfo, town);
+    await runOnce();
+    expect(await getDriverActiveOffer(p2)).toBeNull();
+    expect(await getDriverActiveOffer(m2)).not.toBeNull();
   });
 });

@@ -45,6 +45,12 @@ const driver: Catalog<typeof en> = {
     note: 'GPS μόνο όταν η εφαρμογή είναι ανοιχτή και είστε σε υπηρεσία. Πραγματικό GPS συσκευής — ποτέ προσομοιωμένο.',
   },
   // «Стоянка с очередью» (2026-11-25).
+  // «Брать заказы Comfort» for an XL car (2026-11-25).
+  classes: {
+    comfort: "Δέχομαι κούρσες Comfort",
+    onHint: "Το αυτοκίνητό σας είναι XL: λαμβάνετε κούρσες XL και Comfort (οι Comfort με τιμή Comfort).",
+    offHint: "Μόνο κούρσες XL.",
+  },
   stand: {
     inQueue: "σε σειρά {total}",
     wait: "Αναμονή ≈ {min} λεπ.",

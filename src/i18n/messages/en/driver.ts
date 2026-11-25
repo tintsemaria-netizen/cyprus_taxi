@@ -42,6 +42,12 @@ const driver = {
     note: 'Foreground GPS only, while on duty. Real device GPS — never simulated.',
   },
   // «Стоянка с очередью» (2026-11-25).
+  // «Брать заказы Comfort» for an XL car (2026-11-25).
+  classes: {
+    comfort: "Take Comfort orders",
+    onHint: "Your car is XL: you get XL and Comfort orders (Comfort orders at the Comfort price).",
+    offHint: "XL orders only.",
+  },
   stand: {
     inQueue: "in a queue of {total}",
     wait: "Wait ≈ {min} min",

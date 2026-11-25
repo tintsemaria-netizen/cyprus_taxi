@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { carTakes, takesClasses } from '@/lib/vehicle-class';
 import { ensureAirportAreas } from '@/server/no-go';
 import { blockedPassengerIdsForDriver, isPairBlocked } from './blocked-pairs';
 import { prisma } from '@/lib/db';
@@ -122,7 +123,7 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
     where: {
       status: 'REQUESTED',
       scheduledAt: { gt: new Date(now.getTime() + (p.convertMinutes + 5) * MIN), lt: new Date(now.getTime() + p.horizonHours * 3600_000) },
-      vClass: vehicle.vClass,
+      vClass: { in: takesClasses(vehicle.vClass, driver?.takesComfort) },
       passengerCount: { lte: vehicle.seats },
       preAssignments: { none: { status: 'COMMITTED' } },
     },
@@ -211,7 +212,7 @@ export async function claimScheduled(driverId: string, bookingId: string, now: D
       const driver = await tx.driver.findUnique({ where: { id: driverId }, include: { user: true } });
       if (!driver || !driver.active || !driver.user.active || !canWork(driver)) return fail(409, 'DRIVER_INELIGIBLE', 'Your account can’t take rides right now.');
       const vehicle = await boundVehicle(tx, driverId);
-      if (!vehicle || vehicle.vClass !== b.vClass || vehicle.seats < b.passengerCount) return fail(409, 'VEHICLE_INELIGIBLE', 'Your vehicle doesn’t fit this ride.');
+      if (!vehicle || !carTakes(vehicle.vClass, driver.takesComfort, b.vClass) || vehicle.seats < b.passengerCount) return fail(409, 'VEHICLE_INELIGIBLE', 'Your vehicle doesn’t fit this ride.');
       if (await isPairBlocked(driverId, b.passengerId, tx)) return fail(409, 'BOOKING_GONE', 'This ride is no longer available.');
       // Ride-share pair (Task 022): only the host's ride is claimed; the driver must take co-riders
       // and have seats for both bookings.
@@ -364,7 +365,7 @@ async function convertOne(bookingId: string, now: Date): Promise<'converted' | '
     const driver = await tx.driver.findUnique({ where: { id: pa.driverId }, include: { user: true } });
     const vehicle = await tx.vehicle.findUnique({ where: { id: pa.vehicleId } });
     const binding = vehicle ? await tx.driverVehicleBinding.findFirst({ where: { driverId: pa.driverId, vehicleId: vehicle.id, endedAt: null } }) : null;
-    if (!driver || !driver.active || !driver.user.active || !canWork(driver) || !vehicle || !vehicle.active || !binding || vehicle.vClass !== b.vClass || vehicle.seats < b.passengerCount) {
+    if (!driver || !driver.active || !driver.user.active || !canWork(driver) || !vehicle || !vehicle.active || !binding || !carTakes(vehicle.vClass, true, b.vClass) || vehicle.seats < b.passengerCount) { // a committed ride stays his
       return lapse('driver or vehicle no longer eligible', 'Your confirmed driver is no longer available. We are finding you another driver automatically.', 'Your pre-booked ride was released: your account or vehicle is not eligible right now.', { pax: 'pre.reassign', drv: 'drv.preReleasedIneligible' });
     }
     // Blocked since the claim (a 1-star rating either way): hand it to automatic search.

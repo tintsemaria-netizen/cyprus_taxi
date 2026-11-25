@@ -516,6 +516,34 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   );
 }
 
+/** An XL car takes Comfort orders too; the driver switches that off here (2026-11-25, operator). */
+function TakesComfortToggle() {
+  const { t } = useT();
+  const [st, setSt] = useState<{ vClass: string | null; takesComfort: boolean } | null>(null);
+  useEffect(() => { api<{ vClass: string | null; takesComfort: boolean }>('/driver/classes').then(setSt).catch(() => {}); }, []);
+  if (!st || st.vClass !== 'XL') return null;
+  const on = st.takesComfort;
+  async function toggle(v: boolean) {
+    setSt((x) => (x ? { ...x, takesComfort: v } : x));
+    try { const r = await api<{ takesComfort: boolean }>('/driver/classes', { method: 'PATCH', body: { takesComfort: v } }); setSt((x) => (x ? { ...x, takesComfort: r.takesComfort } : x)); }
+    catch { setSt((x) => (x ? { ...x, takesComfort: !v } : x)); }
+  }
+  return (
+    <div className="mt-3 border-t border-edge pt-3">
+      <label className="flex cursor-pointer items-center justify-between gap-3" data-testid="takes-comfort">
+        <span className="min-w-0">
+          <span className="block text-sm">{t('driver.classes.comfort')}</span>
+          <span className="block text-xs text-muted">{t(on ? 'driver.classes.onHint' : 'driver.classes.offHint')}</span>
+        </span>
+        <input type="checkbox" role="switch" className="sr-only" checked={on} onChange={(e) => toggle(e.target.checked)} />
+        <span aria-hidden className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? 'bg-accent' : 'bg-edge-strong'}`}>
+          <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? 'start-[22px]' : 'start-0.5'}`} />
+        </span>
+      </label>
+    </div>
+  );
+}
+
 type StandState = { name: string; on: boolean; place: number | null; total: number; polygon?: [number, number][]; ahead?: number; vClass?: string; waitMin?: number | null };
 
 // ---- Home ----
@@ -1055,6 +1083,8 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
         <div className="mt-3 border-t border-edge pt-3">
           <AcceptsSharedToggle />
         </div>
+        {/* «Брать заказы Comfort» — only for an XL car (2026-11-25). */}
+        <TakesComfortToggle />
         {/* App colour (2026-11-19): chosen at registration, changed here. */}
         <div className="mt-3 border-t border-edge pt-3">
           <div className="mb-2 text-sm">{t('common.theme.title')}</div>

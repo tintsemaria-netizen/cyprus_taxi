@@ -45,6 +45,12 @@ const driver: Catalog<typeof en> = {
     note: "Nur GPS im Vordergrund, während des Dienstes. Echtes Geräte-GPS — niemals simuliert.",
   },
   // «Стоянка с очередью» (2026-11-25).
+  // «Брать заказы Comfort» for an XL car (2026-11-25).
+  classes: {
+    comfort: "Comfort-Aufträge annehmen",
+    onHint: "Ihr Auto ist XL: Sie erhalten XL- und Comfort-Aufträge (Comfort zum Comfort-Preis).",
+    offHint: "Nur XL-Aufträge.",
+  },
   stand: {
     inQueue: "in einer Schlange von {total}",
     wait: "Wartezeit ≈ {min} Min.",

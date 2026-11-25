@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { carTakes } from '@/lib/vehicle-class';
 import { computeFreshness } from '@/lib/freshness';
 import { haversineMeters } from '@/lib/geo';
 import { eligibleDriverWhere } from '@/lib/eligibility-policy';
@@ -40,7 +41,7 @@ export async function marketSnapshot(
   for (const d of drivers) {
     if (!d.user.active || busy.has(d.id)) continue;
     const b = d.bindings[0];
-    if (!b || !b.vehicle.active || b.vehicle.vClass !== vClass) continue;
+    if (!b || !b.vehicle.active || !carTakes(b.vehicle.vClass, d.takesComfort, vClass)) continue;
     const loc = d.location;
     if (!loc || computeFreshness(loc.sampledAt, loc.receivedAt) !== 'fresh') continue;
     if (haversineMeters({ lat: loc.lat, lng: loc.lng }, pickup) > radiusM) continue;
