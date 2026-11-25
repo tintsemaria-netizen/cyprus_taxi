@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-26 — territory tool toggles (deployed)
+- AreaZones Mode gains 'none': «Углы / Точки подачи / Точки высадки» toggle; only the active tool's tools render (under the buttons); existing POINT opens with 'none', new with 'corners'; NOGO/STAND always corners.
+
 ## 2026-11-26 — zone forms: ✕ closes the form, unsaved changes guarded (deployed)
 - ZoneWorkspace: panel fold removed (no top ✕ / ‹). `useDirty(draft)` + `FormClose` (✕ closes the form; with unsaved changes shows «сначала сохраните»). «Отмена» asks when dirty; startNew/startEdit/startCodes/startBelt and the airport switch refuse while dirty.
 
