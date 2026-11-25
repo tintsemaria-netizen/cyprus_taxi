@@ -1,5 +1,7 @@
 # Session handoff
 
+## 2026-11-26 ~01:05 — «Минимальный заказ отсюда» off hides the Comfort/XL fields (deployed 878d8a9; amounts kept). Suite 503 passed / 1 skipped; live admin chunk changed; health ready. Offered (not done): hide the 📍/🏁 mode buttons while «Точки подачи и высадки» is off.
+
 ## 2026-11-26 — map picker knows territories (deployed)
 - area-client `pickerSpot(kind, p, zoom)` / `pickerOutlines`. GoogleMapPicker + MapPicker: outline near the centre, on idle/moveend slide to the territory point, label = point name, confirm returns the point (pickup: pickup points; destination: drop-off points; stop: unchanged).
 
