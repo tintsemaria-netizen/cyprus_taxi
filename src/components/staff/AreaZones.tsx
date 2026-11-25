@@ -8,7 +8,7 @@
 import { smoothRing, untangle } from '@/lib/ring';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamicImport from 'next/dynamic';
-import { OverMap, useZoneMap } from '@/components/staff/ZoneWorkspace';
+import { OverMap, PanelHead, useZoneMap } from '@/components/staff/ZoneWorkspace';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { Poly, RefZone } from '@/components/staff/ZoneEditorMap';
@@ -202,8 +202,8 @@ function AreaZones({ kind }: { kind: Kind }) {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">{t(kind === 'NOGO' ? 'staff.noGo.title' : kind === 'STAND' ? 'staff.noGo.kindStand' : 'staff.noGo.kindPoint')}</h1>
-      <p className="mt-2 text-sm text-muted">{t(kind === 'NOGO' ? 'staff.noGo.sub' : kind === 'STAND' ? 'staff.noGo.subStand' : 'staff.noGo.subPoint')}</p>
+      <PanelHead title={t(kind === 'NOGO' ? 'staff.noGo.title' : kind === 'STAND' ? 'staff.noGo.kindStand' : 'staff.noGo.kindPoint')}
+        info={t(kind === 'NOGO' ? 'staff.noGo.sub' : kind === 'STAND' ? 'staff.noGo.subStand' : 'staff.noGo.subPoint')} />
 
       {!draft && (
         <div className="mt-4 flex">

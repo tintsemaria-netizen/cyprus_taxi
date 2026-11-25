@@ -155,6 +155,7 @@ const staff: Catalog<typeof en> = {
     unbound: 'без водителя',
     empty: 'Автомобилей пока нет.',
   },
+  zoneMap: {menu: "Меню", info: "Инфо", hide: "Свернуть панель", show: "Открыть панель"},
   noGo: {
     emptyPoint: "Точек подачи нет — клиент ставит подачу где угодно.",
     emptyStand: "Стоянок с очередью нет.",

@@ -5,7 +5,7 @@
 import { untangle } from '@/lib/ring';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamicImport from 'next/dynamic';
-import { OverMap, useZoneMap } from '@/components/staff/ZoneWorkspace';
+import { OverMap, PanelHead, useZoneMap } from '@/components/staff/ZoneWorkspace';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { Poly, RefZone } from '@/components/staff/ZoneEditorMap';
@@ -112,8 +112,7 @@ function MinFares() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">{t('staff.minFare.title')}</h1>
-      <p className="mt-1 text-sm text-muted">{t('staff.minFare.sub')}</p>
+      <PanelHead title={t('staff.minFare.title')} info={t('staff.minFare.sub')} />
 
       {!draft && (
         <div className="mt-4 flex">

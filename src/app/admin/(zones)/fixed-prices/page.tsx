@@ -3,7 +3,7 @@
 // Admin «Фиксированные цены» (2026-11-17): draw airport fare zones on a map and set their prices.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamicImport from 'next/dynamic';
-import { OverMap, useZoneMap } from '@/components/staff/ZoneWorkspace';
+import { OverMap, PanelHead, useZoneMap } from '@/components/staff/ZoneWorkspace';
 import Link from 'next/link';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
@@ -218,8 +218,7 @@ function FixedPrices() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">{t('staff.fixed.title')}</h1>
-      <p className="mt-1 text-sm text-muted">{t('staff.fixed.sub')}</p>
+      <PanelHead title={t('staff.fixed.title')} info={t('staff.fixed.sub')} />
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted">{t('staff.fixed.airport')}:</span>

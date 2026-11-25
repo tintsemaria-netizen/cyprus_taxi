@@ -153,6 +153,7 @@ const staff = {
     unbound: 'unbound',
     empty: 'No vehicles yet.',
   },
+  zoneMap: {menu: "Menu", info: "Info", hide: "Hide the panel", show: "Show the panel"},
   noGo: {
     emptyPoint: "No pickup points — passengers can set the pickup anywhere.",
     emptyStand: "No queue stands.",
