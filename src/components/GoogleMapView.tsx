@@ -150,6 +150,9 @@ function markerEl(mk: MapMarker): HTMLElement {
 /** Fitting never zooms out past the whole island. */
 const MIN_FIT_ZOOM = 8;
 
+/** Outline width of a shaded area by zoom: 4.5 px close up (street), 1.5 px at island / city zoom. */
+export function areaStroke(z: number | undefined): number { const zz = z ?? 14; return zz >= 16 ? 4.5 : zz >= 15 ? 3.5 : zz >= 14 ? 2.5 : zz >= 12 ? 2 : 1.5; }
+
 export default function GoogleMapView({ markers = [], route, center, zoom = 9, interactive = true, onMapClick, className, fitPadding, fitRoute, keepInView, fleet = [], fleetLikeSelf, routeWidth = 7, areas = [], focus, focusZoom, follow, onFollowBreak, recenterTick = 0, glideMs = 700, holdCamera = false, onGlideEnd, onUserMove, idleReturnMs, onIdleReturn, onCenterPick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -552,9 +555,16 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     const map = mapRef.current, g = gRef.current;
     if (!map || !g || !ready) return;
     areaObjs.current.forEach((o) => o.setMap(null));
-    areaObjs.current = areas.filter((a) => a.polygon.length >= 3).map((a) => new g.Polygon({ map, paths: a.polygon.map(([lat, lng]) => ({ lat, lng })), strokeColor: a.color, strokeOpacity: 0.95, strokeWeight: 4.5, fillColor: a.color, fillOpacity: 0.16, clickable: false, zIndex: 0 }));
+    areaObjs.current = areas.filter((a) => a.polygon.length >= 3).map((a) => new g.Polygon({ map, paths: a.polygon.map(([lat, lng]) => ({ lat, lng })), strokeColor: a.color, strokeOpacity: 0.95, strokeWeight: areaStroke(map.getZoom()), fillColor: a.color, fillOpacity: 0.16, clickable: false, zIndex: 0 }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [areasKey, ready]);
+  // Thinner outline when zoomed out — at city zoom the 4.5 px line looked fat on a small airport (2026-11-25).
+  useEffect(() => {
+    const map = mapRef.current, g = gRef.current;
+    if (!map || !g || !ready) return;
+    const l = map.addListener('zoom_changed', () => { const w = areaStroke(map.getZoom()); areaObjs.current.forEach((o) => o.setOptions({ strokeWeight: w })); });
+    return () => g.event.removeListener(l);
+  }, [ready]);
 
   if (failed) {
     return (

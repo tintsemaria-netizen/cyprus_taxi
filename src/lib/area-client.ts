@@ -72,6 +72,13 @@ export function territoryNear(p: { lat: number; lng: number }, radiusM: number):
 }
 
 /** The pickup territory a point is in, with the point it is on (if any) and the nearest one. */
+/** Is p inside t or within m metres of its outline (by corners — the rounded outline has dense corners)? */
+export function nearTerritory(t: Territory, p: { lat: number; lng: number }, m: number): boolean {
+  if (t.polygon.length >= 3 && pointInPolygon(p, t.polygon.map(([lat, lng]) => ({ lat, lng })))) return true;
+  const k = Math.cos((p.lat * Math.PI) / 180);
+  return t.polygon.some(([la, ln]) => Math.hypot((la - p.lat) * 110540, (ln - p.lng) * 111320 * k) <= m);
+}
+
 export function territoryAt(p: { lat: number; lng: number }): { t: Territory; on: number; nearest: number } | null {
   for (const t of territories) {
     if (t.polygon.length < 3 || !pointInPolygon(p, t.polygon.map(([lat, lng]) => ({ lat, lng })))) continue;

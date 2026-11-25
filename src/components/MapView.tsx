@@ -360,7 +360,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     if (src) { src.setData(data as never); return; }
     map.addSource('areas', { type: 'geojson', data: data as never });
     map.addLayer({ id: 'areas-fill', type: 'fill', source: 'areas', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.16 } });
-    map.addLayer({ id: 'areas-line', type: 'line', source: 'areas', layout: { 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': 4.5, 'line-opacity': 0.95 } });
+    map.addLayer({ id: 'areas-line', type: 'line', source: 'areas', layout: { 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 1.5, 13, 2, 14, 2.5, 15, 3.5, 16, 4.5], 'line-opacity': 0.95 } }); // thinner when zoomed out (2026-11-25)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [areasKey, ready]);
 

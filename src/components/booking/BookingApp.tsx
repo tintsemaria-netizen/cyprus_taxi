@@ -12,7 +12,7 @@ import { BRAND_PIN_SVG, BRAND_PIN_SVG_RED } from '@/components/carMarker';
 import { pinPoint } from '@/components/mapFit';
 import { haversineMeters } from '@/lib/geo';
 import { onCyprusIsland } from '@/lib/cyprus-island';
-import { areaBlock, loadNoGo, territoryAt, territoryNear, spotLabel, allTerritories, dropTerritoryAt, dropLabel } from '@/lib/area-client';
+import { areaBlock, loadNoGo, nearTerritory, territoryAt, territoryNear, spotLabel, allTerritories, dropTerritoryAt, dropLabel } from '@/lib/area-client';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import type { Selected } from './PlacesInput';
 import { setNearHint } from '@/lib/nearHint';
@@ -67,6 +67,8 @@ function fitZoom(c: { lat: number; lng: number }, ring: [number, number][]): num
   return Math.log2((78271.5 * k) / mpp);
 }
 
+// Show a pickup territory's outline when the logo / pickup / drop-off is within 2 km of it (2026-11-25).
+const TERR_SHOW_M = 2000;
 export default function BookingApp() {
   const kbBox = useKeyboardViewport(); // keep the header below the status bar while typing (iOS)
   const router = useRouter();
@@ -596,6 +598,8 @@ export default function BookingApp() {
   const dragPick = useRef<{ lat: number; lng: number } | null>(null);
   const [camFocus, setCamFocus] = useState<{ lat: number; lng: number } | null>(null);
   const [camZoom, setCamZoom] = useState(HOME_ZOOM);
+  // Where the logo was let go last — the pickup territory outline shows around it (2026-11-25).
+  const [pinAt, setPinAt] = useState<{ lat: number; lng: number } | null>(null);
   useEffect(() => {
     const p = pickup ?? myLoc;
     if (!p) return;
@@ -673,6 +677,7 @@ export default function BookingApp() {
   const offTimer = useRef<number | null>(null);
   function onCenterPick(p: { lat: number; lng: number; zoom: number }) {
     setPinLift(false);
+    setPinAt({ lat: p.lat, lng: p.lng });
     if (!centerModeRef.current) return;
     const zoomed = zoomRef.current != null && Math.abs(p.zoom - zoomRef.current) > 0.05;
     zoomRef.current = p.zoom;
@@ -742,14 +747,19 @@ export default function BookingApp() {
   // The faint point logos only while the pickup is being chosen; once a route is shown they are not needed
   // (2026-11-24 23:18, operator). The territory outline stays.
   const showSpots = !dropoff;
+  const nearSet = useMemo(() => new Set(terrList.filter((t) => [pinAt, pickup, dropoff].some((p) => p && nearTerritory(t, p, TERR_SHOW_M)))), [terrList, pinAt, pickup, dropoff]);
   const mapMarkers = useMemo<MapMarker[]>(() => [
     ...markers,
-    ...(!showSpots ? [] : terrList).flatMap((t, ti) => t.points.map((sp, i) => {
+    // Exit points only with their territory's outline — near the logo / pickup / drop-off (2026-11-25).
+    ...(!showSpots ? [] : terrList).flatMap((t, ti) => !nearSet.has(t) ? [] : t.points.map((sp, i) => {
       const active = !!terr && terr.t === t && terr.on === i;
       return { id: `spot-${ti}-${i}`, lat: sp.lat, lng: sp.lng, kind: 'spot' as const, label: active ? sp.name || t.name : '', active, noFit: true };
     })),
-  ], [markers, terr, terrList, showSpots]);
-  const mapAreas = useMemo(() => terrList.map((t, ti) => ({ id: `terr-${ti}-${t.name}`, polygon: t.polygon, color: '#4C9AFF' })), [terrList]);
+  ], [markers, terr, terrList, showSpots, nearSet]);
+  // A territory's outline only when the logo (or a chosen pickup / drop-off) is on it or near it — not always on the
+  // map (operator 2026-11-25). Letting the logo go next to it still slides to its point at any zoom (onCenterPick).
+  const mapAreas = useMemo(() => terrList.map((t, ti) => ({ t, ti })).filter(({ t }) => nearSet.has(t))
+    .map(({ t, ti }) => ({ id: `terr-${ti}-${t.name}`, polygon: t.polygon, color: '#4C9AFF' })), [terrList, nearSet]);
   const centerModeRef = useRef(centerMode); centerModeRef.current = centerMode;
   // The pin overlay stands on the same point a padded focus centres on.
   const mapBoxRef = useRef<HTMLDivElement | null>(null);
