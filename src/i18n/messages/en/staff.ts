@@ -154,6 +154,8 @@ const staff = {
     empty: 'No vehicles yet.',
   },
   noGo: {
+    emptyPoint: "No pickup points — passengers can set the pickup anywhere.",
+    emptyStand: "No queue stands.",
     minOn: "on",
     minOff: "off",
     minOnConfirm: "Turn on the minimum fare for «{name}»? From now on rides from here cost at least this amount.",

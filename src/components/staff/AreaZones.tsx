@@ -8,7 +8,7 @@
 import { smoothRing, untangle } from '@/lib/ring';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamicImport from 'next/dynamic';
-import { StaffShell } from '@/components/staff/StaffShell';
+import { OverMap, useZoneMap } from '@/components/staff/ZoneWorkspace';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { Poly, RefZone } from '@/components/staff/ZoneEditorMap';
@@ -16,7 +16,6 @@ import { centroid } from '@/lib/zone-shapes';
 import { onCyprusIsland } from '@/lib/cyprus-island';
 import { pointInPolygon } from '@/lib/geo';
 
-const ZoneEditorMap = dynamicImport(() => import('@/components/staff/ZoneEditorMap'), { ssr: false });
 
 export type Kind = 'NOGO' | 'POINT' | 'STAND';
 type Pt = { lat: number; lng: number };
@@ -39,7 +38,7 @@ const STAND = '#A78BFA'; // «Стоянки с очередью» (2026-11-25)
 const CYPRUS = { lat: 35.0, lng: 33.2 };
 
 export function AreaZonesPage({ kind }: { kind: Kind }) {
-  return <StaffShell roles={['ADMIN']}>{() => <AreaZones kind={kind} />}</StaffShell>;
+  return <AreaZones kind={kind} />; // menu + shared map: app/admin/(zones)/layout.tsx
 }
 
 function AreaZones({ kind }: { kind: Kind }) {
@@ -188,20 +187,8 @@ function AreaZones({ kind }: { kind: Kind }) {
     await load();
   }
 
-  return (
-    <div className="mx-auto max-w-6xl p-4">
-      <h1 className="text-xl font-semibold">{t(kind === 'NOGO' ? 'staff.noGo.title' : kind === 'STAND' ? 'staff.noGo.kindStand' : 'staff.noGo.kindPoint')}</h1>
-      <p className="mt-2 text-sm text-muted">{t(kind === 'NOGO' ? 'staff.noGo.sub' : kind === 'STAND' ? 'staff.noGo.subStand' : 'staff.noGo.subPoint')}</p>
-
-      {!draft && (
-        <div className="mt-4 flex">
-          <button type="button" onClick={startNew} className={`ms-auto rounded-[12px] px-4 !min-h-[40px] !py-2 text-sm font-semibold ${kind === 'NOGO' ? 'bg-danger text-white' : kind === 'STAND' ? 'bg-[#A78BFA] text-[#0b0f10]' : 'bg-[#4C9AFF] text-[#0b0f10]'}`} data-testid="nogo-new">{t(kind === 'NOGO' ? 'staff.noGo.newZone' : kind === 'STAND' ? 'staff.noGo.newStand' : 'staff.noGo.newPoint')}</button>
-        </div>
-      )}
-
-      <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_340px]">
-        <div className="relative h-[62vh] min-h-[380px] overflow-hidden rounded-[14px] border border-edge">
-          <ZoneEditorMap center={CYPRUS} zones={refZones} onPinMove={movePoint} editing={draft && !pointMode ? draft.polygon : null} onChange={setPoly} onPick={(lat, lng) => {
+  // The tab draws on the shared map of the zone tabs (2026-11-25).
+  useZoneMap({ center: CYPRUS, zones: refZones, onPinMove: movePoint, editing: draft && !pointMode ? draft.polygon : null, onChange: setPoly, onPick: (lat, lng) => {
             if (!draft || !pointMode) return;
             // Each click adds a point; it must be inside the rounded territory and on land.
             if (!onCyprusIsland({ lat, lng }) || !pointInPolygon({ lat, lng }, smoothRing(draft.polygon).map(([a, b]) => ({ lat: a, lng: b })))) { setMsg(t('staff.noGo.pointOutside')); return; }
@@ -211,7 +198,22 @@ function AreaZones({ kind }: { kind: Kind }) {
             if (mode === 'drop') { if (draft.dropPoints.length < 20) { setMsg(null); setDraft({ ...draft, dropPoints: [...draft.dropPoints, pt] }); } return; }
             if (draft.points.length >= 20) return;
             setMsg(null); setDraft({ ...draft, points: [...draft.points, pt] });
-          }} fit={fit} editColor={KCOL} className="h-full w-full" />
+          }, fit: fit, editColor: KCOL });
+
+  return (
+    <div>
+      <h1 className="text-xl font-semibold">{t(kind === 'NOGO' ? 'staff.noGo.title' : kind === 'STAND' ? 'staff.noGo.kindStand' : 'staff.noGo.kindPoint')}</h1>
+      <p className="mt-2 text-sm text-muted">{t(kind === 'NOGO' ? 'staff.noGo.sub' : kind === 'STAND' ? 'staff.noGo.subStand' : 'staff.noGo.subPoint')}</p>
+
+      {!draft && (
+        <div className="mt-4 flex">
+          <button type="button" onClick={startNew} className={`ms-auto rounded-[12px] px-4 !min-h-[40px] !py-2 text-sm font-semibold ${kind === 'NOGO' ? 'bg-danger text-white' : kind === 'STAND' ? 'bg-[#A78BFA] text-[#0b0f10]' : 'bg-[#4C9AFF] text-[#0b0f10]'}`} data-testid="nogo-new">{t(kind === 'NOGO' ? 'staff.noGo.newZone' : kind === 'STAND' ? 'staff.noGo.newStand' : 'staff.noGo.newPoint')}</button>
+        </div>
+      )}
+
+      <div className="mt-3">
+        <OverMap>
+          
           {draft && (
             <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start gap-2">
               <button type="button" onClick={stepBack} disabled={histLen === 0} aria-label={t('staff.fixed.stepBack')}
@@ -221,7 +223,8 @@ function AreaZones({ kind }: { kind: Kind }) {
               <div className="min-w-0 flex-1 rounded-[10px] bg-page/90 px-3 py-2 text-xs text-ink">{mode === 'drop' ? t('staff.noGo.dropHint') : pointMode ? t('staff.noGo.pointHint') : t('staff.fixed.hint')}</div>
             </div>
           )}
-        </div>
+        
+        </OverMap>
 
         <div className="space-y-3">
           {draft && (
@@ -302,7 +305,7 @@ function AreaZones({ kind }: { kind: Kind }) {
           )}
           {msg && <p className="text-sm text-muted" data-testid="nogo-msg">{msg}</p>}
 
-          {zones.length === 0 && !draft && <p className="text-sm text-muted">{t('staff.noGo.empty')}</p>}
+          {zones.length === 0 && !draft && <p className="text-sm text-muted">{t(kind === 'POINT' ? 'staff.noGo.emptyPoint' : kind === 'STAND' ? 'staff.noGo.emptyStand' : 'staff.noGo.empty')}</p>}
           {zones.map((z) => (
             <div key={z.id} className={`card p-3 ${draft?.id === z.id ? 'border-accent' : ''}`} data-testid="nogo-row">
               <div className="flex items-center gap-2">

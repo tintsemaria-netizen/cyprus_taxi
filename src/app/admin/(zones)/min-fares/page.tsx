@@ -5,13 +5,12 @@
 import { untangle } from '@/lib/ring';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamicImport from 'next/dynamic';
-import { StaffShell } from '@/components/staff/StaffShell';
+import { OverMap, useZoneMap } from '@/components/staff/ZoneWorkspace';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { Poly, RefZone } from '@/components/staff/ZoneEditorMap';
 import { centroid } from '@/lib/zone-shapes';
 
-const ZoneEditorMap = dynamicImport(() => import('@/components/staff/ZoneEditorMap'), { ssr: false });
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +21,7 @@ const COLORS = ['#C8FF46', '#4C9AFF', '#FFC83D', '#FF7A59', '#B07CFF', '#3DD9C1'
 const CYPRUS = { lat: 35.0, lng: 33.2 };
 
 export default function Page() {
-  return <StaffShell roles={['ADMIN']}>{() => <MinFares />}</StaffShell>;
+  return <MinFares />; // menu + shared map: app/admin/(zones)/layout.tsx
 }
 
 function MinFares() {
@@ -108,8 +107,11 @@ function MinFares() {
     await load();
   }
 
+  // The tab draws on the shared map of the zone tabs (2026-11-25).
+  useZoneMap({ center: CYPRUS, zones: refZones, editing: draft ? draft.polygon : null, onChange: setPoly, fit: fit });
+
   return (
-    <div className="mx-auto max-w-6xl p-4">
+    <div>
       <h1 className="text-xl font-semibold">{t('staff.minFare.title')}</h1>
       <p className="mt-1 text-sm text-muted">{t('staff.minFare.sub')}</p>
 
@@ -119,9 +121,9 @@ function MinFares() {
         </div>
       )}
 
-      <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_340px]">
-        <div className="relative h-[62vh] min-h-[380px] overflow-hidden rounded-[14px] border border-edge">
-          <ZoneEditorMap center={CYPRUS} zones={refZones} editing={draft ? draft.polygon : null} onChange={setPoly} fit={fit} className="h-full w-full" />
+      <div className="mt-3">
+        <OverMap>
+          
           {draft && (
             <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start gap-2">
               <button type="button" onClick={stepBack} disabled={histLen === 0} aria-label={t('staff.fixed.stepBack')}
@@ -131,7 +133,8 @@ function MinFares() {
               <div className="min-w-0 flex-1 rounded-[10px] bg-page/90 px-3 py-2 text-xs text-ink">{t('staff.fixed.hint')}</div>
             </div>
           )}
-        </div>
+        
+        </OverMap>
 
         <div className="space-y-3">
           {draft && (

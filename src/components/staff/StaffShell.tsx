@@ -3,6 +3,7 @@
 import { BackArrow } from '@/components/BackArrow';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { Logo } from '@/components/Brand';
 import { api } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
@@ -37,6 +38,8 @@ export const DOCS_CHANGED = 'il-y:docs-changed';
 interface Group { key: string; label: string; tabs: Tab[]; alert?: boolean }
 const isOn = (path: string, href: string) => path === href || path.startsWith(href + '/');
 interface ChangeLast { id: string; actor: string; method: string; area: string }
+
+const ZONE_TABS = ['/admin/fixed-prices', '/admin/min-fares', '/admin/no-go', '/admin/pickup-points', '/admin/stands'];
 
 export function StaffShell({ roles, children }: { roles: Me['role'][]; children: (me: Me) => React.ReactNode }) {
   const router = useRouter();
@@ -214,12 +217,16 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
       {/* tabs inside the current group (phone and computer) */}
       {current && current.tabs.length > 1 && (
         <nav className="flex gap-1 overflow-x-auto border-b border-edge bg-surface/40 px-3 py-1.5 xl:px-4" data-testid="nav-tabs">
-          {current.tabs.map((x) => (
-            <a key={x.href} href={x.href} className={`whitespace-nowrap rounded-full px-3 py-1 text-[13px] ${x.alert ? ALERT : isOn(pathname, x.href) ? 'bg-accent font-semibold text-[#0b0f10]' : 'text-muted hover:text-ink'}`}
+          {current.tabs.map((x) => {
+            // The zone tabs share one map (2026-11-25): between them the switch is in-app, so the map stays.
+            const A = ZONE_TABS.includes(x.href) && ZONE_TABS.some((h) => isOn(pathname, h)) ? Link : 'a';
+            return (
+            <A key={x.href} href={x.href} className={`whitespace-nowrap rounded-full px-3 py-1 text-[13px] ${x.alert ? ALERT : isOn(pathname, x.href) ? 'bg-accent font-semibold text-[#0b0f10]' : 'text-muted hover:text-ink'}`}
               data-testid={x.alert ? 'tab-alert' : undefined} data-current={isOn(pathname, x.href) ? '' : undefined}>
               {x.alert && dot}{x.label}
-            </a>
-          ))}
+            </A>
+            );
+          })}
         </nav>
       )}
       {/* New driver documents (2026-11-24): a red bar on top of every admin page until they are checked. */}

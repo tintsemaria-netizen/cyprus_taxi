@@ -3,14 +3,14 @@
 // Admin «Фиксированные цены» (2026-11-17): draw airport fare zones on a map and set their prices.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamicImport from 'next/dynamic';
-import { StaffShell } from '@/components/staff/StaffShell';
+import { OverMap, useZoneMap } from '@/components/staff/ZoneWorkspace';
+import Link from 'next/link';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { Poly, RefZone } from '@/components/staff/ZoneEditorMap';
 import { untangle } from '@/lib/ring';
 import { centroid, growAround, nextBelt, polygonArea, polygonInside, shrinkInto } from '@/lib/zone-shapes';
 
-const ZoneEditorMap = dynamicImport(() => import('@/components/staff/ZoneEditorMap'), { ssr: false });
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +25,7 @@ const parseCodes = (v: string) => v.split(/[\s,;]+/).map((c) => c.trim()).filter
 const AIRPORT_NAMES: Record<string, string> = { PFO: 'Paphos (PFO)', LCA: 'Larnaca (LCA)' };
 
 export default function Page() {
-  return <StaffShell roles={['ADMIN']}>{() => <FixedPrices />}</StaffShell>;
+  return <FixedPrices />; // menu + shared map: app/admin/(zones)/layout.tsx
 }
 
 function FixedPrices() {
@@ -213,8 +213,11 @@ function FixedPrices() {
     await load();
   }
 
+  // The tab draws on the shared map of the zone tabs (2026-11-25).
+  useZoneMap({ center: center, zones: refZones, editing: draft && draft.codes == null ? draft.polygon : null, editingHoles: draft?.inner.map((o) => adjusted.get(o.id) ?? o.polygon), onChange: setPoly, fit: fit });
+
   return (
-    <div className="mx-auto max-w-6xl p-4">
+    <div>
       <h1 className="text-xl font-semibold">{t('staff.fixed.title')}</h1>
       <p className="mt-1 text-sm text-muted">{t('staff.fixed.sub')}</p>
 
@@ -247,16 +250,15 @@ function FixedPrices() {
             <option key={x.id} value={x.id}>{x.name}{x.airport && x.airport !== code ? ` (${AIRPORT_NAMES[x.airport] ?? x.airport})` : ''}</option>
           ))}
         </select>
-        {!territories.length && <a href="/admin/pickup-points" className="font-semibold text-accent">{t('staff.fixed.toPickupPoints')} ›</a>}
+        {!territories.length && <Link href="/admin/pickup-points" className="font-semibold text-accent">{t('staff.fixed.toPickupPoints')} ›</Link>}
       </label>
       {airports.length > 0 && !(ap.areas ?? []).length && (
         <p className="mt-2 rounded-[10px] border border-warn/50 bg-warn/10 p-3 text-sm" data-testid="no-airport-area">{t('staff.fixed.noAirportArea')}</p>
       )}
 
-      <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_340px]">
-        <div className="relative h-[62vh] min-h-[380px] overflow-hidden rounded-[14px] border border-edge">
-          <ZoneEditorMap center={center} zones={refZones} editing={draft && draft.codes == null ? draft.polygon : null} editingHoles={draft?.inner.map((o) => adjusted.get(o.id) ?? o.polygon)}
-            onChange={setPoly} fit={fit} className="h-full w-full" />
+      <div className="mt-3">
+        <OverMap>
+          
           {draft && draft.codes == null && (
             <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start gap-2">
               <button type="button" onClick={stepBack} disabled={histLen === 0} data-testid="zone-step-back" aria-label={t('staff.fixed.stepBack')}
@@ -268,7 +270,8 @@ function FixedPrices() {
                 : t('staff.fixed.hint')}</div>
             </div>
           )}
-        </div>
+        
+        </OverMap>
 
         <div className="space-y-3">
           {draft && (
