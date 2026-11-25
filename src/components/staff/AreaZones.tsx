@@ -31,7 +31,6 @@ interface Draft { id: string | null; name: string; kind: Kind; active: boolean; 
 // 'none' (operator 2026-11-26): the territory tools are toggles — a second press switches the tool off and hides it.
 type Mode = 'corners' | 'pick' | 'drop' | 'none';
 const DROP = '#FFC83D';
-const MIN_PICK_DROP_M = 15;
 const metres = (a: Pt, b: Pt) => Math.hypot((a.lat - b.lat) * 110540, (a.lng - b.lng) * 111320 * Math.cos((a.lat * Math.PI) / 180));
 
 const RED = '#FF4D4D';
@@ -143,8 +142,7 @@ function AreaZones({ kind }: { kind: Kind }) {
     if (which !== mode) { setDraft({ ...draft }); return; }
     const pt = { lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6 };
     const ok = onCyprusIsland(pt) && pointInPolygon(pt, smoothRing(draft.polygon).map(([a, b]) => ({ lat: a, lng: b })));
-    const near = (which === 'pick' ? draft.dropPoints : draft.points).some((q) => metres(q, pt) < MIN_PICK_DROP_M);
-    if (!ok || near) { setMsg(t(ok ? 'staff.noGo.tooClose' : 'staff.noGo.pointOutside', { m: MIN_PICK_DROP_M })); setDraft({ ...draft }); return; }
+    if (!ok) { setMsg(t('staff.noGo.pointOutside')); setDraft({ ...draft }); return; } // pickup and drop-off may share a spot (2026-11-26)
     setMsg(null);
     if (which === 'pick') setDraft({ ...draft, points: draft.points.map((q, j) => (j === i ? { ...q, ...pt } : q)) });
     else setDraft({ ...draft, dropPoints: draft.dropPoints.map((q, j) => (j === i ? { ...q, ...pt } : q)) });
@@ -197,7 +195,6 @@ function AreaZones({ kind }: { kind: Kind }) {
             if (!onCyprusIsland({ lat, lng }) || !pointInPolygon({ lat, lng }, smoothRing(draft.polygon).map(([a, b]) => ({ lat: a, lng: b })))) { setMsg(t('staff.noGo.pointOutside')); return; }
             const pt = { lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6, name: '' };
             // Pickup and drop-off points do not mix: at least 15 m apart (operator: «чтобы не переплетались»).
-            if ((mode === 'pick' ? draft.dropPoints : draft.points).some((q) => metres(q, pt) < MIN_PICK_DROP_M)) { setMsg(t('staff.noGo.tooClose', { m: MIN_PICK_DROP_M })); return; }
             if (mode === 'drop') { if (draft.dropPoints.length < 20) { setMsg(null); setDraft({ ...draft, dropPoints: [...draft.dropPoints, pt] }); } return; }
             if (draft.points.length >= 20) return;
             setMsg(null); setDraft({ ...draft, points: [...draft.points, pt] });

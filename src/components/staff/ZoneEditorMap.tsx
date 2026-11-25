@@ -114,7 +114,7 @@ function GoogleZoneMap({ center, zones, editing, editingHoles, onChange, onPick,
     s.labels = zones.filter((z) => z.label && z.labelAt).map((z) => {
       if (z.pin) {
         const icon = (lifted: boolean) => { const pp = pinPillSvg(z.label!, z.color, z.pin === 'drop', lifted); return { url: pp.url, scaledSize: new g.Size(pp.w, pp.h), anchor: new g.Point(pp.ax, pp.ay) }; };
-        const mk = new g.Marker({ map, position: { lat: z.labelAt![0], lng: z.labelAt![1] }, clickable: !!z.draggable, draggable: !!z.draggable, raiseOnDrag: false, zIndex: 40, icon: icon(false) });
+        const mk = new g.Marker({ map, position: { lat: z.labelAt![0], lng: z.labelAt![1] }, clickable: !!z.draggable, draggable: !!z.draggable, raiseOnDrag: false, zIndex: z.draggable ? 60 : 40, icon: icon(false) }); // the kind being edited on top
         if (z.draggable) {
           mk.addListener('dragstart', () => mk.setIcon(icon(true)));
           mk.addListener('dragend', (e: any) => { mk.setIcon(icon(false)); pinMoveRef.current?.(z.id, e.latLng.lat(), e.latLng.lng()); });
@@ -224,7 +224,8 @@ function LibreZoneMap({ center, zones, editing, editingHoles, onChange, onPick, 
       const el = document.createElement('div');
       if (z.pin) {
         // Logo pin, tip on the point; the name under it (symmetric overflow keeps the tip centred).
-        el.style.cssText = `width:32px;height:40px;pointer-events:${z.draggable ? 'auto' : 'none'};cursor:${z.draggable ? 'grab' : 'default'}`;
+        // The kind being edited (📍 / 🏁 switch) is on top: pickup and drop-off logos may stand on one spot (2026-11-26).
+        el.style.cssText = `width:32px;height:40px;z-index:${z.draggable ? 3 : 2};pointer-events:${z.draggable ? 'auto' : 'none'};cursor:${z.draggable ? 'grab' : 'default'}`;
         el.innerHTML = `<div style="position:relative;width:32px;height:40px"><div class="ily-shadow" style="position:absolute;left:10px;top:37px;width:12px;height:6px;border-radius:50%;background:rgba(0,0,0,.4);opacity:0;transition:opacity .15s"></div><div class="ily-logo" style="width:32px;height:40px;transition:transform .15s;filter:drop-shadow(0 2px 3px rgba(0,0,0,.55))">${z.pin === 'drop' ? BRAND_PIN_SVG_CHECKER : BRAND_PIN_SVG}</div><div style="position:absolute;top:calc(100% + 4px);left:-100px;right:-100px;text-align:center"><span style="display:inline-block;background:${z.color};color:#0b0f10;font:700 12.5px Inter,Arial,sans-serif;padding:3px 9px;border-radius:11px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)"></span></div></div>`;
         (el.querySelector('span') as HTMLElement).textContent = z.label!;
         const mk = new lib.Marker({ element: el, anchor: 'bottom', draggable: !!z.draggable }).setLngLat([z.labelAt![1], z.labelAt![0]]).addTo(map);

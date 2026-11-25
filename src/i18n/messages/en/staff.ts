@@ -196,7 +196,6 @@ const staff = {
     noDrop: 'No drop-off points — the passenger is dropped where he chose.',
     modeDrop: 'Drop-off points',
     dropHint: 'Each tap on the map adds a drop-off point (e.g. «Departures»). A passenger going here is dropped at the nearest one. A placed point can be dragged.',
-    tooClose: 'Pickup and drop-off points must be at least {m} m apart.',
     dropPoint: 'Drop-off point',
     pointName: 'Point name (e.g. Exit A)',
     pointOutside: 'A pickup point must be inside the (rounded) territory, on land.',

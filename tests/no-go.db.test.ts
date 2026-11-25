@@ -58,9 +58,9 @@ describe('no-go zones', () => {
         expect([b.dropoffLat, b.dropoffLng, b.dropoffLabel]).toEqual([34.6985, 33.0985, 'Port · Departures']);
       }
     } finally { await prisma.noGoZone.delete({ where: { id: t.id } }); invalidateNoGoCache(); }
-    // pickup and drop-off points must not overlap (≥ 15 m apart)
+    // pickup and drop-off points may stand on one spot (operator 2026-11-26; was ≥ 15 m apart)
     const base = { name: 'P', kind: 'POINT' as const, polygon: sq, points: [{ lat: 34.70, lng: 33.10, name: '' }] };
-    expect(noGoSchema.safeParse({ ...base, dropPoints: [{ lat: 34.70005, lng: 33.10, name: '' }] }).success).toBe(false);
+    expect(noGoSchema.safeParse({ ...base, dropPoints: [{ lat: 34.70, lng: 33.10, name: '' }] }).success).toBe(true);
     expect(noGoSchema.safeParse({ ...base, dropPoints: [{ lat: 34.7010, lng: 33.10, name: '' }] }).success).toBe(true);
   });
 });

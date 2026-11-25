@@ -97,7 +97,6 @@ export async function firstNoGo(pts: { pickup: { lat: number; lng: number }; dro
 }
 
 /** Pickup and drop-off points of one territory stay apart (operator 2026-11-24: «чтобы не переплетались»). */
-export const MIN_PICK_DROP_M = 15;
 export const noGoSchema = z.object({
   name: z.string().trim().min(1).max(80),
   kind: z.enum(['NOGO', 'POINT', 'STAND']).optional(),
@@ -116,9 +115,8 @@ export const noGoSchema = z.object({
   // A territory may have no pickup points (operator 2026-11-25): then it only marks a place (fixed fares, minimum
   // from here, a queue stand) and a pickup inside it stays where the passenger put it.
   // Every pickup point inside its (rounded) territory and on land (2026-11-24).
-  .refine((d) => d.kind !== 'POINT' || [...(d.points ?? []), ...(d.dropPoints ?? [])].every((s) => onCyprusIsland(s) && pointInPolygon(s, smoothRing(d.polygon).map(([lat, lng]) => ({ lat, lng })))), { message: 'Pickup and drop-off points must be inside the territory, on land.' })
-  // Pickup and drop-off points do not mix (operator: «чтобы не переплетались»): at least 15 m apart.
-  .refine((d) => (d.points ?? []).every((a) => (d.dropPoints ?? []).every((b) => Math.hypot((a.lat - b.lat) * 110540, (a.lng - b.lng) * 111320 * Math.cos((a.lat * Math.PI) / 180)) >= MIN_PICK_DROP_M)), { message: `A drop-off point must be at least ${MIN_PICK_DROP_M} m from every pickup point.` });
+  .refine((d) => d.kind !== 'POINT' || [...(d.points ?? []), ...(d.dropPoints ?? [])].every((s) => onCyprusIsland(s) && pointInPolygon(s, smoothRing(d.polygon).map(([lat, lng]) => ({ lat, lng })))), { message: 'Pickup and drop-off points must be inside the territory, on land.' });
+// Pickup and drop-off points may stand on one spot (operator 2026-11-26; was ≥ 15 m apart).
 export function noGoData(d: z.infer<typeof noGoSchema>) {
   return { name: d.name, kind: d.kind ?? 'NOGO', polygon: d.polygon, points: d.kind === 'POINT' ? (d.points ?? []) : undefined, dropPoints: d.kind === 'POINT' ? (d.dropPoints ?? []) : undefined, active: d.active ?? true,
     // Not sent (e.g. the on/off switch) → unchanged; a no-go zone is never an airport.
