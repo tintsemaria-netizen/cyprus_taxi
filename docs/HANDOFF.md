@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-25 ~15:30 — «Стоянки с очередью» + XL takes Comfort (deployed 24e72df)
+- Stand = NoGoZone kind STAND (+airport PFO|LCA; `active` = queue on; off = drivers inside get no orders, the free board included). Model `StandQueue` (migration 20261125120000). Logic: src/server/stands.ts (join on GPS sample via /driver/location, 10 s leave grace, removed on ride/off duty); dispatch: eligibility.ts queue path first for pickups at the stand's airport, refusal keeps the place (tried list). Admin /admin/stands (AreaZones kind STAND, live queue via /api/v1/admin/stands). Driver: big-number card (location response `stand`), 8 languages.
+- `Driver.takesComfort` (migration 20261125130000, default true): XL car takes Comfort orders (src/lib/vehicle-class.ts carTakes/takesClasses) in offers, accept, free board, pre-bookings, admin assign, market count; XL driver switch in profile (/api/v1/driver/classes).
+- Tests: tests/stand-queue.db.test.ts (7). Suite 495 passed / 1 skipped. Live: /admin/stands 200, /api/v1/driver/classes 401 (exists), health ready.
+- Owner action: draw the PFO and LCA stands in admin «Цены → Стоянки с очередью». Not changed: passenger «cars nearby» still shows cars on a switched-off stand; pre-assigned rides. iPhone web: locked screen = no GPS → order goes to the next, place kept.
+
 ## 2026-11-25 ~12:20 — admin point logos rise with a shadow while dragged (deployed 2d8d38b)
 - ZoneEditorMap: MapLibre — `.ily-logo` translateY(-10px) + `.ily-shadow` on dragstart, reset on dragend; Google — `pinPillSvg(..., lifted)` icon swapped on dragstart/dragend, `raiseOnDrag:false` (10 px room on top, anchor stays the tip).
 - Suite 488 passed / 1 skipped; live admin chunk has `ily-shadow`/`raiseOnDrag`; health ready. Google drag not checked by hand.
