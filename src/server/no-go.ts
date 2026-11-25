@@ -42,7 +42,7 @@ async function load(now: number) {
   cache = {
     at: now,
     rows: rows.filter((r) => r.kind === 'NOGO').map(z),
-    points: rows.filter((r) => r.kind === 'POINT').map((r) => ({ ...z(r), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints), airport: r.airport ?? null, minComfortCents: r.minComfortCents ?? null, minXlCents: r.minXlCents ?? null, minActive: r.minActive })).filter((t) => t.points.length > 0),
+    points: rows.filter((r) => r.kind === 'POINT').map((r) => ({ ...z(r), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints), airport: r.airport ?? null, minComfortCents: r.minComfortCents ?? null, minXlCents: r.minXlCents ?? null, minActive: r.minActive })),
     stands: rows.filter((r) => r.kind === 'STAND').map((r) => ({ ...z(r), active: r.active, airport: r.airport ?? null, forZoneId: r.forZoneId ?? null })),
   };
   // The airport is a territory marked «это аэропорт» (2026-11-25) — by the same rounded outline the passenger sees.
@@ -61,7 +61,7 @@ const inside = (p: { lat: number; lng: number }, poly: [number, number][]) => po
  *  passenger), else the nearest — with «territory · point» as the label. */
 export async function snapPickup<T extends { lat: number; lng: number; label?: string }>(p: T): Promise<T> {
   for (const z of await pickupPoints()) {
-    if (!inside(p, z.polygon)) continue;
+    if (!z.points.length || !inside(p, z.polygon)) continue; // no pickup points → the pickup stays as it is
     let best = z.points[0], bd = Infinity;
     for (const s of z.points) { const d = (s.lat - p.lat) ** 2 + ((s.lng - p.lng) * Math.cos((p.lat * Math.PI) / 180)) ** 2; if (d < bd) { bd = d; best = s; } }
     return { ...p, lat: best.lat, lng: best.lng, label: spotLabel(z.name, best) };
@@ -112,7 +112,8 @@ export const noGoSchema = z.object({
   minActive: z.boolean().optional(), // the switch; absent = unchanged
   forZoneId: z.string().max(64).nullable().optional(), // STAND: the pickup territory whose orders it takes
 }).refine((d) => d.kind !== 'STAND' || !(d.airport === null && !d.forZoneId), { message: 'Choose the territory whose orders this stand takes.' })
-  .refine((d) => d.kind !== 'POINT' || (d.points?.length ?? 0) > 0, { message: 'At least one pickup point is required.' })
+  // A territory may have no pickup points (operator 2026-11-25): then it only marks a place (fixed fares, minimum
+  // from here, a queue stand) and a pickup inside it stays where the passenger put it.
   // Every pickup point inside its (rounded) territory and on land (2026-11-24).
   .refine((d) => d.kind !== 'POINT' || [...(d.points ?? []), ...(d.dropPoints ?? [])].every((s) => onCyprusIsland(s) && pointInPolygon(s, smoothRing(d.polygon).map(([lat, lng]) => ({ lat, lng })))), { message: 'Pickup and drop-off points must be inside the territory, on land.' })
   // Pickup and drop-off points do not mix (operator: «чтобы не переплетались»): at least 15 m apart.

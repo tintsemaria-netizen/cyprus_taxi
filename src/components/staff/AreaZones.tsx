@@ -150,7 +150,6 @@ function AreaZones({ kind }: { kind: Kind }) {
   async function save() {
     if (!draft) return;
     if (draft.polygon.length < 3) { setMsg(t('staff.noGo.needPoints')); return; }
-    if (draft.kind === 'POINT' && !draft.points.length) { setMsg(t('staff.noGo.needPickup')); setMode('pick'); return; }
     if (draft.kind === 'STAND' && !standSource(draft)) { setMsg(t('staff.noGo.needAirport')); return; }
     setBusy(true); setMsg(null);
     try {
@@ -261,7 +260,7 @@ function AreaZones({ kind }: { kind: Kind }) {
                 return (
                   <div key={which} className="space-y-1.5" data-testid={which === 'pick' ? 'nogo-points' : 'nogo-drop-points'}>
                     <div className={`text-xs font-semibold ${col}`}>{which === 'pick' ? `📍 ${t('staff.noGo.modePoint')}` : `🏁 ${t('staff.noGo.modeDrop')}`}</div>
-                    {list.length === 0 && <div className={`text-xs ${which === 'pick' ? 'text-warn' : 'text-muted'}`}>{t(which === 'pick' ? 'staff.noGo.needPickup' : 'staff.noGo.noDrop')}</div>}
+                    {list.length === 0 && <div className="text-xs text-muted">{t(which === 'pick' ? 'staff.noGo.noPickup' : 'staff.noGo.noDrop')}</div>}
                     {list.map((p, i) => (
                       <div key={i} className="flex items-center gap-1.5">
                         <span className={`w-5 shrink-0 text-center text-xs font-semibold ${col}`}>{i + 1}</span>

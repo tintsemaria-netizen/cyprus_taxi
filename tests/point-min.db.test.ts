@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { prisma } from '@/lib/db';
-import { invalidateNoGoCache, noGoData, noGoSchema } from '@/server/no-go';
+import { invalidateNoGoCache, noGoData, noGoSchema, snapPickup } from '@/server/no-go';
 import { invalidateFixedFareCache } from '@/server/fixed-fares';
 import { invalidateMinFareCache } from '@/server/min-fares';
 import { createQuote } from '@/server/quote';
@@ -75,6 +75,15 @@ describe('minimum fare from a pickup point', () => {
     await prisma.noGoZone.update({ where: { id: t.id }, data: noGoData(noGoSchema.parse({ ...base, minActive: true })) });
     invalidateNoGoCache();
     expect((await quote(gate, near)).totalCents).toBe(2000);
+  });
+
+  it('a territory without pickup points (2026-11-25): saves, does not move the pickup, its minimum still applies', async () => {
+    expect(noGoSchema.safeParse({ name: 'PM test bare', kind: 'POINT', polygon: port, points: [] }).success).toBe(true);
+    await prisma.noGoZone.create({ data: { name: 'PM test bare', kind: 'POINT', polygon: port, points: [], minComfortCents: 2000 } });
+    invalidateNoGoCache();
+    const inside = { lat: 34.6435, lng: 33.0135 };
+    expect(await snapPickup(inside)).toEqual(inside);
+    expect((await quote(inside, near)).totalCents).toBe(2000);
   });
 
   it('admin form: empty clears, the on/off switch keeps it', async () => {

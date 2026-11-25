@@ -34,7 +34,7 @@ export function areaBlock(p: { lat: number; lng: number }): 'OFF_ISLAND' | 'NO_G
 }
 
 /** All pickup territories — drawn on the passenger map all the time (2026-11-24, operator). */
-export const allTerritories = (): Territory[] => territories;
+export const allTerritories = (): Territory[] => territories.filter((t) => t.points.length || t.dropPoints?.length); // a bare territory (no points) is not drawn for the passenger
 /** The territory with drop-off points a destination is in, with the drop-off point it is on (if any) and the
  *  nearest one (2026-11-24, operator: the airport's drop-off is not at the pickup points). */
 export function dropTerritoryAt(p: { lat: number; lng: number }): { t: Territory; on: number; nearest: number } | null {
@@ -61,7 +61,7 @@ export function territoryNear(p: { lat: number; lng: number }, radiusM: number):
   if (inside || radiusM <= 0) return inside;
   const k = Math.cos((p.lat * Math.PI) / 180);
   let best: Territory | null = null, bd = Infinity;
-  for (const t of territories) for (const [la, ln] of t.polygon) {
+  for (const t of territories) if (t.points.length) for (const [la, ln] of t.polygon) {
     const d = Math.hypot((la - p.lat) * 110540, (ln - p.lng) * 111320 * k);
     if (d < bd) { bd = d; best = t; }
   }
@@ -81,6 +81,7 @@ export function nearTerritory(t: Territory, p: { lat: number; lng: number }, m: 
 
 export function territoryAt(p: { lat: number; lng: number }): { t: Territory; on: number; nearest: number } | null {
   for (const t of territories) {
+    if (!t.points.length) continue; // a territory without pickup points does not move the pickup (2026-11-25)
     if (t.polygon.length < 3 || !pointInPolygon(p, t.polygon.map(([lat, lng]) => ({ lat, lng })))) continue;
     let nearest = 0, bd = Infinity, on = -1;
     t.points.forEach((s, i) => {
