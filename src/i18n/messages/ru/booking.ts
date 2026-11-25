@@ -9,7 +9,7 @@ const booking: Catalog<typeof en> = {
   },
   currentLocation: 'Текущее местоположение',
   form: {
-    prebookMin: 'Предзаказ — {zone}: минимум {amount}, дальше — по счётчику.',
+    prebookMin: '{zone}: минимум {amount}, дальше — по счётчику.',
     priceUpdated: 'Цена обновилась: {price}. Проверьте и нажмите «Заказать» ещё раз.',
     resetRoute: 'Сбросить маршрут',
     onMap: 'На карте',

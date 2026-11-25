@@ -13,7 +13,7 @@ const booking: Catalog<typeof en> = {
   },
   currentLocation: "Position actuelle",
   form: {
-    prebookMin: 'Réservation — {zone} : au moins {amount}, au-delà au compteur.',
+    prebookMin: '{zone} : au moins {amount}, au-delà au compteur.',
     priceUpdated: "Le prix a été mis à jour : {price}. Vérifiez-le et touchez de nouveau «Commander».",
     resetRoute: "Effacer l’itinéraire",
     onMap: "Sur la carte",

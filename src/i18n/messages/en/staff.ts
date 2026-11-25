@@ -154,6 +154,9 @@ const staff = {
     empty: 'No vehicles yet.',
   },
   noGo: {
+    minFrom: "Minimum fare from here",
+    minFromHint: "A ride picked up at this point costs at least this, above it the meter. Now and pre-booked. Fixed fares do not change. Empty — no minimum.",
+    minShort: "min. €{amount}",
     kindStand: 'Queue stands',
     subStand: 'A stand at an airport: drivers who drive in join its queue by the time they entered. Orders from that airport are offered in queue order: if the first refuses or does not answer, the next gets it (the first keeps his place); nobody there or everyone refused → the nearest driver outside. A driver who leaves the stand for more than 10 seconds loses his place.',
     newStand: '+ New stand',

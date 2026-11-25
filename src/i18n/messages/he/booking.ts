@@ -13,7 +13,7 @@ const booking: Catalog<typeof en> = {
   },
   currentLocation: "המיקום הנוכחי",
   form: {
-    prebookMin: 'הזמנה מראש — {zone}: לפחות {amount}, מעבר לכך לפי המונה.',
+    prebookMin: '{zone}: לפחות {amount}, מעבר לכך לפי המונה.',
     priceUpdated: "המחיר עודכן ל-{price}. בדקו והקישו שוב על «הזמנה».",
     resetRoute: "ניקוי המסלול",
     onMap: "על המפה",

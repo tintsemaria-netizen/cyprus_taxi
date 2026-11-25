@@ -21,8 +21,11 @@ const ZoneEditorMap = dynamicImport(() => import('@/components/staff/ZoneEditorM
 export type Kind = 'NOGO' | 'POINT' | 'STAND';
 type Pt = { lat: number; lng: number };
 interface Spot { lat: number; lng: number; name: string }
-interface Zone { id: string; name: string; kind: Kind; polygon: Poly; points: Spot[]; dropPoints?: Spot[]; active: boolean; airport?: string | null }
-interface Draft { id: string | null; name: string; kind: Kind; active: boolean; polygon: Poly; points: Spot[]; dropPoints: Spot[]; airport: string | null }
+// € text ↔ cents for «минимальный заказ отсюда»; empty / 0 / bad = no minimum (null).
+const centsText = (c?: number | null) => (c ? (c / 100).toFixed(c % 100 ? 2 : 0) : '');
+const euroCents = (v: string): number | null => { const n = Number(v.replace(',', '.').trim()); return v.trim() && Number.isFinite(n) && n >= 1 ? Math.round(n * 100) : null; };
+interface Zone { id: string; name: string; kind: Kind; polygon: Poly; points: Spot[]; dropPoints?: Spot[]; active: boolean; airport?: string | null; minComfortCents?: number | null; minXlCents?: number | null }
+interface Draft { id: string | null; name: string; kind: Kind; active: boolean; polygon: Poly; points: Spot[]; dropPoints: Spot[]; airport: string | null; minComfort: string; minXl: string }
 // ✈ in the list (2026-11-25): this territory is chosen as an airport's point on «Фиксированные цены».
 // What a tap on the map adds while editing a territory: corners, pickup points or drop-off points (2026-11-24).
 type Mode = 'corners' | 'pick' | 'drop';
@@ -121,8 +124,8 @@ function AreaZones({ kind }: { kind: Kind }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitKey]);
 
-  function startNew() { setMsg(null); resetHist(); setDraft({ id: null, name: '', kind, active: true, polygon: [], points: [], dropPoints: [], airport: null }); setMode('corners'); }
-  function startEdit(z: Zone) { setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, kind: z.kind, active: z.active, polygon: untangle(z.polygon), points: z.points, dropPoints: z.dropPoints ?? [], airport: z.airport ?? null }); setMode('corners'); }
+  function startNew() { setMsg(null); resetHist(); setDraft({ id: null, name: '', kind, active: true, polygon: [], points: [], dropPoints: [], airport: null, minComfort: '', minXl: '' }); setMode('corners'); }
+  function startEdit(z: Zone) { setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, kind: z.kind, active: z.active, polygon: untangle(z.polygon), points: z.points, dropPoints: z.dropPoints ?? [], airport: z.airport ?? null, minComfort: centsText(z.minComfortCents), minXl: centsText(z.minXlCents) }); setMode('corners'); }
 
   // A point dragged on the map: same rules as placing one (inside the rounded territory, on land, 15 m from the
   // other kind); a bad place puts it back.
@@ -147,7 +150,8 @@ function AreaZones({ kind }: { kind: Kind }) {
     if (draft.kind === 'STAND' && !draft.airport) { setMsg(t('staff.noGo.needAirport')); return; }
     setBusy(true); setMsg(null);
     try {
-      const body = { name: draft.name.trim() || `${t(draft.kind === 'POINT' ? 'staff.noGo.pointTitle' : draft.kind === 'STAND' ? 'staff.noGo.standTitle' : 'staff.noGo.title')} ${zones.length + 1}`, kind: draft.kind, polygon: draft.polygon, points: draft.points, dropPoints: draft.dropPoints, active: draft.active, ...(draft.kind === 'STAND' ? { airport: draft.airport } : {}) };
+      const body = { name: draft.name.trim() || `${t(draft.kind === 'POINT' ? 'staff.noGo.pointTitle' : draft.kind === 'STAND' ? 'staff.noGo.standTitle' : 'staff.noGo.title')} ${zones.length + 1}`, kind: draft.kind, polygon: draft.polygon, points: draft.points, dropPoints: draft.dropPoints, active: draft.active, ...(draft.kind === 'STAND' ? { airport: draft.airport } : {}),
+        ...(draft.kind === 'POINT' ? { minComfortCents: euroCents(draft.minComfort), minXlCents: euroCents(draft.minXl) } : {}) };
       if (draft.id) await api(`/admin/no-go/${draft.id}`, { method: 'PUT', body });
       else await api('/admin/no-go', { method: 'POST', body });
       setDraft(null); setMsg(t('staff.noGo.saved'));
@@ -211,6 +215,17 @@ function AreaZones({ kind }: { kind: Kind }) {
                 <input className="field mt-1" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder={t('staff.noGo.placeholder')} data-testid="nogo-name" />
               </label>
               {draft.kind === 'POINT' && (
+                // «Минимальный заказ отсюда» (operator 2026-11-25): empty = no minimum.
+                <div className="text-sm" data-testid="nogo-min">
+                  <div>{t('staff.noGo.minFrom')}</div>
+                  <div className="mt-1 grid grid-cols-2 gap-2">
+                    <label className="text-xs text-muted">Comfort, €<input className="field mt-0.5" inputMode="decimal" value={draft.minComfort} onChange={(e) => setDraft({ ...draft, minComfort: e.target.value })} placeholder="—" data-testid="nogo-min-comfort" /></label>
+                    <label className="text-xs text-muted">XL, €<input className="field mt-0.5" inputMode="decimal" value={draft.minXl} onChange={(e) => setDraft({ ...draft, minXl: e.target.value })} placeholder="—" data-testid="nogo-min-xl" /></label>
+                  </div>
+                  <p className="mt-1 text-xs text-muted">{t('staff.noGo.minFromHint')}</p>
+                </div>
+              )}
+              {draft.kind === 'POINT' && (
                 <div className="grid grid-cols-3 gap-1 rounded-[10px] border border-edge p-1" data-testid="nogo-mode">
                   <button type="button" onClick={() => setMode('corners')} className={`rounded-[8px] px-1 py-1.5 text-xs font-semibold ${mode === 'corners' ? 'bg-[#4C9AFF] text-[#0b0f10]' : 'text-muted'}`}>{t('staff.noGo.modeCorners')}</button>
                   <button type="button" onClick={() => setMode('pick')} disabled={draft.polygon.length < 3} className={`rounded-[8px] px-1 py-1.5 text-xs font-semibold ${mode === 'pick' ? 'bg-[#4C9AFF] text-[#0b0f10]' : 'text-muted'} disabled:opacity-40`} data-testid="nogo-mode-point">📍 {t('staff.noGo.modePoint')}</button>
@@ -268,7 +283,7 @@ function AreaZones({ kind }: { kind: Kind }) {
             <div key={z.id} className={`card p-3 ${draft?.id === z.id ? 'border-accent' : ''}`} data-testid="nogo-row">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: colorOf(z) }} />
-                <span className="min-w-0 flex-1 truncate font-semibold">{z.name}{z.airport ? <span className="ms-1.5 text-xs font-normal text-accent">✈ {t(`staff.noGo.airport${z.airport}` as 'staff.noGo.airportLCA')}</span> : null}</span>
+                <span className="min-w-0 flex-1 truncate font-semibold">{z.name}{z.minComfortCents ? <span className="ms-1.5 text-xs font-normal text-muted">{t('staff.noGo.minShort', { amount: centsText(z.minComfortCents) })}</span> : null}{z.airport ? <span className="ms-1.5 text-xs font-normal text-accent">✈ {t(`staff.noGo.airport${z.airport}` as 'staff.noGo.airportLCA')}</span> : null}</span>
                 {!z.active && <span className="text-xs text-muted">{t(z.kind === 'STAND' ? 'staff.noGo.standOff' : 'staff.fixed.off')}</span>}
               </div>
               {z.kind === 'STAND' && z.active && (

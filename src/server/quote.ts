@@ -1,11 +1,12 @@
 import { prisma } from '@/lib/db';
-import { ensureAirportAreas } from '@/server/no-go';
+import { ensureAirportAreas, pointMin } from '@/server/no-go';
 import { config } from '@/lib/config';
 import { sha256 } from '@/lib/crypto';
 import { haversineMeters } from '@/lib/geo';
 import { isAirportPoint } from '@/lib/airports';
 import { findFixedFare } from '@/server/fixed-fares';
 import { prebookMin } from '@/server/min-fares';
+import { isFixedPrice } from '@/lib/price-type';
 import { computeMeterEstimate } from '@/lib/tariff';
 import { computeDynamicMultiplier, dynamicSurchargeCents } from '@/lib/pricing-dynamic';
 import { marketSnapshot } from '@/server/dispatch/market';
@@ -180,12 +181,16 @@ export async function createQuote(input: QuoteInput, at = new Date(), mode: Pric
   }
 
   // Pre-booking minimum inside Nicosia (2026-11-22): at least €20, above that the meter counts.
-  const minMatch = await prebookMin({ pickup: input.pickup, dropoff: input.dropoff, scheduled: !!input.scheduledAtUtc, priceType, vClass: input.vClass }).catch(() => null);
+  const zoneMin = await prebookMin({ pickup: input.pickup, dropoff: input.dropoff, scheduled: !!input.scheduledAtUtc, priceType, vClass: input.vClass }).catch(() => null);
+  // «Минимальный заказ отсюда» (2026-11-25): picked up in a pickup territory with a minimum — every ride (now and
+  // pre-booked), never a fixed / shared fare. Both apply → the larger one.
+  const fromPoint = isFixedPrice(priceType) ? null : await pointMin(input.pickup, input.vClass).catch(() => null);
+  const minMatch = [zoneMin, fromPoint].filter((m): m is { cents: number; zone: string } => !!m).sort((a, b) => b.cents - a.cents)[0] ?? null;
   const minCents = minMatch?.cents ?? null;
   const minZone = minMatch?.zone ?? null;
   if (minCents != null) {
     if (totalCents < minCents) {
-      lines = [...lines, { code: 'prebookMin', label: `Pre-booking minimum, ${minZone} (€${(minCents / 100).toFixed(2)})`, cents: minCents - totalCents }];
+      lines = [...lines, { code: 'prebookMin', label: `Minimum, ${minZone} (€${(minCents / 100).toFixed(2)})`, cents: minCents - totalCents }];
       totalCents = minCents;
     }
     rangeLowCents = Math.max(minCents, rangeLowCents);

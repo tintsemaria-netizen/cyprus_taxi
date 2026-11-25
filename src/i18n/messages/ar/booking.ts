@@ -13,7 +13,7 @@ const booking: Catalog<typeof en> = {
   },
   currentLocation: "الموقع الحالي",
   form: {
-    prebookMin: 'الحجز المسبق — {zone}: {amount} على الأقل، وما فوق ذلك حسب العداد.',
+    prebookMin: '{zone}: {amount} على الأقل، وما فوق ذلك حسب العداد.',
     priceUpdated: "تم تحديث السعر إلى {price}. تحقق منه واضغط «اطلب» مرة أخرى.",
     resetRoute: "مسح المسار",
     onMap: "على الخريطة",

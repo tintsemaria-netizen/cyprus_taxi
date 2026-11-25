@@ -196,7 +196,7 @@ export async function completeTrip(bookingId: string, driverId: string, expected
     if (meterCents != null) {
       if (isFixedPrice(b.priceType)) return err(409, 'UPFRONT_FIXED', 'This ride has a fixed price.');
       if (!Number.isInteger(meterCents) || meterCents < 0 || meterCents > 100_000_00) return err(422, 'BAD_AMOUNT', 'Enter a valid amount.');
-      if (b.fareMinCents != null && meterCents < b.fareMinCents) return err(422, 'BELOW_MINIMUM', `Pre-booking minimum here: at least €${(b.fareMinCents / 100).toFixed(2)}.`);
+      if (b.fareMinCents != null && meterCents < b.fareMinCents) return err(422, 'BELOW_MINIMUM', `Minimum price here: at least €${(b.fareMinCents / 100).toFixed(2)}.`);
     }
     return finalizeCompletion(tx, b, a, { type: 'DRIVER', id: driverId }, meterCents ?? null);
   });

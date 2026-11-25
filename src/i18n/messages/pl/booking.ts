@@ -13,7 +13,7 @@ const booking: Catalog<typeof en> = {
   },
   currentLocation: "Bieżąca lokalizacja",
   form: {
-    prebookMin: 'Rezerwacja — {zone}: minimum {amount}, powyżej według taksometru.',
+    prebookMin: '{zone}: minimum {amount}, powyżej według taksometru.',
     priceUpdated: "Cena zmieniła się na {price}. Sprawdź ją i ponownie stuknij «Zamów».",
     resetRoute: "Wyczyść trasę",
     onMap: "Na mapie",
