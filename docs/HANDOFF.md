@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-25 — co-rider note only when switched on (deployed)
+- ShareBookingOptions: «−30% включится, только когда найдётся попутчик» shows only when the switch is on (now and pre-booking).
+
 ## 2026-11-25 — share board removed (deployed)
 - /share-board page removed (redirects to /prebookings); GET /api/v1/passenger/share-board removed; POST kept for «Ехать» from the hour list (open rides ≥ scheduleMinMinutes ahead). shareBoard/boardRide gone; settings.shareBoardHideMinutes no longer used (admin row removed).
 - After a co-rider pre-booking: «Ищем попутчика — сообщим…» on the done screen; the done screen shows the pickup span 13:00–13:15.
