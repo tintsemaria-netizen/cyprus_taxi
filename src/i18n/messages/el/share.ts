@@ -17,6 +17,7 @@ const share: Catalog<typeof en> = {
     pickTo: 'έως',
     pickExact: 'Παραλαβή στις',
     inside: 'Μέσα στο {from}–{to}.',
+    minusPct: "−{pct}% με συνεπιβάτη",
     withPair: "Με συνεπιβάτη",
     withPairWhen: "αν βρούμε συνεπιβάτη",
     noPair: "Χωρίς συνεπιβάτη",

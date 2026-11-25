@@ -17,6 +17,7 @@ const share: Catalog<typeof en> = {
     pickTo: 'إلى',
     pickExact: 'الاستلام في',
     inside: 'ضمن {from}–{to}.',
+    minusPct: "‎−{pct}% مع راكب مشارك",
     withPair: "مع راكب مشارك",
     withPairWhen: "إذا وجدنا راكباً مشاركاً",
     noPair: "بدون راكب مشارك",

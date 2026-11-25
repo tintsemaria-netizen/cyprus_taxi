@@ -17,6 +17,7 @@ const share: Catalog<typeof en> = {
     pickTo: 'до',
     pickExact: 'Подача в',
     inside: 'Внутри {from}–{to}.',
+    minusPct: "−{pct}% с попутчиком",
     withPair: "С попутчиком",
     withPairWhen: "если найдём попутчика",
     noPair: "Без попутчика",

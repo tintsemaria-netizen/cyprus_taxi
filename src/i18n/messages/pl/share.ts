@@ -17,6 +17,7 @@ const share: Catalog<typeof en> = {
     pickTo: 'do',
     pickExact: 'Odbiór o',
     inside: 'W oknie {from}–{to}.',
+    minusPct: "−{pct}% ze współpasażerem",
     withPair: "Ze współpasażerem",
     withPairWhen: "jeśli znajdziemy współpasażera",
     noPair: "Bez współpasażera",
