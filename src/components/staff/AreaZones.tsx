@@ -8,7 +8,7 @@
 import { smoothRing, untangle } from '@/lib/ring';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamicImport from 'next/dynamic';
-import { OverMap, PanelHead, useZoneMap } from '@/components/staff/ZoneWorkspace';
+import { FoldX, OverMap, PanelHead, useZoneMap } from '@/components/staff/ZoneWorkspace';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { Poly, RefZone } from '@/components/staff/ZoneEditorMap';
@@ -228,7 +228,8 @@ function AreaZones({ kind }: { kind: Kind }) {
 
         <div className="space-y-3">
           {draft && (
-            <div className="card space-y-3 p-4" data-testid="nogo-form">
+            <div className="card relative space-y-3 p-4" data-testid="nogo-form">
+              <FoldX />
               <label className="block text-sm">{t('staff.noGo.name')}
                 <input className="field mt-1" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder={t('staff.noGo.placeholder')} data-testid="nogo-name" />
               </label>

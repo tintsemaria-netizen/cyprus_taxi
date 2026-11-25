@@ -67,6 +67,17 @@ export function PanelHead({ title, info }: { title: React.ReactNode; info: React
   );
 }
 
+/** ✕ in the corner of an edit form (operator 2026-11-25): folds the side panel like the one in the title row; the form is kept. */
+export function FoldX() {
+  const { t } = useT();
+  const collapse = useContext(ZoneMapCtx)?.collapse;
+  if (!collapse) return null;
+  return (
+    <button type="button" aria-label={t('staff.zoneMap.hide')} title={t('staff.zoneMap.hide')} onClick={collapse} data-testid="form-fold"
+      className="absolute end-2 top-2 flex h-7 w-7 items-center justify-center rounded-full text-muted hover:bg-white/5 hover:text-ink">✕</button>
+  );
+}
+
 /** Things drawn over the shared map (step back, hints) — at its top, left of the side panel. */
 export function OverMap({ children }: { children: React.ReactNode }) {
   const ctx = useContext(ZoneMapCtx);
