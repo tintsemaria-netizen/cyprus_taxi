@@ -67,7 +67,7 @@ const driver: Catalog<typeof en> = {
   offer: {
     nextTitle: 'ההזמנה הבאה — אחרי ההורדה',
     nextShort: 'הבאה',
-    giveBack: 'ויתור',
+    giveBackNext: 'ויתור על ההזמנה הבאה',
     giveBackConfirm: 'לוותר על ההזמנה הבאה? הלקוח יקבל נהג אחר.',
     nextHint: 'הורידו את הנוסע וסעו ישר לשם',
     minShort: "{min} דק׳",

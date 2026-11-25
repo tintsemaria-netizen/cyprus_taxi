@@ -46,6 +46,8 @@ interface TrackView {
   pickupEtaMin: number | null;
   /** The driver is finishing another ride nearby first (next order, 2026-11-25). */
   finishingNearby?: boolean;
+  /** Where the driver drops his current passenger off — a bare point, nothing else (2026-11-25). */
+  finishingAt?: { lat: number; lng: number } | null;
   pickupEtaApprox: boolean;
   fareCents: number | null;
   startCode: string | null;
@@ -392,6 +394,8 @@ export default function TrackApp() {
   // A pre-booking (2026-11-19) shows the whole route from afar too: both ends, framed together.
   if (onTrip || view.status === 'SEARCHING' || view.status === 'REQUESTED') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
   if (!onTrip) markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label, pulse: view.status === 'SEARCHING' });
+  // The finishing driver's drop-off: just a point on the map, no label (operator 2026-11-25).
+  if (view.finishingAt && !onTrip) markers.push({ id: 'fin', lat: view.finishingAt.lat, lng: view.finishingAt.lng, kind: 'stop', label: '', noFit: false });
   if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: t('track.yourDriver'), stale: liveLocation.freshness === 'stale' || dr.estimated });
 
   const etaMinText = view.pickupEtaMin != null ? tp('common.minutes', view.pickupEtaMin) : null;

@@ -2878,8 +2878,10 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   TrackApp headline track.finishing(Eta). sw.js: next-offer title, ride.assignedNext, ride.nextOnWay (8 langs).
 - Tests: tests/next-order.db.test.ts (3). Full suite 478 passed.
 - Driver gives the next ride back: lifecycle.driverReleaseNext → rematchBooking (search again without him);
-  POST /api/v1/driver/next/release; «Отказаться» on NextRidePill with a confirm. Test added (4 in the file).
-- Passenger waiting for the finishing driver sees the car moving, NOT the other passenger's drop-off (privacy).
+  POST /api/v1/driver/next/release; in the ≡ menu of the navigation screen (DriverNavigation onGiveBackNext),
+  with a confirm (operator: not on the main screen). Test added (4 in the file).
+- Passenger waiting for the finishing driver: trackingView.finishingAt = the bare drop-off point of the current trip
+  (operator's decision) — no address/name; TrackApp draws an unlabelled dot. Test checks no label leaks.
 
 ## 2026-11-25 01:20 — admin zone map rotates 360° + zooms together (DEPLOYED a1ce8cb)
 

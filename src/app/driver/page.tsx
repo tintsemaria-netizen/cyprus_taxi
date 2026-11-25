@@ -390,20 +390,27 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   if (!trip && rateFor) return <RatePassengerSheet bookingId={rateFor.bookingId} passengerName={rateFor.name} onDone={() => setRateFor(null)} />;
   const offerSecs = offer ? Math.max(0, Math.ceil(((offer.localDeadline ?? new Date(offer.expiresAt).getTime()) - nowMs) / 1000)) : 0;
 
+  // The driver gives back his next ride (from the ≡ menu, 2026-11-25): asks first; it goes to another driver.
+  async function giveBackNext() {
+    if (!window.confirm(t('driver.offer.giveBackConfirm'))) return;
+    try { await api('/driver/next/release', { method: 'POST' }); } catch (e) { if (e instanceof ApiRequestError) setBanner(tErrRef.current(e)); }
+    await load();
+  }
   // An accepted ride takes over the whole screen: navigation + the one action for the stage, no tabs.
   if (trip) {
     return (
       <>
         <DriverNavigation trip={trip} pos={pos} gps={gps} nowMs={nowMs} startCode={startCode} setStartCode={setStartCode}
           banner={banner} onDismissBanner={() => setBanner(null)} onStartGps={startGps} onTripAction={tripAction}
-          pair={data.pair ?? null} onOpenCoRider={() => window.dispatchEvent(new Event(OPEN_CO_RIDER))} />
+          pair={data.pair ?? null} onOpenCoRider={() => window.dispatchEvent(new Event(OPEN_CO_RIDER))}
+          onGiveBackNext={data.next ? giveBackNext : null} />
         {/* Ride-share (Task 022): the second passenger's leg, and a co-rider proposal to decide on the spot. */}
         {trip.status === 'IN_PROGRESS' && data.gpsMeter && <GpsMeterCard m={data.gpsMeter} />}
         {data.coRider && <CoRiderLegPill leg={data.coRider} share={data.share ?? null} pair={data.pair ?? null} onChanged={() => { void load(); void loadDash(); }} onError={setBanner} />}
         {data.shareProposal && <DriverShareProposalSheet key={data.shareProposal.groupId} p={data.shareProposal} onAnswered={() => { void load(); }} />}
         {/* Next order while finishing this trip (2026-11-25): the offer, then a pill with the accepted next ride. */}
         {offer && offer.afterTrip && <NextOfferCard offer={offer} secs={offerSecs} busy={offerBusy} onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} />}
-        {data.next && !offer && <NextRidePill next={data.next} onChanged={() => { void load(); }} />}
+        {data.next && !offer && <NextRidePill next={data.next} />}
       </>
     );
   }
@@ -1127,22 +1134,14 @@ function NextOfferCard({ offer, secs, busy, onAccept, onDecline }: { offer: Offe
   );
 }
 
-function NextRidePill({ next, onChanged }: { next: NonNullable<CurrentTrip['next']>; onChanged: () => void }) {
+function NextRidePill({ next }: { next: NonNullable<CurrentTrip['next']> }) {
   const { t } = useT();
-  const [busy, setBusy] = useState(false);
-  // The driver may give the next ride back (2026-11-25, operator): asks first, then it goes to another driver.
-  const giveBack = async () => {
-    if (busy || !window.confirm(t('driver.offer.giveBackConfirm'))) return;
-    setBusy(true);
-    try { await api('/driver/next/release', { method: 'POST' }); } catch { /* refreshed below either way */ }
-    setBusy(false); onChanged();
-  };
+  // Info only on the main screen; giving it back is in the ≡ menu (operator 2026-11-25).
   return (
     // Above the navigation screen (z-50), under its instruction panel.
     <div style={{ top: 'calc(118px + env(safe-area-inset-top))' }} className="pointer-events-none fixed inset-x-0 z-[55] mx-auto flex max-w-lg justify-center px-3" data-testid="next-ride">
-      <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full border-2 border-accent bg-page/95 py-1 pe-1 ps-3 text-sm shadow-card">
-        <span className="min-w-0 truncate"><span className="font-semibold text-accent">{t('driver.offer.nextShort')}:</span> {next.pickup.label} · {next.passengerName}</span>
-        <button type="button" onClick={giveBack} disabled={busy} className="shrink-0 rounded-full border border-danger/50 px-2.5 py-0.5 text-xs font-semibold text-danger" data-testid="next-give-back">{t('driver.offer.giveBack')}</button>
+      <div className="pointer-events-auto max-w-full truncate rounded-full border-2 border-accent bg-page/95 px-3 py-1.5 text-sm shadow-card">
+        <span className="font-semibold text-accent">{t('driver.offer.nextShort')}:</span> {next.pickup.label} · {next.passengerName}
       </div>
     </div>
   );

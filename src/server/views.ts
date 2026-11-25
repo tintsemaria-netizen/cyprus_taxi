@@ -74,6 +74,13 @@ export async function trackingView(bookingId: string) {
   // His driver is still finishing another ride nearby (next order, 2026-11-25): told honestly, and the
   // minutes count the rest of that ride.
   const finishingNearby = !!active?.queuedDriverId;
+  // …and where he drops that passenger off (operator 2026-11-25): only the point — no address, no name, nothing
+  // else about the passenger in the car.
+  let finishingAt: { lat: number; lng: number } | null = null;
+  if (finishingNearby && active) {
+    const cur = await prisma.assignment.findFirst({ where: { activeDriverId: active.driverId }, select: { booking: { select: { dropoffLat: true, dropoffLng: true } } } });
+    if (cur) finishingAt = { lat: cur.booking.dropoffLat, lng: cur.booking.dropoffLng };
+  }
 
   if (active) {
     vehicle = {
@@ -163,6 +170,7 @@ export async function trackingView(bookingId: string) {
     pickupEtaMin,
     pickupEtaApprox,
     finishingNearby,
+    finishingAt,
     fareCents: booking.fareCents ?? null,
     canCancel: PASSENGER_CANCELABLE.includes(booking.status),
     // «Искать снова» only right after the search failed (2026-11-20), not on an old order.

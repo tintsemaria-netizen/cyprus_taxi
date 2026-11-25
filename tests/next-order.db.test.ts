@@ -75,6 +75,9 @@ describe('next order for a driver finishing a trip', () => {
     expect((await driverCurrentTrip(a)).next?.bookingId).toBe(b2.id);
     const tv = (await trackingView(b2.id))!;
     expect(tv.finishingNearby).toBe(true);
+    // Only the bare point of the other passenger's drop-off — no address or name anywhere in the view.
+    expect(tv.finishingAt).toEqual({ lat: D.lat, lng: D.lng });
+    expect(JSON.stringify(tv)).not.toContain('Drop-off D');
     // He finishes the current trip → the next ride becomes his trip, the passenger hears he is on the way.
     expect((await completeTrip(b1.id, a, b1.revision)).ok).toBe(true);
     expect((await prisma.booking.findUnique({ where: { id: b2.id } }))!.status).toBe('EN_ROUTE');
