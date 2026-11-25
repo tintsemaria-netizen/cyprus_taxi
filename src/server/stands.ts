@@ -59,12 +59,42 @@ export async function standQueueOrder(standIds: string[]): Promise<{ driverId: s
   return prisma.standQueue.findMany({ where: { standId: { in: standIds } }, orderBy: [{ enteredAt: 'asc' }, { driverId: 'asc' }], select: { driverId: true, standId: true, lastInAt: true } });
 }
 
+/** Queue entries with each driver's car class (orders are matched by class, so «cars ahead» counts his class). */
+async function queueWithClass(standIds: string[]) {
+  const rows = await prisma.standQueue.findMany({ where: { standId: { in: standIds } }, orderBy: [{ enteredAt: 'asc' }, { driverId: 'asc' }] });
+  const b = await prisma.driverVehicleBinding.findMany({ where: { driverId: { in: rows.map((r) => r.driverId) }, endedAt: null }, select: { driverId: true, vehicle: { select: { vClass: true } } } });
+  const cls = new Map(b.map((x) => [x.driverId, x.vehicle.vClass as string]));
+  return rows.map((r) => ({ ...r, vClass: cls.get(r.driverId) ?? 'COMFORT' }));
+}
+
+/** Rough wait (minutes) for the n-th car of a class: from the airport's orders of that class in the last 2 hours. */
+async function waitMinutes(airport: string | null, vClass: string, nth: number, now = new Date()): Promise<number | null> {
+  if (!airport) return null;
+  await ensureAirportAreas();
+  const since = new Date(now.getTime() - 120 * 60_000);
+  const rows = await prisma.booking.findMany({ where: { createdAt: { gte: since }, vClass: vClass as 'COMFORT' | 'XL' }, select: { pickupLat: true, pickupLng: true } });
+  const n = rows.filter((r) => airportAt(r.pickupLat, r.pickupLng) === airport).length;
+  if (!n) return null;
+  return Math.max(1, Math.round((nth * 120) / n));
+}
+
+/** Every stand for the drivers' map (2026-11-25, like Bolt's waiting area): its outline, on/off and how many wait. */
+export async function standsOverview(): Promise<{ id: string; name: string; polygon: [number, number][]; on: boolean; waiting: number }[]> {
+  const stands = await taxiStands();
+  if (!stands.length) return [];
+  const q = await prisma.standQueue.groupBy({ by: ['standId'], _count: { _all: true } });
+  const cnt = new Map(q.map((x) => [x.standId, x._count._all]));
+  return stands.map((s) => ({ id: s.id, name: s.name, polygon: s.polygon, on: s.active, waiting: s.active ? cnt.get(s.id) ?? 0 : 0 }));
+}
+
 /** For the driver's screen: the stand he is in and his place in its queue. */
-export async function standStateFor(driverId: string, p: { lat: number; lng: number } | null): Promise<{ name: string; on: boolean; place: number | null; total: number; polygon: [number, number][] } | null> {
+export async function standStateFor(driverId: string, p: { lat: number; lng: number } | null): Promise<{ name: string; on: boolean; place: number | null; total: number; polygon: [number, number][]; ahead?: number; vClass?: string; waitMin?: number | null } | null> {
   const entry = await prisma.standQueue.findUnique({ where: { driverId } });
   const stand = entry ? (await taxiStands()).find((s) => s.id === entry.standId) ?? null : p ? await standAt(p) : null;
   if (!stand) return null;
   if (!stand.active || !entry) return { name: stand.name, on: stand.active, place: null, total: 0, polygon: stand.polygon };
-  const q = await prisma.standQueue.findMany({ where: { standId: stand.id }, orderBy: [{ enteredAt: 'asc' }, { driverId: 'asc' }], select: { driverId: true } });
-  return { name: stand.name, on: true, place: q.findIndex((r) => r.driverId === driverId) + 1, total: q.length, polygon: stand.polygon };
+  const q = await queueWithClass([stand.id]);
+  const i = q.findIndex((r) => r.driverId === driverId), mine = q[i]?.vClass ?? 'COMFORT';
+  const ahead = q.slice(0, Math.max(0, i)).filter((r) => r.vClass === mine).length;
+  return { name: stand.name, on: true, place: i + 1, total: q.length, polygon: stand.polygon, ahead, vClass: mine, waitMin: await waitMinutes(stand.airport, mine, ahead + 1).catch(() => null) };
 }

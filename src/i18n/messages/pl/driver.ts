@@ -46,12 +46,11 @@ const driver: Catalog<typeof en> = {
   },
   // «Стоянка с очередью» (2026-11-25).
   stand: {
+    queueCount: "{n} w kolejce",
+    closed: "zamknięty",
+    wait: "Czekanie ≈ {min} min",
     ahead: "Aut przed tobą: {n}",
-    first: "Jesteś pierwszy — następne zlecenie z lotniska jest twoje",
-    inQueue: "w kolejce {total}",
-    mapLabel: "{name} · jesteś {place}.",
-    mapOff: "{name} · brak zleceń",
-    place: "«{name}»: jesteś {place}. z {total} w kolejce",
+    first: "Jesteś pierwszy w kolejce",
     keepOpen: "Trzymaj aplikację otwartą — inaczej zlecenie trafi do następnego.",
     off: "«{name}» jest wyłączony — tu nie przychodzą zlecenia.",
   },
