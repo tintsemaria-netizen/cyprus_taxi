@@ -154,6 +154,7 @@ const staff = {
     empty: 'No vehicles yet.',
   },
   zoneMap: {menu: "Menu", info: "Info", hide: "Hide the panel", show: "Show the panel"},
+  confirm: { on: "Switch on «{name}»?", off: "Switch off «{name}»?", activate: "Activate «{name}»?", deactivate: "Deactivate «{name}»?" },
   noGo: {
     emptyPoint: "No pickup points — passengers can set the pickup anywhere.",
     emptyStand: "No queue stands.",

@@ -69,7 +69,7 @@ function Fleets() {
             </div>
             <span className={`chip ${f.active ? '!text-accent' : '!text-danger'}`}>{f.active ? t('staff.active') : t('staff.inactive')}</span>
             {!f.owner.isDriver && <button className="btn-ghost !min-h-0 !py-1.5 text-xs" onClick={() => patch(f, { resetPassword: true })}>{t('staff.drivers.resetPw')}</button>}
-            <button className="btn-ghost !min-h-0 !py-1.5 text-xs" onClick={() => patch(f, { active: !f.active })}>{f.active ? t('staff.deactivate') : t('staff.activate')}</button>
+            <button className="btn-ghost !min-h-0 !py-1.5 text-xs" onClick={() => { if (window.confirm(t(f.active ? 'staff.confirm.deactivate' : 'staff.confirm.activate', { name: f.name }))) void patch(f, { active: !f.active }); }}>{f.active ? t('staff.deactivate') : t('staff.activate')}</button>
           </div>
         ))}
         {rows.length === 0 && <p className="p-4 text-sm text-muted">{t('staff.fleets.empty')}</p>}

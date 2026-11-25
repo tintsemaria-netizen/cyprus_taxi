@@ -156,6 +156,7 @@ const staff: Catalog<typeof en> = {
     empty: 'Автомобилей пока нет.',
   },
   zoneMap: {menu: "Меню", info: "Инфо", hide: "Свернуть панель", show: "Открыть панель"},
+  confirm: { on: "Включить «{name}»?", off: "Выключить «{name}»?", activate: "Активировать «{name}»?", deactivate: "Деактивировать «{name}»?" },
   noGo: {
     emptyPoint: "Точек подачи нет — клиент ставит подачу где угодно.",
     emptyStand: "Стоянок с очередью нет.",

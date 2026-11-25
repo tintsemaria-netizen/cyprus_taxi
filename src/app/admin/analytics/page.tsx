@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Switch } from '@/components/staff/Switch';
 import { StaffShell } from '@/components/staff/StaffShell';
 import { api } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
@@ -68,7 +69,7 @@ function Analytics() {
         <div className="flex flex-wrap items-end gap-2">
           <label className="text-xs text-muted">{t('staff.an.from')}<input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className="field mt-1 block !min-h-0 !py-1.5" /></label>
           <label className="text-xs text-muted">{t('staff.an.to')}<input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className="field mt-1 block !min-h-0 !py-1.5" /></label>
-          <label className="flex items-center gap-1.5 pb-2 text-xs text-muted"><input type="checkbox" checked={test} onChange={(e) => setTest(e.target.checked)} /> {t('staff.an.includeTest')}</label>
+          <div className="pb-2 text-xs text-muted">{/* a view filter: changes nothing, so no confirmation */}<Switch checked={test} onChange={setTest} label={t('staff.an.includeTest')} /></div>
           <button onClick={() => void load()} className="btn-ghost !min-h-0 !py-1.5" disabled={loading}>{loading ? t('staff.loading') : t('staff.an.refresh')}</button>
         </div>
       </div>

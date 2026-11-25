@@ -119,7 +119,7 @@ function Drivers() {
               </select>
             )}
             <button className="btn-ghost !min-h-0 !py-1.5 text-xs" onClick={() => resetPw(d)}>{t('staff.drivers.resetPw')}</button>
-            <button className="btn-ghost !min-h-0 !py-1.5 text-xs" onClick={() => toggleActive(d)}>{d.active ? t('staff.deactivate') : t('staff.activate')}</button>
+            <button className="btn-ghost !min-h-0 !py-1.5 text-xs" onClick={() => { if (window.confirm(t(d.active ? 'staff.confirm.deactivate' : 'staff.confirm.activate', { name: d.publicName }))) void toggleActive(d); }}>{d.active ? t('staff.deactivate') : t('staff.activate')}</button>
           </div>
         ))}
         {drivers.length === 0 && <p className="p-4 text-sm text-muted">{t('staff.drivers.empty')}</p>}

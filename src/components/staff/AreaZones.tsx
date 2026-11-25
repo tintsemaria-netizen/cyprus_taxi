@@ -6,6 +6,7 @@
 //    pickup points (airport exits, port gates …) — every pickup inside goes to the nearest one.
 // Server: src/server/no-go.ts.
 import { smoothRing, untangle } from '@/lib/ring';
+import { Switch } from '@/components/staff/Switch';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamicImport from 'next/dynamic';
 import { FoldX, OverMap, PanelHead, useZoneMap } from '@/components/staff/ZoneWorkspace';
@@ -237,11 +238,8 @@ function AreaZones({ kind }: { kind: Kind }) {
                 // «Минимальный заказ отсюда» (operator 2026-11-25): empty = no minimum.
                 <div className="text-sm" data-testid="nogo-min">
                   {/* The switch asks first (operator 2026-11-25): it changes what passengers pay. */}
-                  <label className="flex items-center justify-between gap-2">
-                    <span>{t('staff.noGo.minFrom')}</span>
-                    <input type="checkbox" className="h-5 w-5 accent-[#C8FF46]" checked={draft.minOn} data-testid="nogo-min-on"
-                      onChange={(e) => { const on = e.target.checked; if (window.confirm(t(on ? 'staff.noGo.minOnConfirm' : 'staff.noGo.minOffConfirm', { name: draft.name || '—' }))) setDraft({ ...draft, minOn: on }); }} />
-                  </label>
+                  <Switch checked={draft.minOn} onChange={(on) => setDraft({ ...draft, minOn: on })} label={t('staff.noGo.minFrom')} testid="nogo-min-on"
+                    confirmOn={t('staff.noGo.minOnConfirm', { name: draft.name || '—' })} confirmOff={t('staff.noGo.minOffConfirm', { name: draft.name || '—' })} />
                   <div className={`mt-1 grid grid-cols-2 gap-2 ${draft.minOn ? '' : 'opacity-50'}`}>
                     <label className="text-xs text-muted">Comfort, €<input className="field mt-0.5" inputMode="decimal" value={draft.minComfort} onChange={(e) => setDraft({ ...draft, minComfort: e.target.value })} placeholder="—" data-testid="nogo-min-comfort" /></label>
                     <label className="text-xs text-muted">XL, €<input className="field mt-0.5" inputMode="decimal" value={draft.minXl} onChange={(e) => setDraft({ ...draft, minXl: e.target.value })} placeholder="—" data-testid="nogo-min-xl" /></label>
@@ -291,7 +289,8 @@ function AreaZones({ kind }: { kind: Kind }) {
                   <p className="text-xs text-muted">{t('staff.noGo.standTerritoryHint')}</p>
                 </div>
               )}
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} data-testid="nogo-active" />{t(draft.kind === 'STAND' ? 'staff.noGo.standOn' : 'staff.fixed.active')}</label>
+              <Switch checked={draft.active} onChange={(on) => setDraft({ ...draft, active: on })} label={t(draft.kind === 'STAND' ? 'staff.noGo.standOn' : 'staff.fixed.active')} testid="nogo-active"
+                confirmOn={t('staff.confirm.on', { name: draft.name || '—' })} confirmOff={t('staff.confirm.off', { name: draft.name || '—' })} />
               {draft.kind === 'STAND' && <p className="text-xs text-muted">{t('staff.noGo.standOnHint')}</p>}
               <div className="text-xs text-muted">{t('staff.fixed.points', { n: draft.polygon.length })}</div>
               <div className="flex gap-2">
@@ -334,7 +333,7 @@ function AreaZones({ kind }: { kind: Kind }) {
               )}
               <div className="mt-2 flex gap-2 text-sm">
                 <button type="button" className="text-accent" onClick={() => startEdit(z)}>{t('staff.fixed.edit')}</button>
-                <button type="button" className="text-muted" onClick={() => toggle(z)}>{z.kind === 'STAND' ? t(z.active ? 'staff.noGo.queueOffBtn' : 'staff.noGo.queueOnBtn') : z.active ? t('staff.deactivate') : t('staff.activate')}</button>
+                <button type="button" className="text-muted" onClick={() => { if (window.confirm(t(z.kind === 'STAND' ? (z.active ? 'staff.confirm.off' : 'staff.confirm.on') : z.active ? 'staff.confirm.deactivate' : 'staff.confirm.activate', { name: z.name }))) void toggle(z); }}>{z.kind === 'STAND' ? t(z.active ? 'staff.noGo.queueOffBtn' : 'staff.noGo.queueOnBtn') : z.active ? t('staff.deactivate') : t('staff.activate')}</button>
                 <button type="button" className="ms-auto text-danger" onClick={() => remove(z)}>{t('staff.fixed.delete')}</button>
               </div>
             </div>

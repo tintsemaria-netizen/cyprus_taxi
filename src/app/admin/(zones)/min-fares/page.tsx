@@ -3,6 +3,7 @@
 // Admin «Минимум предзаказа» (2026-11-22, operator): areas on the map — one per town / district — with the
 // minimum price of a PRE-BOOKED ride inside the area, Comfort and XL separately. Above it the meter counts.
 import { untangle } from '@/lib/ring';
+import { Switch } from '@/components/staff/Switch';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamicImport from 'next/dynamic';
 import { FoldX, OverMap, PanelHead, useZoneMap } from '@/components/staff/ZoneWorkspace';
@@ -150,7 +151,8 @@ function MinFares() {
                   <input className="field mt-1" inputMode="decimal" value={draft.xl} onChange={(e) => setDraft({ ...draft, xl: e.target.value })} data-testid="minfare-xl" />
                 </label>
               </div>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />{t('staff.fixed.active')}</label>
+              <Switch checked={draft.active} onChange={(on) => setDraft({ ...draft, active: on })} label={t('staff.fixed.active')} testid="zone-active"
+                confirmOn={t('staff.confirm.on', { name: draft.name || '—' })} confirmOff={t('staff.confirm.off', { name: draft.name || '—' })} />
               <div className="text-xs text-muted">{t('staff.fixed.points', { n: draft.polygon.length })}</div>
               <div className="flex gap-2">
                 <button type="button" className="btn-ghost !min-h-[40px] flex-1 !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => { lastChange.current = 0; setPoly(draft.polygon.slice(0, -1)); }}>{t('staff.fixed.undo')}</button>
@@ -175,7 +177,7 @@ function MinFares() {
               <PriceRow z={z} onSaved={load} />
               <div className="mt-2 flex gap-2 text-sm">
                 <button type="button" className="text-accent" onClick={() => startEdit(z)}>{t('staff.fixed.edit')}</button>
-                <button type="button" className="text-muted" onClick={() => toggle(z)}>{z.active ? t('staff.deactivate') : t('staff.activate')}</button>
+                <button type="button" className="text-muted" onClick={() => { if (window.confirm(t(z.active ? 'staff.confirm.deactivate' : 'staff.confirm.activate', { name: z.name }))) void toggle(z); }}>{z.active ? t('staff.deactivate') : t('staff.activate')}</button>
                 <button type="button" className="ms-auto text-danger" onClick={() => remove(z)}>{t('staff.fixed.delete')}</button>
               </div>
             </div>

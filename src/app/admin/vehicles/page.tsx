@@ -94,7 +94,7 @@ function Vehicles() {
                 {fleets.map((f) => <option key={f.id} value={f.id}>{t('staff.drivers.fleet')}: {f.name}</option>)}
               </select>
             )}
-            <button className="btn-ghost !min-h-0 !py-1.5 text-xs" onClick={() => toggle(v)}>{v.active ? t('staff.deactivate') : t('staff.activate')}</button>
+            <button className="btn-ghost !min-h-0 !py-1.5 text-xs" onClick={() => { if (window.confirm(t(v.active ? 'staff.confirm.deactivate' : 'staff.confirm.activate', { name: v.plate }))) void toggle(v); }}>{v.active ? t('staff.deactivate') : t('staff.activate')}</button>
           </div>
         ))}
         {rows.length === 0 && <p className="p-4 text-sm text-muted">{t('staff.vehicles.empty')}</p>}
