@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-26 — map picker knows territories (deployed)
+- area-client `pickerSpot(kind, p, zoom)` / `pickerOutlines`. GoogleMapPicker + MapPicker: outline near the centre, on idle/moveend slide to the territory point, label = point name, confirm returns the point (pickup: pickup points; destination: drop-off points; stop: unchanged).
+
 ## 2026-11-26 — territory tool toggles (deployed)
 - AreaZones Mode gains 'none': «Углы / Точки подачи / Точки высадки» toggle; only the active tool's tools render (under the buttons); existing POINT opens with 'none', new with 'corners'; NOGO/STAND always corners.
 
