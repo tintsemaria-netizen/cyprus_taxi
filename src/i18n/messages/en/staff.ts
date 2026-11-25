@@ -156,6 +156,12 @@ const staff = {
   zoneMap: {menu: "Menu", info: "Info", hide: "Hide the panel", show: "Show the panel"},
   confirm: { on: "Switch on «{name}»?", off: "Switch off «{name}»?", activate: "Activate «{name}»?", deactivate: "Deactivate «{name}»?" },
   noGo: {
+    pointsSwitch: "Pickup and drop-off points",
+    pointsSwitchHint: "Off: the passenger is not moved — pickup and drop-off where they put them. The points are kept.",
+    pointsOnConfirm: "Switch on the pickup and drop-off points of «{name}»? Passengers inside the territory will be moved to the points.",
+    pointsOffConfirm: "Switch off the pickup and drop-off points of «{name}»? Passengers will no longer be moved to the points. The points are kept.",
+    territoryOn: "Territory «{name}»",
+    territoryOnHint: "Off — the territory does nothing at all: no points, no minimum fare, no fixed fares, no stands from it.",
     noPickup: "No pickup points — the passenger sets the pickup anywhere inside the territory.",
     emptyPoint: "No territories.",
     emptyStand: "No queue stands.",

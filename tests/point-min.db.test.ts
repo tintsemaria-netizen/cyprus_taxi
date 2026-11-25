@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { prisma } from '@/lib/db';
-import { invalidateNoGoCache, noGoData, noGoSchema, snapPickup } from '@/server/no-go';
+import { invalidateNoGoCache, noGoData, noGoSchema, snapPickup, snapDropoff } from '@/server/no-go';
+import { GET as publicNoGo } from '@/app/api/v1/no-go/route';
 import { invalidateFixedFareCache } from '@/server/fixed-fares';
 import { invalidateMinFareCache } from '@/server/min-fares';
 import { createQuote } from '@/server/quote';
@@ -83,6 +84,23 @@ describe('minimum fare from a pickup point', () => {
     invalidateNoGoCache();
     const inside = { lat: 34.6435, lng: 33.0135 };
     expect(await snapPickup(inside)).toEqual(inside);
+    expect((await quote(inside, near)).totalCents).toBe(2000);
+  });
+
+  it('«Точки подачи и высадки» switched off: nobody is moved, the points are kept, the minimum still applies', async () => {
+    const t = await prisma.noGoZone.create({ data: { name: 'PM test pts', kind: 'POINT', polygon: port, points: [{ ...gate, name: 'Gate' }], dropPoints: [{ lat: 34.6425, lng: 33.012, name: 'Drop' }], minComfortCents: 2000 } });
+    invalidateNoGoCache();
+    const inside = { lat: 34.6435, lng: 33.0135 };
+    expect((await snapPickup(inside)).lat).toBe(gate.lat);
+    const base = { name: t.name, kind: 'POINT' as const, polygon: port, points: [{ ...gate, name: 'Gate' }], dropPoints: [{ lat: 34.6425, lng: 33.012, name: 'Drop' }] };
+    await prisma.noGoZone.update({ where: { id: t.id }, data: noGoData(noGoSchema.parse({ ...base, pointsActive: false })) });
+    invalidateNoGoCache();
+    expect(await snapPickup(inside)).toEqual(inside);
+    expect(await snapDropoff(inside)).toEqual(inside);
+    const pub = await (await publicNoGo()).json();
+    const mine = (pub.territories ?? pub.data?.territories).find((x: { name: string }) => x.name === 'PM test pts');
+    expect([mine.points.length, mine.dropPoints.length]).toEqual([0, 0]);
+    expect((await prisma.noGoZone.findUnique({ where: { id: t.id } }))?.points).toHaveLength(1);
     expect((await quote(inside, near)).totalCents).toBe(2000);
   });
 

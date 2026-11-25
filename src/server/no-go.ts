@@ -12,7 +12,7 @@ import { AIRPORT_CODES, setAirportAreas } from '@/lib/airports';
 export interface NoGo { id: string; name: string; polygon: [number, number][] }
 /** «Точки подачи» (2026-11-24): inside the territory every pickup goes to the nearest of its points. */
 export interface Spot { lat: number; lng: number; name: string }
-export interface PickupPoint extends NoGo { points: Spot[]; dropPoints: Spot[]; airport: string | null; minComfortCents: number | null; minXlCents: number | null; minActive: boolean }
+export interface PickupPoint extends NoGo { points: Spot[]; dropPoints: Spot[]; airport: string | null; minComfortCents: number | null; minXlCents: number | null; minActive: boolean; pointsActive: boolean }
 export const spotLabel = (zone: string, s: Spot) => (s.name ? `${zone} · ${s.name}` : zone);
 function parseSpots(v: unknown): Spot[] {
   if (!Array.isArray(v)) return [];
@@ -42,7 +42,7 @@ async function load(now: number) {
   cache = {
     at: now,
     rows: rows.filter((r) => r.kind === 'NOGO').map(z),
-    points: rows.filter((r) => r.kind === 'POINT').map((r) => ({ ...z(r), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints), airport: r.airport ?? null, minComfortCents: r.minComfortCents ?? null, minXlCents: r.minXlCents ?? null, minActive: r.minActive })),
+    points: rows.filter((r) => r.kind === 'POINT').map((r) => ({ ...z(r), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints), airport: r.airport ?? null, minComfortCents: r.minComfortCents ?? null, minXlCents: r.minXlCents ?? null, minActive: r.minActive, pointsActive: r.pointsActive })),
     stands: rows.filter((r) => r.kind === 'STAND').map((r) => ({ ...z(r), active: r.active, airport: r.airport ?? null, forZoneId: r.forZoneId ?? null })),
   };
   // The airport is a territory marked «это аэропорт» (2026-11-25) — by the same rounded outline the passenger sees.
@@ -61,7 +61,7 @@ const inside = (p: { lat: number; lng: number }, poly: [number, number][]) => po
  *  passenger), else the nearest — with «territory · point» as the label. */
 export async function snapPickup<T extends { lat: number; lng: number; label?: string }>(p: T): Promise<T> {
   for (const z of await pickupPoints()) {
-    if (!z.points.length || !inside(p, z.polygon)) continue; // no pickup points → the pickup stays as it is
+    if (!z.pointsActive || !z.points.length || !inside(p, z.polygon)) continue; // no (or switched-off) pickup points → the pickup stays as it is
     let best = z.points[0], bd = Infinity;
     for (const s of z.points) { const d = (s.lat - p.lat) ** 2 + ((s.lng - p.lng) * Math.cos((p.lat * Math.PI) / 180)) ** 2; if (d < bd) { bd = d; best = s; } }
     return { ...p, lat: best.lat, lng: best.lng, label: spotLabel(z.name, best) };
@@ -73,7 +73,7 @@ export async function snapPickup<T extends { lat: number; lng: number; label?: s
  *  the airport's drop-off is at Departures, not at the pickup points). No drop-off points → unchanged. */
 export async function snapDropoff<T extends { lat: number; lng: number; label?: string }>(p: T): Promise<T> {
   for (const z of await pickupPoints()) {
-    if (!z.dropPoints.length || !inside(p, z.polygon)) continue;
+    if (!z.pointsActive || !z.dropPoints.length || !inside(p, z.polygon)) continue;
     let best = z.dropPoints[0], bd = Infinity;
     for (const s of z.dropPoints) { const d = (s.lat - p.lat) ** 2 + ((s.lng - p.lng) * Math.cos((p.lat * Math.PI) / 180)) ** 2; if (d < bd) { bd = d; best = s; } }
     return { ...p, lat: best.lat, lng: best.lng, label: spotLabel(z.name, best) };
@@ -110,6 +110,7 @@ export const noGoSchema = z.object({
   minComfortCents: z.number().int().min(100).max(100_000).nullable().optional(),
   minXlCents: z.number().int().min(100).max(100_000).nullable().optional(),
   minActive: z.boolean().optional(), // the switch; absent = unchanged
+  pointsActive: z.boolean().optional(), // «Точки подачи и высадки» switch; absent = unchanged
   forZoneId: z.string().max(64).nullable().optional(), // STAND: the pickup territory whose orders it takes
 }).refine((d) => d.kind !== 'STAND' || !(d.airport === null && !d.forZoneId), { message: 'Choose the territory whose orders this stand takes.' })
   // A territory may have no pickup points (operator 2026-11-25): then it only marks a place (fixed fares, minimum
@@ -123,7 +124,7 @@ export function noGoData(d: z.infer<typeof noGoSchema>) {
     // Not sent (e.g. the on/off switch) → unchanged; a no-go zone is never an airport.
     ...(d.kind === 'POINT' || d.kind === 'STAND' ? (d.airport !== undefined ? { airport: d.airport } : {}) : { airport: null }),
     ...(d.kind === 'STAND' ? (d.forZoneId !== undefined ? { forZoneId: d.forZoneId } : {}) : { forZoneId: null }),
-    ...(d.kind === 'POINT' ? { ...(d.minComfortCents !== undefined ? { minComfortCents: d.minComfortCents } : {}), ...(d.minXlCents !== undefined ? { minXlCents: d.minXlCents } : {}), ...(d.minActive !== undefined ? { minActive: d.minActive } : {}) } : { minComfortCents: null, minXlCents: null }) };
+    ...(d.kind === 'POINT' ? { ...(d.minComfortCents !== undefined ? { minComfortCents: d.minComfortCents } : {}), ...(d.minXlCents !== undefined ? { minXlCents: d.minXlCents } : {}), ...(d.minActive !== undefined ? { minActive: d.minActive } : {}), ...(d.pointsActive !== undefined ? { pointsActive: d.pointsActive } : {}) } : { minComfortCents: null, minXlCents: null }) };
 }
 export const zoneView = (r: { points: unknown; dropPoints?: unknown; polygon: unknown } & Record<string, unknown>) =>
   ({ ...r, polygon: parsePolygon(r.polygon), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints) });
