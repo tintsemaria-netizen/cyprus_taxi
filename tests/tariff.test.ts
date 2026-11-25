@@ -30,8 +30,8 @@ describe('XL vehicle surcharge (our setting, 2026-11-16)', () => {
     expect(e.totalCents).toBe(1580 + 632); // 2212
     expect(e.lines.find((l) => l.code === 'xl')?.cents).toBe(632);
     expect(e.ruleVersion).toContain('xl40');
-    expect(e.rangeLowCents).toBe(Math.round(2212 * 0.85));
-    expect(e.rangeHighCents).toBe(Math.round(2212 * 1.15));
+    expect(e.rangeLowCents).toBe(Math.round(2212 * 0.88));
+    expect(e.rangeHighCents).toBe(Math.round(2212 * 1.12));
   });
   it('XL replaces the 5/6-passenger surcharge — never both', () => {
     const six = computeMeterEstimate({ distanceMeters: 10000, passengerCount: 6, at, vClass: 'XL' });

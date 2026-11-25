@@ -39,9 +39,9 @@ describe('pre-booking minimum by area', () => {
   it('booking rows use the same rule', () => {
     expect(bookingMin([NICOSIA], { pickupLat: centre.lat, pickupLng: centre.lng, dropoffLat: dali.lat, dropoffLng: dali.lng, scheduledAt: new Date(), priceType: null, vClass: 'COMFORT' })?.cents).toBe(2000);
   });
-  it('the ±15 % range never goes below the minimum; above it the estimate counts', () => {
-    expect(fareRangeCents(2000, 'REGULATED_METER_ESTIMATE', 2000)).toEqual([2000, 2300]);
-    expect(fareRangeCents(3000, 'REGULATED_METER_ESTIMATE', 2000)).toEqual([2550, 3450]);
-    expect(fareRangeCents(2000, 'REGULATED_METER_ESTIMATE')).toEqual([1700, 2300]);
+  it('the ±12 % range never goes below the minimum; above it the estimate counts', () => {
+    expect(fareRangeCents(2000, 'REGULATED_METER_ESTIMATE', 2000)).toEqual([2000, 2240]);
+    expect(fareRangeCents(3000, 'REGULATED_METER_ESTIMATE', 2000)).toEqual([2640, 3360]);
+    expect(fareRangeCents(2000, 'REGULATED_METER_ESTIMATE')).toEqual([1760, 2240]);
   });
 });

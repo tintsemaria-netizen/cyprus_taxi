@@ -814,7 +814,7 @@ export default function BookingApp() {
   }, [pickup, dropoff, viaStop]);
 
   // Fare estimate (server-issued quote) — recomputed when the trip inputs change.
-  // Only the ±15 % range is shown, no single «≈» figure (2026-11-16). An upfront fare (low = high) shows one price.
+  // Only the ±12 % range is shown (15 → 12 %, 2026-11-25), no single «≈» figure (2026-11-16). An upfront fare (low = high) shows one price.
   const fmtRange = (q: { rangeLowCents: number; rangeHighCents: number }) =>
     q.rangeLowCents === q.rangeHighCents ? fmt.money(q.rangeLowCents, 'EUR') : `${fmt.money(q.rangeLowCents, 'EUR')}–${fmt.money(q.rangeHighCents, 'EUR')}`;
   // A Nicosia wall time («2026-11-24T11:30») shown in the passenger's language and clock (24.11.2026, 11:30).
