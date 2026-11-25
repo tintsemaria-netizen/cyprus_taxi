@@ -2872,6 +2872,12 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-25 03:25 — «Попутчик −30%» notes (DEPLOYED 2465939)
+
+- ShareBookingOptions: no route note under the switched-off box; ON → hint + «Попутчик — только между …»;
+  tapping it when the route does not allow → red bubble with that note (4 s). Only the row is greyed.
+  Merged on top of the other session's b6cc9e9 (same box, hint only when on) — compatible.
+
 ## 2026-11-25 02:30 — next order for a finishing driver (DEPLOYED 4f3d211, 02:35)
 
 - Rule (operator): offered while the passenger is on board when the drop-off is ≤ 5 min away; ≤ 7 min when the new
