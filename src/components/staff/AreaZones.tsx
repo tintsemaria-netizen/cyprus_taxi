@@ -242,10 +242,11 @@ function AreaZones({ kind }: { kind: Kind }) {
                   {/* The switch asks first (operator 2026-11-25): it changes what passengers pay. */}
                   <Switch checked={draft.minOn} onChange={(on) => setDraft({ ...draft, minOn: on })} label={t('staff.noGo.minFrom')} testid="nogo-min-on"
                     confirmOn={t('staff.noGo.minOnConfirm', { name: draft.name || '—' })} confirmOff={t('staff.noGo.minOffConfirm', { name: draft.name || '—' })} />
-                  <div className={`mt-1 grid grid-cols-2 gap-2 ${draft.minOn ? '' : 'opacity-50'}`}>
+                  {/* Switched off — no price fields (operator 2026-11-26); the amounts are kept and come back with the switch. */}
+                  {draft.minOn && <div className="mt-1 grid grid-cols-2 gap-2">
                     <label className="text-xs text-muted">Comfort, €<input className="field mt-0.5" inputMode="decimal" value={draft.minComfort} onChange={(e) => setDraft({ ...draft, minComfort: e.target.value })} placeholder="—" data-testid="nogo-min-comfort" /></label>
                     <label className="text-xs text-muted">XL, €<input className="field mt-0.5" inputMode="decimal" value={draft.minXl} onChange={(e) => setDraft({ ...draft, minXl: e.target.value })} placeholder="—" data-testid="nogo-min-xl" /></label>
-                  </div>
+                  </div>}
                 </div>
               )}
               {draft.kind === 'POINT' && (
