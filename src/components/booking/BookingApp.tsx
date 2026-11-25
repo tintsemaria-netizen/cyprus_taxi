@@ -1327,9 +1327,8 @@ export default function BookingApp() {
               <span className="shrink-0 text-end">
                 {q ? (
                   <>
-                    {/* The usual price range in every case (operator 2026-11-25); with «Попутчик» on, a «−30 % с попутчиком» note under it. */}
+                    {/* The usual price range in every case (operator 2026-11-25); the co-rider price is in the box below. */}
                     <span className={`block font-semibold tabular-nums ${selected ? 'text-accent' : 'text-ink'}`}>{fmtRange(q)}</span>
-                    {shareOn && when === 'SCHEDULE' && cfg?.share && <span className="block text-[11px] font-semibold text-accent" data-testid="class-share-pct">{t('share.terms.minusPct', { pct: cfg.share.discountPct })}</span>}
                   </>
                 ) : <span className="text-xs text-muted">{quoting ? t('booking.form.pricing') : '—'}</span>}
               </span>
@@ -1346,7 +1345,7 @@ export default function BookingApp() {
         return (
           <div className="mt-2 rounded-[10px] border border-accent/50 bg-accent/10 px-3 py-2 text-[13px] text-ink" data-testid="share-prices">
             {/* Two sums, no range (TZ review 2026-11-23): what they pay with a co-rider and without one. */}
-            <div className="flex items-baseline justify-between gap-2"><span className="font-semibold">{t('share.terms.withPair')} <span className="ms-1 rounded-full bg-accent px-1.5 py-0.5 text-[11px] font-bold text-[#0b0f10]">−{cfg.share.discountPct}%</span></span><span className="text-base font-bold text-accent tabular-nums" data-testid="price-shared">{fmt.money(sharedCents(q.totalCents, cfg.share.discountPct), 'EUR')}</span></div>
+            <div className="flex items-baseline justify-between gap-2"><span className="font-semibold">{t('share.terms.withPair')} <span className="ms-1 rounded-full bg-accent px-1.5 py-0.5 text-[11px] font-bold text-[#0b0f10]">−{cfg.share.discountPct}%</span></span><span className="text-base font-bold text-accent tabular-nums" data-testid="price-shared">{fmtRange({ rangeLowCents: sharedCents(q.rangeLowCents, cfg.share.discountPct), rangeHighCents: sharedCents(q.rangeHighCents, cfg.share.discountPct) })}</span></div>
             <p className="text-xs text-muted">{t('share.terms.withPairWhen')}</p>
             <div className="mt-1.5 flex items-baseline justify-between gap-2"><span className="font-semibold">{t('share.terms.noPair')}</span><span className="text-base font-bold tabular-nums" data-testid="price-full">{fmtRange(q)}</span></div>
             <p className="text-xs text-muted">{q.priceType === 'REGULATED_FIXED' ? '' : `${t('share.terms.meter')} · `}{t('share.terms.noPairWhen')}</p>

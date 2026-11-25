@@ -17,7 +17,6 @@ const share: Catalog<typeof en> = {
     pickTo: 'עד',
     pickExact: 'איסוף ב־',
     inside: 'בתוך {from}–{to}.',
-    minusPct: "‎−{pct}% עם נוסע משותף",
     withPair: "עם נוסע משותף",
     withPairWhen: "אם נמצא נוסע משותף",
     noPair: "בלי נוסע משותף",

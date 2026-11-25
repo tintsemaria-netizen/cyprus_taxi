@@ -15,7 +15,6 @@ const share = {
     pickTo: 'to',
     pickExact: 'Pickup at',
     inside: 'Within {from}–{to}.',
-    minusPct: "−{pct}% with a co-rider",
     withPair: "With a co-rider",
     withPairWhen: "if we find a co-rider",
     noPair: "Without a co-rider",
