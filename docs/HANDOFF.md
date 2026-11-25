@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-25 — territory outline near the logo only (deployed)
+- BookingApp: outline + exit points only when the logo (last onCenterPick), pickup or drop-off is within 2 km (TERR_SHOW_M, nearTerritory in area-client). Outline width by zoom (GoogleMapView areaStroke; MapLibre interpolate). Snapping unchanged.
+
 ## 2026-11-25 ~11:20 — ПП hour list without «машина приедет в течение 15 минут» (deployed 443b75e)
 - `booking.slots.titleDepart` = first sentence only; unused `needHour` cleaned too (8 languages). The pickup span shows under the list once an hour is chosen («Подача 20:00–20:15»).
 - Full suite 482 passed / 1 skipped; live: chunk has the new text, 0 «приедет в течение 15 минут»; health ready.
