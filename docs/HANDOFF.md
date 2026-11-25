@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-25 ~22:40 — XL + ride-share: PARKED by the operator («потом XL»)
+- Problem: XL co-rider pays 70 % of XL ≈ 98 % of a solo Comfort; the XL driver earns no more for a longer trip; share orders max 3 people.
+- Ready, NOT merged: branch `share-comfort-only` (23147ca) — share Comfort-only (server + XL greyed with a note), Comfort pair ≤ 4 even in an XL car. Operator first said «не решение», then «убери, потом XL».
+- Proposed, not built: per-class discount (XL e.g. −15 %) + up to 5 people per XL share order (pair ≤ 6).
+
 ## 2026-11-25 — admin switches with confirmation; ✕ on edit forms (deployed)
 - src/components/staff/Switch.tsx (small switch, confirmOn/confirmOff). Used in zone forms (active, «Минимальный заказ отсюда», stand queue) and the analytics test filter (no confirm: view filter). Activate/deactivate buttons ask first: zones, stands, drivers, vehicles, fleets. `FoldX` ✕ in every zone edit form folds the panel.
 
