@@ -6,7 +6,7 @@ import { untangle } from '@/lib/ring';
 import { Switch } from '@/components/staff/Switch';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamicImport from 'next/dynamic';
-import { FoldX, OverMap, PanelHead, useZoneMap } from '@/components/staff/ZoneWorkspace';
+import { FormClose, OverMap, PanelHead, useDirty, useZoneMap } from '@/components/staff/ZoneWorkspace';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { Poly, RefZone } from '@/components/staff/ZoneEditorMap';
@@ -29,6 +29,7 @@ function MinFares() {
   const { t } = useT();
   const [zones, setZones] = useState<Zone[]>([]);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const { dirty, reset: resetDirty } = useDirty(draft); // ✕ and «Отмена» do not drop unsaved changes silently
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // «↶ Шаг назад»: every corner change can be undone; a continuous drag counts as one step.
@@ -76,8 +77,8 @@ function MinFares() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitKey]);
 
-  function startNew() { setMsg(null); resetHist(); setDraft({ id: null, name: '', comfort: '20', xl: '28', active: true, polygon: [] }); }
-  function startEdit(z: Zone) { setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, comfort: euro(z.comfortCents), xl: euro(z.xlCents), active: z.active, polygon: untangle(z.polygon) }); } // an old figure-8 opens as one loop (2026-11-24)
+  function startNew() { if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } resetDirty(); setMsg(null); resetHist(); setDraft({ id: null, name: '', comfort: '20', xl: '28', active: true, polygon: [] }); }
+  function startEdit(z: Zone) { if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } resetDirty(); setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, comfort: euro(z.comfortCents), xl: euro(z.xlCents), active: z.active, polygon: untangle(z.polygon) }); } // an old figure-8 opens as one loop (2026-11-24)
 
   async function save() {
     if (!draft) return;
@@ -139,7 +140,7 @@ function MinFares() {
         <div className="space-y-3">
           {draft && (
             <div className="card relative space-y-3 p-4" data-testid="minfare-form">
-              <FoldX />
+              <FormClose dirty={dirty} onClose={() => setDraft(null)} />
               <label className="block text-sm">{t('staff.minFare.name')}
                 <input className="field mt-1" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Limassol" data-testid="minfare-name" />
               </label>
@@ -159,7 +160,7 @@ function MinFares() {
                 <button type="button" className="btn-ghost !min-h-[40px] !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => { lastChange.current = 0; setPoly([]); }}>{t('staff.fixed.clear')}</button>
               </div>
               <div className="flex gap-2">
-                <button type="button" className="btn-ghost !min-h-[44px] !py-2 text-sm" onClick={() => setDraft(null)}>{t('staff.fixed.cancel')}</button>
+                <button type="button" className="btn-ghost !min-h-[44px] !py-2 text-sm" onClick={() => { if (dirty && !window.confirm(t('staff.zoneMap.discard'))) return; setDraft(null); }}>{t('staff.fixed.cancel')}</button>
                 <button type="button" className="btn-primary !min-h-[44px] flex-1 !py-2 text-sm" disabled={busy} onClick={save} data-testid="minfare-save">{t('staff.fixed.save')}</button>
               </div>
             </div>

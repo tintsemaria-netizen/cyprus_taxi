@@ -16,7 +16,7 @@ const ZoneEditorMap = dynamicImport(() => import('@/components/staff/ZoneEditorM
 
 type MapProps = Omit<ComponentProps<typeof ZoneEditorMapT>, 'className'>;
 type Fit = MapProps['fit'];
-interface Ctx { set: (p: MapProps | null) => void; overlay: HTMLDivElement | null; collapse: () => void }
+interface Ctx { set: (p: MapProps | null) => void; overlay: HTMLDivElement | null }
 const ZoneMapCtx = createContext<Ctx | null>(null);
 
 const CYPRUS = { lat: 35.0, lng: 33.2 };
@@ -31,11 +31,10 @@ export function useZoneMap(p: MapProps): void {
 
 /**
  * The tab's title row (operator 2026-11-25): on the right ☰ with «Инфо» (the long description, hidden until asked)
- * and ✕ that folds the side panel away so the map takes the whole width (a «‹» on the map brings it back).
+ * (the top ✕ that folded the panel was removed the same day — operator).
  */
 export function PanelHead({ title, info }: { title: React.ReactNode; info: React.ReactNode }) {
   const { t } = useT();
-  const collapse = useContext(ZoneMapCtx)?.collapse;
   const [menu, setMenu] = useState(false);
   const [show, setShow] = useState(false);
   return (
@@ -46,10 +45,6 @@ export function PanelHead({ title, info }: { title: React.ReactNode; info: React
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink hover:bg-white/5 ${menu ? 'bg-white/10' : ''}`}>
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" /></svg>
         </button>
-        {collapse && (
-          <button type="button" aria-label={t('staff.zoneMap.hide')} title={t('staff.zoneMap.hide')} onClick={collapse} data-testid="panel-close"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg text-muted hover:bg-white/5 hover:text-ink">✕</button>
-        )}
       </div>
       {menu && (
         <div className="absolute end-10 top-10 z-20 min-w-[160px] rounded-[12px] border border-edge bg-elevated p-1 shadow-xl" data-testid="panel-menu-list">
@@ -67,14 +62,31 @@ export function PanelHead({ title, info }: { title: React.ReactNode; info: React
   );
 }
 
-/** ✕ in the corner of an edit form (operator 2026-11-25): folds the side panel like the one in the title row; the form is kept. */
-export function FoldX() {
+/**
+ * Unsaved changes of an edit form (operator 2026-11-25). Call `reset()` right before opening a form; `dirty` is
+ * true once the draft differs from what was opened.
+ */
+export function useDirty(draft: unknown): { dirty: boolean; reset: () => void } {
+  const base = useRef<string | null>(null);
+  const reset = useCallback(() => { base.current = null; }, []);
+  if (draft == null) { base.current = null; return { dirty: false, reset }; }
+  const now = JSON.stringify(draft);
+  if (base.current == null) { base.current = now; return { dirty: false, reset }; }
+  return { dirty: now !== base.current, reset };
+}
+
+/** ✕ in the corner of an edit form: closes the form — but not while it has unsaved changes (operator 2026-11-25). */
+export function FormClose({ dirty, onClose }: { dirty: boolean; onClose: () => void }) {
   const { t } = useT();
-  const collapse = useContext(ZoneMapCtx)?.collapse;
-  if (!collapse) return null;
+  const [warn, setWarn] = useState(false);
+  useEffect(() => { if (!dirty) setWarn(false); }, [dirty]);
   return (
-    <button type="button" aria-label={t('staff.zoneMap.hide')} title={t('staff.zoneMap.hide')} onClick={collapse} data-testid="form-fold"
-      className="absolute end-2 top-2 flex h-7 w-7 items-center justify-center rounded-full text-muted hover:bg-white/5 hover:text-ink">✕</button>
+    <>
+      <button type="button" aria-label={t('staff.zoneMap.close')} title={t('staff.zoneMap.close')} data-testid="form-close"
+        onClick={() => (dirty ? setWarn(true) : onClose())}
+        className="absolute end-2 top-2 flex h-7 w-7 items-center justify-center rounded-full text-muted hover:bg-white/5 hover:text-ink">✕</button>
+      {warn && <p className="rounded-[10px] border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger" data-testid="form-unsaved">{t('staff.zoneMap.saveFirst')}</p>}
+    </>
   );
 }
 
@@ -119,10 +131,7 @@ export function ZoneWorkspace({ children }: { children: React.ReactNode }) {
   const onPick = useCallback((lat: number, lng: number) => latest.current.onPick?.(lat, lng), []);
   const onPinMove = useCallback((id: string, lat: number, lng: number) => latest.current.onPinMove?.(id, lat, lng), []);
 
-  // ✕ in the panel folds it away (its content stays mounted, so a half-filled form is kept); «‹» on the map opens it.
-  const [folded, setFolded] = useState(false);
-  const collapse = useCallback(() => setFolded(true), []);
-  const ctxValue = useMemo(() => ({ set, overlay, collapse }), [set, overlay, collapse]);
+  const ctxValue = useMemo(() => ({ set, overlay }), [set, overlay]);
 
   // The work area fills the screen below the menu (its height follows banners above it and the window size).
   const box = useRef<HTMLDivElement>(null);
@@ -141,13 +150,9 @@ export function ZoneWorkspace({ children }: { children: React.ReactNode }) {
         <div className="relative order-2 h-[58vh] min-h-[360px] overflow-hidden rounded-[14px] border border-edge lg:order-1 lg:h-[var(--zw-h,75vh)] lg:min-w-0 lg:flex-1" data-testid="zone-map-box">
           <ZoneEditorMap {...props} center={center.current ?? props.center} fit={fit} onChange={onChange} onPick={props.onPick ? onPick : undefined} onPinMove={props.onPinMove ? onPinMove : undefined} className="h-full w-full" />
           <div ref={setOverlay} className="pointer-events-none absolute inset-0" />
-          {folded && (
-            <button type="button" onClick={() => setFolded(false)} data-testid="panel-open" aria-label={t('staff.zoneMap.show')}
-              className="absolute end-0 top-1/2 z-10 flex h-16 w-8 -translate-y-1/2 items-center justify-center rounded-s-[12px] bg-accent text-xl font-bold text-[#0b0f10] shadow-lg">‹</button>
-          )}
         </div>
         {/* Narrow screens (Fold, phone — operator 2026-11-25): the tools on top, at most half the screen, the map under them. */}
-        <aside className={`order-1 max-h-[48vh] overflow-y-auto lg:order-2 lg:h-[var(--zw-h,75vh)] lg:max-h-none lg:w-[400px] lg:shrink-0 ${folded ? 'hidden' : ''}`} data-testid="zone-panel">{children}</aside>
+        <aside className={`order-1 max-h-[48vh] overflow-y-auto lg:order-2 lg:h-[var(--zw-h,75vh)] lg:max-h-none lg:w-[400px] lg:shrink-0`} data-testid="zone-panel">{children}</aside>
       </div>
     </ZoneMapCtx.Provider>
   );

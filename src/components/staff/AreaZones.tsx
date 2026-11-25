@@ -9,7 +9,7 @@ import { smoothRing, untangle } from '@/lib/ring';
 import { Switch } from '@/components/staff/Switch';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamicImport from 'next/dynamic';
-import { FoldX, OverMap, PanelHead, useZoneMap } from '@/components/staff/ZoneWorkspace';
+import { FormClose, OverMap, PanelHead, useDirty, useZoneMap } from '@/components/staff/ZoneWorkspace';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import type { Poly, RefZone } from '@/components/staff/ZoneEditorMap';
@@ -56,6 +56,7 @@ function AreaZones({ kind }: { kind: Kind }) {
   const pointMode = mode !== 'corners';
   const KCOL = kind === 'NOGO' ? RED : kind === 'STAND' ? STAND : BLUE;
   const [draft, setDraft] = useState<Draft | null>(null);
+  const { dirty, reset: resetDirty } = useDirty(draft); // ✕ and «Отмена» do not drop unsaved changes silently
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // «↶ Шаг назад»: every corner change can be undone; a continuous drag counts as one step.
@@ -128,8 +129,8 @@ function AreaZones({ kind }: { kind: Kind }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitKey]);
 
-  function startNew() { setMsg(null); resetHist(); setDraft({ id: null, name: '', kind, active: true, polygon: [], points: [], dropPoints: [], airport: null, forZoneId: null, minComfort: '', minXl: '', minOn: true, pointsOn: true }); setMode('corners'); }
-  function startEdit(z: Zone) { setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, kind: z.kind, active: z.active, polygon: untangle(z.polygon), points: z.points, dropPoints: z.dropPoints ?? [], airport: z.airport ?? null, forZoneId: z.forZoneId ?? null, minComfort: centsText(z.minComfortCents), minXl: centsText(z.minXlCents), minOn: z.minActive ?? true, pointsOn: z.pointsActive ?? true }); setMode('corners'); }
+  function startNew() { if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } resetDirty(); setMsg(null); resetHist(); setDraft({ id: null, name: '', kind, active: true, polygon: [], points: [], dropPoints: [], airport: null, forZoneId: null, minComfort: '', minXl: '', minOn: true, pointsOn: true }); setMode('corners'); }
+  function startEdit(z: Zone) { if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } resetDirty(); setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, kind: z.kind, active: z.active, polygon: untangle(z.polygon), points: z.points, dropPoints: z.dropPoints ?? [], airport: z.airport ?? null, forZoneId: z.forZoneId ?? null, minComfort: centsText(z.minComfortCents), minXl: centsText(z.minXlCents), minOn: z.minActive ?? true, pointsOn: z.pointsActive ?? true }); setMode('corners'); }
 
   // A point dragged on the map: same rules as placing one (inside the rounded territory, on land, 15 m from the
   // other kind); a bad place puts it back.
@@ -229,7 +230,7 @@ function AreaZones({ kind }: { kind: Kind }) {
         <div className="space-y-3">
           {draft && (
             <div className="card relative space-y-3 p-4" data-testid="nogo-form">
-              <FoldX />
+              <FormClose dirty={dirty} onClose={() => setDraft(null)} />
               <label className="block text-sm">{t('staff.noGo.name')}
                 <input className="field mt-1" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder={t('staff.noGo.placeholder')} data-testid="nogo-name" />
               </label>
@@ -302,7 +303,7 @@ function AreaZones({ kind }: { kind: Kind }) {
                 <button type="button" className="btn-ghost !min-h-[40px] !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => { lastChange.current = 0; setPoly([]); }}>{t('staff.fixed.clear')}</button>
               </div>
               <div className="flex gap-2">
-                <button type="button" className="btn-ghost !min-h-[44px] !py-2 text-sm" onClick={() => setDraft(null)}>{t('staff.fixed.cancel')}</button>
+                <button type="button" className="btn-ghost !min-h-[44px] !py-2 text-sm" onClick={() => { if (dirty && !window.confirm(t('staff.zoneMap.discard'))) return; setDraft(null); }}>{t('staff.fixed.cancel')}</button>
                 <button type="button" className="btn-primary !min-h-[44px] flex-1 !py-2 text-sm" disabled={busy} onClick={save} data-testid="nogo-save">{t('staff.fixed.save')}</button>
               </div>
             </div>

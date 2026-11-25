@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Switch } from '@/components/staff/Switch';
 import dynamicImport from 'next/dynamic';
-import { FoldX, OverMap, PanelHead, useZoneMap } from '@/components/staff/ZoneWorkspace';
+import { FormClose, OverMap, PanelHead, useDirty, useZoneMap } from '@/components/staff/ZoneWorkspace';
 import Link from 'next/link';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
@@ -37,6 +37,7 @@ function FixedPrices() {
   const [zones, setZones] = useState<Zone[]>([]);
   const [code, setCode] = useState('PFO');
   const [draft, setDraft] = useState<Draft | null>(null);
+  const { dirty, reset: resetDirty } = useDirty(draft); // ✕ and «Отмена» do not drop unsaved changes silently
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // «↶ Шаг назад» on the map (2026-11-21, operator): every corner change (add, drag, insert, remove, clear) can be
@@ -150,18 +151,19 @@ function FixedPrices() {
   const euro = (c: number) => (c / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const cents = (s: string) => Math.round(Number(s.replace(',', '.')) * 100);
 
-  function startNew() { setMsg(null); resetHist(); setDraft({ id: null, name: '', comfort: '35', xl: '50', active: true, polygon: [], codes: null, inner: [], outer: [] }); }
+  function startNew() { if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } resetDirty(); setMsg(null); resetHist(); setDraft({ id: null, name: '', comfort: '35', xl: '50', active: true, polygon: [], codes: null, inner: [], outer: [] }); }
   // «+ По индексу» (2026-11-21, operator): a fixed price for addresses with these postcodes — no drawing.
-  function startCodes() { setMsg(null); resetHist(); setDraft({ id: null, name: '', comfort: '45', xl: '65', active: true, polygon: [], codes: '', inner: [], outer: [] }); }
+  function startCodes() { if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } resetDirty(); setMsg(null); resetHist(); setDraft({ id: null, name: '', comfort: '45', xl: '65', active: true, polygon: [], codes: '', inner: [], outer: [] }); }
   // «+ Следующий пояс» (2026-11-21, operator): starts exactly on the edge of the outermost zone and goes 3 km further
   // out, with many corners to drag. Inside it the previous zones keep their prices (the smallest zone wins).
   function startBelt() {
     if (!outermost) return;
+    if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } resetDirty();
     setMsg(null); resetHist();
     const n = mine.length + 1;
     setDraft({ id: null, name: t('staff.fixed.beltN', { n }), comfort: euroS(outermost.comfortCents + 1000), xl: euroS(outermost.xlCents + 1500), active: true, polygon: nextBelt(outermost.polygon, 3000), codes: null, inner: [outermost], outer: [] });
   }
-  function startEdit(z: Zone) {
+  function startEdit(z: Zone) { if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } resetDirty();
     setMsg(null); resetHist();
     const rest = mine.filter((o) => o.id !== z.id);
     const isCode = z.polygon.length < 3;
@@ -224,7 +226,7 @@ function FixedPrices() {
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted">{t('staff.fixed.airport')}:</span>
         {(airports.length ? airports : [{ code: 'PFO' }, { code: 'LCA' }]).map((a) => (
-          <button key={a.code} type="button" onClick={() => { setCode(a.code); setDraft(null); }}
+          <button key={a.code} type="button" onClick={() => { if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } setCode(a.code); setDraft(null); }}
             className={`rounded-full border px-3 py-1.5 text-sm ${code === a.code ? 'border-accent bg-accent/15 text-accent' : 'border-edge text-ink'}`}>{AIRPORT_NAMES[a.code] ?? a.code}</button>
         ))}
         {!draft && (
@@ -276,7 +278,7 @@ function FixedPrices() {
         <div className="space-y-3">
           {draft && (
             <div className="card relative space-y-3 p-4" data-testid="zone-form">
-              <FoldX />
+              <FormClose dirty={dirty} onClose={() => setDraft(null)} />
               <label className="block text-sm">{t('staff.fixed.name')}
                 <input className="field mt-1" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Paphos — centre" data-testid="zone-name" />
               </label>
@@ -303,7 +305,7 @@ function FixedPrices() {
                 <button type="button" className="btn-ghost !min-h-[40px] !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => { lastChange.current = 0; setPoly([]); }}>{t('staff.fixed.clear')}</button>
               </div>}
               <div className="flex gap-2">
-                <button type="button" className="btn-ghost !min-h-[44px] !py-2 text-sm" onClick={() => setDraft(null)}>{t('staff.fixed.cancel')}</button>
+                <button type="button" className="btn-ghost !min-h-[44px] !py-2 text-sm" onClick={() => { if (dirty && !window.confirm(t('staff.zoneMap.discard'))) return; setDraft(null); }}>{t('staff.fixed.cancel')}</button>
                 <button type="button" className="btn-primary !min-h-[44px] flex-1 !py-2 text-sm" disabled={busy} onClick={save} data-testid="zone-save">{t('staff.fixed.save')}</button>
               </div>
             </div>

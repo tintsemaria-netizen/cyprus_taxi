@@ -153,7 +153,7 @@ const staff = {
     unbound: 'unbound',
     empty: 'No vehicles yet.',
   },
-  zoneMap: {menu: "Menu", info: "Info", hide: "Hide the panel", show: "Show the panel"},
+  zoneMap: { close: "Close", saveFirst: "There are unsaved changes — save them first or press «Cancel».", discard: "Discard the unsaved changes?",menu: "Menu", info: "Info", hide: "Hide the panel", show: "Show the panel"},
   confirm: { on: "Switch on «{name}»?", off: "Switch off «{name}»?", activate: "Activate «{name}»?", deactivate: "Deactivate «{name}»?" },
   noGo: {
     pointsSwitch: "Pickup and drop-off points",
