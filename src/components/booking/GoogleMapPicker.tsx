@@ -1,7 +1,8 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { areaBlock, loadNoGo } from '@/lib/area-client';
+import { areaBlock, loadNoGo, pickerOutlines, pickerSpot } from '@/lib/area-client';
+import { areaStroke } from '@/components/GoogleMapView';
 import LiftPin from '@/components/LiftPin';
 import { useEffect, useRef, useState } from 'react';
 import { useTwoFingerCamera } from '@/components/useTwoFingerCamera';
@@ -51,9 +52,17 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
   const [center, setCenter] = useState(centerRef.current);
   const [lift, setLift] = useState(false); // the logo rises while the map is dragged (as on the start screen)
   // Not on the island or in a «Запретная зона» (2026-11-24): confirm off, a red line says why.
-  const blockCode = areaBlock(center);
+  // Territories on this screen too (operator 2026-11-26): the outline near the logo, and the logo let go inside /
+  // next to one slides to its pickup (destination: drop-off) point, named like on the main map.
+  const [terrReady, setTerrReady] = useState(false);
+  const [zoomNow, setZoomNow] = useState(initial ? 16 : fallback ? 14 : 11);
+  const spot = terrReady ? pickerSpot(kind, center, zoomNow) : null;
+  const outlines = terrReady ? pickerOutlines(kind, center) : [];
+  const outlinesKey = outlines.map((o) => o.length + ':' + o[0]?.join(',')).join('|');
+  const blockCode = spot ? null : areaBlock(center);
   const offIsland = !!blockCode;
-  useEffect(() => { void loadNoGo(); }, []);
+  useEffect(() => { void loadNoGo().then(() => setTerrReady(true)); }, []);
+  const terrPolys = useRef<any[]>([]);
   const [addr, setAddr] = useState<string | null>(initial?.label ?? null);
   const [resolving, setResolving] = useState(false);
   const [geo, setGeo] = useState<GeoState>('idle');
@@ -154,6 +163,12 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
           setLift(false);
           if (disposed || closed.current || gen !== mapGen.current) return;
           const c = map.getCenter(); if (!c) return;
+          const z = map.getZoom() ?? 14; setZoomNow(z);
+          terrPolys.current.forEach((o) => o.setOptions({ strokeWeight: areaStroke(z) }));
+          // Let go in / next to a territory → slide onto its point (the next idle shows its name, no address lookup).
+          const s = pickerSpot(kind, { lat: c.lat(), lng: c.lng() }, z);
+          if (s && (Math.abs(s.lat - c.lat()) > 3e-5 || Math.abs(s.lng - c.lng()) > 3e-5)) { map.panTo({ lat: s.lat, lng: s.lng }); return; }
+          if (s) return;
           reverseGeocode(c.lat(), c.lng(), draftRev.current, gen);
         });
         g.event.addListenerOnce(map, 'idle', () => {
@@ -222,6 +237,16 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
     navigator.geolocation.getCurrentPosition(onOk, (e) => onErr(e, false), { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 });
   }
 
+  // The territory outlines near the logo, thin when zoomed out (like the main map).
+  useEffect(() => {
+    const map = mapRef.current, g = gRef.current;
+    terrPolys.current.forEach((o) => o.setMap(null));
+    terrPolys.current = [];
+    if (!map || !g || !mapLoaded) return;
+    terrPolys.current = outlines.map((poly) => new g.Polygon({ map, paths: poly.map(([lat, lng]) => ({ lat, lng })), strokeColor: '#4C9AFF', strokeOpacity: 0.95, strokeWeight: areaStroke(map.getZoom()), fillColor: '#4C9AFF', fillOpacity: 0.16, clickable: false, zIndex: 0 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outlinesKey, mapLoaded]);
+
   function finish() {
     if (!popped.current && history.state && (history.state as { ilyasPicker?: boolean }).ilyasPicker) history.back();
   }
@@ -230,6 +255,9 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
     const c = mapRef.current?.getCenter?.();
     const lat = c ? c.lat() : centerRef.current.lat;
     const lng = c ? c.lng() : centerRef.current.lng;
+    // A territory point wins: its place and name (as on the main map).
+    const s = pickerSpot(kind, { lat, lng }, mapRef.current?.getZoom?.() ?? zoomNow);
+    if (s) { closed.current = true; finish(); onConfirm(s); return; }
     // Only on the island of Cyprus (2026-11-24, operator): the button is off and a red line says why.
     if (areaBlock({ lat, lng })) return;
     closed.current = true;
@@ -293,12 +321,12 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
         <div className="mb-3 min-h-[3.25rem]">
           <div className="label">{kind === 'pickup' ? t('booking.picker.selectedPickup') : kind === 'stop' ? t('booking.picker.selectedStop') : t('booking.picker.selectedDestination')}</div>
           <div className="mt-0.5 truncate text-sm font-medium">
-            {addr ?? coordLabel(center.lat, center.lng)}
-            {resolving && !addr && <span className="ms-2 text-xs text-muted">{t('booking.picker.resolving')}</span>}
+            {spot?.label ?? addr ?? coordLabel(center.lat, center.lng)}
+            {resolving && !addr && !spot && <span className="ms-2 text-xs text-muted">{t('booking.picker.resolving')}</span>}
           </div>
           {offIsland
             ? <div className="text-xs font-medium leading-snug text-danger" data-testid="picker-off-island">{t(`errors.${blockCode ?? 'OFF_ISLAND'}` as 'errors.OFF_ISLAND')}</div>
-            : <div className="truncate text-xs text-muted">{addr ? ' ' : t('booking.picker.noAddress')}</div>}
+            : <div className="truncate text-xs text-muted">{addr || spot ? ' ' : t('booking.picker.noAddress')}</div>}
         </div>
         <div className="flex gap-2">
           <button className="btn-ghost !min-h-[44px] shrink-0 !px-4 !py-2 text-sm" onClick={cancel}>{t('common.cancel')}</button>

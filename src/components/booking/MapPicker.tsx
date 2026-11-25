@@ -1,6 +1,6 @@
 'use client';
 
-import { areaBlock, loadNoGo } from '@/lib/area-client';
+import { areaBlock, loadNoGo, pickerOutlines, pickerSpot } from '@/lib/area-client';
 import LiftPin from '@/components/LiftPin';
 import { useEffect, useRef, useState } from 'react';
 import type * as maplibregl from 'maplibre-gl';
@@ -74,9 +74,16 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
   const [center, setCenter] = useState(centerRef.current);
   const [lift, setLift] = useState(false); // the logo rises while the map is dragged (as on the start screen)
   // Not on the island or in a «Запретная зона» (2026-11-24): confirm off, a red line says why.
-  const blockCode = areaBlock(center);
+  // Territories on this screen too (operator 2026-11-26): the outline near the logo, and the logo let go inside /
+  // next to one slides to its pickup (destination: drop-off) point, named like on the main map.
+  const [terrReady, setTerrReady] = useState(false);
+  const [zoomNow, setZoomNow] = useState(initial ? 15 : fallback ? 13 : 10);
+  const spot = terrReady ? pickerSpot(kind, center, zoomNow) : null;
+  const outlines = terrReady ? pickerOutlines(kind, center) : [];
+  const outlinesKey = outlines.map((o) => o.length + ':' + o[0]?.join(',')).join('|');
+  const blockCode = spot ? null : areaBlock(center);
   const offIsland = !!blockCode;
-  useEffect(() => { void loadNoGo(); }, []);
+  useEffect(() => { void loadNoGo().then(() => setTerrReady(true)); }, []);
   const [addr, setAddr] = useState<string | null>(initial?.label ?? null);
   const [resolving, setResolving] = useState(false);
   const [geo, setGeo] = useState<GeoState>('idle');
@@ -183,7 +190,14 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
         // No +/- buttons (2026-11-17): pinch / wheel to zoom.
         const userGesture = (e: { originalEvent?: unknown }) => { if (e.originalEvent) userMoveCount.current += 1; };
         map.on('dragstart', (e) => { userGesture(e); setLift(true); });
-        map.on('moveend', () => setLift(false));
+        map.on('moveend', () => {
+          setLift(false);
+          if (gen !== mapGen.current) return;
+          const c = map.getCenter(), z = map.getZoom(); setZoomNow(z);
+          // Let go in / next to a territory → slide onto its point.
+          const s = pickerSpot(kind, { lat: c.lat, lng: c.lng }, z);
+          if (s && (Math.abs(s.lat - c.lat) > 3e-5 || Math.abs(s.lng - c.lng) > 3e-5)) map.easeTo({ center: [s.lng, s.lat], duration: 300 });
+        });
         map.on('zoomstart', userGesture);
         map.on('rotatestart', userGesture);
         // Only a real geographic centre change counts — resize/zoom-in-place is ignored.
@@ -290,11 +304,29 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
   function finish() {
     if (!popped.current && history.state && (history.state as { ilyasPicker?: boolean }).ilyasPicker) history.back();
   }
+  // The territory outlines near the logo, thinner when zoomed out (like the main map).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any = { type: 'FeatureCollection', features: outlines.map((poly) => ({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[...poly.map(([la, ln]) => [ln, la]), [poly[0][1], poly[0][0]]]] } })) };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const src = map.getSource('pk-terr') as any;
+    if (src) { src.setData(data); return; }
+    map.addSource('pk-terr', { type: 'geojson', data });
+    map.addLayer({ id: 'pk-terr-fill', type: 'fill', source: 'pk-terr', paint: { 'fill-color': '#4C9AFF', 'fill-opacity': 0.16 } });
+    map.addLayer({ id: 'pk-terr-line', type: 'line', source: 'pk-terr', paint: { 'line-color': '#4C9AFF', 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 1.5, 13, 2, 14, 2.5, 15, 3.5, 16, 4.5], 'line-opacity': 0.95 } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outlinesKey, mapLoaded]);
+
   function confirm() {
     if (closed.current) return;
     const c = mapRef.current?.getCenter();
     const lat = c ? c.lat : centerRef.current.lat;
     const lng = c ? c.lng : centerRef.current.lng;
+    // A territory point wins: its place and name (as on the main map).
+    const s = pickerSpot(kind, { lat, lng }, mapRef.current?.getZoom?.() ?? zoomNow);
+    if (s) { closed.current = true; finish(); onConfirm(s); return; }
     // Only on the island of Cyprus (2026-11-24, operator): the button is off and a red line says why.
     if (areaBlock({ lat, lng })) return;
     closed.current = true;
@@ -370,12 +402,12 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
         <div className="mb-3 min-h-[3.25rem]">
           <div className="label">{kind === 'pickup' ? t('booking.picker.selectedPickup') : kind === 'stop' ? t('booking.picker.selectedStop') : t('booking.picker.selectedDestination')}</div>
           <div className="mt-0.5 truncate text-sm font-medium">
-            {addr ?? coordLabel(center.lat, center.lng)}
-            {resolving && !addr && <span className="ms-2 text-xs text-muted">{t('booking.picker.resolving')}</span>}
+            {spot?.label ?? addr ?? coordLabel(center.lat, center.lng)}
+            {resolving && !addr && !spot && <span className="ms-2 text-xs text-muted">{t('booking.picker.resolving')}</span>}
           </div>
           {offIsland
             ? <div className="text-xs font-medium leading-snug text-danger" data-testid="picker-off-island">{t(`errors.${blockCode ?? 'OFF_ISLAND'}` as 'errors.OFF_ISLAND')}</div>
-            : <div className="truncate text-xs text-muted">{addr ? ' ' : t('booking.picker.noAddress')}</div>}
+            : <div className="truncate text-xs text-muted">{addr || spot ? ' ' : t('booking.picker.noAddress')}</div>}
         </div>
         <div className="flex gap-2">
           <button className="btn-ghost !min-h-[44px] shrink-0 !px-4 !py-2 text-sm" onClick={cancel}>{t('common.cancel')}</button>

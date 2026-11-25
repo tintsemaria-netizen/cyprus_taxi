@@ -93,3 +93,31 @@ export function territoryAt(p: { lat: number; lng: number }): { t: Territory; on
   }
   return null;
 }
+
+/**
+ * The separate «Место подачи / назначения» map screen (operator 2026-11-26: it did not know the territories).
+ * Pickup: let go inside or next to a territory (30 px, at most 1.5 km) → its nearest pickup point. Destination:
+ * inside a territory with drop-off points → its nearest drop-off point. A stop is never moved.
+ */
+export function pickerSpot(kind: 'pickup' | 'dropoff' | 'stop', p: { lat: number; lng: number }, zoom: number): { lat: number; lng: number; label: string } | null {
+  if (kind === 'pickup') {
+    const mpp = (156543 * Math.cos((p.lat * Math.PI) / 180)) / 2 ** zoom;
+    const tz = territoryNear(p, Math.min(1500, 30 * mpp));
+    if (!tz) return null;
+    const i = tz.on >= 0 ? tz.on : tz.nearest, sp = tz.t.points[i];
+    return { lat: sp.lat, lng: sp.lng, label: spotLabel(tz.t, i) };
+  }
+  if (kind === 'dropoff') {
+    const dz = dropTerritoryAt(p);
+    if (!dz) return null;
+    const i = dz.on >= 0 ? dz.on : dz.nearest, sp = dz.t.dropPoints![i];
+    return { lat: sp.lat, lng: sp.lng, label: dropLabel(dz.t, i) };
+  }
+  return null;
+}
+
+/** Outlines for the picker map: territories with points of that kind within 2 km of the centre. */
+export function pickerOutlines(kind: 'pickup' | 'dropoff' | 'stop', p: { lat: number; lng: number }): [number, number][][] {
+  if (kind === 'stop') return [];
+  return allTerritories().filter((t) => (kind === 'pickup' ? t.points.length : t.dropPoints?.length) && nearTerritory(t, p, 2000)).map((t) => t.polygon);
+}
