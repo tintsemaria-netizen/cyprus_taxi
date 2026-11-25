@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-25 ~12:20 — admin point logos rise with a shadow while dragged (deployed 2d8d38b)
+- ZoneEditorMap: MapLibre — `.ily-logo` translateY(-10px) + `.ily-shadow` on dragstart, reset on dragend; Google — `pinPillSvg(..., lifted)` icon swapped on dragstart/dragend, `raiseOnDrag:false` (10 px room on top, anchor stays the tip).
+- Suite 488 passed / 1 skipped; live admin chunk has `ily-shadow`/`raiseOnDrag`; health ready. Google drag not checked by hand.
+
 ## 2026-11-25 — driver phone sign-in for applicants; driver data in the passenger app (deployed)
 - /driver/otp/verify: applicant number → applicant session + `{application:true}` → /driver/register; unknown → NOT_REGISTERED (login shows «Стать водителем ›»); switched-off driver → DRIVER_DISABLED (8 languages).
 - verifiedPassenger fills an empty name / e-mail from the driver account with the same SMS-verified phone (e-mail only if free). Passenger SMS is still OFF (features.PASSENGER_SMS) and Twilio is not configured, so neither works for real users until SMS is on. Test: tests/driver-phone-login.db.test.ts.
