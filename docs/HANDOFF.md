@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-25 — share board removed (deployed)
+- /share-board page removed (redirects to /prebookings); GET /api/v1/passenger/share-board removed; POST kept for «Ехать» from the hour list (open rides ≥ scheduleMinMinutes ahead). shareBoard/boardRide gone; settings.shareBoardHideMinutes no longer used (admin row removed).
+- After a co-rider pre-booking: «Ищем попутчика — сообщим…» on the done screen; the done screen shows the pickup span 13:00–13:15.
+- Error reasons GONE / DRIVER_ACCOUNT reworded (no «board») in 8 languages. Test: tests/share-pick.db.test.ts.
+
 ## 2026-11-25 — ПП: pick the co-rider in the hour list (deployed)
 - Hour list (/api/v1/share/slots): each order has its own arrival time (Google road legs with traffic for that hour; fallback straight-line) and «Ехать»; unfit orders disabled with why ROOM/TIME. Chosen order is proposed right after booking (share-board POST fromHours:true, skips the 3 h rule).
 - Co-rider box: conditions lines removed; no hint before an hour is picked. 3 h rule only in shareTimeMode=ARRIVE (sample mode); admin label says so.
