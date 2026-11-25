@@ -2866,7 +2866,7 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
-## 2026-11-25 02:30 — next order for a finishing driver (branch `next-order`, NOT deployed)
+## 2026-11-25 02:30 — next order for a finishing driver (DEPLOYED 4f3d211, 02:35)
 
 - Rule (operator): offered while the passenger is on board when the drop-off is ≤ 5 min away; ≤ 7 min when the new
   pickup is ≤ 1 km from that drop-off. Competes with free drivers by total time (rest of trip + 2 min drop-off +
@@ -2880,7 +2880,8 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   co-rider search skips drivers with a next ride.
 - Driver app: offer polling also during IN_PROGRESS; NextOfferCard («Следующий заказ — после высадки»). Passenger: trackingView.finishingNearby + ETA via preassign.reachMinutes (30 s cache);
   TrackApp headline track.finishing(Eta). sw.js: next-offer title, ride.assignedNext, ride.nextOnWay (8 langs).
-- Tests: tests/next-order.db.test.ts (3). Full suite 478 passed.
+- Tests: tests/next-order.db.test.ts (4). Full suite 479 passed. Live: sw.js has ride.nextOnWay, health ready,
+  migration applied by the entrypoint. Not checked live: two phones (driver on a trip + a client nearby).
 - Driver gives the next ride back: lifecycle.driverReleaseNext → rematchBooking (search again without him);
   POST /api/v1/driver/next/release. Operator: nothing about the next ride on the main screen — the ≡ menu of the
   navigation screen: one small row — the next pickup address, a small «Отменить» on its right (confirm). Test added (4 in the file).
