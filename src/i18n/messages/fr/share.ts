@@ -26,6 +26,7 @@ const share: Catalog<typeof en> = {
   },
   booking: {
     stopBlocked: 'Impossible d’ajouter un arrêt à une réservation avec co-passager.',
+    comfortOnly: "Avec un covoyageur : Comfort uniquement. Pour un XL, désactivez « Covoyageur ».",
     shareBlocked: 'La réservation avec co-passager ne fonctionne pas avec un arrêt.',
     minNote: 'Nous cherchons un co-passager pour les trajets réservés au moins {h} h à l’avance.',
     tooSoon: 'Un trajet partagé doit être réservé au moins {h} h à l’avance.',

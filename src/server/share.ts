@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { getSettings } from '@/lib/settings';
 import { haversineMeters, type LatLng } from '@/lib/geo';
-import { arrivalFits, isShareRoute, sharedCents, approxLegMin, bestSharePlan, bestPrebookPlan, shareFits, prebookTiming, comparePairs, STOP_OF, type SharePlan, type LegFn } from '@/lib/share';
+import { arrivalFits, isShareRoute, shareClassOk, SHARE_COMFORT_SEATS, sharedCents, approxLegMin, bestSharePlan, bestPrebookPlan, shareFits, prebookTiming, comparePairs, STOP_OF, type SharePlan, type LegFn } from '@/lib/share';
 import { googleConfigured, googleRoute } from '@/server/google';
 import { enqueueDriver, enqueuePassenger, enqueuePassengerDriverNews } from '@/server/push';
 import { recordEvent, driverPseudo } from '@/server/events';
@@ -44,7 +44,7 @@ const maxExtra = (b: { shareMaxExtraMin: number | null }) => b.shareMaxExtraMin 
 
 /** Can this booking take part in ride-share at all? (opted in, priced, airport/intercity, no stop) */
 export function shareCapable(b: ShareBooking): boolean {
-  return b.shareOptIn && b.fareCents != null && b.stopLat == null
+  return b.shareOptIn && shareClassOk(b.vClass) && b.fareCents != null && b.stopLat == null
     && isShareRoute(pt(b.pickupLat, b.pickupLng), pt(b.dropoffLat, b.dropoffLng));
 }
 const waitMin = (b: { shareWaitMin?: number | null }) => b.shareWaitMin ?? S().defaultWaitMin;
@@ -155,7 +155,7 @@ export async function tryLiveShare(guestId: string, now: Date = new Date()): Pro
   for (const h of hosts) {
     if (!shareCapable(h)) continue;
     const a = h.assignments[0];
-    if (!a || !shareFits(h, guest, a.vehicle.seats, S().luggage[guest.vClass])) continue;
+    if (!a || !shareFits(h, guest, Math.min(a.vehicle.seats, SHARE_COMFORT_SEATS), S().luggage[guest.vClass])) continue; // a Comfort pair stays ≤ 4 even in an XL car
     const loc = a.driver.location;
     const start = loc ? pt(loc.lat, loc.lng) : pt(h.pickupLat, h.pickupLng);
     if (haversineMeters(start, gp) > 40_000) continue; // far away: not "on the way"

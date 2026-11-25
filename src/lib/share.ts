@@ -188,3 +188,11 @@ export function comparePairs(
   if (sa !== sb) return sa - sb;
   return a.extraHost + a.extraGuest - (b.extraHost + b.extraGuest);
 }
+
+/** «Попутчик» is a Comfort thing only (operator 2026-11-25): an XL with a co-rider earns no more than a Comfort
+ *  and takes longer, so XL drivers would refuse and the rides fall apart. XL bookings get no co-rider. */
+export function shareClassOk(vClass: string): boolean {
+  return vClass === 'COMFORT';
+}
+/** A Comfort pair fills a Comfort's seats even when the car is an XL (an XL taking Comfort rides, 2026-11-25). */
+export const SHARE_COMFORT_SEATS = 4;

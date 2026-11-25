@@ -26,6 +26,7 @@ const share: Catalog<typeof en> = {
   },
   booking: {
     stopBlocked: 'Do rezerwacji ze współpasażerem nie można dodać przystanku.',
+    comfortOnly: "Ze współpasażerem tylko Comfort. Aby jechać XL, wyłącz «Współpasażer».",
     shareBlocked: 'Rezerwacja ze współpasażerem nie działa z przystankiem.',
     minNote: 'Współpasażera szukamy dla przejazdów zamówionych co najmniej {h} h wcześniej.',
     tooSoon: 'Przejazd ze współpasażerem trzeba zamówić co najmniej {h} h wcześniej.',

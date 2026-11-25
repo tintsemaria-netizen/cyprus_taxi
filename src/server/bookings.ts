@@ -15,7 +15,7 @@ import { nicosiaWallTimeToUtc } from '@/lib/timezone';
 import { consumeQuote } from '@/server/quote';
 import { recordEvent, bookingEventPayload } from '@/server/events';
 import { Prisma } from '@prisma/client';
-import { isShareRoute } from '@/lib/share';
+import { isShareRoute, shareClassOk } from '@/lib/share';
 
 export type CreateResult =
   | { ok: true; body: BookingCreatedBody }
@@ -104,7 +104,7 @@ export async function createBooking(
     }),
   );
   // Ride-share only where it is offered: airport or intercity, no intermediate stop.
-  const shareOptIn = !!input.shareOptIn && !input.stop && isShareRoute(input.pickup, input.dropoff);
+  const shareOptIn = !!input.shareOptIn && shareClassOk(input.vClass) && !input.stop && isShareRoute(input.pickup, input.dropoff); // Comfort only (2026-11-25)
 
   // 5. Replay an existing receipt BEFORE time-dependent schedule validation, so a
   // valid original booking is recoverable even if its scheduled time is now inside

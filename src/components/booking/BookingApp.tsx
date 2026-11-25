@@ -30,7 +30,7 @@ import { useT, MsgKey, translate } from '@/i18n/I18nProvider';
 import { NotifyPrompt } from '@/components/NotifyPrompt';
 import { RedBubble } from '@/components/RedBubble';
 import { ShareBookingOptions, type ShareOpts } from '@/components/share/ShareBookingOptions';
-import { isShareRoute, shareZone, sharedCents } from '@/lib/share';
+import { shareClassOk, isShareRoute, shareZone, sharedCents } from '@/lib/share';
 import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
 interface PublicConfig {
@@ -781,6 +781,10 @@ export default function BookingApp() {
   const [stopWarn, setStopWarn] = useState(false);
   useEffect(() => { if (!stopWarn) return; const id = setTimeout(() => setStopWarn(false), 4000); return () => clearTimeout(id); }, [stopWarn]);
   const shareOn = shareAllowed && shareOpts.on;
+  // «Попутчик» is Comfort only (2026-11-25): switching it on moves an XL choice to Comfort.
+  const [xlWhy, setXlWhy] = useState(false);
+  useEffect(() => { if (shareOn && !shareClassOk(vClass)) setVClass('COMFORT'); }, [shareOn, vClass]);
+  useEffect(() => { if (!xlWhy) return; const id = setTimeout(() => setXlWhy(false), 4000); return () => clearTimeout(id); }, [xlWhy]);
   // Pre-booking time (2026-11-23, operator): the «быть на месте с … до …» window only with «Попутчик»;
   // a plain pre-booking asks one thing — what time the car should come.
   const arriveOn = arriveMode && shareOn;
@@ -1315,10 +1319,13 @@ export default function BookingApp() {
         {classes.map((c) => {
           const q = quotes[c.key as 'COMFORT' | 'XL'];
           const selected = vClass === c.key;
+          // «Попутчик» is Comfort only (2026-11-25): with it on, XL is greyed; a tap says why.
+          const noShare = shareOn && !shareClassOk(c.key);
           return (
-            <button key={c.key} type="button" role="radio" aria-checked={selected}
-              onClick={() => { setVClass(c.key); if (pax > c.maxPassengers) setPax(c.maxPassengers); }}
-              className={`flex w-full items-center gap-3 rounded-[14px] border px-3 py-3 text-start transition ${selected ? 'border-accent bg-accent/10' : 'border-edge bg-elevated hover:border-accent/40'}`}>
+            <div key={c.key} className="relative">
+            <button type="button" role="radio" aria-checked={selected} aria-disabled={noShare || undefined} data-testid={`class-${c.key}`}
+              onClick={() => { if (noShare) { setXlWhy(true); return; } setVClass(c.key); if (pax > c.maxPassengers) setPax(c.maxPassengers); }}
+              className={`flex w-full items-center gap-3 rounded-[14px] border px-3 py-3 text-start transition ${noShare ? 'border-edge bg-elevated opacity-45' : selected ? 'border-accent bg-accent/10' : 'border-edge bg-elevated hover:border-accent/40'}`}>
               <CarClassIcon kind={c.key === 'XL' ? 'minibus' : 'sedan'} active={selected} />
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold">{t(`common.vClass.${c.key}`)}</span>
@@ -1333,6 +1340,8 @@ export default function BookingApp() {
                 ) : <span className="text-xs text-muted">{quoting ? t('booking.form.pricing') : '—'}</span>}
               </span>
             </button>
+            {noShare && xlWhy && <p role="alert" className="mt-1 rounded-[10px] bg-danger/15 px-3 py-1.5 text-xs font-medium text-danger" data-testid="xl-no-share">{t('share.booking.comfortOnly')}</p>}
+            </div>
           );
         })}
       </div>

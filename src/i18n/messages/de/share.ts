@@ -26,6 +26,7 @@ const share: Catalog<typeof en> = {
   },
   booking: {
     stopBlocked: 'Zu einer Vorbestellung mit Mitfahrer kann kein Zwischenstopp hinzugefügt werden.',
+    comfortOnly: "Mit Mitfahrer nur Comfort. Für XL schalten Sie «Mitfahrer» aus.",
     shareBlocked: 'Eine Vorbestellung mit Mitfahrer funktioniert nicht mit Zwischenstopp.',
     minNote: 'Mitfahrer suchen wir für Fahrten, die mindestens {h} Std. vorher gebucht sind.',
     tooSoon: 'Eine Fahrt mit Mitfahrer muss mindestens {h} Std. vorher gebucht werden.',
