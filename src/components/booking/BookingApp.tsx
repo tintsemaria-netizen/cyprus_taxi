@@ -477,6 +477,8 @@ export default function BookingApp() {
   useEffect(() => {
     if (isMobile && collapsed && contentRef.current) contentRef.current.scrollTop = 0;
   }, [isMobile, collapsed, when, step]);
+  // A new step (form → price → search …) starts at the top, open or not.
+  useEffect(() => { if (contentRef.current) contentRef.current.scrollTop = 0; }, [step]);
   useEffect(() => {
     const box = contentRef.current, sheet = sheetRef.current;
     if (!isMobile || !box || !sheet) return;
