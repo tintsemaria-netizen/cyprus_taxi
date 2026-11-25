@@ -10,7 +10,7 @@ import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { createBooking } from '@/server/bookings';
 import { answerShare, matchPrebookings } from '@/server/share';
-import { shareBoard, proposeFromBoard } from '@/server/share-board';
+import { proposeFromBoard } from '@/server/share-board';
 import { createBookingSchema } from '@/lib/validation';
 
 const MIN = 60_000;
@@ -47,23 +47,17 @@ beforeEach(async () => {
   }
 });
 
-describe('share board', () => {
-  it('TZ 2026-11-23: «ride together» is offered only for a ride that fits BOTH passengers’ terms; nothing private is shown', async () => {
+// The board page was removed (operator 2026-11-25): «Ехать» with an order from the hour list uses proposeFromBoard.
+describe('co-rider picked from the hour list', () => {
+  it('TZ 2026-11-23: «ride together» works only for a ride that fits BOTH passengers’ terms', async () => {
     const a = await passenger(), b = await passenger(), c = await passenger();
     const ra = await ride(a.id, lca, nic1, 24);
     const rb = await ride(b.id, lcaNear, nic2, 25.5); // 1.5 h apart: listed (±1 h reach), but even moving me 1 h does not fit
     expect(await matchPrebookings()).toBe(0);
-    const v0 = await shareBoard(a.id);
-    expect(v0.mine.map((m) => m.id)).toEqual([ra.id]);
-    expect(v0.others).toHaveLength(0);
-    expect(v0.all.map((r) => r.id)).toEqual([rb.id]); // still visible in the open list
+    expect(await proposeFromBoard(a.id, ra.id, rb.id)).toMatchObject({ ok: false, code: 'TOO_FAR' });
     // 10 min later, and that passenger can be picked up up to 20 min earlier: fits both, I keep my time.
     const rc = await ride(c.id, lcaNear, nic2, 24 + 10 / 60, { early: 20 });
-    const v = await shareBoard(a.id);
-    expect(v.others.map((o) => o.id)).toEqual([rc.id]);
-    expect(Math.abs(v.others[0].myShiftMin!)).toBeLessThanOrEqual(10); // I (the one choosing) adapt a few minutes
-    const json = JSON.stringify(v);
-    expect(json).not.toMatch(/Secret Name|\+357|Eleftheria|Makariou/); // no names, phones or streets
+    expect((await proposeFromBoard(a.id, ra.id, rc.id)).ok).toBe(true);
   });
 
   // ---- «Быть на месте» windows (operator 2026-11-23) ----
@@ -83,17 +77,13 @@ describe('share board', () => {
     expect(Math.max(fa, fb)).toBeGreaterThanOrEqual(base + 135 * MIN); // near the end of the common part, not early
   });
 
-  it('auto: windows that do not overlap are not paired; the board offers it, asks first, then tells the new arrival time', async () => {
+  it('auto: windows that do not overlap are not paired; picking it asks first, then tells the new arrival time', async () => {
     const a = await passenger(), b = await passenger(), c = await passenger();
     const h = (base - Date.now()) / 3600_000;
     const ra = await ride(a.id, lca, nic1, h, { arrive: [180, 240] }); // 13:00–14:00
     const rb = await ride(b.id, lcaNear, nic2, h, { arrive: [270, 300] }); // 14:30–15:00
     await ride(c.id, lcaNear, nic2, h, { arrive: [420, 480] }); // 17:00–18:00: beyond ±1 h, not shown
     expect(await matchPrebookings()).toBe(0);
-    const v = await shareBoard(a.id);
-    expect(v.others.map((o) => o.id)).toEqual([rb.id]);
-    expect(v.all).toHaveLength(0);
-    expect(v.others[0].myOutside).toBe(true);
     const r1 = await proposeFromBoard(a.id, ra.id, rb.id);
     expect(r1).toMatchObject({ ok: false, code: 'OUTSIDE_WINDOW' });
     const r = await proposeFromBoard(a.id, ra.id, rb.id, new Date(), true);
@@ -111,29 +101,20 @@ describe('share board', () => {
     expect(fa.arriveBy!.getTime()).toBeGreaterThanOrEqual(myAt); // my window now covers what I agreed to
   });
 
-  it('hides other corridors and rides inside the last 4 h; the open board shows everyone else\'s rides to anyone', async () => {
-    const a = await passenger(), b = await passenger(), c = await passenger(), d = await passenger();
+  it('another corridor is refused; a ride inside the pre-booking minimum (1 h) is no longer open', async () => {
+    const a = await passenger(), b = await passenger(), c = await passenger();
     const ra = await ride(a.id, lca, nic1, 24);
     const rb = await ride(b.id, lca, lim, 24); // different destination
-    await ride(c.id, lcaNear, nic2, 3); // within 4 h (settings.shareBoardHideMinutes)
-    expect((await shareBoard(a.id)).others).toHaveLength(0);
-    // 2026-11-22 (operator): the board is open — a passenger with no ride of his own sees all listed rides.
-    const none = await shareBoard(d.id);
-    expect(none.mine).toHaveLength(0);
-    expect(none.others).toHaveLength(0);
-    expect(none.all.map((r) => r.id).sort()).toEqual([ra.id, rb.id].sort());
-    expect(JSON.stringify(none)).not.toMatch(/Secret Name|\+357|Eleftheria|Makariou/);
-    expect((await shareBoard(a.id)).all.map((r) => r.id)).toEqual([rb.id]); // never my own ride
+    expect(await proposeFromBoard(a.id, ra.id, rb.id)).toMatchObject({ ok: false, code: 'NOT_SAME_ROUTE' });
+    const soon = await ride(c.id, lcaNear, nic2, 0.5);
+    expect(await proposeFromBoard(a.id, ra.id, soon.id)).toMatchObject({ ok: false, code: 'GONE' });
   });
 
-  it('a driver (same phone as a driver account) gets no board and cannot propose', async () => {
+  it('a driver (same phone as a driver account) cannot ride as a co-rider', async () => {
     const d = await prisma.driver.findFirstOrThrow({ where: { publicName: 'Andreas' } });
     const asPax = await prisma.passenger.create({ data: { phone: d.phone, phoneVerifiedAt: new Date(), name: 'Driver as passenger' } }).catch(async () => prisma.passenger.findUniqueOrThrow({ where: { phone: d.phone } }));
     const b = await passenger();
     const rb = await ride(b.id, lca, nic1, 24);
-    const v = await shareBoard(asPax.id);
-    expect(v.driver).toBe(true);
-    expect(v.all).toHaveLength(0);
     const mine = await ride(asPax.id, lcaNear, nic2, 25);
     const r = await proposeFromBoard(asPax.id, mine.id, rb.id);
     expect(r.ok).toBe(false);
@@ -158,14 +139,12 @@ describe('share board', () => {
     } finally { await saveSettings({ shareTimeMode: was }); }
   });
 
-  // Operator 2026-11-25: in the hour list he picks whom to ride with, up to the normal pre-booking minimum
-  // (the board itself still hides rides inside its last 4 h).
-  it('picked in the hour list: rides 2 h ahead can be joined (fromHours); the board alone would refuse', async () => {
+  // Operator 2026-11-25: in the hour list he picks whom to ride with, up to the normal pre-booking minimum.
+  it('picked in the hour list: rides 2 h ahead can be joined', async () => {
     const a = await passenger(), b = await passenger();
     const ra = await ride(a.id, lca, nic1, 2, { early: 15 });
     const rb = await ride(b.id, lcaNear, nic2, 2, { early: 15 });
-    expect((await proposeFromBoard(a.id, ra.id, rb.id)).ok).toBe(false);
-    expect((await proposeFromBoard(a.id, ra.id, rb.id, new Date(), false, true)).ok).toBe(true);
+    expect((await proposeFromBoard(a.id, ra.id, rb.id)).ok).toBe(true);
   });
 
   it('«ride together» outside the other passenger’s terms is refused (TZ 2026-11-23: nobody is moved to the other’s time)', async () => {

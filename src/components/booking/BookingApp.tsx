@@ -77,9 +77,6 @@ export default function BookingApp() {
   const [dropoff, setDropoff] = useState<Selected | null>(null);
   const [dropoffText, setDropoffText] = useState('');
   const [when, setWhen] = useState<'NOW' | 'SCHEDULE'>('NOW');
-  // «Поехать с этим попутчиком» from the share board (2026-11-22): /?join=<rideId> opens the pre-booking with the
-  // co-rider switched on and that ride's day / arrival window; after my ride is booked the proposal goes to them.
-  const [join, setJoin] = useState<{ id: string; at: string; from: string; to: string; arrive: { from: string; by: string } | null } | null>(null);
   const [joinResult, setJoinResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [scheduledAt, setScheduledAt] = useState('');
   // «Быть на месте с … до …» (2026-11-22, operator): the passenger gives an ARRIVAL window; the
@@ -113,6 +110,8 @@ export default function BookingApp() {
   useEffect(() => { if (step !== 'form') setCollapsed(false); }, [step]);
   // After a pre-booking (2026-11-13) the passenger stays here and can order again right away.
   const [doneAt, setDoneAt] = useState<string | null>(null);
+  // Departure hour (2026-11-25): the done screen shows the same «13:00–13:15» as «Мои предзаказы», not the span's end.
+  const [doneTo, setDoneTo] = useState<string | null>(null);
   // Pre-booking reminder on the home page (2026-11-13): the signed-in passenger's next scheduled
   // ride when its pickup is within the hour (the same moment a push reminder is sent).
   const [soonRide, setSoonRide] = useState<{ id: string; at: string; pickup: string; dropoff: string } | null>(null);
@@ -176,7 +175,7 @@ export default function BookingApp() {
   // Leave the pre-booking window (2026-11-20): the ✕ at its top-right — back to «now» and the start screen.
   function exitSchedule() {
     setArriveFromT(''); setArriveToT('');
-    setJoin(null);
+    setJoinPick(null);
     setWhen('NOW'); setScheduledAt(''); setScheduleOffsetMin(undefined); setAmbiguous(null); setNote('');
     resetRoute();
     if (isMobile) setCollapsed(true); // the small start sheet, as before «Запланировать»
@@ -1006,27 +1005,21 @@ export default function BookingApp() {
       await api('/tracking/exchange', { method: 'POST', body: { token: res.tracking.token } });
       if (when === 'SCHEDULE') {
         // Pre-booking: confirm here instead of jumping to tracking, so another ride can be ordered.
-        setDoneAt(scheduledAt); setStep('scheduled'); setSubmitting(false);
-        // Operator 2026-11-23: after a co-rider pre-booking the board opens at once — choose a co-rider yourself.
+        const span = departMode && arriveOn && arriveCalc ? arriveCalc : null;
+        setDoneAt(span ? span.leaveFrom : scheduledAt); setDoneTo(span && span.leaveBy !== span.leaveFrom ? span.leaveBy.slice(11, 16) : null);
+        setStep('scheduled'); setSubmitting(false);
         // Chosen in the hour list (2026-11-25): ride with that order — proposed at once, no board.
         if (shareOn && joinPick && departMode) {
           const myId = (res as unknown as { bookingId?: string }).bookingId;
           setJoinResult(null);
-          if (myId) api('/passenger/share-board', { method: 'POST', body: { myBookingId: myId, otherBookingId: joinPick, fromHours: true } })
+          if (myId) api('/passenger/share-board', { method: 'POST', body: { myBookingId: myId, otherBookingId: joinPick } })
             .then(() => setJoinResult({ ok: true, text: t('share.board.joinSent') }))
             .catch((e) => setJoinResult({ ok: false, text: t('share.board.joinFailed', { reason: e instanceof ApiRequestError ? tError(e) : t('common.networkError') }) }));
           setJoinPick(null);
           return;
         }
-        if (shareOn && !join) { router.push(`/share-board?booked=${encodeURIComponent((res as unknown as { reference?: string }).reference ?? '')}`); return; }
-        if (join && shareOn) {
-          const myId = (res as unknown as { bookingId?: string }).bookingId;
-          setJoinResult(null);
-          if (myId) api('/passenger/share-board', { method: 'POST', body: { myBookingId: myId, otherBookingId: join.id } })
-            .then(() => setJoinResult({ ok: true, text: t('share.board.joinSent') }))
-            .catch((e) => setJoinResult({ ok: false, text: t('share.board.joinFailed', { reason: e instanceof ApiRequestError ? tError(e) : t('common.networkError') }) }));
-          setJoin(null);
-        }
+        // No share board (operator 2026-11-25): without a chosen co-rider the system looks for a pair itself.
+        setJoinResult(shareOn ? { ok: true, text: t('share.board.booked') } : null);
         return;
       }
       router.push('/track');
@@ -1163,28 +1156,6 @@ export default function BookingApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [when]);
   useEffect(() => {
-    const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('join') : null;
-    if (!id || !cfg) return;
-    window.history.replaceState(null, '', window.location.pathname); // a reload does not join again
-    api<{ id: string; at: string; from: string; to: string; arrive: { from: string; by: string } | null }>(`/passenger/share-board?ride=${encodeURIComponent(id)}`)
-      .then((r) => {
-        setJoin(r);
-        setWhen('SCHEDULE'); setCollapsed(false);
-        setShareOpts((o) => ({ ...o, on: true }));
-        const wallOf = (iso: string) => nicosiaInputValue(new Date(iso));
-        setArriveMode(true);
-        if ((cfg?.schedule.shareTimeMode ?? 'DEPART') === 'DEPART') {
-          // Joining a ride on the board: the departure hour it sits in (2026-11-24).
-          const w = wallOf(r.at), step = cfg?.schedule.shareSlotMinutes ?? 60, m = +w.slice(11, 13) * 60 + +w.slice(14, 16);
-          const h = Math.floor(m / step) * step;
-          setArriveDay(w.slice(0, 10)); setDepartT(`${String(Math.floor(h / 60)).padStart(2, '0')}:${String(h % 60).padStart(2, '0')}`);
-        } else if (r.arrive) { const f = wallOf(r.arrive.from), b = wallOf(r.arrive.by); setArriveDay(f.slice(0, 10)); setArriveFromT(f.slice(11, 16)); setArriveToT(b.slice(11, 16)); }
-        else setArriveDay(wallOf(r.at).slice(0, 10));
-      })
-      .catch(() => setFlash(t('share.board.joinFailed', { reason: t('errors.BOOKING_GONE') })));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!cfg]);
-  useEffect(() => {
     if (when !== 'SCHEDULE' || arriveOn) return;
     const v = pickDay && /^\d{2}:\d{2}$/.test(pickT) ? `${pickDay}T${pickT}` : '';
     if (v !== scheduledAt) { setScheduledAt(v); setScheduleOffsetMin(undefined); }
@@ -1200,12 +1171,11 @@ export default function BookingApp() {
   const shareTermsBox = departMode ? <></> : (
     <div className="rounded-[12px] border border-accent/40 bg-accent/10 px-3 py-2.5" data-testid="share-terms">
       <p className="text-[13px] font-semibold text-accent">{t('share.terms.auto')}</p>
-      {/* Simple (operator 2026-11-23): the window, the 15-minute limit and the board — no pickup editor. */}
+      {/* Simple (operator 2026-11-23): the window and the 15-minute limit — no pickup editor (no board since 2026-11-25). */}
       {arriveCalc ? (
         <p className="mt-1 text-[15px] font-bold leading-snug" data-testid="share-terms-times">{(departMode ? t('booking.slots.pickupSpan', { from: fmt.clock(arriveCalc.leaveFrom.slice(11)), to: fmt.clock(arriveCalc.leaveBy.slice(11)) }) : t('share.terms.arrive', { af: fmt.clock(arriveFromT), at: fmt.clock(arriveToT) }))}</p>
       ) : departMode ? null /* no hint line here (operator 2026-11-25): the hour list below says it */ : <p className="mt-1 text-xs text-muted">{t('share.terms.needWindow')}</p>}
       <p className="mt-1 text-xs">{t('share.terms.extra', { n: cfg?.share?.termsMaxExtraMin ?? 15 })}</p>
-      <p className="mt-1 text-xs">{t('share.terms.board')}</p>
       <p className="mt-1.5 text-xs text-muted" data-testid="share-min-note">{t('share.booking.minNote', { h: shareMinH })}</p>
     </div>
   );
@@ -1588,13 +1558,6 @@ export default function BookingApp() {
                       <div data-testid="schedule-panel">
                         {/* Collapsed (2026-11-24, operator chose variant 1): no heading — the route box shows like a normal ride. */}
                         <h1 className={`mb-3 pe-12 text-xl font-bold ${peekSched ? 'hidden' : ''}`}>🕒 {t('booking.form.schedule')}</h1>
-                        {join && (
-                          <div className="mb-3 rounded-[12px] border border-accent/50 bg-accent/10 px-3 py-2 text-[13px] text-ink" data-testid="join-banner">
-                            👥 {t('share.board.joining', { from: t(`share.zones.${join.from}` as 'share.zones.LCA'), to: t(`share.zones.${join.to}` as 'share.zones.LCA'), when: join.arrive ? t('rides.prebookings.arrive', { from: fmt.time(join.arrive.from), to: fmt.time(join.arrive.by) }) : fmt.dateTime(join.at) })}
-                            <button type="button" className="ms-2 text-xs text-muted underline" onClick={() => setJoin(null)}>{t('share.board.cancelJoin')}</button>
-                            {pickup && dropoff && (shareZone(pickup) !== join.from || shareZone(dropoff) !== join.to) && <span className="mt-1 block font-semibold text-warn" data-testid="join-mismatch">{t('share.board.joinMismatch')}</span>}
-                          </div>
-                        )}
                         <div className="mb-3" />
                       </div>
                     ) : (
@@ -1792,7 +1755,7 @@ export default function BookingApp() {
                     <div className="text-center">
                       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent/15 text-2xl text-accent">✓</div>
                       <h2 className="mt-3 text-xl font-bold">{t('booking.prebooked.title')}</h2>
-                      <p className="mt-1 text-sm text-muted">{t('booking.prebooked.when', { when: wallText(doneAt ?? '') })}</p>
+                      <p className="mt-1 text-sm text-muted">{t('booking.prebooked.when', { when: wallText(doneAt ?? '') + (doneTo ? `–${doneTo}` : '') })}</p>
                       <p className="mt-2 text-sm text-muted">{t('booking.prebooked.body')}</p>
                       {joinResult && <p role="status" data-testid="join-result" className={`mt-3 rounded-[12px] border px-3 py-2 text-sm ${joinResult.ok ? 'border-accent/40 bg-accent/10 text-accent' : 'border-warn/40 bg-warn/10 text-warn'}`}>{joinResult.text}</p>}
                       <div className="mt-5 space-y-2">

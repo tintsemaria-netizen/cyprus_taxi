@@ -37,7 +37,7 @@ export async function shareSlots(day: string, pickup: LatLng, dropoff: LatLng, m
   for (let m = 0; m < 24 * 60; m += slotMinutes) slots.push({ at: hhmm(m), orders: [] });
   if (!from || !to || from === to) return { slotMinutes, spanMinutes: DEPART_SPAN_MIN, slots };
   const dayEnd = new Date(midnight.getTime() + 26 * 60 * MIN); // a DST day can be 25 h
-  const rides = await openRides(now, { scheduledAt: { gt: midnight, lt: new Date(dayEnd.getTime() + 3 * 60 * MIN) } }, settings.scheduleMinMinutes);
+  const rides = await openRides(now, { scheduledAt: { gt: midnight, lt: new Date(dayEnd.getTime() + 3 * 60 * MIN) } });
   const seats = settings.classes.find((c) => c.key === me.vClass)?.maxPassengers ?? 4;
   for (const r of rides) {
     // Old -30% bookings made before the terms are not paired automatically — board only, not promised here.

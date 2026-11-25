@@ -67,10 +67,6 @@ export default function Page() {
     <div className="mx-auto max-w-lg p-4 sm:p-6">
       <h1 className="mb-1 text-xl font-bold">{t('rides.prebookings.title')}</h1>
       <p className="mb-3 text-sm text-muted">{t('rides.prebookings.subtitle')}</p>
-      {/* Share board (2026-11-21): co-rider pre-bookings without a pair, to pick one yourself. */}
-      <a href="/share-board" className="card mb-3 flex items-center justify-between p-3 text-sm font-semibold" data-testid="open-share-board">
-        <span>👥 {t('share.board.open')}</span><span className="text-accent">›</span>
-      </a>
       {needLogin ? (
         <div className="card p-6 text-center">
           <p className="text-sm text-muted">{t('rides.signInPrompt')}</p>

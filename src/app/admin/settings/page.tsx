@@ -92,7 +92,6 @@ function SettingsForm() {
             </select>
           </Row>
           <Row label={t('staff.settings.shareMin')}><input type="number" className="field" value={s.shareMinMinutes} onChange={(e) => setS({ ...s, shareMinMinutes: Number(e.target.value) })} data-testid="set-share-min" /></Row>
-          <Row label={t('staff.settings.boardHide')}><input type="number" className="field" value={s.shareBoardHideMinutes} onChange={(e) => setS({ ...s, shareBoardHideMinutes: Number(e.target.value) })} data-testid="set-board-hide" /></Row>
           <Row label={t('staff.settings.schedMax')}><input type="number" className="field" value={s.scheduleMaxDays} onChange={(e) => setS({ ...s, scheduleMaxDays: Number(e.target.value) })} /></Row>
           <Row label={t('staff.settings.minStop')}><input type="number" className="field" value={s.minStopDistanceMeters} onChange={(e) => setS({ ...s, minStopDistanceMeters: Number(e.target.value) })} /></Row>
         </div>
