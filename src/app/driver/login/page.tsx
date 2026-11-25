@@ -65,7 +65,8 @@ export default function DriverLogin() {
   return (
     <div className="flex min-h-[100dvh] items-start justify-center px-4 py-6 sm:items-center">
       <div className="w-full max-w-sm" data-testid="driver-entrance">
-        <div className="flex items-center justify-between gap-2"><a href="/" className="inline-block"><Logo /></a><LanguageSwitcher /></div>
+        {/* No links to the passenger app (operator 2026-11-25): the logo is not a link. */}
+        <div className="flex items-center justify-between gap-2"><span className="inline-block"><Logo /></span><LanguageSwitcher /></div>
         <h1 className="mt-6 text-2xl font-bold">{t('driver.login.heading')}</h1>
         <p className="mt-1 text-sm text-muted">{t('driver.login.headingSub')}</p>
 
@@ -102,15 +103,9 @@ export default function DriverLogin() {
             onClick={() => { setErr(null); setMode(mode === 'phone' ? 'password' : 'phone'); }}>
             {mode === 'phone' ? t('driver.login.byPassword') : t('driver.login.byPhone')}
           </button>
+          {/* «Стать водителем» is a line under the sign-in choice, not a separate card (operator 2026-11-25). */}
+          <a href="/driver/register" className="mt-3 block w-full text-center text-sm text-accent" data-testid="driver-join">{t('driver.login.wantJoinBtn')} ›</a>
         </div>
-
-        <div className="card mt-3 p-4" data-testid="driver-join">
-          <div className="text-lg font-semibold">{t('driver.login.wantJoin')}</div>
-          <p className="mt-1 text-sm text-muted">{t('driver.login.wantJoinSub')}</p>
-          <a href="/driver/register" className="btn-ghost mt-3 flex min-h-[44px] w-full items-center justify-center font-semibold">{t('driver.login.wantJoinBtn')}</a>
-        </div>
-
-        <a href="/" className="mt-5 block text-center text-sm text-muted hover:text-ink">{t('driver.login.passengerLink')} ›</a>
       </div>
     </div>
   );

@@ -64,9 +64,9 @@ export default function Login() {
             <a href="/register" className="btn-ghost min-h-[44px] flex w-full items-center justify-center">{t('auth.createAccount')}</a>
           </div>
         </form>
-        <div className="mt-3 flex justify-between px-1 text-xs text-muted">
+        {/* No link to the driver app (operator 2026-11-25). */}
+        <div className="mt-3 px-1 text-xs text-muted">
           <a href="/" className="hover:text-ink">{t('auth.backToBooking')}</a>
-          <a href="/driver/login" className="hover:text-ink" data-testid="to-driver-login">{t('auth.login.driverLink')} ›</a>
         </div>
       </div>
     </div>

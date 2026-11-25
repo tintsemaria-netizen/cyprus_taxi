@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Logo } from '@/components/Brand';
+import { BackArrow } from '@/components/BackArrow';
 import { compressImageForUpload, UPLOAD_TARGET_BYTES } from '@/lib/image-compress';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
@@ -93,7 +94,7 @@ function StatusCard({ app, title, body, cta }: { app: AppData; title: string; bo
         <p className="mt-2 text-sm text-muted">{body}</p>
         <p className="mt-2 text-xs text-muted">{t('driverReg.status.ref', { phone: app.phone })}</p>
         {cta && <a href={cta.href} className="btn-primary mt-4 w-full">{cta.label}</a>}
-        <a href="/" className="mt-3 block text-sm text-muted hover:text-ink">{t('driverReg.status.backToBooking')}</a>
+        <a href="/driver/login" className="mt-3 block text-sm text-muted hover:text-ink">{t('driverReg.status.driverSignIn')}</a>
       </div>
     </div>
   );
@@ -114,7 +115,8 @@ function PhoneGate({ onDone }: { onDone: () => void }) {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center px-4">
       <div className="card w-full max-w-sm p-6">
-        <div className="flex items-center justify-between gap-2"><a href="/" className="inline-block"><Logo /></a></div>
+        {/* Back to the driver sign-in, never to the passenger app (operator 2026-11-25). */}
+        <div className="-ms-2 flex items-center gap-1"><BackArrow fallback="/driver/login" onBack={() => { window.location.href = '/driver/login'; }} /><Logo /></div>
         <h1 className="mt-6 text-xl font-bold">{t('driverReg.phone.title')}</h1>
         <p className="mt-1 text-sm text-muted">{t('driverReg.phone.intro')}</p>
         {err && <p className="mt-4 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}
