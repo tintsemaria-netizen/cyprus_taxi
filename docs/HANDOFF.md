@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-25 — airport = chosen pickup point, no 2.5 km circle (deployed)
+- NoGoZone.airport (LCA|PFO), migration 20261125090000_airport_territory auto-marks an active POINT territory containing the terminal. lib/airports: areas registry (server: no-go load + ensureAirportAreas in quote/fixed-fares/lifecycle/preassign/bookings/share*; client: area-client). Tests pin a 2.5 km ring via tests/setup/airports.ts; tests/airport-territory.db.test.ts uses the DB.
+- Admin «Фиксированные цены»: «Точка подачи для этих цен (выезд и въезд)» select → PUT /api/v1/admin/fixed-zones/airport-area (audit AIRPORT_AREA_SET); outline with the territory name on the map; warning when none. Territory list shows ✈.
+- If prod has no territory around a terminal, that airport's fixed fares are off until the admin picks a point.
+
 ## 2026-11-25 — no passenger↔driver links (deployed)
 - Driver login: «Стать водителем ›» is a line under the sign-in toggle (no join card); no «Я пассажир» link; logo not a link. Driver registration: back arrow to /driver/login, status card links to driver sign-in. Passenger /login: no driver link. Staff login still links to driver login (operator not asked).
 
