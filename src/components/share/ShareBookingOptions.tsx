@@ -42,8 +42,9 @@ export function ShareBookingOptions({ value, onChange, pct, maxPeople: carMax, p
   // Why it cannot be switched on — only when he tries (operator 2026-11-25: no text under the box, like ПП).
   const whyNot = blockMsg ?? (disabled ? t('share.booking.routes') : null);
   return (
-    <div className={`relative mt-4 rounded-[14px] border px-3 py-3 transition ${on ? 'border-accent bg-accent/10' : 'border-edge bg-elevated'} ${disabled ? 'opacity-60' : ''}`} data-testid="share-options">
-      <label className="flex cursor-pointer items-center gap-3" onClick={(e) => { if (disabled) { e.preventDefault(); setWarn(true); } }}>
+    <div className={`relative mt-4 rounded-[14px] border px-3 py-3 transition ${on ? 'border-accent bg-accent/10' : 'border-edge bg-elevated'}`} data-testid="share-options">
+      {/* Greyed when the route does not allow it — only the row, so the red bubble stays fully readable. */}
+      <label className={`flex cursor-pointer items-center gap-3 ${disabled ? 'opacity-60' : ''}`} onClick={(e) => { if (disabled) { e.preventDefault(); setWarn(true); } }}>
         <span className="min-w-0 flex-1">
           {/* 2026-11-22 (operator): the discount must be noticed — a lime badge + a highlighted note. */}
           <span className="flex items-center gap-2 font-semibold">
