@@ -381,3 +381,18 @@ export async function driverShareNoShow(bookingId: string, driverId: string, exp
     return ok(u.status, u.revision, { noShowFeeCents: fee });
   });
 }
+
+/** The driver gives back the next ride he took while finishing a trip (2026-11-25, operator): it goes back to the
+ *  search without him; the passenger is told another driver is being found. */
+export async function driverReleaseNext(driverId: string): Promise<LifeResult> {
+  return prisma.$transaction(async (tx) => {
+    const q = await tx.assignment.findFirst({ where: { queuedDriverId: driverId } });
+    if (!q) return err(404, 'NOT_FOUND', 'No next ride.');
+    await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${q.bookingId} FOR UPDATE`;
+    const again = await tx.assignment.findFirst({ where: { id: q.id, queuedDriverId: driverId } });
+    if (!again) return err(409, 'CONFLICT', 'The ride changed. Refresh and retry.');
+    await rematchBooking(tx, q.bookingId, driverId, 'driver gave back the next ride', 'DRIVER');
+    const b = await tx.booking.findUnique({ where: { id: q.bookingId }, select: { status: true, revision: true } });
+    return { ok: true, status: b!.status, revision: b!.revision };
+  });
+}

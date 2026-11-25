@@ -403,7 +403,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
         {data.shareProposal && <DriverShareProposalSheet key={data.shareProposal.groupId} p={data.shareProposal} onAnswered={() => { void load(); }} />}
         {/* Next order while finishing this trip (2026-11-25): the offer, then a pill with the accepted next ride. */}
         {offer && offer.afterTrip && <NextOfferCard offer={offer} secs={offerSecs} busy={offerBusy} onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} />}
-        {data.next && !offer && <NextRidePill next={data.next} />}
+        {data.next && !offer && <NextRidePill next={data.next} onChanged={() => { void load(); }} />}
       </>
     );
   }
@@ -1127,13 +1127,22 @@ function NextOfferCard({ offer, secs, busy, onAccept, onDecline }: { offer: Offe
   );
 }
 
-function NextRidePill({ next }: { next: NonNullable<CurrentTrip['next']> }) {
+function NextRidePill({ next, onChanged }: { next: NonNullable<CurrentTrip['next']>; onChanged: () => void }) {
   const { t } = useT();
+  const [busy, setBusy] = useState(false);
+  // The driver may give the next ride back (2026-11-25, operator): asks first, then it goes to another driver.
+  const giveBack = async () => {
+    if (busy || !window.confirm(t('driver.offer.giveBackConfirm'))) return;
+    setBusy(true);
+    try { await api('/driver/next/release', { method: 'POST' }); } catch { /* refreshed below either way */ }
+    setBusy(false); onChanged();
+  };
   return (
     // Above the navigation screen (z-50), under its instruction panel.
     <div style={{ top: 'calc(118px + env(safe-area-inset-top))' }} className="pointer-events-none fixed inset-x-0 z-[55] mx-auto flex max-w-lg justify-center px-3" data-testid="next-ride">
-      <div className="pointer-events-auto max-w-full truncate rounded-full border-2 border-accent bg-page/95 px-3 py-1.5 text-sm shadow-card">
-        <span className="font-semibold text-accent">{t('driver.offer.nextShort')}:</span> {next.pickup.label} · {next.passengerName}
+      <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full border-2 border-accent bg-page/95 py-1 pe-1 ps-3 text-sm shadow-card">
+        <span className="min-w-0 truncate"><span className="font-semibold text-accent">{t('driver.offer.nextShort')}:</span> {next.pickup.label} · {next.passengerName}</span>
+        <button type="button" onClick={giveBack} disabled={busy} className="shrink-0 rounded-full border border-danger/50 px-2.5 py-0.5 text-xs font-semibold text-danger" data-testid="next-give-back">{t('driver.offer.giveBack')}</button>
       </div>
     </div>
   );

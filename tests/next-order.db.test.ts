@@ -10,7 +10,7 @@ import { prisma } from '@/lib/db';
 import { createBooking } from '@/server/bookings';
 import { runOnce } from '@/server/dispatch/worker';
 import { acceptOffer, getDriverActiveOffer } from '@/server/dispatch/offers';
-import { completeTrip } from '@/server/dispatch/lifecycle';
+import { completeTrip, driverReleaseNext } from '@/server/dispatch/lifecycle';
 import { trackingView, driverCurrentTrip } from '@/server/views';
 import type { CreateBookingInput } from '@/lib/validation';
 
@@ -115,5 +115,17 @@ describe('next order for a driver finishing a trip', () => {
     await book({ lat: D.lat, lng: D.lng + 0.0044, label: 'Three' }, lca);
     await runOnce();
     expect(await getDriverActiveOffer(p)).toBeNull();
+  });
+  it('the driver gives the next ride back: it is searched again without him, his trip goes on', async () => {
+    const { a, b1 } = await andreasOnTrip(1);
+    const b2 = await book({ lat: D.lat, lng: D.lng + 0.0044, label: 'Back' }, lca);
+    await runOnce();
+    expect((await acceptOffer((await getDriverActiveOffer(a))!.offerId, a)).ok).toBe(true);
+    expect((await driverReleaseNext(a)).ok).toBe(true);
+    expect((await prisma.booking.findUnique({ where: { id: b2.id } }))!.status).toBe('SEARCHING');
+    expect((await prisma.dispatchJob.findUnique({ where: { bookingId: b2.id } }))!.triedDriverIds).toContain(a);
+    expect(await prisma.assignment.findFirst({ where: { queuedDriverId: a } })).toBeNull();
+    expect((await driverCurrentTrip(a)).trip?.bookingId).toBe(b1.id);
+    expect((await driverReleaseNext(a)).ok).toBe(false);
   });
 });

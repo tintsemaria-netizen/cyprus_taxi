@@ -2877,7 +2877,9 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   NextRidePill. Passenger: trackingView.finishingNearby + ETA via preassign.reachMinutes (30 s cache);
   TrackApp headline track.finishing(Eta). sw.js: next-offer title, ride.assignedNext, ride.nextOnWay (8 langs).
 - Tests: tests/next-order.db.test.ts (3). Full suite 478 passed.
-- Not done: the driver cannot give back a next ride himself (only the passenger cancels / admin).
+- Driver gives the next ride back: lifecycle.driverReleaseNext → rematchBooking (search again without him);
+  POST /api/v1/driver/next/release; «Отказаться» on NextRidePill with a confirm. Test added (4 in the file).
+- Passenger waiting for the finishing driver sees the car moving, NOT the other passenger's drop-off (privacy).
 
 ## 2026-11-25 01:20 — admin zone map rotates 360° + zooms together (DEPLOYED a1ce8cb)
 
