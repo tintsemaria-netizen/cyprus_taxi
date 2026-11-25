@@ -2,6 +2,8 @@ import type { Catalog } from '../../types';
 import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
+  NOT_REGISTERED: "هذا الرقم غير مسجّل كسائق.",
+  DRIVER_DISABLED: "حساب السائق هذا معطّل. يرجى التواصل معنا.",
   CAR_NOT_ALLOWED: "غير مسموح لك بهذه السيارة.",
   GO_OFFLINE_FIRST: "اخرج من الخط أولاً ثم غيّر السيارة.",
   PREBOOK_ON_CAR: "لديك حجز مسبق على سيارتك الحالية. تخلَّ عنه أولاً.",

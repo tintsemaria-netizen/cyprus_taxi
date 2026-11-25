@@ -10,8 +10,27 @@ const secure = (process.env.APP_BASE_URL || '').startsWith('https');
 
 export async function verifiedPassenger(phone: string): Promise<Passenger> {
   const existing = await prisma.passenger.findUnique({ where: { phone } });
-  if (existing) return prisma.passenger.update({ where: { id: existing.id }, data: { phoneVerifiedAt: new Date() } });
-  return prisma.passenger.create({ data: { phone, phoneVerifiedAt: new Date() } });
+  const fill = await fromDriver(phone, existing);
+  if (existing) return prisma.passenger.update({ where: { id: existing.id }, data: { phoneVerifiedAt: new Date(), ...fill } });
+  return prisma.passenger.create({ data: { phone, phoneVerifiedAt: new Date(), ...fill } });
+}
+
+/**
+ * A driver signs in to the passenger app with the same number (operator 2026-11-25): the SMS code has just proved
+ * the number is his, so the name (and e-mail, if no other passenger uses it) come from his driver account — he
+ * does not type them again. Only fills what is empty; never the other way round (a passenger never becomes a driver).
+ */
+async function fromDriver(phone: string, p: Passenger | null): Promise<{ name?: string; email?: string }> {
+  if (p?.name && p?.email) return {};
+  const user = await prisma.staffUser.findUnique({ where: { login: phone }, select: { role: true, displayName: true, driver: { select: { id: true } } } });
+  if (!user || user.role !== 'DRIVER' || !user.driver) return {};
+  const out: { name?: string; email?: string } = {};
+  if (!p?.name && user.displayName && user.displayName !== 'Driver') out.name = user.displayName;
+  if (!p?.email) {
+    const email = (await prisma.driverApplicant.findUnique({ where: { phone }, select: { email: true } }))?.email?.trim().toLowerCase();
+    if (email && !(await prisma.passenger.findUnique({ where: { email }, select: { id: true } }))) out.email = email;
+  }
+  return out;
 }
 
 // Attach email + password to a phone-verified passenger (Task 018 register). The phone is SMS-

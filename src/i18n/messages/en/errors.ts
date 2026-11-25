@@ -1,6 +1,8 @@
 // Translations for API error codes shown to passengers/drivers. Unknown codes fall back to the
 // server's English message (see tError in I18nProvider).
 const errors = {
+  NOT_REGISTERED: "This number is not registered as a driver.",
+  DRIVER_DISABLED: "This driver account is switched off. Please contact us.",
   CAR_NOT_ALLOWED: "You are not allowed on this car.",
   GO_OFFLINE_FIRST: "Go offline first, then change the car.",
   PREBOOK_ON_CAR: "You hold a pre-booking on your current car. Give it up first.",

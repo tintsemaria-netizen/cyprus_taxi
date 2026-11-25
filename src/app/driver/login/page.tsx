@@ -25,12 +25,13 @@ export default function DriverLogin() {
   const [dev, setDev] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [notReg, setNotReg] = useState(false); // «номер не зарегистрирован» → a «Стать водителем» link under it
 
   // Already signed in as a driver (the «IL-Y Driver» icon opens here): straight to work.
   useEffect(() => { api<{ role: string }>('/auth/me').then((m) => { if (m.role === 'DRIVER') router.replace('/driver'); }).catch(() => {}); }, [router]);
 
   async function requestCode() {
-    setBusy(true); setErr(null);
+    setBusy(true); setErr(null); setNotReg(false);
     try {
       const r = await api<{ sent: boolean; devCode?: string; unavailable?: boolean }>('/driver/otp/request', { method: 'POST', body: { phone } });
       if (!r.sent) { setErr(t('driver.login.smsUnavailable')); return; }
@@ -40,9 +41,12 @@ export default function DriverLogin() {
   async function verify() {
     setBusy(true); setErr(null);
     try {
-      await api('/driver/otp/verify', { method: 'POST', body: { phone, code } });
-      router.push('/driver');
-    } catch (e) { if (e instanceof ApiRequestError) setErr(tError(e)); } finally { setBusy(false); }
+      const r = await api<{ application?: boolean }>('/driver/otp/verify', { method: 'POST', body: { phone, code } });
+      // Not a driver yet but has an application (2026-11-25): open it — continue or see its status.
+      router.push(r.application ? '/driver/register' : '/driver');
+    } catch (e) {
+      if (e instanceof ApiRequestError) { setErr(tError(e)); setNotReg(e.body.code === 'NOT_REGISTERED'); }
+    } finally { setBusy(false); }
   }
   async function byPassword(e: React.FormEvent) {
     e.preventDefault();
@@ -72,7 +76,7 @@ export default function DriverLogin() {
 
         <div className="card mt-5 p-4" data-testid="driver-have-account">
           <div className="text-lg font-semibold">{t('driver.login.haveAccount')}</div>
-          {err && <p className="mt-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}
+          {err && <p className="mt-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger" data-testid="driver-login-error">{err}{notReg && <> <a href="/driver/register" className="font-semibold underline">{t('driver.login.wantJoinBtn')} ›</a></>}</p>}
           {mode === 'phone' ? (
             stage === 'phone' ? (
               <div className="mt-2 space-y-3">

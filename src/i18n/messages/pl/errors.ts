@@ -2,6 +2,8 @@ import type { Catalog } from '../../types';
 import type en from '../en/errors';
 
 const errors: Catalog<typeof en> = {
+  NOT_REGISTERED: "Ten numer nie jest zarejestrowany jako kierowca.",
+  DRIVER_DISABLED: "To konto kierowcy jest wyłączone. Skontaktuj się z nami.",
   CAR_NOT_ALLOWED: "Nie masz zgody na to auto.",
   GO_OFFLINE_FIRST: "Najpierw przejdź offline, potem zmień auto.",
   PREBOOK_ON_CAR: "Masz zlecenie z wyprzedzeniem na obecnym aucie. Najpierw je oddaj.",

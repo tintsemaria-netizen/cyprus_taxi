@@ -2,13 +2,15 @@ import { apiOk, apiError, Errors, clientIp } from '@/lib/http';
 import { config } from '@/lib/config';
 import { prisma } from '@/lib/db';
 import { rateLimit, refundRateLimit } from '@/lib/rate-limit';
-import { normalizePhone } from '@/server/applicant';
+import { normalizePhone, createApplicantSession } from '@/server/applicant';
 import { checkOtp } from '@/server/sms';
 import { createStaffSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 // Verify OTP and, if an operational DRIVER account exists for this phone, start a driver session.
+// Operator 2026-11-25: somebody who started «Стать водителем» and comes back through «Я уже водитель» is not
+// stopped with an error — the code proves the number, so his application opens (continue it / see its status).
 export async function POST(req: Request) {
   let body: { phone?: string; code?: string };
   try { body = await req.json(); } catch { return Errors.validation({ _: 'Invalid JSON body.' }); }
@@ -24,8 +26,17 @@ export async function POST(req: Request) {
   await refundRateLimit('otp-verify-phone', phone);
   const user = await prisma.staffUser.findUnique({ where: { login: phone } });
   const driver = user ? await prisma.driver.findUnique({ where: { userId: user.id } }) : null;
+  if (user && user.role === 'DRIVER' && driver && !user.active) {
+    return apiError(403, 'DRIVER_DISABLED', 'This driver account is switched off. Please contact us.');
+  }
   if (!user || user.role !== 'DRIVER' || !user.active || !driver) {
-    return apiError(403, 'NOT_A_DRIVER', 'No approved driver account for this number. If you applied, check your application status.');
+    const applicant = await prisma.driverApplicant.findUnique({ where: { phone }, select: { id: true } });
+    if (applicant) {
+      await prisma.driverApplicant.update({ where: { id: applicant.id }, data: { phoneVerifiedAt: new Date() } });
+      await createApplicantSession(applicant.id);
+      return apiOk({ ok: true, application: true });
+    }
+    return apiError(403, 'NOT_REGISTERED', 'This number is not registered as a driver.');
   }
   await createStaffSession(user);
   return apiOk({ ok: true });
