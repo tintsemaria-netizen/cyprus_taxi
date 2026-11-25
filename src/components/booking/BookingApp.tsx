@@ -471,6 +471,14 @@ export default function BookingApp() {
   const peekRoute = isMobile && collapsed && routeReady && step === 'form';
   const peekSched = peekRoute && when === 'SCHEDULE';
   const footerRef = useRef<HTMLDivElement | null>(null);
+  // A collapsed sheet always shows its top (2026-11-25, operator: after leaving a pre-booking form that had been
+  // scrolled down, the home sheet kept that scroll — «Куда едем?» was cut off above, empty space below — and the
+  // peek height was not measured again because the content was scrolled).
+  useEffect(() => {
+    if (isMobile && collapsed && contentRef.current) contentRef.current.scrollTop = 0;
+  }, [isMobile, collapsed, when, step]);
+  // A new step (form → price → search …) starts at the top, open or not.
+  useEffect(() => { if (contentRef.current) contentRef.current.scrollTop = 0; }, [step]);
   useEffect(() => {
     const box = contentRef.current, sheet = sheetRef.current;
     if (!isMobile || !box || !sheet) return;
@@ -505,7 +513,7 @@ export default function BookingApp() {
     if (first) ro.observe(first);
     window.addEventListener('resize', measure);
     return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
-  }, [isMobile, step, routeReady, addrOpen, hasStop, destinations.length, places, passenger]);
+  }, [isMobile, step, routeReady, addrOpen, hasStop, destinations.length, places, passenger, collapsed, when, !!soonRide]); // eslint-disable-line react-hooks/exhaustive-deps
   useHideClipped(contentRef, isMobile && (collapsed || dragH != null));
   useEffect(() => {
     const el = contentRef.current;
@@ -1181,7 +1189,7 @@ export default function BookingApp() {
   );
   const pickupBox = (
     <div data-testid="pickup-time">
-      {!pickT && <p className="mb-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium text-ink" data-testid="pickup-hint">{t('booking.pickupAt.hint')}</p>}
+      {/* No «Укажите, во сколько машина должна быть у вас» note (operator 2026-11-25): the title says it. */}
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-2">
         <label className="block min-w-0">
           <span className="label">{t('booking.arrive.day')}</span>

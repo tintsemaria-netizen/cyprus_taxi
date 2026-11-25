@@ -216,7 +216,6 @@ const booking: Catalog<typeof en> = {
   pickupAt: {
     title: 'Wann soll der Wagen Sie abholen?',
     time: 'Abholzeit',
-    hint: 'Wählen Sie, wann der Wagen bei Ihnen sein soll.',
     tooSoon: 'Abholung frühestens in {n} Min.',
   },
   // «Попутчик» arrival windows (2026-11-24).

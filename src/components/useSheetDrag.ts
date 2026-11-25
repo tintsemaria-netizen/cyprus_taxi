@@ -20,6 +20,11 @@ export function useSheetDrag(opts: {
   const [panelEl, setPanelEl] = useState<HTMLDivElement | null>(null);
   const panelRef = useCallback((el: HTMLDivElement | null) => setPanelEl(el), []);
   const [offset, setOffset] = useState<number | null>(null);
+  // A collapsed panel always shows its top (2026-11-25, operator): if its body was scrolled while open, closing
+  // it must not leave the first lines cut off above and empty space below.
+  useEffect(() => {
+    if (!open && scrollRef?.current) scrollRef.current.scrollTop = 0;
+  }, [open, scrollRef]);
 
   useEffect(() => {
     const el = panelEl;

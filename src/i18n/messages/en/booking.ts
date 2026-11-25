@@ -200,7 +200,6 @@ const booking = {
   pickupAt: {
     title: 'What time should the car pick you up?',
     time: 'Pickup time',
-    hint: 'Choose when the car should be at your door.',
     tooSoon: 'Pickup can be no sooner than in {n} min.',
   },
   // «Попутчик» arrival windows (2026-11-24).
