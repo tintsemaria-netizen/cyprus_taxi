@@ -60,11 +60,11 @@ export async function standQueueOrder(standIds: string[]): Promise<{ driverId: s
 }
 
 /** For the driver's screen: the stand he is in and his place in its queue. */
-export async function standStateFor(driverId: string, p: { lat: number; lng: number } | null): Promise<{ name: string; on: boolean; place: number | null; total: number } | null> {
+export async function standStateFor(driverId: string, p: { lat: number; lng: number } | null): Promise<{ name: string; on: boolean; place: number | null; total: number; polygon: [number, number][] } | null> {
   const entry = await prisma.standQueue.findUnique({ where: { driverId } });
   const stand = entry ? (await taxiStands()).find((s) => s.id === entry.standId) ?? null : p ? await standAt(p) : null;
   if (!stand) return null;
-  if (!stand.active || !entry) return { name: stand.name, on: stand.active, place: null, total: 0 };
+  if (!stand.active || !entry) return { name: stand.name, on: stand.active, place: null, total: 0, polygon: stand.polygon };
   const q = await prisma.standQueue.findMany({ where: { standId: stand.id }, orderBy: [{ enteredAt: 'asc' }, { driverId: 'asc' }], select: { driverId: true } });
-  return { name: stand.name, on: true, place: q.findIndex((r) => r.driverId === driverId) + 1, total: q.length };
+  return { name: stand.name, on: true, place: q.findIndex((r) => r.driverId === driverId) + 1, total: q.length, polygon: stand.polygon };
 }

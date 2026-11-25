@@ -516,7 +516,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   );
 }
 
-type StandState = { name: string; on: boolean; place: number | null; total: number };
+type StandState = { name: string; on: boolean; place: number | null; total: number; polygon?: [number, number][] };
 
 // ---- Home ----
 function HomeSection(props: {
@@ -547,6 +547,11 @@ function HomeSection(props: {
   const docSlot = docAlert?.slot ? `${slotName(docAlert.slot)}${docAlert.car ? ` (${docAlert.car})` : ''}` : '';
   const blocker = dash?.alerts.find((a) => a.level === 'blocker' && !(docAlert && (a.code === 'DOCUMENTS_EXPIRED' || a.code === 'DOC_EXPIRED')));
 
+  // «Стоянка с очередью» (2026-11-25): three looks to choose from (operator) — localStorage ily-stand-ui = 1 | 2 | 3.
+  const standUi = (() => { try { return localStorage.getItem('ily-stand-ui') || '2'; } catch { return '2'; } })();
+  const [standOpen, setStandOpen] = useState(false);
+  const st = props.stand ?? null;
+  const standShown = !!(data.onDuty && !trip && st && (st.on ? st.place != null : true));
   const [counts, setCounts] = useState({ free: 0, busy: 0 });
   const onCounts = useCallback((free: number, busy: number) => setCounts({ free, busy }), []);
   const warning = dash?.alerts.find((a) => a.level === 'warning' && a.code !== 'DOC_EXPIRING');
@@ -559,7 +564,8 @@ function HomeSection(props: {
       <DriverHomeMap pos={props.pos} fullscreen onCounts={onCounts}
         pickup={offer && !trip ? offer.pickup : null}
         dropoff={offer && !trip ? offer.dropoff : null} via={offer && !trip ? offer.stop ?? null : null}
-        fitPadding={offer && !trip ? sheetFitPadding() : undefined} />
+        fitPadding={offer && !trip ? sheetFitPadding() : undefined}
+        stand={standShown && standUi === '3' && st?.polygon ? { polygon: st.polygon, on: st.on, label: st.on ? t('driver.stand.mapLabel', { name: st.name, place: st.place ?? 0 }) : t('driver.stand.mapOff', { name: st.name }) } : null} />
 
       {/* Top: status + messages */}
       <div style={{ top: 'calc(64px + env(safe-area-inset-top))' }} className="pointer-events-none fixed inset-x-0 z-10 mx-auto flex max-w-lg flex-col items-start gap-2 px-3 pt-2">
@@ -654,6 +660,21 @@ function HomeSection(props: {
         {!offer && warning && <div className="pointer-events-auto rounded-[12px] border border-warn/40 bg-page/95 px-3 py-2 text-sm text-warn">{warning.message}{warning.action && <a href={warning.action.href} className="ms-2 underline">{warning.action.label}</a>}</div>}
         {data.onDuty && gps.error && <div className={`pointer-events-auto rounded-[12px] border bg-page/95 px-3 py-2 text-xs ${gps.error === 'acquiring' ? 'border-warn/40 text-warn' : 'border-danger/40 text-danger'}`}>{t(`driver.gps.${gps.error as 'denied' | 'acquiring' | 'unsupported' | 'unavailable'}`)}</div>}
         {data.onDuty && !gps.active && !gps.error && <div className="pointer-events-auto rounded-[12px] border border-edge bg-page/95 px-3 py-2 text-xs text-muted">{t('driver.map.noGps')}</div>}
+        {/* «Стоянка с очередью» look «1»: a small badge; a tap opens the details. */}
+        {standShown && standUi === '1' && st && (
+          <div className="pointer-events-auto" data-testid="driver-stand">
+            <button type="button" onClick={() => setStandOpen((v) => !v)} className={`${pill} flex h-11 items-center gap-1.5 px-4 text-[15px] font-bold tabular-nums ${st.on ? '!border-[#A78BFA] text-[#A78BFA]' : '!border-warn/60 text-warn'}`} aria-expanded={standOpen}>
+              🅿 {st.on ? `${st.place}/${st.total}` : '✕'}
+            </button>
+            {standOpen && (
+              <div className="mt-2 max-w-[290px] rounded-[14px] border border-edge bg-page/95 px-3 py-2.5 text-sm shadow-card">
+                <div className="font-semibold">{st.on ? t('driver.stand.place', { name: st.name, place: st.place ?? 0, total: st.total }) : t('driver.stand.off', { name: st.name })}</div>
+                {st.on && <div className="mt-0.5 text-xs">{st.place === 1 ? t('driver.stand.first') : t('driver.stand.ahead', { n: (st.place ?? 1) - 1 })}</div>}
+                {st.on && <div className="mt-1 text-[11px] text-muted">{t('driver.stand.keepOpen')}</div>}
+              </div>
+            )}
+          </div>
+        )}
         <InstallPrompt app="driver" className="pointer-events-auto w-full bg-page/95" />
         {/* One button per action, right-aligned under the messages (never overlapping them). */}
         {!offer && (
@@ -679,15 +700,18 @@ function HomeSection(props: {
       <div className="pointer-events-none fixed inset-x-0 z-10 mx-auto max-w-lg px-3" style={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
         {!offer && (
           <div className="flex flex-col items-center gap-2">
-            {/* «Стоянка с очередью» (2026-11-25): his place in the queue, or that this stand gives no orders. */}
-            {data.onDuty && !trip && props.stand && (props.stand.on ? props.stand.place != null : true) && (
-              <div className={`${pill} max-w-full px-4 py-2 text-center ${props.stand.on ? '!border-[#A78BFA]' : '!border-warn/60'}`} data-testid="driver-stand">
-                {props.stand.on ? (
+            {/* «Стоянка с очередью» (2026-11-25). Look «2» (operator to choose): a card with a big number. */}
+            {standShown && standUi === '2' && st && (
+              <div className={`${pill} flex max-w-full items-center gap-3 !rounded-[18px] px-4 py-2.5 ${st.on ? '!border-[#A78BFA]' : '!border-warn/60'}`} data-testid="driver-stand">
+                {st.on ? (
                   <>
-                    <div className="text-sm font-semibold">🅿 {t('driver.stand.place', { name: props.stand.name, place: props.stand.place ?? 0, total: props.stand.total })}</div>
-                    <div className="text-[11px] text-muted">{t('driver.stand.keepOpen')}</div>
+                    <span className="text-[40px] font-extrabold leading-none tabular-nums text-[#A78BFA]">{st.place}</span>
+                    <span className="min-w-0 text-start">
+                      <span className="block text-sm font-semibold">{st.place === 1 ? t('driver.stand.first') : t('driver.stand.ahead', { n: (st.place ?? 1) - 1 })}</span>
+                      <span className="block truncate text-[11px] text-muted">🅿 {st.name} · {t('driver.stand.inQueue', { total: st.total })}</span>
+                    </span>
                   </>
-                ) : <div className="text-sm font-medium text-warn">🅿 {t('driver.stand.off', { name: props.stand.name })}</div>}
+                ) : <span className="text-sm font-medium text-warn">🅿 {t('driver.stand.off', { name: st.name })}</span>}
               </div>
             )}
             <div className={`${pill} px-3 py-1 text-xs text-muted`}>

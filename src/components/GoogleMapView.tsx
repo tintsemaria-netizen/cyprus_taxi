@@ -136,7 +136,7 @@ function markerEl(mk: MapMarker): HTMLElement {
     el.classList.add('ily-vehicle');
     return centerOnPoint(el);
   }
-  if (mk.kind === 'spot') { const el = spotEl({ name: mk.label ?? '', active: mk.active }); el.dataset.sig = `spot|${mk.active ? 1 : 0}|${mk.label ?? ''}`; return el; }
+  if (mk.kind === 'spot') { const el = spotEl({ name: mk.label ?? '', active: mk.active, labelOnly: mk.labelOnly, color: mk.color }); el.dataset.sig = `spot|${mk.active ? 1 : 0}|${mk.label ?? ''}|${mk.color ?? ''}`; return el; }
   if (mk.num != null && mk.kind !== 'person') return centerOnPoint(numberedStopEl({ num: mk.num, kind: mk.kind, next: mk.next, title: mk.label }));
   if (mk.kind === 'person') return centerOnPoint(personMarkerEl({ title: mk.label, stale: mk.stale }));
   // Pin: the needle tip (element bottom) is the point — Google's default bottom anchor, no shift.
@@ -334,7 +334,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
       const sig = mk.nav ? 'nav' : `${mk.busy ? 1 : 0}|${mk.tag ?? ''}`;
       if (mk.kind === 'pickup' && marker.content && (marker.content as HTMLElement).dataset.sig !== (mk.pulse ? 'pulse' : 'pin')) marker.content = markerEl(mk);
       // Pickup-point silhouette: the chosen one carries the name (2026-11-24).
-      if (mk.kind === 'spot' && marker.content && (marker.content as HTMLElement).dataset.sig !== `spot|${mk.active ? 1 : 0}|${mk.label ?? ''}`) marker.content = markerEl(mk);
+      if (mk.kind === 'spot' && marker.content && (marker.content as HTMLElement).dataset.sig !== `spot|${mk.active ? 1 : 0}|${mk.label ?? ''}|${mk.color ?? ''}`) marker.content = markerEl(mk);
       if (mk.kind === 'vehicle' && marker.content && (marker.content as HTMLElement).dataset.sig !== sig) {
         marker.content = markerEl(mk);
         if (mk.heading != null) orientVehicle(marker.content as HTMLElement, map.getHeading?.() ?? 0, mk.heading);

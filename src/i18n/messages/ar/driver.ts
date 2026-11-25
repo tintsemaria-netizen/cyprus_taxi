@@ -46,6 +46,11 @@ const driver: Catalog<typeof en> = {
   },
   // «Стоянка с очередью» (2026-11-25).
   stand: {
+    ahead: "سيارات قبلك: {n}",
+    first: "أنت الأول — طلب المطار التالي لك",
+    inQueue: "في طابور من {total}",
+    mapLabel: "{name} · أنت {place}",
+    mapOff: "{name} · لا طلبات",
     place: "«{name}»: أنت {place} من {total} في الطابور",
     keepOpen: "أبقِ التطبيق مفتوحًا — وإلا ينتقل الطلب إلى التالي.",
     off: "«{name}» متوقف — لا تصل طلبات هنا.",
