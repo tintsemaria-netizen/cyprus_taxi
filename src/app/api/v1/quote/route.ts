@@ -38,9 +38,10 @@ export async function POST(req: Request) {
   if (!onCyprusIsland(pickup) || !onCyprusIsland(dropoff) || (stop && !onCyprusIsland(stop))) {
     return apiError(422, 'OFF_ISLAND', 'The point is not on the island of Cyprus.');
   }
-  if (await firstNoGo({ pickup, dropoff, stop })) return apiError(422, 'NO_GO_ZONE', 'The taxi does not go to this area.'); // 2026-11-24
+  // Moved to a point first (a territory's, or one next to a no-go zone — 2026-11-26), then the zones are checked.
   parsed.data.pickup = await snapPickup(parsed.data.pickup); // «Одна точка подачи»: priced from that point
   parsed.data.dropoff = await snapDropoff(parsed.data.dropoff); // and to the territory's drop-off point
+  if (await firstNoGo({ pickup: parsed.data.pickup, dropoff: parsed.data.dropoff, stop })) return apiError(422, 'NO_GO_ZONE', 'The taxi does not go to this area.'); // 2026-11-24
 
   // Convert a scheduled wall time to UTC; if it's not a valid instant (DST gap/ambiguous)
   // we price the quote for "now" — the booking endpoint does the strict schedule check.

@@ -7,7 +7,7 @@ import { setAirportAreas } from './airports';
 // «Запретная зона». The zones come from /api/v1/no-go (refreshed every 5 min); the server checks again.
 let zones: [number, number][][] = [];
 /** Pickup territories (already rounded by the server): a pickup inside goes to one of their points. */
-export interface Territory { name: string; polygon: [number, number][]; points: { lat: number; lng: number; name: string }[]; dropPoints?: { lat: number; lng: number; name: string }[]; airport?: string | null }
+export interface Territory { name: string; polygon: [number, number][]; points: { lat: number; lng: number; name: string }[]; dropPoints?: { lat: number; lng: number; name: string }[]; airport?: string | null; nogo?: boolean }
 let territories: Territory[] = [];
 let loadedAt = 0;
 let loading: Promise<void> | null = null;
@@ -15,11 +15,11 @@ let loading: Promise<void> | null = null;
 export function loadNoGo(): Promise<void> {
   if (loading) return loading;
   if (Date.now() - loadedAt < 5 * 60_000) return Promise.resolve();
-  loading = api<{ zones: [number, number][][]; territories?: Territory[] }>('/no-go')
+  loading = api<{ zones: [number, number][][]; territories?: Territory[]; zoneSpots?: Territory[] }>('/no-go')
     .then((r) => {
-      zones = r.zones ?? []; territories = r.territories ?? []; loadedAt = Date.now();
+      zones = r.zones ?? []; territories = [...(r.territories ?? []), ...(r.zoneSpots ?? [])]; loadedAt = Date.now(); // no-go zones with points next to them snap like territories (2026-11-26)
       // The airport is a territory marked «это аэропорт» (2026-11-25): the co-rider places use it here too.
-      setAirportAreas(territories.filter((t) => t.airport).map((t) => ({ code: t.airport!, polygon: t.polygon })));
+      setAirportAreas(territories.filter((t) => t.airport && !t.nogo).map((t) => ({ code: t.airport!, polygon: t.polygon })));
     })
     .catch(() => { /* keep what we had; the server still refuses */ })
     .finally(() => { loading = null; });
@@ -34,7 +34,7 @@ export function areaBlock(p: { lat: number; lng: number }): 'OFF_ISLAND' | 'NO_G
 }
 
 /** All pickup territories — drawn on the passenger map all the time (2026-11-24, operator). */
-export const allTerritories = (): Territory[] => territories.filter((t) => t.points.length || t.dropPoints?.length); // a bare territory (no points) is not drawn for the passenger
+export const allTerritories = (): Territory[] => territories.filter((t) => !t.nogo && (t.points.length || t.dropPoints?.length)); // a bare territory (no points) is not drawn for the passenger
 /** The territory with drop-off points a destination is in, with the drop-off point it is on (if any) and the
  *  nearest one (2026-11-24, operator: the airport's drop-off is not at the pickup points). */
 export function dropTerritoryAt(p: { lat: number; lng: number }): { t: Territory; on: number; nearest: number } | null {
@@ -61,7 +61,8 @@ export function territoryNear(p: { lat: number; lng: number }, radiusM: number):
   if (inside || radiusM <= 0) return inside;
   const k = Math.cos((p.lat * Math.PI) / 180);
   let best: Territory | null = null, bd = Infinity;
-  for (const t of territories) if (t.points.length) for (const [la, ln] of t.polygon) {
+  // «Next to» only for territories: next to a no-go zone, outside it, the pickup is fine where it is (2026-11-26).
+  for (const t of territories) if (t.points.length && !t.nogo) for (const [la, ln] of t.polygon) {
     const d = Math.hypot((la - p.lat) * 110540, (ln - p.lng) * 111320 * k);
     if (d < bd) { bd = d; best = t; }
   }

@@ -115,6 +115,8 @@ function AreaZones({ kind }: { kind: Kind }) {
     })),
     ...zones.filter((z) => z.id !== draft?.id).flatMap((z) => [...z.points.map((p, i) => pointLabel(p.name, p, i)), ...(z.dropPoints ?? []).map((p, i) => dropLabel(p.name, p, i))]),
     // the territory being drawn: its rounded outline (faint behind the corners; solid while points are placed)
+    // a no-go zone being edited: its red outline stays while its points are placed (2026-11-26)
+    ...(draft?.kind === 'NOGO' && !cornersOn && draft.polygon.length >= 3 ? [{ id: 'draft-nogo', name: draft.name, polygon: draft.polygon, color: colorOf({ kind: 'NOGO', active: true } as Zone), strong: true }] : []),
     ...(draft?.kind === 'POINT' && draft.polygon.length >= 3 ? [{ id: 'draft-round', name: draft.name, polygon: smoothRing(draft.polygon), color: BLUE, strong: !cornersOn }] : []),
     // The territory being edited: its points can be dragged to a new place (2026-11-25, operator).
     // Only the kind chosen in the switch moves (operator 2026-11-25): «📍 Точки подачи» → pickup points,
@@ -132,7 +134,18 @@ function AreaZones({ kind }: { kind: Kind }) {
   }, [fitKey]);
 
   function startNew() { if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } resetDirty(); setMsg(null); resetHist(); setDraft({ id: null, name: '', kind, active: true, polygon: [], points: [], dropPoints: [], airport: null, forZoneId: null, minComfort: '', minXl: '', minOn: true, pointsOn: true }); setMode('corners'); }
-  function startEdit(z: Zone) { if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } resetDirty(); setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, kind: z.kind, active: z.active, polygon: untangle(z.polygon), points: z.points, dropPoints: z.dropPoints ?? [], airport: z.airport ?? null, forZoneId: z.forZoneId ?? null, minComfort: centsText(z.minComfortCents), minXl: centsText(z.minXlCents), minOn: z.minActive ?? true, pointsOn: z.pointsActive ?? true }); setMode(z.kind === 'POINT' ? 'none' : 'corners'); }
+  // Where a point may stand: a territory's inside it (rounded); a no-go zone's NEXT TO it — outside, within 3 km (2026-11-26).
+  const spotOk = (d: Draft, pt: { lat: number; lng: number }) => {
+    if (!onCyprusIsland(pt)) return false;
+    if (d.kind === 'NOGO') {
+      const k = Math.cos((pt.lat * Math.PI) / 180);
+      return !pointInPolygon(pt, d.polygon.map(([a, b]) => ({ lat: a, lng: b }))) && d.polygon.some(([a, b]) => Math.hypot((a - pt.lat) * 110540, (b - pt.lng) * 111320 * k) <= 3000);
+    }
+    return pointInPolygon(pt, smoothRing(d.polygon).map(([a, b]) => ({ lat: a, lng: b })));
+  };
+  const hasPoints = (k: Kind) => k === 'POINT' || k === 'NOGO';
+
+  function startEdit(z: Zone) { if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } resetDirty(); setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, kind: z.kind, active: z.active, polygon: untangle(z.polygon), points: z.points, dropPoints: z.dropPoints ?? [], airport: z.airport ?? null, forZoneId: z.forZoneId ?? null, minComfort: centsText(z.minComfortCents), minXl: centsText(z.minXlCents), minOn: z.minActive ?? true, pointsOn: z.pointsActive ?? true }); setMode(z.kind === 'STAND' ? 'corners' : 'none'); }
 
   // A point dragged on the map: same rules as placing one (inside the rounded territory, on land, 15 m from the
   // other kind); a bad place puts it back.
@@ -142,9 +155,9 @@ function AreaZones({ kind }: { kind: Kind }) {
     const which = m[1] as 'pick' | 'drop', i = Number(m[2]);
     if (which !== mode) { setDraft({ ...draft }); return; }
     const pt = { lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6 };
-    const ok = onCyprusIsland(pt) && pointInPolygon(pt, smoothRing(draft.polygon).map(([a, b]) => ({ lat: a, lng: b })));
+    const ok = spotOk(draft, pt);
     const near = (which === 'pick' ? draft.dropPoints : draft.points).some((q) => metres(q, pt) < MIN_PICK_DROP_M);
-    if (!ok || near) { setMsg(t(ok ? 'staff.noGo.tooClose' : 'staff.noGo.pointOutside', { m: MIN_PICK_DROP_M })); setDraft({ ...draft }); return; }
+    if (!ok || near) { setMsg(t(ok ? 'staff.noGo.tooClose' : draft.kind === 'NOGO' ? 'staff.noGo.spotNotNext' : 'staff.noGo.pointOutside', { m: MIN_PICK_DROP_M })); setDraft({ ...draft }); return; }
     setMsg(null);
     if (which === 'pick') setDraft({ ...draft, points: draft.points.map((q, j) => (j === i ? { ...q, ...pt } : q)) });
     else setDraft({ ...draft, dropPoints: draft.dropPoints.map((q, j) => (j === i ? { ...q, ...pt } : q)) });
@@ -157,7 +170,8 @@ function AreaZones({ kind }: { kind: Kind }) {
     setBusy(true); setMsg(null);
     try {
       const body = { name: draft.name.trim() || `${t(draft.kind === 'POINT' ? 'staff.noGo.pointTitle' : draft.kind === 'STAND' ? 'staff.noGo.standTitle' : 'staff.noGo.title')} ${zones.length + 1}`, kind: draft.kind, polygon: draft.polygon, points: draft.points, dropPoints: draft.dropPoints, active: draft.active, ...(draft.kind === 'STAND' ? { forZoneId: standSource(draft)?.id ?? null, airport: standSource(draft)?.airport ?? null } : {}),
-        ...(draft.kind === 'POINT' ? { minComfortCents: euroCents(draft.minComfort), minXlCents: euroCents(draft.minXl), minActive: draft.minOn, pointsActive: draft.pointsOn } : {}) };
+        ...(draft.kind === 'POINT' ? { minComfortCents: euroCents(draft.minComfort), minXlCents: euroCents(draft.minXl), minActive: draft.minOn, pointsActive: draft.pointsOn } : {}),
+        ...(draft.kind === 'NOGO' ? { pointsActive: draft.pointsOn } : {}) };
       if (draft.id) await api(`/admin/no-go/${draft.id}`, { method: 'PUT', body });
       else await api('/admin/no-go', { method: 'POST', body });
       setDraft(null); setMsg(t('staff.noGo.saved'));
@@ -194,7 +208,7 @@ function AreaZones({ kind }: { kind: Kind }) {
   useZoneMap({ center: CYPRUS, zones: refZones, onPinMove: movePoint, editing: draft && cornersOn ? draft.polygon : null, onChange: setPoly, onPick: (lat, lng) => {
             if (!draft || !pointMode) return;
             // Each click adds a point; it must be inside the rounded territory and on land.
-            if (!onCyprusIsland({ lat, lng }) || !pointInPolygon({ lat, lng }, smoothRing(draft.polygon).map(([a, b]) => ({ lat: a, lng: b })))) { setMsg(t('staff.noGo.pointOutside')); return; }
+            if (!spotOk(draft, { lat, lng })) { setMsg(t(draft.kind === 'NOGO' ? 'staff.noGo.spotNotNext' : 'staff.noGo.pointOutside')); return; }
             const pt = { lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6, name: '' };
             // Pickup and drop-off points do not mix: at least 15 m apart (operator: «чтобы не переплетались»).
             if ((mode === 'pick' ? draft.dropPoints : draft.points).some((q) => metres(q, pt) < MIN_PICK_DROP_M)) { setMsg(t('staff.noGo.tooClose', { m: MIN_PICK_DROP_M })); return; }
@@ -223,7 +237,7 @@ function AreaZones({ kind }: { kind: Kind }) {
                 className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-[10px] bg-accent px-3 py-2 text-sm font-semibold text-[#0b0f10] shadow-lg disabled:bg-page/90 disabled:text-muted">
                 <span className="text-lg leading-none">↶</span>{t('staff.fixed.stepBack')}
               </button>
-              <div className="min-w-0 flex-1 rounded-[10px] bg-page/90 px-3 py-2 text-xs text-ink">{mode === 'drop' ? t('staff.noGo.dropHint') : mode === 'pick' ? t('staff.noGo.pointHint') : mode === 'none' ? t('staff.noGo.pickTool') : t('staff.fixed.hint')}</div>
+              <div className="min-w-0 flex-1 rounded-[10px] bg-page/90 px-3 py-2 text-xs text-ink">{draft.kind === 'NOGO' && (mode === 'pick' || mode === 'drop') ? t('staff.noGo.nogoPointHint') : mode === 'drop' ? t('staff.noGo.dropHint') : mode === 'pick' ? t('staff.noGo.pointHint') : mode === 'none' ? t('staff.noGo.pickTool') : t('staff.fixed.hint')}</div>
             </div>
           )}
         
@@ -249,16 +263,16 @@ function AreaZones({ kind }: { kind: Kind }) {
                   </div>}
                 </div>
               )}
-              {draft.kind === 'POINT' && (
+              {hasPoints(draft.kind) && (
                 // Pickup + drop-off points on / off (operator 2026-11-25): off keeps them, the passenger is moved nowhere.
                 <div className="text-sm" data-testid="nogo-points">
                   <Switch checked={draft.pointsOn} onChange={(on) => setDraft({ ...draft, pointsOn: on })} label={t('staff.noGo.pointsSwitch')} testid="nogo-points-on"
                     confirmOn={t('staff.noGo.pointsOnConfirm', { name: draft.name || '—' })} confirmOff={t('staff.noGo.pointsOffConfirm', { name: draft.name || '—' })} />
                 </div>
               )}
-              {draft.kind === 'POINT' && (
+              {hasPoints(draft.kind) && (
                 <div className={`grid grid-cols-3 gap-1 rounded-[10px] border border-edge p-1 ${draft.pointsOn ? '' : 'opacity-60'}`} data-testid="nogo-mode">
-                  <button type="button" onClick={() => setMode(mode === 'corners' ? 'none' : 'corners')} aria-pressed={mode === 'corners'} data-testid="mode-corners" className={`rounded-[8px] px-1 py-1.5 text-xs font-semibold ${mode === 'corners' ? 'bg-[#4C9AFF] text-[#0b0f10]' : 'text-muted'}`}>{t('staff.noGo.modeCorners')}</button>
+                  <button type="button" onClick={() => setMode(mode === 'corners' ? 'none' : 'corners')} aria-pressed={mode === 'corners'} data-testid="mode-corners" className={`rounded-[8px] px-1 py-1.5 text-xs font-semibold ${mode === 'corners' ? 'bg-[#4C9AFF] text-[#0b0f10]' : 'text-muted'}`}>{t(draft.kind === 'NOGO' ? 'staff.noGo.modeCornersZone' : 'staff.noGo.modeCorners')}</button>
                   <button type="button" onClick={() => setMode(mode === 'pick' ? 'none' : 'pick')} aria-pressed={mode === 'pick'} disabled={draft.polygon.length < 3} className={`rounded-[8px] px-1 py-1.5 text-xs font-semibold ${mode === 'pick' ? 'bg-[#4C9AFF] text-[#0b0f10]' : 'text-muted'} disabled:opacity-40`} data-testid="nogo-mode-point">📍 {t('staff.noGo.modePoint')}</button>
                   <button type="button" onClick={() => setMode(mode === 'drop' ? 'none' : 'drop')} aria-pressed={mode === 'drop'} disabled={draft.polygon.length < 3} className={`rounded-[8px] px-1 py-1.5 text-xs font-semibold ${mode === 'drop' ? 'bg-[#FFC83D] text-[#0b0f10]' : 'text-muted'} disabled:opacity-40`} data-testid="nogo-mode-drop">🏁 {t('staff.noGo.modeDrop')}</button>
                 </div>
@@ -269,7 +283,7 @@ function AreaZones({ kind }: { kind: Kind }) {
                 <button type="button" className="btn-ghost !min-h-[40px] flex-1 !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => { lastChange.current = 0; setPoly(draft.polygon.slice(0, -1)); }}>{t('staff.fixed.undo')}</button>
                 <button type="button" className="btn-ghost !min-h-[40px] !py-2 text-sm" disabled={!draft.polygon.length} onClick={() => { lastChange.current = 0; setPoly([]); }}>{t('staff.fixed.clear')}</button>
               </div>}
-              {draft.kind === 'POINT' && (['pick', 'drop'] as const).filter((which) => which === mode).map((which) => {
+              {hasPoints(draft.kind) && (['pick', 'drop'] as const).filter((which) => which === mode).map((which) => {
                 const list = which === 'pick' ? draft.points : draft.dropPoints;
                 const key = which === 'pick' ? 'points' : 'dropPoints';
                 const col = which === 'pick' ? 'text-[#4C9AFF]' : 'text-[#FFC83D]';

@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-26 — no-go zone points next to the zone (branch nogo-points)
+- «Запретная зона» form has «Углы зоны / 📍 Точки подачи / 🏁 Точки высадки» + «Точки подачи и высадки» switch (confirm).
+- Points must be outside the zone, on land, ≤ 3 km (NOGO_SPOT_M; noGoSchema + AreaZones spotOk).
+- Server: snapPickup/snapDropoff move a point inside a NOGO zone with active points to the nearest point (`noGoSpots`);
+  quote and bookings now snap FIRST, then firstNoGo. Stops inside a zone stay refused.
+- /api/v1/no-go returns `zoneSpots` (nogo:true); such zones are not in `zones` (client areaBlock) and not drawn as territories.
+- Test: tests/nogo-spots.db.test.ts.
+
 ## 2026-11-26 ~01:05 — «Минимальный заказ отсюда» off hides the Comfort/XL fields (deployed 878d8a9; amounts kept). Suite 503 passed / 1 skipped; live admin chunk changed; health ready. Offered (not done): hide the 📍/🏁 mode buttons while «Точки подачи и высадки» is off.
 
 ## 2026-11-26 — map picker knows territories (deployed)
