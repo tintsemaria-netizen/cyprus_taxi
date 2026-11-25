@@ -19,7 +19,7 @@ function parseSpots(v: unknown): Spot[] {
   return v.filter((x) => x && typeof x.lat === 'number' && typeof x.lng === 'number').map((x) => ({ lat: x.lat, lng: x.lng, name: typeof x.name === 'string' ? x.name : '' }));
 }
 /** «Стоянка с очередью» (2026-11-25): `active` = the queue is on; off = drivers standing there get no orders. */
-export interface Stand extends NoGo { active: boolean; airport: string | null }
+export interface Stand extends NoGo { active: boolean; airport: string | null; forZoneId: string | null }
 let cache: { at: number; rows: NoGo[]; points: PickupPoint[]; stands: Stand[] } | null = null;
 const TTL_MS = 30_000;
 export function invalidateNoGoCache(): void { cache = null; }
@@ -43,7 +43,7 @@ async function load(now: number) {
     at: now,
     rows: rows.filter((r) => r.kind === 'NOGO').map(z),
     points: rows.filter((r) => r.kind === 'POINT').map((r) => ({ ...z(r), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints), airport: r.airport ?? null, minComfortCents: r.minComfortCents ?? null, minXlCents: r.minXlCents ?? null, minActive: r.minActive })).filter((t) => t.points.length > 0),
-    stands: rows.filter((r) => r.kind === 'STAND').map((r) => ({ ...z(r), active: r.active, airport: r.airport ?? null })),
+    stands: rows.filter((r) => r.kind === 'STAND').map((r) => ({ ...z(r), active: r.active, airport: r.airport ?? null, forZoneId: r.forZoneId ?? null })),
   };
   // The airport is a territory marked «это аэропорт» (2026-11-25) — by the same rounded outline the passenger sees.
   setAirportAreas(cache.points.filter((t) => t.airport).map((t) => ({ code: t.airport!, polygon: t.polygon })));
@@ -110,7 +110,8 @@ export const noGoSchema = z.object({
   minComfortCents: z.number().int().min(100).max(100_000).nullable().optional(),
   minXlCents: z.number().int().min(100).max(100_000).nullable().optional(),
   minActive: z.boolean().optional(), // the switch; absent = unchanged
-}).refine((d) => d.kind !== 'STAND' || d.airport !== null, { message: 'Choose the airport whose orders this stand takes.' })
+  forZoneId: z.string().max(64).nullable().optional(), // STAND: the pickup territory whose orders it takes
+}).refine((d) => d.kind !== 'STAND' || !(d.airport === null && !d.forZoneId), { message: 'Choose the territory whose orders this stand takes.' })
   .refine((d) => d.kind !== 'POINT' || (d.points?.length ?? 0) > 0, { message: 'At least one pickup point is required.' })
   // Every pickup point inside its (rounded) territory and on land (2026-11-24).
   .refine((d) => d.kind !== 'POINT' || [...(d.points ?? []), ...(d.dropPoints ?? [])].every((s) => onCyprusIsland(s) && pointInPolygon(s, smoothRing(d.polygon).map(([lat, lng]) => ({ lat, lng })))), { message: 'Pickup and drop-off points must be inside the territory, on land.' })
@@ -120,6 +121,7 @@ export function noGoData(d: z.infer<typeof noGoSchema>) {
   return { name: d.name, kind: d.kind ?? 'NOGO', polygon: d.polygon, points: d.kind === 'POINT' ? (d.points ?? []) : undefined, dropPoints: d.kind === 'POINT' ? (d.dropPoints ?? []) : undefined, active: d.active ?? true,
     // Not sent (e.g. the on/off switch) → unchanged; a no-go zone is never an airport.
     ...(d.kind === 'POINT' || d.kind === 'STAND' ? (d.airport !== undefined ? { airport: d.airport } : {}) : { airport: null }),
+    ...(d.kind === 'STAND' ? (d.forZoneId !== undefined ? { forZoneId: d.forZoneId } : {}) : { forZoneId: null }),
     ...(d.kind === 'POINT' ? { ...(d.minComfortCents !== undefined ? { minComfortCents: d.minComfortCents } : {}), ...(d.minXlCents !== undefined ? { minXlCents: d.minXlCents } : {}), ...(d.minActive !== undefined ? { minActive: d.minActive } : {}) } : { minComfortCents: null, minXlCents: null }) };
 }
 export const zoneView = (r: { points: unknown; dropPoints?: unknown; polygon: unknown } & Record<string, unknown>) =>

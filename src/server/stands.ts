@@ -1,11 +1,11 @@
 import { prisma } from '@/lib/db';
 import { pointInPolygon } from '@/lib/geo';
-import { airportAt } from '@/lib/airports';
-import { ensureAirportAreas, taxiStands, type Stand } from '@/server/no-go';
+import { airportAreas } from '@/lib/airports';
+import { ensureAirportAreas, taxiStands, pickupPoints, type Stand } from '@/server/no-go';
 import { takesClasses } from '@/lib/vehicle-class';
 
 // «Стоянка с очередью» (2026-11-25, operator). A stand is a NoGoZone of kind STAND, drawn in admin
-// «Стоянки с очередью», tied to one airport:
+// «Стоянки с очередью», tied to one pickup territory («Точки подачи»: an airport, a port …; older stands: an airport):
 //  • switched ON: a driver on duty who drives in gets a place in its queue (by the time he entered). An order
 //    from that airport is offered to the queue first, in order; nobody there / all refused → the usual search
 //    outside. A refusal or a missed offer keeps his place (he is first again for the next order).
@@ -45,12 +45,25 @@ export async function leaveStandQueue(driverId: string, tx: { standQueue: { dele
   await tx.standQueue.deleteMany({ where: { driverId } });
 }
 
-/** The switched-on stand(s) whose queue takes an order picked up here (the order's airport), or []. */
-export async function standsForPickup(p: { lat: number; lng: number }): Promise<Stand[]> {
+/** Where a stand's orders come from (2026-11-25): the pickup territory chosen for it («Точки подачи» — an airport,
+ *  a port …), else (older stands) its airport's territory. Rounded outline, as passengers see it. */
+async function sourceArea(s: Stand): Promise<[number, number][] | null> {
+  if (s.forZoneId) return (await pickupPoints()).find((t) => t.id === s.forZoneId)?.polygon ?? null;
+  if (!s.airport) return null;
   await ensureAirportAreas();
-  const code = airportAt(p.lat, p.lng);
-  if (!code) return [];
-  return (await taxiStands()).filter((s) => s.active && s.airport === code);
+  return airportAreas().find((a) => a.code === s.airport)?.polygon ?? null;
+}
+const inPoly = (p: { lat: number; lng: number }, poly: [number, number][]) => poly.length >= 3 && pointInPolygon(p, poly.map(([lat, lng]) => ({ lat, lng })));
+
+/** The switched-on stand(s) whose queue takes an order picked up here, or []. */
+export async function standsForPickup(p: { lat: number; lng: number }): Promise<Stand[]> {
+  const out: Stand[] = [];
+  for (const s of await taxiStands()) {
+    if (!s.active) continue;
+    const area = await sourceArea(s);
+    if (area && inPoly(p, area)) out.push(s);
+  }
+  return out;
 }
 
 /** The queue of these stands, first first. Whether each one is still there is checked against his position
@@ -68,13 +81,13 @@ async function queueWithClass(standIds: string[]) {
   return rows.map((r) => ({ ...r, vClass: cls.get(r.driverId)?.vClass ?? 'COMFORT', takes: cls.get(r.driverId)?.takes ?? ['COMFORT'] }));
 }
 
-/** Rough wait (minutes) for the n-th car of a class: from the airport's orders of that class in the last 2 hours. */
-async function waitMinutes(airport: string | null, vClass: string, nth: number, now = new Date()): Promise<number | null> {
-  if (!airport) return null;
-  await ensureAirportAreas();
+/** Rough wait (minutes) for the n-th car of a class: from the stand's orders of that class in the last 2 hours. */
+async function waitMinutes(stand: Stand, vClass: string, nth: number, now = new Date()): Promise<number | null> {
+  const area = await sourceArea(stand);
+  if (!area) return null;
   const since = new Date(now.getTime() - 120 * 60_000);
   const rows = await prisma.booking.findMany({ where: { createdAt: { gte: since }, vClass: vClass as 'COMFORT' | 'XL' }, select: { pickupLat: true, pickupLng: true } });
-  const n = rows.filter((r) => airportAt(r.pickupLat, r.pickupLng) === airport).length;
+  const n = rows.filter((r) => inPoly({ lat: r.pickupLat, lng: r.pickupLng }, area)).length;
   if (!n) return null;
   return Math.max(1, Math.round((nth * 120) / n));
 }
@@ -89,5 +102,5 @@ export async function standStateFor(driverId: string, p: { lat: number; lng: num
   // «Cars ahead» = those before him who take some of the same orders (an XL car takes Comfort too, 2026-11-25).
   const i = q.findIndex((r) => r.driverId === driverId), mine = q[i]?.vClass ?? 'COMFORT', myTakes = q[i]?.takes ?? ['COMFORT'];
   const ahead = q.slice(0, Math.max(0, i)).filter((r) => r.takes.some((c) => myTakes.includes(c))).length;
-  return { name: stand.name, on: true, place: i + 1, total: q.length, polygon: stand.polygon, ahead, vClass: mine, waitMin: await waitMinutes(stand.airport, mine, ahead + 1).catch(() => null) };
+  return { name: stand.name, on: true, place: i + 1, total: q.length, polygon: stand.polygon, ahead, vClass: mine, waitMin: await waitMinutes(stand, mine, ahead + 1).catch(() => null) };
 }
