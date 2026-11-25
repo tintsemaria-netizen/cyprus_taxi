@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-25 ~11:20 — ПП hour list without «машина приедет в течение 15 минут» (deployed 443b75e)
+- `booking.slots.titleDepart` = first sentence only; unused `needHour` cleaned too (8 languages). The pickup span shows under the list once an hour is chosen («Подача 20:00–20:15»).
+- Full suite 482 passed / 1 skipped; live: chunk has the new text, 0 «приедет в течение 15 минут»; health ready.
+
 ## 2026-11-25 — airport = chosen pickup point, no 2.5 km circle (deployed)
 - NoGoZone.airport (LCA|PFO), migration 20261125090000_airport_territory auto-marks an active POINT territory containing the terminal. lib/airports: areas registry (server: no-go load + ensureAirportAreas in quote/fixed-fares/lifecycle/preassign/bookings/share*; client: area-client). Tests pin a 2.5 km ring via tests/setup/airports.ts; tests/airport-territory.db.test.ts uses the DB.
 - Admin «Фиксированные цены»: «Точка подачи для этих цен (выезд и въезд)» select → PUT /api/v1/admin/fixed-zones/airport-area (audit AIRPORT_AREA_SET); outline with the territory name on the map; warning when none. Territory list shows ✈.
