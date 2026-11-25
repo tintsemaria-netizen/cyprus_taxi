@@ -1,0 +1,28 @@
+import type { Catalog } from '../../types';
+import type en from '../en/promo';
+
+const promo: Catalog<typeof en> = {
+  title: "Taxi dans tout Chypre",
+  lead: "Réservez en une minute. Vous voyez le prix avant le départ et la voiture sur la carte jusqu’à son arrivée.",
+  book: "Réserver une course",
+  install: "Installer l’application",
+  airportT: "Aéroports à prix fixe",
+  airportD: "Larnaca et Paphos ↔ votre quartier : un seul prix, jour et nuit.",
+  shareT: "Covoyageur −30 %",
+  shareD: "Partagez la course avec quelqu’un qui va dans la même direction et payez 30 % de moins.",
+  prebookT: "Réservation à l’avance",
+  prebookD: "Choisissez le jour et l’heure — la voiture est là quand vous en avez besoin.",
+  priceT: "Le prix à l’avance",
+  priceD: "Vous voyez la fourchette de prix avant de réserver ; le taximètre fixe le montant final.",
+  trackT: "Votre chauffeur sur la carte",
+  trackD: "Suivez la voiture et démarrez la course avec votre code à 4 chiffres.",
+  langT: "8 langues",
+  langD: "English, Ελληνικά, Русский, Deutsch, Français, Polski, עברית, العربية.",
+  drvTitle: "Vous êtes chauffeur ?",
+  drvLead: "Roulez avec IL-Y selon votre propre emploi du temps.",
+  drv1: "Courses à proximité, selon le vrai temps d’arrivée",
+  drv2: "Réservations et file d’attente aux stations d’aéroport",
+  drv3: "Les passagers vous paient directement",
+  drvCta: "Devenir chauffeur IL-Y",
+};
+export default promo;
