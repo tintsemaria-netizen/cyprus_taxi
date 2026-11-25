@@ -20,9 +20,6 @@ export interface MapMarker {
   kind: 'pickup' | 'dropoff' | 'vehicle' | 'person' | 'stop' | 'spot';
   /** spot: drawn as the chosen one. */
   active?: boolean;
-  /** spot: only the name pill (no logo), in `color` (a stand on the driver's map, 2026-11-25). */
-  labelOnly?: boolean;
-  color?: string;
   label?: string;
   stale?: boolean;
   /** Visible label under a vehicle marker (e.g. plate number on staff maps). */
@@ -215,7 +212,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     if (!map || !ready) return;
     (async () => {
       const maplibre = await loadMaplibre();
-      const keyOf = (mk: MapMarker) => [mk.id, mk.kind, mk.label, mk.active, mk.num, mk.next, mk.stale, mk.busy, mk.tag, mk.pulse, mk.self, mk.nav, mk.moving, mk.heading, mk.color].join('|');
+      const keyOf = (mk: MapMarker) => [mk.id, mk.kind, mk.label, mk.active, mk.num, mk.next, mk.stale, mk.busy, mk.tag, mk.pulse, mk.self, mk.nav, mk.moving, mk.heading].join('|');
       const keep = new Map<string, maplibregl.Marker>();
       for (const mk of markers) { const k = keyOf(mk), m = markerByKey.current.get(k); if (m) { m.setLngLat([mk.lng, mk.lat]); keep.set(k, m); } }
       for (const [k, m] of markerByKey.current) if (!keep.has(k)) m.remove();
@@ -232,7 +229,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
           el.classList.add('ily-vehicle');
           if (mk.heading != null) orientVehicle(el, map.getBearing(), mk.heading);
         } else if (mk.kind === 'spot') {
-          el = spotEl({ name: mk.label ?? '', active: mk.active, labelOnly: mk.labelOnly, color: mk.color });
+          el = spotEl({ name: mk.label ?? '', active: mk.active });
         } else if (mk.num != null && mk.kind !== 'person') {
           el = numberedStopEl({ num: mk.num, kind: mk.kind, next: mk.next, title: mk.label });
         } else if (mk.kind === 'person') {

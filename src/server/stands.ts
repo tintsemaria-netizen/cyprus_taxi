@@ -78,15 +78,6 @@ async function waitMinutes(airport: string | null, vClass: string, nth: number, 
   return Math.max(1, Math.round((nth * 120) / n));
 }
 
-/** Every stand for the drivers' map (2026-11-25, like Bolt's waiting area): its outline, on/off and how many wait. */
-export async function standsOverview(): Promise<{ id: string; name: string; polygon: [number, number][]; on: boolean; waiting: number }[]> {
-  const stands = await taxiStands();
-  if (!stands.length) return [];
-  const q = await prisma.standQueue.groupBy({ by: ['standId'], _count: { _all: true } });
-  const cnt = new Map(q.map((x) => [x.standId, x._count._all]));
-  return stands.map((s) => ({ id: s.id, name: s.name, polygon: s.polygon, on: s.active, waiting: s.active ? cnt.get(s.id) ?? 0 : 0 }));
-}
-
 /** For the driver's screen: the stand he is in and his place in its queue. */
 export async function standStateFor(driverId: string, p: { lat: number; lng: number } | null): Promise<{ name: string; on: boolean; place: number | null; total: number; polygon: [number, number][]; ahead?: number; vClass?: string; waitMin?: number | null } | null> {
   const entry = await prisma.standQueue.findUnique({ where: { driverId } });

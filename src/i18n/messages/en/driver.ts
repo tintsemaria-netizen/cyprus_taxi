@@ -43,11 +43,10 @@ const driver = {
   },
   // «Стоянка с очередью» (2026-11-25).
   stand: {
-    queueCount: "{n} in queue",
-    closed: "closed",
+    inQueue: "in a queue of {total}",
     wait: "Wait ≈ {min} min",
     ahead: "Cars ahead of you: {n}",
-    first: "You are first in the queue",
+    first: "You are first — the next airport order is yours",
     keepOpen: "Keep the app open — otherwise the order goes to the next driver.",
     off: "«{name}» is off — no orders come here.",
   },

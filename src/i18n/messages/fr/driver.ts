@@ -46,11 +46,10 @@ const driver: Catalog<typeof en> = {
   },
   // «Стоянка с очередью» (2026-11-25).
   stand: {
-    queueCount: "{n} en file",
-    closed: "fermée",
+    inQueue: "dans une file de {total}",
     wait: "Attente ≈ {min} min",
     ahead: "Voitures devant vous : {n}",
-    first: "Vous êtes premier dans la file",
+    first: "Vous êtes premier — la prochaine course de l’aéroport est pour vous",
     keepOpen: "Gardez l’application ouverte — sinon la course passe au suivant.",
     off: "«{name}» est désactivée — aucune course n’arrive ici.",
   },

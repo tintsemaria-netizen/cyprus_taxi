@@ -681,20 +681,20 @@ function HomeSection(props: {
       <div className="pointer-events-none fixed inset-x-0 z-10 mx-auto max-w-lg px-3" style={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
         {!offer && (
           <div className="flex flex-col items-center gap-2">
-            {/* «Стоянка с очередью» (2026-11-25, like Bolt): in the queue — the cars ahead of him in his class and
-                the rough wait; a switched-off stand — that no orders come here. The stand itself is on the map. */}
+            {/* «Стоянка с очередью» (2026-11-25, operator chose the big number): his place among the cars of his
+                class (orders are matched by class), the cars ahead and the stand. Switched off: no orders here. */}
             {standShown && st && (
-              <div className={`pointer-events-auto w-full rounded-[16px] border bg-page/95 px-4 py-3 shadow-card backdrop-blur ${st.on ? 'border-[#A78BFA]/70' : 'border-warn/60'}`} data-testid="driver-stand">
+              <div className={`${pill} flex max-w-full items-center gap-3 !rounded-[18px] px-4 py-2.5 ${st.on ? '!border-[#A78BFA]' : '!border-warn/60'}`} data-testid="driver-stand">
                 {st.on ? (
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#A78BFA]/20 text-xl">✈</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-[11px] text-muted">{st.name} · {t('common.vClass.' + (st.vClass ?? 'COMFORT') as 'common.vClass.COMFORT')}</div>
-                      <div className="text-[17px] font-bold leading-tight">{st.ahead ? t('driver.stand.ahead', { n: st.ahead }) : t('driver.stand.first')}</div>
-                      <div className="text-xs text-muted">{st.waitMin != null ? t('driver.stand.wait', { min: st.waitMin }) : t('driver.stand.keepOpen')}</div>
-                    </div>
-                  </div>
-                ) : <div className="text-sm font-medium text-warn">✈ {t('driver.stand.off', { name: st.name })}</div>}
+                  <>
+                    <span className="text-[40px] font-extrabold leading-none tabular-nums text-[#A78BFA]">{(st.ahead ?? 0) + 1}</span>
+                    <span className="min-w-0 text-start">
+                      <span className="block text-sm font-semibold">{st.ahead ? t('driver.stand.ahead', { n: st.ahead }) : t('driver.stand.first')}</span>
+                      <span className="block truncate text-[11px] text-muted">🅿 {st.name} · {t('driver.stand.inQueue', { total: st.total })}</span>
+                      {st.waitMin != null && <span className="block text-[11px] text-muted">{t('driver.stand.wait', { min: st.waitMin })}</span>}
+                    </span>
+                  </>
+                ) : <span className="text-sm font-medium text-warn">🅿 {t('driver.stand.off', { name: st.name })}</span>}
               </div>
             )}
             <div className={`${pill} px-3 py-1 text-xs text-muted`}>

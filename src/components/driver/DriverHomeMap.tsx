@@ -25,15 +25,13 @@ export function DriverHomeMap({ pos, fullscreen = false, onCounts, pickup = null
 }) {
   const { t } = useT();
   const [fleet, setFleet] = useState<FleetCar[]>([]);
-  // «Стоянки с очередью» (2026-11-25, like Bolt's airport waiting area): every stand, with how many cars wait there.
-  const [stands, setStands] = useState<{ id: string; name: string; polygon: [number, number][]; on: boolean; waiting: number }[]>([]);
 
   useEffect(() => {
     let alive = true;
     const load = () => {
       if (document.visibilityState !== 'visible') return;
-      api<{ vehicles: FleetCar[]; stands?: typeof stands }>('/driver/fleet', { timeoutMs: 8000 })
-        .then((r) => { if (alive) { setFleet(r.vehicles); setStands(r.stands ?? []); } })
+      api<{ vehicles: FleetCar[] }>('/driver/fleet', { timeoutMs: 8000 })
+        .then((r) => { if (alive) setFleet(r.vehicles); })
         .catch(() => { /* keep last known */ });
     };
     load();
@@ -47,12 +45,7 @@ export function DriverHomeMap({ pos, fullscreen = false, onCounts, pickup = null
     ...(pickup ? [{ id: 'pickup', kind: 'pickup' as const, lat: pickup.lat, lng: pickup.lng, label: pickup.label }] : []),
     ...(pickup && via ? [{ id: 'via', kind: 'stop' as const, lat: via.lat, lng: via.lng, label: via.label }] : []),
     ...(pickup && dropoff ? [{ id: 'dropoff', kind: 'dropoff' as const, lat: dropoff.lat, lng: dropoff.lng, label: dropoff.label }] : []),
-    // Each stand's name pill just above its top edge (his own car in the middle would cover it).
-    ...(!pickup ? stands.filter((x) => x.polygon.length >= 3).map((x) => ({ id: `stand-${x.id}`, kind: 'spot' as const, labelOnly: true, noFit: true, color: x.on ? '#A78BFA' : '#8A9499',
-      label: `✈ ${x.name} · ${x.on ? t('driver.stand.queueCount', { n: x.waiting }) : t('driver.stand.closed')}`,
-      lat: Math.max(...x.polygon.map((p) => p[0])), lng: x.polygon.reduce((a, p) => a + p[1], 0) / x.polygon.length })) : []),
-  ], [pos, pickup, via, dropoff, t, stands]);
-  const areas = useMemo(() => (pickup ? [] : stands.map((x) => ({ id: `stand-${x.id}`, polygon: x.polygon, color: x.on ? '#A78BFA' : '#8A9499' }))), [stands, pickup]);
+  ], [pos, pickup, via, dropoff, t]);
 
   // Route of the offered ride, pickup → (stop) → destination; one request per offer.
   const [route, setRoute] = useState<[number, number][] | undefined>(undefined);
@@ -74,7 +67,7 @@ export function DriverHomeMap({ pos, fullscreen = false, onCounts, pickup = null
   if (fullscreen) {
     return (
       <div className="fixed inset-0 z-0">
-        <AutoMapView markers={markers} areas={areas} route={pickup ? route : undefined} fitRoute={!!pickup} fleet={pickup ? [] : fleet} fleetLikeSelf routeWidth={8} focus={pickup ? null : pos} focusZoom={13.77} center={pos ?? CYPRUS} zoom={pos ? 13.77 : 8} interactive idleReturnMs={4000} fitPadding={fitPadding} className="h-full w-full" />
+        <AutoMapView markers={markers} route={pickup ? route : undefined} fitRoute={!!pickup} fleet={pickup ? [] : fleet} fleetLikeSelf routeWidth={8} focus={pickup ? null : pos} focusZoom={13.77} center={pos ?? CYPRUS} zoom={pos ? 13.77 : 8} interactive idleReturnMs={4000} fitPadding={fitPadding} className="h-full w-full" />
       </div>
     );
   }

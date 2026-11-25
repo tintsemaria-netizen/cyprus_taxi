@@ -2,7 +2,6 @@ import { apiOk, Errors } from '@/lib/http';
 import { requireDriver, isDriverCtx } from '@/lib/driver-ctx';
 import { publicFleet } from '@/server/views';
 import { rateLimit } from '@/lib/rate-limit';
-import { standsOverview } from '@/server/stands';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +12,5 @@ export async function GET() {
   if (!isDriverCtx(ctx)) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();
   const rl = await rateLimit('driver-fleet', ctx.driver.id, 30, 60);
   if (!rl.ok) return Errors.throttled(rl.retryAfter);
-  // «Стоянки с очередью» (2026-11-25): every stand on the drivers' map with how many wait there.
-  return apiOk({ vehicles: await publicFleet({ excludeDriverId: ctx.driver.id }), stands: await standsOverview().catch(() => []) });
+  return apiOk({ vehicles: await publicFleet({ excludeDriverId: ctx.driver.id }) });
 }

@@ -304,28 +304,24 @@ export function numberedStopEl(opts: { num: number; kind: 'pickup' | 'dropoff' |
 /** A pickup point of a territory (2026-11-24, operator): a very faint IL-Y logo pin (was a silhouette), the same size and
  *  tip as the pickup logo, so the logo «arrives» and sits right in it. Name under the tip (chosen point only).
  *  Anchor: bottom centre = the point (the label is absolute, outside the element's box). */
-/** labelOnly (2026-11-25, stand on the driver's map): just the name pill, on the point, in `color`. */
-export function spotEl(opts: { name: string; active?: boolean; labelOnly?: boolean; color?: string }): HTMLElement {
+export function spotEl(opts: { name: string; active?: boolean }): HTMLElement {
   // No `position` on the root: MapLibre positions its marker element absolutely (an inline `relative` broke that).
   const el = document.createElement('div');
   el.style.cssText = 'width:32px;height:40px;pointer-events:none';
   const box = document.createElement('div');
   box.style.cssText = 'position:relative;width:32px;height:40px';
   // A very faint IL-Y logo (2026-11-24 22:11, operator: «вместо силуэта — логотип, только очень тусклый»).
-  if (!opts.labelOnly) box.innerHTML = `<div style="width:100%;height:100%;opacity:.3">${BRAND_PIN_SVG}</div>`;
+  box.innerHTML = `<div style="width:100%;height:100%;opacity:.3">${BRAND_PIN_SVG}</div>`;
   el.appendChild(box);
   if (opts.name) {
     // Symmetric overflow (left/right -90px, centred text): the marker box stays centred on the tip however the
     // map measures it (Google showed the silhouette ~20 px beside the point).
     const row = document.createElement('div');
-    row.style.cssText = `position:absolute;top:${opts.labelOnly ? '8px' : 'calc(100% + 4px)'};left:-120px;right:-120px;text-align:center;pointer-events:none`;
+    row.style.cssText = 'position:absolute;top:calc(100% + 4px);left:-90px;right:-90px;text-align:center;pointer-events:none';
     const tag = document.createElement('span');
     row.appendChild(tag);
     tag.textContent = opts.name;
-    const c = opts.color ?? '#4C9AFF';
-    tag.style.cssText = opts.labelOnly
-      ? `display:inline-block;background:${c};color:#0b0f10;font:700 13px Inter,Arial,sans-serif;padding:4px 10px;border-radius:11px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.45)`
-      : `display:inline-block;background:${opts.active ? c : 'rgba(16,25,28,.9)'};color:${opts.active ? '#0b0f10' : '#fff'};font:600 11.5px Inter,Arial,sans-serif;padding:2px 7px;border-radius:9px;white-space:nowrap;border:1px solid ${c}`;
+    tag.style.cssText = `display:inline-block;background:${opts.active ? '#4C9AFF' : 'rgba(16,25,28,.9)'};color:${opts.active ? '#0b0f10' : '#fff'};font:600 11.5px Inter,Arial,sans-serif;padding:2px 7px;border-radius:9px;white-space:nowrap;border:1px solid #4C9AFF`;
     box.appendChild(row);
   }
   return el;
