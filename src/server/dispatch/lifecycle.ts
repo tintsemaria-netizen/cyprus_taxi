@@ -115,7 +115,7 @@ async function finalizeCompletion(
       },
     });
   }
-  await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason: 'completed', activeBookingId: null, activeDriverId: null, activeVehicleId: null } });
+  await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason: 'completed', activeBookingId: null, activeDriverId: null, activeVehicleId: null, queuedDriverId: null } });
   // A shared ride's other leg may still be in the car: it takes over and the driver stays busy.
   // The amount the driver typed on the completion screen (meter ride): recorded once, final from now on.
   if (meterCents != null && !isUpfront && !(await tx.driverSettlement.findFirst({ where: { bookingId: b.id }, select: { id: true } }))) {
@@ -319,7 +319,7 @@ export async function rematchBooking(
   await leaveShareTx(tx, bookingId, `rematch: ${reason}`);
   const a = await tx.assignment.findFirst({ where: { activeBookingId: bookingId } });
   if (a) {
-    await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason, activeBookingId: null, activeDriverId: null, activeVehicleId: null } });
+    await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason, activeBookingId: null, activeDriverId: null, activeVehicleId: null, queuedDriverId: null } });
     await afterLegEndedTx(tx, a);
   }
   await tx.waitingSession.deleteMany({ where: { bookingId } });
@@ -372,12 +372,27 @@ export async function driverShareNoShow(bookingId: string, driverId: string, exp
     const sharedPrice = g.hostBookingId === bookingId ? g.hostCents : g.guestCents;
     const fee = g.mode === 'PREBOOK' ? noShowFeeCents(sharedPrice) : null;
     await leaveShareTx(tx, bookingId, 'no-show', fee != null ? { noShowFeeCents: fee } : {});
-    await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason: 'no-show', activeBookingId: null, activeDriverId: null, activeVehicleId: null } });
+    await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason: 'no-show', activeBookingId: null, activeDriverId: null, activeVehicleId: null, queuedDriverId: null } });
     await afterLegEndedTx(tx, a);
     const u = await tx.booking.update({ where: { id: bookingId }, data: { status: 'CANCELED', revision: { increment: 1 } } });
     await tx.bookingEvent.create({ data: { bookingId, type: 'NO_SHOW', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'ARRIVED', afterStatus: 'CANCELED', reason: fee != null ? `no-show fee ${fee} cents` : 'no-show' } });
     await recordEvent(tx, { eventType: 'booking.canceled', aggregateType: 'booking', aggregateId: bookingId, aggregateVersion: u.revision, correlationId: bookingId, payload: { bookingId, status: 'CANCELED', actorType: 'DRIVER', reason: 'no-show', noShowFeeCents: fee } });
     await enqueuePassenger(tx, bookingId, 'Ride canceled — no-show', fee != null ? `The driver waited but you did not come. A no-show fee of €${(fee / 100).toFixed(2)} applies.` : 'The driver waited but you did not come.', { msg: fee != null ? { k: 'ride.noShowFee', p: { feeC: fee } } : { k: 'ride.noShow' } });
     return ok(u.status, u.revision, { noShowFeeCents: fee });
+  });
+}
+
+/** The driver gives back the next ride he took while finishing a trip (2026-11-25, operator): it goes back to the
+ *  search without him; the passenger is told another driver is being found. */
+export async function driverReleaseNext(driverId: string): Promise<LifeResult> {
+  return prisma.$transaction(async (tx) => {
+    const q = await tx.assignment.findFirst({ where: { queuedDriverId: driverId } });
+    if (!q) return err(404, 'NOT_FOUND', 'No next ride.');
+    await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${q.bookingId} FOR UPDATE`;
+    const again = await tx.assignment.findFirst({ where: { id: q.id, queuedDriverId: driverId } });
+    if (!again) return err(409, 'CONFLICT', 'The ride changed. Refresh and retry.');
+    await rematchBooking(tx, q.bookingId, driverId, 'driver gave back the next ride', 'DRIVER');
+    const b = await tx.booking.findUnique({ where: { id: q.bookingId }, select: { status: true, revision: true } });
+    return { ok: true, status: b!.status, revision: b!.revision };
   });
 }

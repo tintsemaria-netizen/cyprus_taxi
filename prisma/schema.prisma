@@ -805,6 +805,9 @@ model Assignment {
   activeBookingId String? @unique
   activeDriverId  String? @unique
   activeVehicleId String? @unique
+  // Next order (2026-11-25): accepted by a driver still finishing a trip. activeBookingId is set (the ride is his),
+  // activeDriverId/activeVehicleId stay empty until that trip ends — then it becomes his active ride.
+  queuedDriverId  String? @unique
 
   @@index([bookingId])
   @@index([driverId])

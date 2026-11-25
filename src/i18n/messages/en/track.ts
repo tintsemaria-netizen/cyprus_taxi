@@ -19,6 +19,8 @@ const track = {
   repeatRide: 'Order again',
   yourDriver: 'Your driver',
   etaApprox: '{min} (approx.)',
+  finishingEta: '{name} is finishing a ride nearby and will come to you — {eta}',
+  finishing: '{name} is finishing a ride nearby and will come to you next',
   meetDriver: 'Meet {name}',
   meetDriverEta: 'Meet {name} — {eta}',
   pillEnRoute: 'DRIVER ON THE WAY',

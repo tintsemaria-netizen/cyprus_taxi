@@ -2866,6 +2866,27 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-25 02:30 — next order for a finishing driver (branch `next-order`, NOT deployed)
+
+- Rule (operator): offered while the passenger is on board when the drop-off is ≤ 5 min away; ≤ 7 min when the new
+  pickup is ≤ 1 km from that drop-off. Competes with free drivers by total time (rest of trip + 2 min drop-off +
+  drive to the client). Operator answers: «кто быстрее приедет», passenger told honestly.
+- Migration 20261125020000_queued_assignment: Assignment.queuedDriverId @unique (one next ride per driver).
+  createAssignment(…, { queued }) leaves activeDriverId/activeVehicleId empty; share.afterLegEndedTx →
+  promoteQueuedTx when the current trip ends (ASSIGNED → EN_ROUTE, push ride.nextOnWay). All assignment-ending
+  writes clear queuedDriverId.
+- eligibility.finishingCandidates (NEXT_ORDER_* constants); createOffer/acceptOffer allow it only when the current
+  booking is IN_PROGRESS and there is no next ride; not for share pairs / scheduled rides / shared trips; live
+  co-rider search skips drivers with a next ride.
+- Driver app: offer polling also during IN_PROGRESS; NextOfferCard («Следующий заказ — после высадки»). Passenger: trackingView.finishingNearby + ETA via preassign.reachMinutes (30 s cache);
+  TrackApp headline track.finishing(Eta). sw.js: next-offer title, ride.assignedNext, ride.nextOnWay (8 langs).
+- Tests: tests/next-order.db.test.ts (3). Full suite 478 passed.
+- Driver gives the next ride back: lifecycle.driverReleaseNext → rematchBooking (search again without him);
+  POST /api/v1/driver/next/release. Operator: nothing about the next ride on the main screen — the ≡ menu of the
+  navigation screen: one small row — the next pickup address, a small «Отменить» on its right (confirm). Test added (4 in the file).
+- Passenger waiting for the finishing driver: trackingView.finishingAt = the bare drop-off point of the current trip
+  (operator's decision) — no address/name; TrackApp draws an unlabelled dot. Test checks no label leaks.
+
 ## 2026-11-25 01:20 — admin zone map rotates 360° + zooms together (DEPLOYED a1ce8cb)
 
 - ZoneEditorMap (Google): headingInteractionEnabled, rotateControl, useTwoFingerCamera. All other maps already

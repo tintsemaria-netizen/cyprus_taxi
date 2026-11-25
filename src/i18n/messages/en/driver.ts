@@ -62,6 +62,10 @@ const driver = {
     goOnline: 'Go online',
   },
   offer: {
+    nextTitle: 'Next ride — after the drop-off',
+    cancelNext: 'Cancel',
+    giveBackConfirm: 'Give back the next ride? The client will get another driver.',
+    nextHint: 'Drop your passenger off, then straight there',
     minShort: '{min} min',
     toClient: 'to the client',
     whereTo: 'To',

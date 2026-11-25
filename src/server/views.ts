@@ -71,6 +71,16 @@ export async function trackingView(bookingId: string) {
   let pickupEta: string | null = null;
   let pickupEtaMin: number | null = null;
   let pickupEtaApprox = false;
+  // His driver is still finishing another ride nearby (next order, 2026-11-25): told honestly, and the
+  // minutes count the rest of that ride.
+  const finishingNearby = !!active?.queuedDriverId;
+  // …and where he drops that passenger off (operator 2026-11-25): only the point — no address, no name, nothing
+  // else about the passenger in the car.
+  let finishingAt: { lat: number; lng: number } | null = null;
+  if (finishingNearby && active) {
+    const cur = await prisma.assignment.findFirst({ where: { activeDriverId: active.driverId }, select: { booking: { select: { dropoffLat: true, dropoffLng: true } } } });
+    if (cur) finishingAt = { lat: cur.booking.dropoffLat, lng: cur.booking.dropoffLng };
+  }
 
   if (active) {
     vehicle = {
@@ -98,7 +108,10 @@ export async function trackingView(bookingId: string) {
         };
         // ASSIGNED too: the passenger needs "how many minutes away" right after the driver
         // accepts, not only once the driver taps "on the way" (2026-10-01 audit).
-        if ((booking.status === 'EN_ROUTE' || booking.status === 'ASSIGNED') && freshness === 'fresh') {
+        if (finishingNearby && freshness === 'fresh') {
+          const m = await nextRideEta(booking.id, active.driverId, { lat: booking.pickupLat, lng: booking.pickupLng });
+          if (m != null) { pickupEta = `≈ ${m} min`; pickupEtaMin = m; }
+        } else if ((booking.status === 'EN_ROUTE' || booking.status === 'ASSIGNED') && freshness === 'fresh') {
           // Real driver→pickup road ETA (traffic-aware via Google), not the trip duration.
           const eta = await driverToPickupEta(booking.id, active.driverId, { lat: loc.lat, lng: loc.lng }, { lat: booking.pickupLat, lng: booking.pickupLng });
           pickupEta = `≈ ${eta.etaMin} min${eta.source === 'approx' ? ' (approx)' : ''}`;
@@ -156,6 +169,8 @@ export async function trackingView(bookingId: string) {
     pickupEta: pickupEta ?? (booking.status === 'EN_ROUTE' || booking.status === 'ASSIGNED' ? 'ETA unavailable' : null),
     pickupEtaMin,
     pickupEtaApprox,
+    finishingNearby,
+    finishingAt,
     fareCents: booking.fareCents ?? null,
     canCancel: PASSENGER_CANCELABLE.includes(booking.status),
     // «Искать снова» only right after the search failed (2026-11-20), not on an old order.
@@ -313,12 +328,25 @@ export async function driverCurrentTrip(driverId: string) {
   });
   const driver = await prisma.driver.findUnique({ where: { id: driverId } });
   if (!active) {
-    return { onDuty: driver?.onDuty ?? false, available: driver?.available ?? false, trip: null, shareProposal: null, coRider: null, share: null, pair: null, gpsMeter: null };
+    return { onDuty: driver?.onDuty ?? false, available: driver?.available ?? false, trip: null, next: null, shareProposal: null, coRider: null, share: null, pair: null, gpsMeter: null };
   }
   const b = active.booking;
   const waiting = b.status === 'ARRIVED' ? await prisma.waitingSession.findUnique({ where: { bookingId: b.id } }) : null;
+  // His next ride, accepted while finishing this one (2026-11-25): shown on the trip screen; it becomes the trip
+  // when this one ends.
+  const q = await prisma.assignment.findFirst({ where: { queuedDriverId: driverId }, include: { booking: true } });
+  const next = q ? {
+    bookingId: q.booking.id,
+    pickup: { lat: q.booking.pickupLat, lng: q.booking.pickupLng, label: q.booking.pickupLabel },
+    dropoff: { lat: q.booking.dropoffLat, lng: q.booking.dropoffLng, label: q.booking.dropoffLabel },
+    passengerName: q.booking.passengerName,
+    passengerCount: q.booking.passengerCount,
+    fareCents: q.booking.fareCents,
+    vClass: q.booking.vClass,
+  } : null;
   return {
     ...(await driverShareView(driverId, b.id)),
+    next,
     // GPS taximeter while the passenger is on board (comparison with the car's meter; not charged).
     gpsMeter: b.status === 'IN_PROGRESS' ? await gpsMeterFor(prisma, b.id, driverId).catch(() => null) : null,
     onDuty: driver?.onDuty ?? false,
@@ -536,4 +564,18 @@ export async function fleet() {
       };
     })
     .filter(Boolean);
+}
+
+// Minutes until a finishing driver reaches his next client (via his current drop-off), cached 30 s per ride so a
+// polling tracking screen does not route on every poll.
+const nextEtaCache = new Map<string, { at: number; min: number | null }>();
+async function nextRideEta(bookingId: string, driverId: string, pickup: { lat: number; lng: number }): Promise<number | null> {
+  const c = nextEtaCache.get(bookingId);
+  if (c && Date.now() - c.at < 30_000) return c.min;
+  const { reachMinutes } = await import('@/server/dispatch/preassign');
+  const m = await reachMinutes(driverId, pickup).catch(() => null);
+  const min = m == null ? null : Math.max(1, Math.round(m));
+  nextEtaCache.set(bookingId, { at: Date.now(), min });
+  if (nextEtaCache.size > 500) nextEtaCache.clear();
+  return min;
 }

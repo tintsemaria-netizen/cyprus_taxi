@@ -27,6 +27,8 @@ const track: Catalog<typeof en> = {
   repeatRide: "Erneut bestellen",
   yourDriver: "Ihr Fahrer",
   etaApprox: "{min} (ca.)",
+  finishingEta: '{name} beendet in der Nähe eine Fahrt und kommt zu Ihnen — {eta}',
+  finishing: '{name} beendet in der Nähe eine Fahrt und kommt danach zu Ihnen',
   meetDriver: "Treffen Sie {name}",
   meetDriverEta: "Treffen Sie {name} — {eta}",
   pillEnRoute: "FAHRER UNTERWEGS",

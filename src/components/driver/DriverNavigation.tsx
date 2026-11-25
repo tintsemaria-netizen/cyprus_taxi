@@ -57,6 +57,9 @@ export function DriverNavigation(props: {
   onStartGps: () => void; onTripAction: (path: string, body: Record<string, unknown>, opts?: { stopGps?: boolean }) => void;
   /** Ride-share pair: all stops in trip order (2026-11-22). */
   pair?: PairStops | null;
+  /** He has a next ride (2026-11-25): shown only in this menu — first the address, then «Отказаться». */
+  next?: { pickupLabel: string; passengerName: string } | null;
+  onGiveBackNext?: (() => void) | null;
   /** Opens the co-rider's sheet (its arrive / picked up / drop-off actions). */
   onOpenCoRider?: () => void;
 }) {
@@ -533,6 +536,14 @@ export function DriverNavigation(props: {
             {/* Only for a ride-share pair (operator, 2026-11-23): an ordinary ride has nothing more to show. */}
             {props.pair && <button className="relative mx-auto block h-[53px] w-[80%] rounded-full border border-edge bg-page text-[16px] font-bold text-ink" onClick={() => { setMenuOpen(false); setDetailsOpen(true); }} data-testid="nav-details"><EdgeShine />📋 {t('driver.navigation.orderDetails')}</button>}
             {canRelease && <button className="relative mx-auto block h-[53px] w-[80%] min-w-[260px] rounded-full border border-danger/50 bg-page px-3 text-[15px] font-bold text-danger" onClick={() => { setMenuOpen(false); setAsk('release'); }}><EdgeShine />{t('driver.trip.release')}</button>}
+            {/* Next ride (operator 2026-11-25): one small row — the next address, a small «Отменить» on its right;
+                kept well below «Поделиться поездкой» so the wrong one is not tapped by mistake. */}
+            {props.next && (
+              <div className="mx-auto !mt-6 flex w-[80%] min-w-[260px] items-center gap-2 rounded-full border border-edge bg-page py-1.5 pe-1.5 ps-4 text-sm" data-testid="nav-next-info">
+                <span className="min-w-0 flex-1 truncate">{props.next.pickupLabel}</span>
+                {props.onGiveBackNext && <button type="button" className="shrink-0 rounded-full border border-danger/50 px-3 py-1 text-xs font-semibold text-danger" onClick={() => { setMenuOpen(false); props.onGiveBackNext?.(); }} data-testid="nav-give-back-next">{t('driver.offer.cancelNext')}</button>}
+              </div>
+            )}
             {/* No «Отмена» (operator, 2026-11-23): tapping outside the menu closes it. */}
           </div>
         </div>

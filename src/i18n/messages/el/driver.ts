@@ -65,6 +65,10 @@ const driver: Catalog<typeof en> = {
     goOnline: 'Σε υπηρεσία',
   },
   offer: {
+    nextTitle: 'Επόμενη κούρσα — μετά την αποβίβαση',
+    cancelNext: 'Ακύρωση',
+    giveBackConfirm: 'Να ακυρωθεί η επόμενη κούρσα; Ο πελάτης θα πάρει άλλον οδηγό.',
+    nextHint: 'Αφήστε τον επιβάτη και πηγαίνετε κατευθείαν εκεί',
     minShort: '{min} λεπ.',
     toClient: 'μέχρι τον πελάτη',
     whereTo: 'Προς',

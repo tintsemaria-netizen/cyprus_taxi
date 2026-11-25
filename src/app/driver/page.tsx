@@ -48,12 +48,15 @@ interface CurrentTrip {
   shareProposal?: DriverShareProposal | null; coRider?: CoRiderLeg | null; share?: ShareInfo | null;
   pair?: PairStops | null;
   gpsMeter?: GpsMeterView | null; // GPS taximeter while on board (comparison, not charged)
+  /** His next ride, accepted while finishing this one (2026-11-25). */
+  next?: { bookingId: string; pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string }; passengerName: string; passengerCount: number; fareCents: number | null; vClass: string } | null;
 }
 interface Offer {
   offerId: string; expiresAt: string; expiresInMs: number; localDeadline?: number; pickupEtaSec: number | null; pickupDistanceM: number | null;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string; postcode?: string | null }; stop?: { lat: number; lng: number; label: string } | null;
   vClass: string; passengerCount: number; luggageCount?: number; passengerName: string; note: string | null; flightNumber?: string | null; scheduledAt: string | null;
   fareCents: number | null; priceType: string | null; currency: string; fareBreakdown: { label: string; cents: number }[] | null; minCents?: number | null;
+  afterTrip?: boolean; // offered while he is on a trip: his next ride (2026-11-25)
 }
 interface TripCard {
   bookingId: string; reference: string; at: string; pickupLabel: string; dropoffLabel: string; vClass: string; passengerCount: number;
@@ -268,14 +271,16 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
 
   // Offer polling — runs regardless of the visible tab (never stops on tab switch).
   useEffect(() => {
-    if (!data?.onDuty || data.trip) { setOffer(null); return; }
+    // On a trip only once the passenger is on board and there is no next ride yet: the next order (2026-11-25).
+    const canNext = !!data?.trip && data.trip.status === 'IN_PROGRESS' && !data.next;
+    if (!data?.onDuty || (data.trip && !canNext)) { setOffer(null); return; }
     let alive = true;
     // Convert the server-relative remaining time into a deadline on THIS device's clock, so the
     // countdown (and the Accept button) is right even when the device clock is skewed.
     const poll = async () => { try { const r = await api<{ offer: Offer | null }>('/driver/offers'); if (alive) setOffer(r.offer ? { ...r.offer, localDeadline: Date.now() + r.offer.expiresInMs } : null); } catch { /* transient */ } };
     poll(); const t = setInterval(poll, 2000);
     return () => { alive = false; clearInterval(t); };
-  }, [data?.onDuty, data?.trip]);
+  }, [data?.onDuty, data?.trip?.status, data?.trip?.bookingId, data?.next?.bookingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sub-views of the merged tabs.
   const [profileView, setProfileView] = useState<'me' | 'trips'>('me');
@@ -385,17 +390,27 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   if (!trip && rateFor) return <RatePassengerSheet bookingId={rateFor.bookingId} passengerName={rateFor.name} onDone={() => setRateFor(null)} />;
   const offerSecs = offer ? Math.max(0, Math.ceil(((offer.localDeadline ?? new Date(offer.expiresAt).getTime()) - nowMs) / 1000)) : 0;
 
+  // The driver gives back his next ride (from the ≡ menu, 2026-11-25): asks first; it goes to another driver.
+  async function giveBackNext() {
+    if (!window.confirm(t('driver.offer.giveBackConfirm'))) return;
+    try { await api('/driver/next/release', { method: 'POST' }); } catch (e) { if (e instanceof ApiRequestError) setBanner(tErrRef.current(e)); }
+    await load();
+  }
   // An accepted ride takes over the whole screen: navigation + the one action for the stage, no tabs.
   if (trip) {
     return (
       <>
         <DriverNavigation trip={trip} pos={pos} gps={gps} nowMs={nowMs} startCode={startCode} setStartCode={setStartCode}
           banner={banner} onDismissBanner={() => setBanner(null)} onStartGps={startGps} onTripAction={tripAction}
-          pair={data.pair ?? null} onOpenCoRider={() => window.dispatchEvent(new Event(OPEN_CO_RIDER))} />
+          pair={data.pair ?? null} onOpenCoRider={() => window.dispatchEvent(new Event(OPEN_CO_RIDER))}
+          next={data.next ? { pickupLabel: data.next.pickup.label, passengerName: data.next.passengerName } : null}
+          onGiveBackNext={data.next ? giveBackNext : null} />
         {/* Ride-share (Task 022): the second passenger's leg, and a co-rider proposal to decide on the spot. */}
         {trip.status === 'IN_PROGRESS' && data.gpsMeter && <GpsMeterCard m={data.gpsMeter} />}
         {data.coRider && <CoRiderLegPill leg={data.coRider} share={data.share ?? null} pair={data.pair ?? null} onChanged={() => { void load(); void loadDash(); }} onError={setBanner} />}
         {data.shareProposal && <DriverShareProposalSheet key={data.shareProposal.groupId} p={data.shareProposal} onAnswered={() => { void load(); }} />}
+        {/* Next order while finishing this trip (2026-11-25): the offer here; the accepted next ride is only in the ≡ menu. */}
+        {offer && offer.afterTrip && <NextOfferCard offer={offer} secs={offerSecs} busy={offerBusy} onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} />}
       </>
     );
   }
@@ -1087,4 +1102,34 @@ function BottomNav({ tab, setTab, hasOffer, freeCount }: { tab: Tab; setTab: (t:
 function ClassBadge({ vClass }: { vClass: string }) {
   const { t } = useT();
   return <span className="ms-auto shrink-0 rounded-md border-2 border-white/25 px-2 py-0.5 text-[15px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${vClass}` as MsgKey)}</span>;
+}
+
+// ---- Next order (2026-11-25): offered while the passenger is on board, 5 min before the drop-off (7 when the
+// new client is within 1 km of it). Accepting keeps the current trip; the new ride starts when it ends.
+function NextOfferCard({ offer, secs, busy, onAccept, onDecline }: { offer: Offer; secs: number; busy: boolean; onAccept: (id: string) => void; onDecline: (id: string) => void }) {
+  const { t } = useT();
+  const { money, km } = useDriverFmt();
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] mx-auto max-w-lg px-3 pb-[calc(12px+env(safe-area-inset-bottom))]" data-testid="next-offer">
+      <div key={offer.offerId} className="ily-offer-in card pointer-events-auto border-2 border-accent p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.55)]">
+        <div className="flex items-center justify-between gap-2"><span className="font-semibold text-accent">{t('driver.offer.nextTitle')}</span><span className={`chip ${secs <= 5 ? '!text-danger' : ''}`}>⏳ {t('driver.units.sec', { n: secs })}</span></div>
+        <div className="mt-2 flex items-baseline gap-3">
+          <span className="text-3xl font-bold text-ink">{offer.pickupEtaSec != null ? t('driver.offer.minShort', { min: Math.max(1, Math.round(offer.pickupEtaSec / 60)) }) : '—'}</span>
+          {offer.pickupDistanceM != null && <span className="text-lg font-semibold text-muted">{km(offer.pickupDistanceM)}</span>}
+          <span className="text-sm text-muted">{t('driver.offer.toClient')}</span>
+        </div>
+        <div className="mt-1 text-xs text-muted">{t('driver.offer.nextHint')}</div>
+        <div className="mt-2 space-y-1 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
+          <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="font-medium">{offer.pickup.label}</span></div>
+          <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{offer.dropoff.label}</span></div>
+          <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span></div>
+          <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="font-bold">{offer.fareCents != null ? fareRangeText(offer.fareCents, offer.priceType, (c) => money(c, offer.currency), offer.minCents) : '—'}</span></div>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button className="btn-ghost min-h-[44px] !text-danger border border-danger/40" disabled={busy} onClick={() => onDecline(offer.offerId)} data-testid="next-decline">{t('driver.offer.decline')}</button>
+          <button className="btn-primary min-h-[44px]" disabled={busy || secs === 0} onClick={() => onAccept(offer.offerId)} data-testid="next-accept">{t('driver.offer.accept')}</button>
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -22,9 +22,11 @@ export async function createOffer(bookingId: string, c: Candidate): Promise<{ id
       await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
       const booking = await tx.booking.findUnique({ where: { id: bookingId } });
       if (!booking || booking.status !== 'SEARCHING') return null;
-      // Belt-and-braces: skip if the driver is already reserved elsewhere.
-      const busy = await tx.assignment.findFirst({ where: { activeDriverId: c.driverId } });
-      if (busy) return null;
+      // Belt-and-braces: skip if the driver is already reserved elsewhere — except a next order (c.afterTrip) for a
+      // driver whose passenger is on board and who has no next order yet (2026-11-25).
+      const busy = await tx.assignment.findFirst({ where: { activeDriverId: c.driverId }, include: { booking: { select: { status: true } } } });
+      if (busy && !(c.afterTrip && busy.booking.status === 'IN_PROGRESS')) return null;
+      if (c.afterTrip && (await tx.assignment.findFirst({ where: { queuedDriverId: c.driverId }, select: { id: true } }))) return null;
       const offer = await tx.driverOffer.create({
         data: {
           bookingId, driverId: c.driverId, vehicleId: c.vehicleId,
@@ -43,7 +45,7 @@ export async function createOffer(bookingId: string, c: Candidate): Promise<{ id
       });
       // Notification job in the SAME transaction, bound to this exact offer (so a delayed
       // drain that finds the offer already resolved marks it SUPERSEDED, never delivers it).
-      await enqueueDriver(tx, c.driverId, 'New ride offer', offerBody(booking.pickupLabel, c.etaSec), { tag: 'offer', offerId: offer.id });
+      await enqueueDriver(tx, c.driverId, c.afterTrip ? 'Next ride offer' : 'New ride offer', offerBody(booking.pickupLabel, c.etaSec), { tag: 'offer', offerId: offer.id });
       return { id: offer.id };
     });
     return res;
@@ -102,14 +104,18 @@ export async function acceptOffer(offerId: string, driverId: string): Promise<Of
 
       const driver = await tx.driver.findUnique({ where: { id: driverId }, include: { user: true } });
       if (!driver || !driver.active || !driver.user.active || !driver.onDuty || !canWork(driver)) return err(409, 'DRIVER_INELIGIBLE', 'Driver no longer eligible.');
-      if (await tx.assignment.findFirst({ where: { activeDriverId: driverId } })) return err(409, 'DRIVER_BUSY', 'You already have an active trip.');
+      // On a trip: only as his NEXT order — the passenger already on board, no next order yet (2026-11-25).
+      const cur = await tx.assignment.findFirst({ where: { activeDriverId: driverId }, include: { booking: { select: { status: true } } } });
+      const next = !!cur;
+      if (cur && cur.booking.status !== 'IN_PROGRESS') return err(409, 'DRIVER_BUSY', 'You already have an active trip.');
+      if (next && (await tx.assignment.findFirst({ where: { queuedDriverId: driverId }, select: { id: true } }))) return err(409, 'DRIVER_BUSY', 'You already have a next ride.');
       if (await isPairBlocked(driverId, booking.passengerId, tx)) return err(409, 'OFFER_GONE', 'This offer is no longer available.');
       const vehicle = await tx.vehicle.findUnique({ where: { id: offer.vehicleId } });
       if (!vehicle || !vehicle.active || vehicle.vClass !== booking.vClass || vehicle.seats < booking.passengerCount) return err(409, 'VEHICLE_INELIGIBLE', 'Vehicle no longer eligible.');
       const binding = await tx.driverVehicleBinding.findFirst({ where: { driverId, vehicleId: vehicle.id, endedAt: null } });
       if (!binding) return err(409, 'NOT_BOUND', 'Vehicle no longer bound.');
 
-      await createAssignment(tx, booking, driver, vehicle, 'SYSTEM', 'auto-dispatch accept');
+      await createAssignment(tx, booking, driver, vehicle, 'SYSTEM', next ? 'auto-dispatch accept (next ride)' : 'auto-dispatch accept', { queued: next });
       await tx.driverOffer.update({ where: { id: offerId }, data: { status: 'ACCEPTED', respondedAt: new Date(), activeBookingId: null, activeDriverId: null } });
       const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: 'ASSIGNED', revision: { increment: 1 } } });
       await tx.bookingEvent.create({ data: { bookingId: booking.id, type: 'OFFER_ACCEPTED', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'SEARCHING', afterStatus: 'ASSIGNED' } });
@@ -123,6 +129,13 @@ export async function acceptOffer(offerId: string, driverId: string): Promise<Of
         correlationId: booking.id,
         payload: { ...bookingEventPayload({ ...booking, status: 'ASSIGNED' }), driverPseudo: driverPseudo(driverId) },
       });
+      if (next) {
+        // His next ride: stays ASSIGNED until the current trip ends (share.promoteQueuedTx → EN_ROUTE).
+        await tx.dispatchJob.deleteMany({ where: { bookingId: booking.id } });
+        await enqueuePassengerDriverNews(tx, booking.id, 'assigned', 'Driver assigned', 'Your driver is finishing a ride nearby and will come to you next.', { k: 'ride.assignedNext' });
+        acceptedBookingId = booking.id;
+        return { ok: true, status: updated.status, revision: updated.revision };
+      }
       // Accepting IS heading to the pickup (2026-11-12): no separate "On my way" tap. The ride
       // passes through ASSIGNED (audit trail above) and lands in EN_ROUTE in the same transaction.
       const enRoute = await tx.booking.update({ where: { id: booking.id }, data: { status: 'EN_ROUTE', revision: { increment: 1 } } });
@@ -184,6 +197,8 @@ export async function getDriverActiveOffer(driverId: string) {
     expiresInMs: Math.max(0, o.expiresAt.getTime() - Date.now()),
     pickupEtaSec: o.pickupEtaSec,
     pickupDistanceM: o.pickupDistanceM,
+    // Offered while he is on a trip: «Следующий заказ — после высадки» (2026-11-25).
+    afterTrip: !!(await prisma.assignment.findFirst({ where: { activeDriverId: driverId }, select: { id: true } })),
     pickup: { lat: b.pickupLat, lng: b.pickupLng, label: b.pickupLabel },
     dropoff: { lat: b.dropoffLat, lng: b.dropoffLng, label: b.dropoffLabel, postcode: b.dropoffPostcode ?? null },
     stop: b.stopLat != null && b.stopLng != null ? { lat: b.stopLat, lng: b.stopLng, label: b.stopLabel ?? '' } : null,

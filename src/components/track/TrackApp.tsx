@@ -44,6 +44,10 @@ interface TrackView {
   location: null | { lat: number; lng: number; freshness: string; poorAccuracy: boolean; sampledAt: string };
   pickupEta: string | null;
   pickupEtaMin: number | null;
+  /** The driver is finishing another ride nearby first (next order, 2026-11-25). */
+  finishingNearby?: boolean;
+  /** Where the driver drops his current passenger off — a bare point, nothing else (2026-11-25). */
+  finishingAt?: { lat: number; lng: number } | null;
   pickupEtaApprox: boolean;
   fareCents: number | null;
   startCode: string | null;
@@ -390,13 +394,17 @@ export default function TrackApp() {
   // A pre-booking (2026-11-19) shows the whole route from afar too: both ends, framed together.
   if (onTrip || view.status === 'SEARCHING' || view.status === 'REQUESTED') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
   if (!onTrip) markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label, pulse: view.status === 'SEARCHING' });
+  // The finishing driver's drop-off: just a point on the map, no label (operator 2026-11-25).
+  if (view.finishingAt && !onTrip) markers.push({ id: 'fin', lat: view.finishingAt.lat, lng: view.finishingAt.lng, kind: 'stop', label: '', noFit: false });
   if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: t('track.yourDriver'), stale: liveLocation.freshness === 'stale' || dr.estimated });
 
   const etaMinText = view.pickupEtaMin != null ? tp('common.minutes', view.pickupEtaMin) : null;
   const etaText = !disconnected && etaMinText ? (view.pickupEtaApprox ? t('track.etaApprox', { min: etaMinText }) : etaMinText) : null;
   const statusLabel = STATUS_KEYS.has(view.status) ? t(`common.status.${view.status}` as MsgKey) : view.status;
   const headline =
-    (view.status === 'EN_ROUTE' || view.status === 'ASSIGNED') && view.vehicle
+    (view.status === 'EN_ROUTE' || view.status === 'ASSIGNED') && view.vehicle && view.finishingNearby
+      ? (etaText ? t('track.finishingEta', { name: view.vehicle.driverName, eta: etaText }) : t('track.finishing', { name: view.vehicle.driverName }))
+      : (view.status === 'EN_ROUTE' || view.status === 'ASSIGNED') && view.vehicle
       ? (etaText ? t('track.meetDriverEta', { name: view.vehicle.driverName, eta: etaText }) : t('track.meetDriver', { name: view.vehicle.driverName }))
       // An old order no driver was found for (2026-11-20): «Поездка не состоялась», no retry.
       : view.status === 'NO_DRIVER' && !view.canRetry ? t('rides.detail.notHappened') : statusLabel;

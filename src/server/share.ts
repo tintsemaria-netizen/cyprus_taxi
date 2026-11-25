@@ -139,7 +139,8 @@ export async function tryLiveShare(guestId: string, now: Date = new Date()): Pro
       id: { notIn: asked },
       status: { in: [...LIVE_HOST_STATUSES] }, shareOptIn: true, vClass: guest.vClass, fareCents: { not: null }, stopLat: null,
       shareAsHost: { none: { activeHostBookingId: { not: null } } }, shareAsGuest: { none: { activeGuestBookingId: { not: null } } },
-      assignments: { some: { activeDriverId: { not: null }, driver: { acceptsShared: true, onDuty: true } } },
+      // …and not a driver who already took his next ride (2026-11-25): a co-rider would make him late for it.
+      assignments: { some: { activeDriverId: { not: null }, driver: { acceptsShared: true, onDuty: true, assignments: { none: { queuedDriverId: { not: null } } } } } },
     },
     include: { assignments: { where: { activeDriverId: { not: null } }, include: { vehicle: true, driver: { include: { location: true } } } } },
     take: 50,
@@ -749,6 +750,12 @@ export async function leaveShareTx(tx: Tx, bookingId: string, reason: string, op
 export async function afterLegEndedTx(tx: Tx, ended: { driverId: string }): Promise<void> {
   const other = await tx.assignment.findFirst({ where: { driverId: ended.driverId, activeBookingId: { not: null } } });
   if (!other) { await tx.driver.update({ where: { id: ended.driverId }, data: { available: true } }); return; }
+  // His next order (2026-11-25): the trip he was finishing ended → it becomes his active ride, he heads there.
+  if (other.queuedDriverId) {
+    if (!(await tx.assignment.findFirst({ where: { activeDriverId: ended.driverId }, select: { id: true } }))) await promoteQueuedTx(tx, other);
+    await tx.driver.update({ where: { id: ended.driverId }, data: { available: false } });
+    return;
+  }
   if (!other.activeDriverId) {
     await tx.assignment.update({ where: { id: other.id }, data: { activeDriverId: ended.driverId, activeVehicleId: other.vehicleId } });
   }
@@ -785,3 +792,16 @@ export async function dissolveUnclaimedTx(tx: Tx, bookingId: string): Promise<bo
 
 export const shareInternals = { closeGroupTx, restoreFullPriceTx, activeGroupOf, peopleText, proposalBody, driverProposalBody };
 export const SHARE_MIN = MIN;
+
+/** The next order (2026-11-25) becomes the driver's active ride: ASSIGNED → EN_ROUTE, the passenger hears the
+ *  driver is now on the way. */
+export async function promoteQueuedTx(tx: Tx, q: { id: string; bookingId: string; driverId: string; vehicleId: string }): Promise<void> {
+  await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${q.bookingId} FOR UPDATE`;
+  await tx.assignment.update({ where: { id: q.id }, data: { activeDriverId: q.driverId, activeVehicleId: q.vehicleId, queuedDriverId: null } });
+  const b = await tx.booking.findUnique({ where: { id: q.bookingId }, select: { status: true } });
+  if (b?.status !== 'ASSIGNED') return;
+  const u = await tx.booking.update({ where: { id: q.bookingId }, data: { status: 'EN_ROUTE', revision: { increment: 1 } } });
+  await tx.bookingEvent.create({ data: { bookingId: q.bookingId, type: 'STATUS_EN_ROUTE', actorType: 'SYSTEM', beforeStatus: 'ASSIGNED', afterStatus: 'EN_ROUTE', reason: 'previous trip finished' } });
+  await recordEvent(tx, { eventType: 'booking.en_route', aggregateType: 'booking', aggregateId: q.bookingId, aggregateVersion: u.revision, correlationId: q.bookingId, payload: { bookingId: q.bookingId, status: 'EN_ROUTE', actorType: 'SYSTEM', reason: 'previous trip finished' } });
+  await enqueuePassenger(tx, q.bookingId, 'Your driver is on the way', 'The driver has finished the previous ride and is heading to you.', { msg: { k: 'ride.nextOnWay' } });
+}
