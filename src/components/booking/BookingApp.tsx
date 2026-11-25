@@ -1189,7 +1189,7 @@ export default function BookingApp() {
   );
   const pickupBox = (
     <div data-testid="pickup-time">
-      {!pickT && <p className="mb-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium text-ink" data-testid="pickup-hint">{t('booking.pickupAt.hint')}</p>}
+      {/* No «Укажите, во сколько машина должна быть у вас» note (operator 2026-11-25): the title says it. */}
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-2">
         <label className="block min-w-0">
           <span className="label">{t('booking.arrive.day')}</span>
