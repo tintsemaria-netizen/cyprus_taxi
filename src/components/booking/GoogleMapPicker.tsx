@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { areaBlock, loadNoGo } from '@/lib/area-client';
-import { BRAND_PIN_SVG } from '@/components/carMarker';
+import LiftPin from '@/components/LiftPin';
 import { useEffect, useRef, useState } from 'react';
 import { useTwoFingerCamera } from '@/components/useTwoFingerCamera';
 import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
@@ -49,6 +49,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
   const popped = useRef(false);
 
   const [center, setCenter] = useState(centerRef.current);
+  const [lift, setLift] = useState(false); // the logo rises while the map is dragged (as on the start screen)
   // Not on the island or in a «Запретная зона» (2026-11-24): confirm off, a red line says why.
   const blockCode = areaBlock(center);
   const offIsland = !!blockCode;
@@ -138,7 +139,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
           clickableIcons: false,
         });
         mapRef.current = map;
-        map.addListener('dragstart', () => { userMoveCount.current += 1; });
+        map.addListener('dragstart', () => { userMoveCount.current += 1; setLift(true); });
         // A real geographic centre change invalidates the label immediately (Task 008);
         // resize/no-op idle (unchanged centre) is ignored via tolerance.
         map.addListener('center_changed', () => {
@@ -150,6 +151,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
         });
         // 'idle' is the settle signal → one reverse lookup, deduped by coordinate.
         map.addListener('idle', () => {
+          setLift(false);
           if (disposed || closed.current || gen !== mapGen.current) return;
           const c = map.getCenter(); if (!c) return;
           reverseGeocode(c.lat(), c.lng(), draftRev.current, gen);
@@ -272,7 +274,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
             {mapLoaded && (
               <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full">
                 {/* IL-Y brand mark as the centre pin (2026-11-17). */}
-                <span className="block h-[40px] w-[32px] [filter:drop-shadow(0_2px_3px_rgba(0,0,0,0.55))]" dangerouslySetInnerHTML={{ __html: BRAND_PIN_SVG }} />
+                <span className="block h-[40px] w-[32px]" data-testid="picker-pin"><LiftPin lift={lift} /></span>
               </div>
             )}
             {!mapLoaded && (

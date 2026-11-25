@@ -1,7 +1,7 @@
 'use client';
 
 import { areaBlock, loadNoGo } from '@/lib/area-client';
-import { BRAND_PIN_SVG } from '@/components/carMarker';
+import LiftPin from '@/components/LiftPin';
 import { useEffect, useRef, useState } from 'react';
 import type * as maplibregl from 'maplibre-gl';
 import { loadMaplibre } from '@/lib/maplibre';
@@ -72,6 +72,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
   const popped = useRef(false);
 
   const [center, setCenter] = useState(centerRef.current);
+  const [lift, setLift] = useState(false); // the logo rises while the map is dragged (as on the start screen)
   // Not on the island or in a «Запретная зона» (2026-11-24): confirm off, a red line says why.
   const blockCode = areaBlock(center);
   const offIsland = !!blockCode;
@@ -181,7 +182,8 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
         mapRef.current = map;
         // No +/- buttons (2026-11-17): pinch / wheel to zoom.
         const userGesture = (e: { originalEvent?: unknown }) => { if (e.originalEvent) userMoveCount.current += 1; };
-        map.on('dragstart', userGesture);
+        map.on('dragstart', (e) => { userGesture(e); setLift(true); });
+        map.on('moveend', () => setLift(false));
         map.on('zoomstart', userGesture);
         map.on('rotatestart', userGesture);
         // Only a real geographic centre change counts — resize/zoom-in-place is ignored.
@@ -342,7 +344,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
             {mapLoaded && (
               <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full">
                 {/* IL-Y brand mark as the centre pin (2026-11-17). */}
-                <span className="block h-[40px] w-[32px] [filter:drop-shadow(0_2px_3px_rgba(0,0,0,0.55))]" dangerouslySetInnerHTML={{ __html: BRAND_PIN_SVG }} />
+                <span className="block h-[40px] w-[32px]" data-testid="picker-pin"><LiftPin lift={lift} /></span>
               </div>
             )}
             {!mapLoaded && (

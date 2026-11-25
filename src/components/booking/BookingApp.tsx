@@ -19,6 +19,7 @@ import { setNearHint } from '@/lib/nearHint';
 import SavedPlacesSheet, { type SavedMode, type SavedPlaces } from './SavedPlacesSheet';
 import { RouteEditor, type RouteSlot } from './RouteEditor';
 import AutoMapPicker from './AutoMapPicker';
+import LiftPin from '@/components/LiftPin';
 import { PassengerLoginModal } from './PassengerLoginModal';
 import { AccountMenu } from './AccountMenu';
 import { recordVisit } from '@/lib/navTrail';
@@ -1476,10 +1477,7 @@ export default function BookingApp() {
             const pt = pinPoint(fitPadding, mapBox.w, mapBox.h);
             return (
               <div aria-hidden data-testid="center-pin" className="pointer-events-none absolute z-[5]" style={{ left: pt.x - 16, top: pt.y - 40, width: 32, height: 40 }}>
-                <div className="h-full w-full transition-transform duration-150" style={{ transform: pinLift ? 'translateY(-10px)' : 'none', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.55))' }}>
-                  <div className={`h-full w-full ${offIsland ? 'ily-pin-shake' : ''}`} dangerouslySetInnerHTML={{ __html: offIsland ? BRAND_PIN_SVG_RED : BRAND_PIN_SVG }} data-red={offIsland ? '1' : undefined} />
-                </div>
-                <div className={`absolute left-1/2 top-full h-1.5 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/40 transition-opacity ${pinLift ? 'opacity-100' : 'opacity-0'}`} />
+                <LiftPin lift={pinLift} svg={offIsland ? BRAND_PIN_SVG_RED : BRAND_PIN_SVG} shake={offIsland} red={offIsland} />
               </div>
             );
           })()}
