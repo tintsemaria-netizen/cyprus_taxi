@@ -138,7 +138,7 @@ export function ZoneWorkspace({ children }: { children: React.ReactNode }) {
   return (
     <ZoneMapCtx.Provider value={ctxValue}>
       <div ref={box} className="flex flex-col gap-3 p-3 lg:flex-row" style={h ? { height: undefined, ['--zw-h' as string]: `${h}px` } : undefined} data-testid="zone-workspace">
-        <div className="relative h-[58vh] min-h-[360px] overflow-hidden rounded-[14px] border border-edge lg:h-[var(--zw-h,75vh)] lg:min-w-0 lg:flex-1" data-testid="zone-map-box">
+        <div className="relative order-2 h-[58vh] min-h-[360px] overflow-hidden rounded-[14px] border border-edge lg:order-1 lg:h-[var(--zw-h,75vh)] lg:min-w-0 lg:flex-1" data-testid="zone-map-box">
           <ZoneEditorMap {...props} center={center.current ?? props.center} fit={fit} onChange={onChange} onPick={props.onPick ? onPick : undefined} onPinMove={props.onPinMove ? onPinMove : undefined} className="h-full w-full" />
           <div ref={setOverlay} className="pointer-events-none absolute inset-0" />
           {folded && (
@@ -146,7 +146,8 @@ export function ZoneWorkspace({ children }: { children: React.ReactNode }) {
               className="absolute end-0 top-1/2 z-10 flex h-16 w-8 -translate-y-1/2 items-center justify-center rounded-s-[12px] bg-accent text-xl font-bold text-[#0b0f10] shadow-lg">‹</button>
           )}
         </div>
-        <aside className={`lg:h-[var(--zw-h,75vh)] lg:w-[400px] lg:shrink-0 lg:overflow-y-auto ${folded ? 'hidden' : ''}`} data-testid="zone-panel">{children}</aside>
+        {/* Narrow screens (Fold, phone — operator 2026-11-25): the tools on top, at most half the screen, the map under them. */}
+        <aside className={`order-1 max-h-[48vh] overflow-y-auto lg:order-2 lg:h-[var(--zw-h,75vh)] lg:max-h-none lg:w-[400px] lg:shrink-0 ${folded ? 'hidden' : ''}`} data-testid="zone-panel">{children}</aside>
       </div>
     </ZoneMapCtx.Provider>
   );
