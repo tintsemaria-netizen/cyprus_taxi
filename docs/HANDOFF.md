@@ -2872,6 +2872,15 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   PlacesInput, both map pickers and the home centre pin refuse right where the point is picked (red line / red shaking logo).
 - Not covered client-side: saved places «Дом/Работа» inside a zone — refused at the price (small warn line). Tests: no-go.db.test.ts.
 
+## 2026-11-25 09:20 — collapsed panels show their top; no pickup-time note (DEPLOYED 9cdb9c3)
+
+- Operator: after leaving a scrolled «Запланировать» form the home sheet kept the scroll («Куда едем?» cut off,
+  empty space below). BookingApp: scrollTop = 0 when collapsed / `when` / `step` change; peek re-measured on
+  collapsed, when, soonRide too. useSheetDrag: closing a panel resets its body scroll (driver navigation panel,
+  passenger tracking sheet). Other sheets mount fresh on open.
+- Removed «Укажите, во сколько машина должна быть у вас» (booking.pickupAt.hint, 8 langs). The arrive-mode note
+  (booking.arrive.hint, ПП «ко времени») is still there.
+
 ## 2026-11-25 03:25 — «Попутчик −30%» notes (DEPLOYED 2465939)
 
 - ShareBookingOptions: no route note under the switched-off box; ON → hint + «Попутчик — только между …»;
