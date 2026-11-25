@@ -403,14 +403,14 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
         <DriverNavigation trip={trip} pos={pos} gps={gps} nowMs={nowMs} startCode={startCode} setStartCode={setStartCode}
           banner={banner} onDismissBanner={() => setBanner(null)} onStartGps={startGps} onTripAction={tripAction}
           pair={data.pair ?? null} onOpenCoRider={() => window.dispatchEvent(new Event(OPEN_CO_RIDER))}
+          next={data.next ? { pickupLabel: data.next.pickup.label, passengerName: data.next.passengerName } : null}
           onGiveBackNext={data.next ? giveBackNext : null} />
         {/* Ride-share (Task 022): the second passenger's leg, and a co-rider proposal to decide on the spot. */}
         {trip.status === 'IN_PROGRESS' && data.gpsMeter && <GpsMeterCard m={data.gpsMeter} />}
         {data.coRider && <CoRiderLegPill leg={data.coRider} share={data.share ?? null} pair={data.pair ?? null} onChanged={() => { void load(); void loadDash(); }} onError={setBanner} />}
         {data.shareProposal && <DriverShareProposalSheet key={data.shareProposal.groupId} p={data.shareProposal} onAnswered={() => { void load(); }} />}
-        {/* Next order while finishing this trip (2026-11-25): the offer, then a pill with the accepted next ride. */}
+        {/* Next order while finishing this trip (2026-11-25): the offer here; the accepted next ride is only in the ≡ menu. */}
         {offer && offer.afterTrip && <NextOfferCard offer={offer} secs={offerSecs} busy={offerBusy} onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} />}
-        {data.next && !offer && <NextRidePill next={data.next} />}
       </>
     );
   }
@@ -1129,19 +1129,6 @@ function NextOfferCard({ offer, secs, busy, onAccept, onDecline }: { offer: Offe
           <button className="btn-ghost min-h-[44px] !text-danger border border-danger/40" disabled={busy} onClick={() => onDecline(offer.offerId)} data-testid="next-decline">{t('driver.offer.decline')}</button>
           <button className="btn-primary min-h-[44px]" disabled={busy || secs === 0} onClick={() => onAccept(offer.offerId)} data-testid="next-accept">{t('driver.offer.accept')}</button>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function NextRidePill({ next }: { next: NonNullable<CurrentTrip['next']> }) {
-  const { t } = useT();
-  // Info only on the main screen; giving it back is in the ≡ menu (operator 2026-11-25).
-  return (
-    // Above the navigation screen (z-50), under its instruction panel.
-    <div style={{ top: 'calc(118px + env(safe-area-inset-top))' }} className="pointer-events-none fixed inset-x-0 z-[55] mx-auto flex max-w-lg justify-center px-3" data-testid="next-ride">
-      <div className="pointer-events-auto max-w-full truncate rounded-full border-2 border-accent bg-page/95 px-3 py-1.5 text-sm shadow-card">
-        <span className="font-semibold text-accent">{t('driver.offer.nextShort')}:</span> {next.pickup.label} · {next.passengerName}
       </div>
     </div>
   );

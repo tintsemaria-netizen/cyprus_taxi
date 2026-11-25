@@ -2873,13 +2873,12 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - eligibility.finishingCandidates (NEXT_ORDER_* constants); createOffer/acceptOffer allow it only when the current
   booking is IN_PROGRESS and there is no next ride; not for share pairs / scheduled rides / shared trips; live
   co-rider search skips drivers with a next ride.
-- Driver app: offer polling also during IN_PROGRESS; NextOfferCard («Следующий заказ — после высадки»),
-  NextRidePill. Passenger: trackingView.finishingNearby + ETA via preassign.reachMinutes (30 s cache);
+- Driver app: offer polling also during IN_PROGRESS; NextOfferCard («Следующий заказ — после высадки»). Passenger: trackingView.finishingNearby + ETA via preassign.reachMinutes (30 s cache);
   TrackApp headline track.finishing(Eta). sw.js: next-offer title, ride.assignedNext, ride.nextOnWay (8 langs).
 - Tests: tests/next-order.db.test.ts (3). Full suite 478 passed.
 - Driver gives the next ride back: lifecycle.driverReleaseNext → rematchBooking (search again without him);
-  POST /api/v1/driver/next/release; in the ≡ menu of the navigation screen (DriverNavigation onGiveBackNext),
-  with a confirm (operator: not on the main screen). Test added (4 in the file).
+  POST /api/v1/driver/next/release. Operator: nothing about the next ride on the main screen — the ≡ menu of the
+  navigation screen shows «Следующий заказ — после высадки» + address · name, then «Отказаться…» (confirm). Test added (4 in the file).
 - Passenger waiting for the finishing driver: trackingView.finishingAt = the bare drop-off point of the current trip
   (operator's decision) — no address/name; TrackApp draws an unlabelled dot. Test checks no label leaks.
 
