@@ -1,5 +1,8 @@
 # Session handoff
 
+## 2026-11-25 — territory «Точки подачи и высадки» switch (deployed)
+- NoGoZone.pointsActive (migration 20261125230000_points_active): off → snapPickup/snapDropoff skip, /api/v1/no-go sends empty points; points kept. Main switch labelled «Территория «name»». Hint lines under switches and under «Точки высадки» removed (operator). Test in tests/point-min.db.test.ts.
+
 ## 2026-11-25 — «Территории»; territory without pickup points; tools on top on narrow screens (deployed)
 - Tab «Точки подачи» renamed «Территории» (URL /admin/pickup-points kept). POINT zone may have no pickup points: server snapPickup / client territoryAt/Near skip it, not drawn for passengers (allTerritories), still a place for fixed fares / minimum / stands. Test in tests/point-min.db.test.ts.
 - ZoneWorkspace below lg: panel first (max-h 48vh, scrolls), map below.
