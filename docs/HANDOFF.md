@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-25 ~11:55 — logo lift + shadow in the «На карте» pickers (deployed 99bc2e4)
+- New `src/components/LiftPin.tsx` (one component): start screen, MapPicker (MapLibre: dragstart→up, moveend→down), GoogleMapPicker (dragstart→up, idle→down).
+- Not changed: fixed pickup markers on tracking/driver maps; admin point logos (dragged themselves) — offered to the operator.
+- Suite 482 passed / 1 skipped; live chunk has `picker-pin`; health ready. Google picker not checked on a phone.
+
 ## 2026-11-25 — territory outline near the logo only (deployed)
 - BookingApp: outline + exit points only when the logo (last onCenterPick), pickup or drop-off is within 2 km (TERR_SHOW_M, nearTerritory in area-client). Outline width by zoom (GoogleMapView areaStroke; MapLibre interpolate). Snapping unchanged.
 
