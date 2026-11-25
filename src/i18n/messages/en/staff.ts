@@ -154,6 +154,10 @@ const staff = {
     empty: 'No vehicles yet.',
   },
   noGo: {
+    minOn: "on",
+    minOff: "off",
+    minOnConfirm: "Turn on the minimum fare for «{name}»? From now on rides from here cost at least this amount.",
+    minOffConfirm: "Turn off the minimum fare for «{name}»? Rides from here go at the normal price. The amount is kept.",
     minFrom: "Minimum fare from here",
     minFromHint: "A ride picked up at this point costs at least this, above it the meter. Now and pre-booked. Fixed fares do not change. Empty — no minimum.",
     minShort: "min. €{amount}",

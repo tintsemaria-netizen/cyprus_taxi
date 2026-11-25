@@ -14,7 +14,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!(await prisma.noGoZone.findUnique({ where: { id }, select: { id: true } }))) return Errors.notFound();
   const row = await prisma.noGoZone.update({ where: { id }, data: noGoData(parsed.data) });
   invalidateNoGoCache();
-  await prisma.auditEvent.create({ data: { actorId: ctx.user.id, actorRole: 'ADMIN', action: 'NO_GO_ZONE_UPDATED', target: id, detail: `${row.name} ${row.active ? 'on' : 'off'}${row.airport ? ` airport=${row.airport}` : ''}` } });
+  await prisma.auditEvent.create({ data: { actorId: ctx.user.id, actorRole: 'ADMIN', action: 'NO_GO_ZONE_UPDATED', target: id, detail: `${row.name} ${row.active ? 'on' : 'off'}${row.airport ? ` airport=${row.airport}` : ''}${row.kind === 'POINT' && (row.minComfortCents || row.minXlCents) ? ` min=${row.minActive ? 'on' : 'off'} ${row.minComfortCents ?? '-'}/${row.minXlCents ?? '-'}` : ''}` } });
   return apiOk(zoneView(row));
 }
 

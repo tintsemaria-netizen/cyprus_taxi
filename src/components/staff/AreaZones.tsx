@@ -24,8 +24,8 @@ interface Spot { lat: number; lng: number; name: string }
 // € text ↔ cents for «минимальный заказ отсюда»; empty / 0 / bad = no minimum (null).
 const centsText = (c?: number | null) => (c ? (c / 100).toFixed(c % 100 ? 2 : 0) : '');
 const euroCents = (v: string): number | null => { const n = Number(v.replace(',', '.').trim()); return v.trim() && Number.isFinite(n) && n >= 1 ? Math.round(n * 100) : null; };
-interface Zone { id: string; name: string; kind: Kind; polygon: Poly; points: Spot[]; dropPoints?: Spot[]; active: boolean; airport?: string | null; minComfortCents?: number | null; minXlCents?: number | null }
-interface Draft { id: string | null; name: string; kind: Kind; active: boolean; polygon: Poly; points: Spot[]; dropPoints: Spot[]; airport: string | null; minComfort: string; minXl: string }
+interface Zone { id: string; name: string; kind: Kind; polygon: Poly; points: Spot[]; dropPoints?: Spot[]; active: boolean; airport?: string | null; minComfortCents?: number | null; minXlCents?: number | null; minActive?: boolean }
+interface Draft { id: string | null; name: string; kind: Kind; active: boolean; polygon: Poly; points: Spot[]; dropPoints: Spot[]; airport: string | null; minComfort: string; minXl: string; minOn: boolean }
 // ✈ in the list (2026-11-25): this territory is chosen as an airport's point on «Фиксированные цены».
 // What a tap on the map adds while editing a territory: corners, pickup points or drop-off points (2026-11-24).
 type Mode = 'corners' | 'pick' | 'drop';
@@ -124,8 +124,8 @@ function AreaZones({ kind }: { kind: Kind }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitKey]);
 
-  function startNew() { setMsg(null); resetHist(); setDraft({ id: null, name: '', kind, active: true, polygon: [], points: [], dropPoints: [], airport: null, minComfort: '', minXl: '' }); setMode('corners'); }
-  function startEdit(z: Zone) { setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, kind: z.kind, active: z.active, polygon: untangle(z.polygon), points: z.points, dropPoints: z.dropPoints ?? [], airport: z.airport ?? null, minComfort: centsText(z.minComfortCents), minXl: centsText(z.minXlCents) }); setMode('corners'); }
+  function startNew() { setMsg(null); resetHist(); setDraft({ id: null, name: '', kind, active: true, polygon: [], points: [], dropPoints: [], airport: null, minComfort: '', minXl: '', minOn: true }); setMode('corners'); }
+  function startEdit(z: Zone) { setMsg(null); resetHist(); setDraft({ id: z.id, name: z.name, kind: z.kind, active: z.active, polygon: untangle(z.polygon), points: z.points, dropPoints: z.dropPoints ?? [], airport: z.airport ?? null, minComfort: centsText(z.minComfortCents), minXl: centsText(z.minXlCents), minOn: z.minActive ?? true }); setMode('corners'); }
 
   // A point dragged on the map: same rules as placing one (inside the rounded territory, on land, 15 m from the
   // other kind); a bad place puts it back.
@@ -151,7 +151,7 @@ function AreaZones({ kind }: { kind: Kind }) {
     setBusy(true); setMsg(null);
     try {
       const body = { name: draft.name.trim() || `${t(draft.kind === 'POINT' ? 'staff.noGo.pointTitle' : draft.kind === 'STAND' ? 'staff.noGo.standTitle' : 'staff.noGo.title')} ${zones.length + 1}`, kind: draft.kind, polygon: draft.polygon, points: draft.points, dropPoints: draft.dropPoints, active: draft.active, ...(draft.kind === 'STAND' ? { airport: draft.airport } : {}),
-        ...(draft.kind === 'POINT' ? { minComfortCents: euroCents(draft.minComfort), minXlCents: euroCents(draft.minXl) } : {}) };
+        ...(draft.kind === 'POINT' ? { minComfortCents: euroCents(draft.minComfort), minXlCents: euroCents(draft.minXl), minActive: draft.minOn } : {}) };
       if (draft.id) await api(`/admin/no-go/${draft.id}`, { method: 'PUT', body });
       else await api('/admin/no-go', { method: 'POST', body });
       setDraft(null); setMsg(t('staff.noGo.saved'));
@@ -165,6 +165,17 @@ function AreaZones({ kind }: { kind: Kind }) {
     await api(`/admin/no-go/${z.id}`, { method: 'DELETE' }).catch(() => null);
     if (draft?.id === z.id) setDraft(null);
     await load();
+  }
+
+  // «Минимальный заказ отсюда» on / off from the list, after a confirmation (operator 2026-11-25).
+  async function toggleMin(z: Zone) {
+    const on = z.minActive === false;
+    if (!window.confirm(t(on ? 'staff.noGo.minOnConfirm' : 'staff.noGo.minOffConfirm', { name: z.name }))) return;
+    setMsg(null);
+    try {
+      await api(`/admin/no-go/${z.id}`, { method: 'PUT', body: { name: z.name, kind: z.kind, polygon: z.polygon, points: z.points, dropPoints: z.dropPoints ?? [], active: z.active, minActive: on } });
+      await load();
+    } catch (err) { setMsg(err instanceof ApiRequestError ? err.body.message : String(err)); }
   }
 
   async function toggle(z: Zone) {
@@ -217,8 +228,13 @@ function AreaZones({ kind }: { kind: Kind }) {
               {draft.kind === 'POINT' && (
                 // «Минимальный заказ отсюда» (operator 2026-11-25): empty = no minimum.
                 <div className="text-sm" data-testid="nogo-min">
-                  <div>{t('staff.noGo.minFrom')}</div>
-                  <div className="mt-1 grid grid-cols-2 gap-2">
+                  {/* The switch asks first (operator 2026-11-25): it changes what passengers pay. */}
+                  <label className="flex items-center justify-between gap-2">
+                    <span>{t('staff.noGo.minFrom')}</span>
+                    <input type="checkbox" className="h-5 w-5 accent-[#C8FF46]" checked={draft.minOn} data-testid="nogo-min-on"
+                      onChange={(e) => { const on = e.target.checked; if (window.confirm(t(on ? 'staff.noGo.minOnConfirm' : 'staff.noGo.minOffConfirm', { name: draft.name || '—' }))) setDraft({ ...draft, minOn: on }); }} />
+                  </label>
+                  <div className={`mt-1 grid grid-cols-2 gap-2 ${draft.minOn ? '' : 'opacity-50'}`}>
                     <label className="text-xs text-muted">Comfort, €<input className="field mt-0.5" inputMode="decimal" value={draft.minComfort} onChange={(e) => setDraft({ ...draft, minComfort: e.target.value })} placeholder="—" data-testid="nogo-min-comfort" /></label>
                     <label className="text-xs text-muted">XL, €<input className="field mt-0.5" inputMode="decimal" value={draft.minXl} onChange={(e) => setDraft({ ...draft, minXl: e.target.value })} placeholder="—" data-testid="nogo-min-xl" /></label>
                   </div>
@@ -283,7 +299,12 @@ function AreaZones({ kind }: { kind: Kind }) {
             <div key={z.id} className={`card p-3 ${draft?.id === z.id ? 'border-accent' : ''}`} data-testid="nogo-row">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: colorOf(z) }} />
-                <span className="min-w-0 flex-1 truncate font-semibold">{z.name}{z.minComfortCents ? <span className="ms-1.5 text-xs font-normal text-muted">{t('staff.noGo.minShort', { amount: centsText(z.minComfortCents) })}</span> : null}{z.airport ? <span className="ms-1.5 text-xs font-normal text-accent">✈ {t(`staff.noGo.airport${z.airport}` as 'staff.noGo.airportLCA')}</span> : null}</span>
+                <span className="min-w-0 flex-1 truncate font-semibold">{z.name}{z.minComfortCents || z.minXlCents ? (
+                  <button type="button" data-testid="nogo-min-switch" onClick={(e) => { e.stopPropagation(); void toggleMin(z); }}
+                    className={`ms-1.5 rounded-full border px-2 py-0.5 text-xs font-normal ${z.minActive !== false ? 'border-accent/60 text-accent' : 'border-edge text-muted line-through'}`}>
+                    {t('staff.noGo.minShort', { amount: centsText(z.minComfortCents ?? z.minXlCents) })} · {t(z.minActive !== false ? 'staff.noGo.minOn' : 'staff.noGo.minOff')}
+                  </button>
+                ) : null}{z.airport ? <span className="ms-1.5 text-xs font-normal text-accent">✈ {t(`staff.noGo.airport${z.airport}` as 'staff.noGo.airportLCA')}</span> : null}</span>
                 {!z.active && <span className="text-xs text-muted">{t(z.kind === 'STAND' ? 'staff.noGo.standOff' : 'staff.fixed.off')}</span>}
               </div>
               {z.kind === 'STAND' && z.active && (

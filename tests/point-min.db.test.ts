@@ -64,6 +64,19 @@ describe('minimum fare from a pickup point', () => {
     expect(q.minZone).toBe('Limassol');
   });
 
+  it('the minimum switch: off → the normal price, the amounts are kept; on again → the minimum is back', async () => {
+    const t = await make(2000, 3000);
+    const base = { name: t.name, kind: 'POINT' as const, polygon: port, points: [{ ...gate, name: 'Gate' }] };
+    await prisma.noGoZone.update({ where: { id: t.id }, data: noGoData(noGoSchema.parse({ ...base, minActive: false })) });
+    invalidateNoGoCache();
+    expect((await quote(gate, near)).minCents ?? null).toBeNull();
+    const row = await prisma.noGoZone.findUnique({ where: { id: t.id } });
+    expect([row?.minComfortCents, row?.minXlCents, row?.minActive]).toEqual([2000, 3000, false]);
+    await prisma.noGoZone.update({ where: { id: t.id }, data: noGoData(noGoSchema.parse({ ...base, minActive: true })) });
+    invalidateNoGoCache();
+    expect((await quote(gate, near)).totalCents).toBe(2000);
+  });
+
   it('admin form: empty clears, the on/off switch keeps it', async () => {
     const t = await make(2000, 3000);
     const base = { name: t.name, kind: 'POINT' as const, polygon: port, points: [{ ...gate, name: 'Gate' }] };

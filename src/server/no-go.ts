@@ -12,7 +12,7 @@ import { AIRPORT_CODES, setAirportAreas } from '@/lib/airports';
 export interface NoGo { id: string; name: string; polygon: [number, number][] }
 /** «Точки подачи» (2026-11-24): inside the territory every pickup goes to the nearest of its points. */
 export interface Spot { lat: number; lng: number; name: string }
-export interface PickupPoint extends NoGo { points: Spot[]; dropPoints: Spot[]; airport: string | null; minComfortCents: number | null; minXlCents: number | null }
+export interface PickupPoint extends NoGo { points: Spot[]; dropPoints: Spot[]; airport: string | null; minComfortCents: number | null; minXlCents: number | null; minActive: boolean }
 export const spotLabel = (zone: string, s: Spot) => (s.name ? `${zone} · ${s.name}` : zone);
 function parseSpots(v: unknown): Spot[] {
   if (!Array.isArray(v)) return [];
@@ -42,7 +42,7 @@ async function load(now: number) {
   cache = {
     at: now,
     rows: rows.filter((r) => r.kind === 'NOGO').map(z),
-    points: rows.filter((r) => r.kind === 'POINT').map((r) => ({ ...z(r), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints), airport: r.airport ?? null, minComfortCents: r.minComfortCents ?? null, minXlCents: r.minXlCents ?? null })).filter((t) => t.points.length > 0),
+    points: rows.filter((r) => r.kind === 'POINT').map((r) => ({ ...z(r), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints), airport: r.airport ?? null, minComfortCents: r.minComfortCents ?? null, minXlCents: r.minXlCents ?? null, minActive: r.minActive })).filter((t) => t.points.length > 0),
     stands: rows.filter((r) => r.kind === 'STAND').map((r) => ({ ...z(r), active: r.active, airport: r.airport ?? null })),
   };
   // The airport is a territory marked «это аэропорт» (2026-11-25) — by the same rounded outline the passenger sees.
@@ -109,6 +109,7 @@ export const noGoSchema = z.object({
   // POINT: «минимальный заказ отсюда» (2026-11-25), € cents; null = none, absent = unchanged.
   minComfortCents: z.number().int().min(100).max(100_000).nullable().optional(),
   minXlCents: z.number().int().min(100).max(100_000).nullable().optional(),
+  minActive: z.boolean().optional(), // the switch; absent = unchanged
 }).refine((d) => d.kind !== 'STAND' || d.airport !== null, { message: 'Choose the airport whose orders this stand takes.' })
   .refine((d) => d.kind !== 'POINT' || (d.points?.length ?? 0) > 0, { message: 'At least one pickup point is required.' })
   // Every pickup point inside its (rounded) territory and on land (2026-11-24).
@@ -119,7 +120,7 @@ export function noGoData(d: z.infer<typeof noGoSchema>) {
   return { name: d.name, kind: d.kind ?? 'NOGO', polygon: d.polygon, points: d.kind === 'POINT' ? (d.points ?? []) : undefined, dropPoints: d.kind === 'POINT' ? (d.dropPoints ?? []) : undefined, active: d.active ?? true,
     // Not sent (e.g. the on/off switch) → unchanged; a no-go zone is never an airport.
     ...(d.kind === 'POINT' || d.kind === 'STAND' ? (d.airport !== undefined ? { airport: d.airport } : {}) : { airport: null }),
-    ...(d.kind === 'POINT' ? { ...(d.minComfortCents !== undefined ? { minComfortCents: d.minComfortCents } : {}), ...(d.minXlCents !== undefined ? { minXlCents: d.minXlCents } : {}) } : { minComfortCents: null, minXlCents: null }) };
+    ...(d.kind === 'POINT' ? { ...(d.minComfortCents !== undefined ? { minComfortCents: d.minComfortCents } : {}), ...(d.minXlCents !== undefined ? { minXlCents: d.minXlCents } : {}), ...(d.minActive !== undefined ? { minActive: d.minActive } : {}) } : { minComfortCents: null, minXlCents: null }) };
 }
 export const zoneView = (r: { points: unknown; dropPoints?: unknown; polygon: unknown } & Record<string, unknown>) =>
   ({ ...r, polygon: parsePolygon(r.polygon), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints) });
@@ -133,7 +134,7 @@ export async function pointMin(pickup: { lat: number; lng: number }, vClass: str
   let best: { cents: number; zone: string } | null = null;
   for (const t of await pickupPoints()) {
     const cents = vClass === 'XL' ? t.minXlCents : t.minComfortCents;
-    if (!cents) continue;
+    if (!cents || !t.minActive) continue; // switched off in admin → the amounts are kept but do not apply
     const onSpot = t.points.some((s) => Math.hypot((s.lat - pickup.lat) * 110540, (s.lng - pickup.lng) * 111320 * Math.cos((pickup.lat * Math.PI) / 180)) <= 30);
     if (!onSpot && !inside(pickup, t.polygon)) continue;
     if (!best || cents > best.cents) best = { cents, zone: t.name };
