@@ -25,6 +25,13 @@
 - Test: lifecycle.db.test.ts «the passenger is told what to pay».
 - Open: offer one shared receipt component for «Мои поездки» too; no-show push demo was promised to the operator next.
 
+## 2026-11-26 ~21:40 — start page (deployed, branch welcome-first)
+- proxy.ts: GET / without cookie ily_welcome_seen and without tc_passenger → 307 /welcome (query kept); /welcome sets the cookie (2 years). So: first visit / new phone / QR / link / invite → start page once; signed-in passengers never.
+- Passenger menu «Пригласить друга»: share sheet (or copy) with promo text + `/?ref=invite` (once per phone like any link). `ref` is not recorded anywhere yet; no referral rewards.
+- /welcome: no back arrow, no «Войти»; airport card no longer promises a fixed day/night price; WelcomeAnimation (pin drops, route draws, car drives to the flag, 6 s loop; title ↔ promo.slogan «Не попробуешь — не поймёшь»; still picture for reduced motion); cards slide in.
+- Open question to the operator: keep «начните поездку своим 4-значным кодом» in promo.trackD?
+- Full suite 520 passed.
+
 ## 2026-11-26 ~19:40 — admin notifications strip (deployed); admin Settings parked
 - StaffShell: the phone-only NotifyToggle strip under the admin tabs removed; the switch is a card in /staff/security (ADMIN only). Desktop header toggle unchanged.
 - PARKED by the operator: Admin → Настройки rework — list + screenshot in docs/todo/ADMIN-SETTINGS.md. Ask the operator before starting; he will add more.
