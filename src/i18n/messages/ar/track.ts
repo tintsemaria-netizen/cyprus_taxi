@@ -2,6 +2,14 @@ import type { Catalog } from '../../types';
 import type en from '../en/track';
 
 const track: Catalog<typeof en> = {
+  done: {
+    toPay: "المبلغ المستحق",
+    share: "مشاركة",
+    close: "تم",
+    copied: "تم نسخ الإيصال",
+    receipt: "إيصال IL-Y",
+    payDriver: "الدفع للسائق",
+  },
   shareLoc: {
     off: "أظهر للسائق مكاني",
     on: "السائق يرى مكانك",

@@ -377,6 +377,27 @@ const MSG_TEXT = {
     he: ["נסיעה משותפת לא אפשרית", "אף נהג לא לקח את הנסיעה המשותפת — אתם נוסעים לבד במחיר הרגיל."],
     ar: ["الرحلة المشتركة غير ممكنة", "لم يقبل أي سائق الرحلة المشتركة — ستسافر وحدك بالسعر العادي."],
   },
+  // Finished ride (2026-11-26): what to pay the driver.
+  'ride.completed': {
+    ru: ["Поездка завершена", "К оплате водителю: {totalC}."],
+    en: ["Ride completed", "To pay the driver: {totalC}."],
+    el: ["Η διαδρομή ολοκληρώθηκε", "Πληρωμή στον οδηγό: {totalC}."],
+    de: ["Fahrt beendet", "An den Fahrer zu zahlen: {totalC}."],
+    fr: ["Course terminée", "À payer au chauffeur : {totalC}."],
+    pl: ["Przejazd zakończony", "Do zapłaty kierowcy: {totalC}."],
+    he: ["הנסיעה הסתיימה", "לתשלום לנהג: {totalC}."],
+    ar: ["انتهت الرحلة", "المبلغ المستحق للسائق: {totalC}."],
+  },
+  'ride.completedNoSum': {
+    ru: ["Поездка завершена", "Спасибо, что ездите с IL-Y!"],
+    en: ["Ride completed", "Thank you for riding with IL-Y!"],
+    el: ["Η διαδρομή ολοκληρώθηκε", "Ευχαριστούμε που ταξιδεύετε με την IL-Y!"],
+    de: ["Fahrt beendet", "Danke, dass Sie mit IL-Y fahren!"],
+    fr: ["Course terminée", "Merci de voyager avec IL-Y !"],
+    pl: ["Przejazd zakończony", "Dziękujemy za przejazd z IL-Y!"],
+    he: ["הנסיעה הסתיימה", "תודה שנסעתם עם IL-Y!"],
+    ar: ["انتهت الرحلة", "شكرًا لركوبك مع IL-Y!"],
+  },
   'ride.arrived': {
     ru: ["Водитель прибыл", "Водитель ждёт вас на месте посадки."],
     en: ["Your driver has arrived", "Your driver is waiting at the pickup point."],

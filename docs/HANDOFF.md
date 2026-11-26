@@ -1,5 +1,14 @@
 # Session handoff
 
+## 2026-11-26 — finished ride: receipt + rating window + «ride.completed» push (branch ride-done)
+- completeTrip enqueues a passenger push `ride.completed` {totalC} (sw.js MSG_TEXT, 8 langs; `ride.completedNoSum` fallback),
+  amount = completedTotalCents (driver's typed meter amount wins, fixed price stays) — same as receipt / «Итого».
+- trackingView.receipt now has totalCents + completedAt.
+- TrackApp COMPLETED: whole planned route on the map (pickup + dropoff), route box, DoneReceipt (К оплате, «↗ Поделиться» =
+  navigator.share / clipboard), «Готово»; «Готово» and × open RateTripModal (modal) if not rated, else go to «/».
+- Test: lifecycle.db.test.ts «the passenger is told what to pay».
+- Open: offer one shared receipt component for «Мои поездки» too; no-show push demo was promised to the operator next.
+
 ## 2026-11-26 ~15:35 — support / legal tidy (deployed, branch support-fix)
 - /support: delete-account hint removed (promo.deleteHint key deleted in 8 langs); LegalLinks({current}) hides the link to the page you are on (support, privacy, terms).
 - legal.ts EN/RU/EL «your rights» path now «Profile settings → Personal details».

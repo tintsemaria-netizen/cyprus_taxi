@@ -22,6 +22,7 @@ import type { MsgKey } from '@/i18n/I18nProvider';
 import { useSheetDrag } from '@/components/useSheetDrag';
 import { PlacesInput, type Selected } from '@/components/booking/PlacesInput';
 import { fareRangeText } from '@/lib/price-type';
+import { DoneReceipt } from '@/components/track/DoneReceipt';
 import { ShareProposalCard, SharedBadge, type ShareProposalView, type SharedView } from '@/components/share/SharePassenger';
 
 interface TrackView {
@@ -55,7 +56,7 @@ interface TrackView {
   fareMinCents?: number | null;
   startCode: string | null;
   waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
-  receipt: null | { estimateCents: number | null; waitingCents: number; finalCents: number | null; currency: string; priceType: string; paymentMethod: string; paymentStatus: string };
+  receipt: null | { totalCents: number | null; completedAt: string | null; estimateCents: number | null; waitingCents: number; finalCents: number | null; currency: string; priceType: string; paymentMethod: string; paymentStatus: string };
   canCancel: boolean;
   canRetry: boolean;
   timeline: { type: string; at: string; status: string | null }[];
@@ -83,6 +84,7 @@ export default function TrackApp() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [safety, setSafety] = useState(false);
+  const [rateOpen, setRateOpen] = useState(false); // finished ride: the rating window over the receipt (2026-11-26)
   // Chat: a button next to the code (operator 2026-11-26); kept mounted so new messages show a badge on it.
   const [chatOpen, setChatOpen] = useState(false);
   const [chatUnread, setChatUnread] = useState(0);
@@ -192,7 +194,8 @@ export default function TrackApp() {
   // or the leg changes; bounded by the 5s poll cadence.
   const drvLoc = disconnected ? null : view?.location ?? null;
   const rleg = view?.status === 'IN_PROGRESS' ? 'dropoff' : view?.status === 'EN_ROUTE' || view?.status === 'ASSIGNED' ? 'pickup' : null;
-  const planned = !!view && ['REQUESTED', 'SEARCHING', 'NO_DRIVER', 'ARRIVED', 'ASSIGNED', 'EN_ROUTE', 'IN_PROGRESS'].includes(view.status);
+  // …and the finished ride (2026-11-26): the whole route, pickup → destination, framed on the map.
+  const planned = !!view && ['REQUESTED', 'SEARCHING', 'NO_DRIVER', 'ARRIVED', 'ASSIGNED', 'EN_ROUTE', 'IN_PROGRESS', 'COMPLETED'].includes(view.status);
   // Economical (2026-11-18): the driver's route is fetched once per leg and again only when the car
   // left it (> 50 m) or after 2 min — not every ~10 m as before. The passed part is cut off locally.
   const routeFetch = useRef<{ leg: string; at: number; n: number }>({ leg: '', at: 0, n: 0 });
@@ -399,7 +402,7 @@ export default function TrackApp() {
   const onTrip = view.status === 'IN_PROGRESS' || view.status === 'COMPLETED';
   // A pre-booking (2026-11-19) shows the whole route from afar too: both ends, framed together.
   if (onTrip || view.status === 'SEARCHING' || view.status === 'REQUESTED') markers.push({ id: 'd', lat: view.dropoff.lat, lng: view.dropoff.lng, kind: 'dropoff', label: view.dropoff.label });
-  if (!onTrip) markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label, pulse: view.status === 'SEARCHING' });
+  if (!onTrip || view.status === 'COMPLETED') markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label, pulse: view.status === 'SEARCHING' });
   // The finishing driver's drop-off: just a point on the map, no label (operator 2026-11-25).
   if (view.finishingAt && !onTrip) markers.push({ id: 'fin', lat: view.finishingAt.lat, lng: view.finishingAt.lng, kind: 'stop', label: '', noFit: false });
   if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: t('track.yourDriver'), stale: liveLocation.freshness === 'stale' || dr.estimated });
@@ -416,6 +419,8 @@ export default function TrackApp() {
       : view.status === 'NO_DRIVER' && !view.canRetry ? t('rides.detail.notHappened') : statusLabel;
   const vehicleDesc = view.vehicle ? `${view.vehicle.color} ${view.vehicle.make} ${view.vehicle.model}` : '';
   const SLOT = '\u0000';
+  // «Готово» and × on the finished ride (2026-11-26): not rated yet → the rating window; rated → the start page.
+  const finishDone = () => { if (ratedNow ?? view.myRating) window.location.href = '/'; else setRateOpen(true); };
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-page" style={kbBox}>
@@ -424,7 +429,7 @@ export default function TrackApp() {
       <div className="relative flex-1">
         <div className="absolute inset-0">
           <AutoMapView markers={markers} route={shownRoute.length ? shownRoute : undefined} center={view.pickup} zoom={12} interactive className="h-full w-full"
-            fitPadding={mapPad} fitRoute={view.status === 'REQUESTED' || view.status === 'SEARCHING' || liveTrip || view.status === 'ASSIGNED' || view.status === 'EN_ROUTE' || view.status === 'IN_PROGRESS'} keepInView={liveTrip}
+            fitPadding={mapPad} fitRoute={view.status === 'COMPLETED' || view.status === 'REQUESTED' || view.status === 'SEARCHING' || liveTrip || view.status === 'ASSIGNED' || view.status === 'EN_ROUTE' || view.status === 'IN_PROGRESS'} keepInView={liveTrip}
             idleReturnMs={4000} />
         </div>
         {/* The street the car is on (2026-11-17): the map labels only main roads at this zoom. */}
@@ -485,9 +490,14 @@ export default function TrackApp() {
             {shareMsg && <p role="status" className="absolute bottom-full start-3 mb-3 rounded-full bg-page/95 px-3 py-1.5 text-xs text-muted shadow">{shareMsg}</p>}
             <div ref={sheetRef} data-testid="track-sheet" className="card relative flex max-h-[78dvh] flex-col overflow-hidden sm:max-h-[calc(100dvh-7rem)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }}>
               {/* Finished ride (2026-11-15): × in the top-right corner returns to the start (new booking). */}
-              {(view.status === 'COMPLETED' || view.status === 'CANCELED') && (
+              {view.status === 'CANCELED' && (
                 <a href="/" aria-label={t('track.closeToStart')} title={t('track.closeToStart')}
                   className="absolute end-1.5 top-1.5 z-20 flex h-12 w-12 items-center justify-center rounded-full text-[36px] leading-none text-muted hover:bg-page/60 hover:text-ink">×</a>
+              )}
+              {/* Finished ride: × works like «Готово» — the rating window first (operator 2026-11-26), then the start page. */}
+              {view.status === 'COMPLETED' && (
+                <button type="button" onClick={finishDone} aria-label={t('track.closeToStart')} title={t('track.closeToStart')} data-testid="done-x"
+                  className="absolute end-1.5 top-1.5 z-20 flex h-12 w-12 items-center justify-center rounded-full text-[36px] leading-none text-muted hover:bg-page/60 hover:text-ink">×</button>
               )}
               <button type="button" aria-expanded={panelOpen} aria-label={panelOpen ? t('booking.sheet.collapse') : t('booking.sheet.expand')}
                 onClick={() => { if (!sheetSwiped.current) setPanelOpen((o) => !o); sheetSwiped.current = false; }}
@@ -601,7 +611,7 @@ export default function TrackApp() {
 
                 {/* Route (2026-11-15): the same dotted box as when ordering, with room between points;
                     a stop can be added/removed in the middle until the car reaches it. */}
-                <TrackRoute price={view.shared ? fareRangeText(view.shared.fareCents, 'SHARED_FIXED', (c) => fmt.money(c)) : view.fareCents != null ? fareRangeText(view.fareCents, view.priceType, (c) => fmt.money(c), view.fareMinCents) : null} view={view} editable={!terminal && !view.stop?.arrivedAt && !(view.status === 'NO_DRIVER' && !view.canRetry) && !(view.scheduledAt && view.status !== 'REQUESTED')} canAddStop={!view.shareOptIn && !view.shared} onChanged={load} />
+                <TrackRoute price={terminal ? null : view.shared ? fareRangeText(view.shared.fareCents, 'SHARED_FIXED', (c) => fmt.money(c)) : view.fareCents != null ? fareRangeText(view.fareCents, view.priceType, (c) => fmt.money(c), view.fareMinCents) : null} view={view} editable={!terminal && !view.stop?.arrivedAt && !(view.status === 'NO_DRIVER' && !view.canRetry) && !(view.scheduledAt && view.status !== 'REQUESTED')} canAddStop={!view.shareOptIn && !view.shared} onChanged={load} />
                 {view.stop?.arrivedAt && !view.stop.departedAt && (
                   <p className="mt-2 rounded-[10px] border border-[#FFC83D]/40 bg-[#FFC83D]/10 px-3 py-2 text-xs text-[#FFC83D]">{view.stop.waitStartedAt ? t('track.stopWaitingPaid') : t('track.atStop')}</p>
                 )}
@@ -631,21 +641,27 @@ export default function TrackApp() {
 
                 {terminal && (
                   <div className="mt-4">
-                    {/* Rate the driver right on the finished screen (2026-11-15): 5 stars + optional tags/comment. */}
+                    {/* Finished ride (operator 2026-11-26), two steps: 1) the whole route on the map + our receipt
+                        (amount, share, details); 2) «Готово» → a small rating window on top. */}
+                    {view.status === 'COMPLETED' && view.receipt && (
+                      <DoneReceipt r={view.receipt} reference={view.reference} from={view.pickup.label} to={view.dropoff.label} stop={view.stop?.label} />
+                    )}
+                    {view.status === 'COMPLETED' && (ratedNow ?? view.myRating) ? (
+                      <div className="mt-3 flex items-center justify-between rounded-[12px] border border-edge bg-elevated px-3 py-2 text-sm">
+                        <span className="text-muted">{t('rides.receipt.yourRating')}</span>
+                        <span className="text-lg text-accent">{'★'.repeat((ratedNow ?? view.myRating)!)}<span className="text-muted/40">{'★'.repeat(5 - (ratedNow ?? view.myRating)!)}</span></span>
+                      </div>
+                    ) : null}
                     {view.status === 'COMPLETED' && (
-                      (ratedNow ?? view.myRating) ? (
-                        <div className="mb-3 flex items-center justify-between rounded-[12px] border border-edge bg-elevated px-3 py-2 text-sm">
-                          <span className="text-muted">{t('rides.receipt.yourRating')}</span>
-                          <span className="text-lg text-accent">{'★'.repeat((ratedNow ?? view.myRating)!)}<span className="text-muted/40">{'★'.repeat(5 - (ratedNow ?? view.myRating)!)}</span></span>
-                        </div>
-                      ) : (
-                        <div className="mb-3"><RateTripModal inline postUrl="/tracking/rating" onDone={(s) => setRatedNow(s)} /></div>
-                      )
+                      <button type="button" className="btn-primary mt-4 w-full" data-testid="done-close"
+                        onClick={finishDone}>{t('track.done.close')}</button>
+                    )}
+                    {view.status === 'COMPLETED' && rateOpen && !(ratedNow ?? view.myRating) && (
+                      <RateTripModal postUrl="/tracking/rating" onClose={() => { window.location.href = '/'; }} onDone={(st) => { setRatedNow(st); setRateOpen(false); }} />
                     )}
                     {/* Google review prompt: its own window over everything, right after rating — for every rating,
                         never only for 5★ (Google rules). */}
                     {view.status === 'COMPLETED' && ratedNow ? <GoogleReviewCard modal /> : null}
-                    {/* No «Чек за поездку» box on the finished screen (2026-11-17): the receipt lives in «My rides». */}
                     {view.status === 'CANCELED' ? (
                       // Re-order the very same ride (route + stop + class); × above starts a fresh booking.
                       <button type="button" className="btn-primary mt-3 w-full" data-testid="repeat-ride" onClick={repeatSameRide}>{t('track.repeatRide')}</button>

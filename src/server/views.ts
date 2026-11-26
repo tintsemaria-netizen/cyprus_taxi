@@ -1,4 +1,5 @@
 import { pairStopsFor } from '@/server/pair-route';
+import { completedTotalCents } from '@/lib/fare-total';
 import { config } from '@/lib/config';
 import { noDriverRetryable } from '@/lib/ride-outcome';
 import { gpsMeterFor } from '@/server/gps-meter';
@@ -136,6 +137,9 @@ export async function trackingView(bookingId: string) {
   }
   const waiting = booking.status === 'ARRIVED' ? await prisma.waitingSession.findUnique({ where: { bookingId: booking.id } }) : null;
   const fareRec = booking.status === 'COMPLETED' ? await prisma.fare.findUnique({ where: { bookingId: booking.id } }) : null;
+  // What the passenger pays (2026-11-26, finished-ride receipt): the same total as «My rides» / the e-mail (fare-total.ts).
+  const fareCorrection = fareRec ? (await prisma.driverSettlement.findFirst({ where: { bookingId: booking.id }, orderBy: { revision: 'desc' }, select: { reportedFinalCents: true } }))?.reportedFinalCents ?? null : null;
+  const completedAt = fareRec ? (await prisma.bookingEvent.findFirst({ where: { bookingId: booking.id, type: 'COMPLETED' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }))?.createdAt.toISOString() ?? null : null;
   // Passenger's own rating of this finished ride (stars), so the finished screen can ask once.
   const myRating = booking.status === 'COMPLETED' ? (await prisma.tripRating.findUnique({ where: { bookingId: booking.id }, select: { stars: true } }))?.stars ?? null : null;
 
@@ -149,7 +153,7 @@ export async function trackingView(bookingId: string) {
     startCode: showCode ? booking.startCode ?? null : null,
     waiting: waiting ? { arrivedAt: waiting.arrivedAt.toISOString(), graceSeconds: waiting.graceSeconds, paidRateCentsPerMin: waiting.paidRateCentsPerMin } : null,
     receipt: fareRec
-      ? { estimateCents: fareRec.estimateCents, waitingCents: fareRec.waitingCents, finalCents: fareRec.finalCents, currency: fareRec.currency, priceType: fareRec.priceType, paymentMethod: fareRec.paymentMethod, paymentStatus: fareRec.paymentStatus }
+      ? { totalCents: completedTotalCents(fareRec, fareCorrection), completedAt, estimateCents: fareRec.estimateCents, waitingCents: fareRec.waitingCents, finalCents: fareRec.finalCents, currency: fareRec.currency, priceType: fareRec.priceType, paymentMethod: fareRec.paymentMethod, paymentStatus: fareRec.paymentStatus }
       : null,
     pickup: { lat: booking.pickupLat, lng: booking.pickupLng, label: booking.pickupLabel },
     stop: stopView(booking),

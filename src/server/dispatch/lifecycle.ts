@@ -128,6 +128,13 @@ async function finalizeCompletion(
   await tx.bookingEvent.create({ data: { bookingId: b.id, type: 'COMPLETED', actorType: actor.type, actorId: actor.id, beforeStatus: 'IN_PROGRESS', afterStatus: 'COMPLETED' } });
   // E-mailed receipt (2026-11-17): queued atomically with the completion; the worker sends it.
   await enqueueReceiptEmail(tx, b.id);
+  // «Поездка завершена — к оплате …» push (operator 2026-11-26): the amount the passenger pays the driver — the same
+  // total as the receipt and the driver's «Итого» (src/lib/fare-total.ts; the driver's typed meter amount wins).
+  {
+    const payCents = completedTotalCents({ priceType, estimateCents: b.fareCents ?? null, waitingCents, finalCents }, isUpfront ? null : meterCents);
+    await enqueuePassenger(tx, b.id, 'Ride completed', payCents != null ? `To pay the driver: €${(payCents / 100).toFixed(2)}.` : 'Thank you for riding with IL-Y.',
+      { tag: `done-${b.id}`, dedupeKey: `done-${b.id}`, msg: payCents != null ? { k: 'ride.completed', p: { totalC: payCents } } : { k: 'ride.completedNoSum' } });
+  }
   // Completed-booking projection + a separate fare fact (money is analyzed from the fare
   // event; finalCents may be null under regulated metering — never coerced to 0).
   await recordEvent(tx, {

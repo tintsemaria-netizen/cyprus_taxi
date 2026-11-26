@@ -128,6 +128,26 @@ describe('M3 trip lifecycle', () => {
     expect(await prisma.assignment.findFirst({ where: { activeDriverId: t.driverId } })).toBeNull();
   });
 
+  it('the passenger is told what to pay: a «ride.completed» push and the amount on the finished screen (2026-11-26)', async () => {
+    const t = await assignedBooking('Andreas', 20);
+    let rev = t.revision;
+    const er = await changeStatus({ bookingId: t.bookingId, to: 'EN_ROUTE', expectedRevision: rev, actor: 'DRIVER', driverId: t.driverId, actorId: 'u' });
+    if (er.ok) rev = er.revision;
+    const ar = await arriveAtPickup(t.bookingId, t.driverId, rev); expect(ar).toMatchObject({ ok: true }); if (ar.ok) rev = ar.revision;
+    const st = await startTrip(t.bookingId, t.driverId, rev, ''); expect(st).toMatchObject({ ok: true }); if (st.ok) rev = st.revision;
+    const b0 = await prisma.booking.findUnique({ where: { id: t.bookingId } });
+    // The driver typed the taximeter amount at «Завершить»: that is what the passenger pays.
+    const co = await completeTrip(t.bookingId, t.driverId, rev, 7250); expect(co).toMatchObject({ ok: true });
+    const push = await prisma.notificationOutbox.findFirst({ where: { audience: `PASSENGER:${t.bookingId}`, dedupeKey: `done-${t.bookingId}` } });
+    expect(push).not.toBeNull();
+    const fixed = b0!.priceType === 'REGULATED_FIXED' || b0!.priceType === 'SHARED_FIXED';
+    const want = fixed ? b0!.fareCents : 7250;
+    expect(push!.msg).toEqual({ k: 'ride.completed', p: { totalC: want } });
+    const { trackingView } = await import('@/server/views');
+    const v = await trackingView(t.bookingId);
+    expect(v && 'receipt' in v ? v.receipt?.totalCents : null).toBe(want);
+  });
+
   it('arrive is rejected when the driver is too far from pickup', async () => {
     const t = await assignedBooking('Andreas', 5000); // 5km away
     const er = await changeStatus({ bookingId: t.bookingId, to: 'EN_ROUTE', expectedRevision: t.revision, actor: 'DRIVER', driverId: t.driverId, actorId: 'u' });

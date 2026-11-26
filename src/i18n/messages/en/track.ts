@@ -1,4 +1,12 @@
 const track = {
+  done: {
+    toPay: "To pay",
+    share: "Share",
+    close: "Done",
+    copied: "Receipt copied",
+    receipt: "IL-Y receipt",
+    payDriver: "Pay the driver",
+  },
   shareLoc: { off: 'Show the driver where I am', on: 'Driver sees where you are', hint: 'Only until pickup. Turn on if you are the one being picked up.', waiting: 'Waiting for your location…' },
   stop: 'Stop',
   stopAdd: 'Add the stop',
