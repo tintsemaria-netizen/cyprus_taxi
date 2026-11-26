@@ -17,6 +17,8 @@ export interface PairStop {
   primary: boolean;
   bookingId: string; status: string; name: string;
   lat: number; lng: number; label: string; done: boolean;
+  /** This passenger's rating from drivers (2026-11-26) — the co-rider's too. */
+  rating?: { average: number; count: number } | null;
   /** Road minutes from this stop to the next one (operator, 2026-11-23: the driver needs these, not «быть на месте»). */
   toNextMin?: number | null;
 }

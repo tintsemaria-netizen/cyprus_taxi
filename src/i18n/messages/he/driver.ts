@@ -86,7 +86,6 @@ const driver: Catalog<typeof en> = {
     goOnline: "עלייה לאוויר",
   },
   offer: {
-    newClient: "חדש",
     nextTitle: 'ההזמנה הבאה — אחרי ההורדה',
     cancelNext: 'ביטול',
     giveBackConfirm: 'לוותר על ההזמנה הבאה? הלקוח יקבל נהג אחר.',

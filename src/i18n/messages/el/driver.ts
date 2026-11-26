@@ -86,7 +86,6 @@ const driver: Catalog<typeof en> = {
     goOnline: 'Σε υπηρεσία',
   },
   offer: {
-    newClient: "νέος",
     nextTitle: 'Επόμενη κούρσα — μετά την αποβίβαση',
     cancelNext: 'Ακύρωση',
     giveBackConfirm: 'Να ακυρωθεί η επόμενη κούρσα; Ο πελάτης θα πάρει άλλον οδηγό.',

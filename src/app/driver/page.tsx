@@ -806,11 +806,10 @@ function HomeSection(props: {
             {offer.pickupDistanceM != null && <span className="text-xl font-semibold text-muted">{km(offer.pickupDistanceM)}</span>}
             <span className="text-sm text-muted">{t('driver.offer.toClient')}</span>
           </div>
-          <div className="mt-1 flex items-center gap-2 text-sm"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="font-medium">{offer.pickup.label}</span></div>
+          {/* From → to (2026-11-26, operator: «как обычно» — where from, and under it where to). */}
+          <RouteLines pickup={offer.pickup} stop={offer.stop} dropoff={offer.dropoff} />
           {/* 2) Main info: where to, client name, the sum. */}
           <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-            {offer.stop && <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.stop.via')}</span><span className="font-medium">{offer.stop.label}</span></div>}
-            <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{offer.dropoff.label}<Postcode code={offer.dropoff.postcode} /></span></div>
             <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span><PaxRating r={offer.passengerRating} /><ClassBadge vClass={offer.vClass} /></div>
             <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{offer.fareCents != null ? fareRangeText(offer.fareCents, offer.priceType, (c) => money(c, offer.currency), offer.minCents) : '—'}</span></div>
             {offer.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(offer.scheduledAt)}</div>}
@@ -972,10 +971,8 @@ function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
               </div>
               {!o.roadRouted && o.pickupEtaSec != null && <p className="text-xs text-muted">{t('driver.free.approx')}</p>}
               {o.pickupEtaSec == null && <p className="text-xs text-muted">{t('driver.map.noGps')}</p>}
-              <div className="mt-1 flex items-center gap-2 text-sm"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="font-medium">{o.pickup.label}</span></div>
+              <RouteLines pickup={o.pickup} stop={o.stop} dropoff={o.dropoff} />
               <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-                {o.stop && <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.stop.via')}</span><span className="font-medium">{o.stop.label}</span></div>}
-                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{o.dropoff.label}<Postcode code={o.dropoff.postcode} /></span></div>
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{o.passengerName}</span><PaxRating r={o.passengerRating} /><ClassBadge vClass={o.vClass} /></div>
                 <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{o.fareCents != null ? fareRangeText(o.fareCents, o.priceType, (c) => money(c, o.currency), o.minCents) : '—'}</span></div>
                 {o.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(o.scheduledAt)}</div>}
@@ -1325,6 +1322,19 @@ function ClassBadge({ vClass }: { vClass: string }) {
 
 // ---- Next order (2026-11-25): offered while the passenger is on board, 5 min before the drop-off (7 when the
 // new client is within 1 km of it). Accepting keeps the current trip; the new ride starts when it ends.
+/** Where from, and under it where to (and a stop between), with the line joining them (2026-11-26, operator). */
+function RouteLines({ pickup, stop, dropoff }: { pickup: { label: string }; stop?: { label: string } | null; dropoff: { label: string; postcode?: string | null } }) {
+  return (
+    <div className="mt-2 text-sm" data-testid="route-lines">
+      <div className="flex items-start gap-2.5"><span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-accent" /><span className="font-medium">{pickup.label}</span></div>
+      {stop && <div className="flex items-start gap-2.5"><span className="ms-[3px] h-4 w-px shrink-0 bg-edge-strong" /></div>}
+      {stop && <div className="flex items-start gap-2.5"><span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#FFC83D]" /><span className="font-medium">{stop.label}</span></div>}
+      <div className="flex items-start gap-2.5"><span className="ms-[4px] h-4 w-px shrink-0 bg-edge-strong" /></div>
+      <div className="flex items-start gap-2.5"><span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-ink" /><span className="font-medium">{dropoff.label}<Postcode code={dropoff.postcode} /></span></div>
+    </div>
+  );
+}
+
 function NextOfferCard({ offer, secs, busy, onAccept, onDecline }: { offer: Offer; secs: number; busy: boolean; onAccept: (id: string) => void; onDecline: (id: string) => void }) {
   const { t } = useT();
   const { money, km } = useDriverFmt();
@@ -1338,9 +1348,8 @@ function NextOfferCard({ offer, secs, busy, onAccept, onDecline }: { offer: Offe
           <span className="text-sm text-muted">{t('driver.offer.toClient')}</span>
         </div>
         <div className="mt-1 text-xs text-muted">{t('driver.offer.nextHint')}</div>
+        <RouteLines pickup={offer.pickup} stop={offer.stop} dropoff={offer.dropoff} />
         <div className="mt-2 space-y-1 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-          <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="font-medium">{offer.pickup.label}</span></div>
-          <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{offer.dropoff.label}</span></div>
           <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span><PaxRating r={offer.passengerRating} /></div>
           <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="font-bold">{offer.fareCents != null ? fareRangeText(offer.fareCents, offer.priceType, (c) => money(c, offer.currency), offer.minCents) : '—'}</span></div>
         </div>
