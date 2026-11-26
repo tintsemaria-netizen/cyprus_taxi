@@ -10,7 +10,7 @@ import EdgeShine from '@/components/EdgeShine';
 import { StaffShell } from '@/components/staff/StaffShell';
 import { NotifyToggle } from '@/components/NotifyToggle';
 import { ThemePicker } from '@/components/ThemePicker';
-import { ClientLine, RouteLines } from '@/components/driver/OrderBits';
+import { ClientLine, RouteLines, PREBOOK_FREE_COLOR } from '@/components/driver/OrderBits';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
@@ -794,7 +794,8 @@ function HomeSection(props: {
         )}
       {/* Offer takes priority */}
       {offer && !trip && (
-        <div key={offer.offerId} className="ily-offer-in card pointer-events-auto max-h-[58dvh] overflow-y-auto border-2 border-accent p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.55)]">
+        <div key={offer.offerId} className="ily-offer-in card pointer-events-auto max-h-[58dvh] overflow-y-auto border-2 border-accent p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.55)]"
+          style={offer.scheduledAt ? { borderColor: PREBOOK_FREE_COLOR } : undefined} data-prebook={offer.scheduledAt ? 'free' : undefined}>
           {/* «Отклонить» small at the top right; the timer next to the title (2026-11-26, operator). */}
           <div className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-2"><span className="font-semibold text-accent">{t('driver.offer.title')}</span><span className={`text-sm font-semibold tabular-nums ${offerSecs <= 5 ? 'text-danger' : 'text-muted'}`}>{t('driver.units.sec', { n: offerSecs })}</span></span>
@@ -1322,7 +1323,7 @@ function NextOfferCard({ offer, secs, busy, onAccept, onDecline }: { offer: Offe
   const { money, km } = useDriverFmt();
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] mx-auto max-w-lg px-3 pb-[calc(12px+env(safe-area-inset-bottom))]" data-testid="next-offer">
-      <div key={offer.offerId} className="ily-offer-in card pointer-events-auto border-2 border-accent p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.55)]">
+      <div key={offer.offerId} className="ily-offer-in card pointer-events-auto border-2 border-accent p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.55)]" style={offer.scheduledAt ? { borderColor: PREBOOK_FREE_COLOR } : undefined}>
         <div className="flex items-center justify-between gap-2"><span className="font-semibold text-accent">{t('driver.offer.nextTitle')}</span><span className={`text-sm font-semibold tabular-nums ${secs <= 5 ? 'text-danger' : 'text-muted'}`}>{t('driver.units.sec', { n: secs })}</span></div>
         <div className="mt-2 flex items-baseline gap-3">
           <span className="text-3xl font-bold text-ink">{offer.pickupEtaSec != null ? t('driver.offer.minShort', { min: Math.max(1, Math.round(offer.pickupEtaSec / 60)) }) : '—'}</span>

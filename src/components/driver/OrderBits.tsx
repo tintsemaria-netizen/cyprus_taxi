@@ -2,6 +2,11 @@
 
 // Pieces of an order card shared by every driver screen with an order (2026-11-26/27, operator «на всех как на
 // новом заказе»): new order, next order, free orders, pre-bookings.
+// When a pre-booking's time comes (2026-11-27, operator): his own pre-booking shows on the trip screen in violet;
+// a pre-booking nobody took, now offered to drivers by the system, shows in orange. In the lists — our lime.
+export const PREBOOK_FREE_COLOR = '#FFA94D';
+export const PREBOOK_MINE_COLOR = '#A78BFA';
+
 import { useT, type MsgKey } from '@/i18n/I18nProvider';
 import { PaxRating, type PaxRatingValue } from '@/components/driver/PaxRating';
 import { Postcode } from '@/components/driver/Postcode';

@@ -12,13 +12,6 @@ import AutoMapView, { type MapMarker } from '@/components/AutoMapView';
 import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
 // Driver pre-booking board (scheduled rides). Server: src/server/dispatch/preassign.ts.
-// Frame colours (2026-11-27, operator): a free pre-booking (nobody has taken it) — orange; one he took — violet.
-const FREE_C = '#FFA94D';
-const MINE_C = '#A78BFA';
-const Tag = ({ mine, label }: { mine: boolean; label: string }) => (
-  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: mine ? MINE_C : FREE_C }}>{label}</span>
-);
-
 interface Item {
   passengerName?: string; passengerRating?: { average: number; count: number } | null; // card: name ★ class (2026-11-27)
   bookingId: string; reference: string; pickupAt: string; pickupLabel: string; dropoffLabel: string; dropoffPostcode?: string | null;
@@ -86,10 +79,9 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
 
   // A ride-share pair (2026-11-19): a short card — date/time, label, from → to, total — and the
   // whole card opens the details (no separate «Посмотреть» button).
-  const pairRow = (i: Item, s: ShareBoard, mine: boolean) => (
+  const pairRow = (i: Item, s: ShareBoard) => (
     <button key={i.bookingId} type="button" data-testid="pair-card" onClick={() => setOpenId(i.bookingId)}
-      className="block w-full rounded-[12px] border-2 bg-elevated p-3 text-start active:bg-white/[0.04]" style={{ borderColor: mine ? MINE_C : FREE_C }}>
-      <Tag mine={mine} label={mine ? t('driver.scheduled.tagMine') : t('driver.scheduled.tagFree')} />
+      className="block w-full rounded-[12px] border border-accent/40 bg-elevated p-3 text-start active:bg-accent/10">
       <div className="text-lg font-semibold">{fmt.dateTime(i.pickupAt)}</div>
       <div className="mt-1 text-sm font-semibold text-accent">👥 {t('share.driver.boardCompact')}</div>
       <div className="mt-1.5 text-sm">{i.pickupLabel} → {i.dropoffLabel}</div>
@@ -98,12 +90,11 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
     </button>
   );
 
-  const row = (i: Item, action: React.ReactNode, mine = false) => i.share ? pairRow(i, i.share, mine) : (
+  const row = (i: Item, action: React.ReactNode) => i.share ? pairRow(i, i.share) : (
     // The whole card opens the ride too, not only «Посмотреть» (operator 2026-11-26).
     <div key={i.bookingId} role="button" tabIndex={0} data-testid="prebook-card" onClick={() => setOpenId(i.bookingId)}
       onKeyDown={(e) => { if (e.key === 'Enter') setOpenId(i.bookingId); }}
-      className="cursor-pointer rounded-[12px] border-2 bg-elevated p-3 active:bg-white/[0.04]" style={{ borderColor: mine ? MINE_C : FREE_C }}>
-      <Tag mine={mine} label={mine ? t('driver.scheduled.tagMine') : t('driver.scheduled.tagFree')} />
+      className="cursor-pointer rounded-[12px] border border-accent/40 bg-elevated p-3 active:bg-white/[0.04]">
       {/* Same look as «Новый заказ» (2026-11-27, operator): when, the client (name ★ class), from / to in the frame. */}
       <div className="text-lg font-semibold">{fmt.dateTime(i.span ? i.span.from : i.pickupAt)}{i.span && <span className="block text-xs font-normal text-muted">{t('driver.scheduled.mayShift')}</span>}</div>
       <ClientLine name={i.passengerName ?? ''} rating={i.passengerRating} vClass={i.vClass} />
@@ -171,7 +162,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
           )}
 
           {view === 'mine' && (board.mine.length === 0 ? <p className="text-sm text-muted">{t('driver.scheduled.noneMine')}</p> : board.mine.map((i) => row(i,
-            <button className="btn-ghost !min-h-[44px] w-full border border-edge" onClick={() => setOpenId(i.bookingId)}>{t('driver.free.view')}</button>, true)))}
+            <button className="btn-ghost !min-h-[44px] w-full border border-edge" onClick={() => setOpenId(i.bookingId)}>{t('driver.free.view')}</button>)))}
 
           {view === 'available' && (board.blocked ? (
             <p className="rounded-[12px] border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn">{board.blocked === 'NO_VEHICLE' ? t('driver.scheduled.blockedNoVehicle') : t('driver.scheduled.blockedNotEligible')}</p>
@@ -280,8 +271,7 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
           fitPadding={{ top: 110, right: 50, bottom: Math.round(h * 0.6) + 90, left: 50 }} className="h-full w-full" />
       </div>
       <div className="pointer-events-none fixed inset-x-0 z-10 mx-auto max-w-lg px-3" style={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
-        <div className="card pointer-events-auto max-h-[60dvh] overflow-y-auto border-2 p-4" style={{ borderColor: d?.mine ? MINE_C : FREE_C }}>
-          {d && <Tag mine={d.mine} label={d.mine ? t('driver.scheduled.tagMine') : t('driver.scheduled.tagFree')} />}
+        <div className="card pointer-events-auto max-h-[60dvh] overflow-y-auto border-2 border-accent p-4">
           {!d ? <p className="py-6 text-center text-sm text-muted">{t('common.loading')}</p> : (
             <>
               <div className="flex items-center justify-between gap-2">
