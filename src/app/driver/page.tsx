@@ -115,7 +115,9 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   tErrRef.current = tError;
   const [tab, setTab] = useState<Tab>('home');
   const [drawer, setDrawer] = useState(false);
-  useEffect(() => { const open = () => setDrawer(true); window.addEventListener('il-y:driver-menu', open); return () => window.removeEventListener('il-y:driver-menu', open); }, []);
+  // Menu sections (2026-11-26, operator): one open at a time, under its own row.
+  const [menuSec, setMenuSec] = useState<MenuSec | null>(null);
+  useEffect(() => { const open = () => { setMenuSec(null); setDrawer(true); }; window.addEventListener('il-y:driver-menu', open); return () => window.removeEventListener('il-y:driver-menu', open); }, []);
   // ‹ back arrow in the top bar on every sub-screen (pre-bookings, free orders) → back to the map (2026-11-19).
   useEffect(() => { window.dispatchEvent(new CustomEvent('il-y:driver-back-visible', { detail: tab !== 'home' })); }, [tab]);
   useEffect(() => { const back = () => setTab('home'); window.addEventListener('il-y:driver-back', back); return () => window.removeEventListener('il-y:driver-back', back); }, []);
@@ -285,8 +287,6 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
     return () => { alive = false; clearInterval(t); };
   }, [data?.onDuty, data?.trip?.status, data?.trip?.bookingId, data?.next?.bookingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sub-views of the merged tabs.
-  const [profileView, setProfileView] = useState<'me' | 'trips'>('me');
   const [earnEntry, setEarnEntry] = useState<'summary' | 'analytics'>('summary'); // which part of «Заработок» to open (2026-11-20)
   const [prebookCount, setPrebookCount] = useState(0);
   // Others asking for his car (2026-11-24): a red count on «Мои машины» in the menu.
@@ -348,7 +348,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   // screen (other tabs, profile pages, an open order detail are left) so the offer card is on top.
   useEffect(() => {
     if (!offerId) return;
-    setTab('home'); setProfileView('me'); setActiveDetailId(null);
+    setTab('home'); setMenuSec(null); setActiveDetailId(null);
   }, [offerId]);
   useEffect(() => {
     if (!offerId) return;
@@ -435,9 +435,9 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
           banner={banner} onDismissBanner={() => setBanner(null)}
           data={data} dash={dash} gps={gps} pos={pos} stand={stand} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
           onDuty={setDuty} onStartGps={startGps} onStopGps={stopGps}
-          onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => { setProfileView('trips'); setDrawer(true); }}
+          onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => { setMenuSec('trips'); setDrawer(true); }}
           openCars={() => setTab('cars')}
-          openDocs={() => { setProfileView('me'); setDrawer(true); window.setTimeout(() => document.getElementById('driver-docs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 350); }}
+          openDocs={() => { setMenuSec('docs'); setDrawer(true); window.setTimeout(() => document.getElementById('driver-docs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 350); }}
           goEarnings={(to) => { setEarnEntry(to ?? 'summary'); setTab('earnings'); }}
           refreshDash={loadDash}
         />
@@ -456,46 +456,57 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
       <aside role="dialog" aria-modal="true" aria-label={t('driver.nav.profile')} data-testid="driver-drawer"
         className={`fixed inset-y-0 end-0 z-50 flex w-[86%] max-w-[400px] flex-col bg-page shadow-2xl transition-transform duration-300 ease-out ${drawer ? 'translate-x-0' : 'translate-x-full rtl:-translate-x-full'}`}
         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <div className="flex h-14 shrink-0 items-center justify-end px-3">
-          <button type="button" onClick={() => setDrawer(false)} aria-label={t('common.close')} className="flex h-10 w-10 items-center justify-center rounded-full text-2xl text-ink hover:bg-white/5">×</button>
+        {/* «Визитка» on top (2026-11-26, operator): photo, name, car and plate; × on the right. */}
+        <div className="flex shrink-0 items-start gap-3 px-4 pb-3 pt-3">
+          <DriverCard dash={dash} />
+          <button type="button" onClick={() => setDrawer(false)} aria-label={t('common.close')} className="-me-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-2xl text-ink hover:bg-white/5">×</button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
           {drawer && (
-            <>
-              {/* Pre-bookings moved from the bottom bar into the menu (2026-11-19). */}
-              <button type="button" onClick={() => { setDrawer(false); setTab('prebook'); }} data-testid="drawer-prebook"
-                className="mb-3 flex w-full items-center justify-between rounded-[12px] border border-edge bg-elevated px-4 py-3 text-start text-[16px] font-semibold">
-                <span>{t('driver.scheduled.tabPrebook')}</span>
-                {/* 2026-11-19: taken by me and new ones I could take — both red (operator). */}
-                <span className="flex items-center gap-1.5">
+            <div className="space-y-2">
+              {/* Sections one under another; a tap opens it under its row and closes the one that was open. */}
+              <MenuRow id="prebook" open={menuSec} setOpen={setMenuSec} label={t('driver.scheduled.tabPrebook')} testId="drawer-prebook"
+                badges={<>
                   {prebookMine > 0 && <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white" title={t('driver.scheduled.mine')}>{prebookMine}</span>}
                   {prebookCount > 0 && <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white">{prebookCount}</span>}
-                </span>
-              </button>
-              {/* «Мои машины» (2026-11-24): change car, ask for a car in the system, add a new one. */}
-              <button type="button" onClick={() => { setDrawer(false); setTab('cars'); }} data-testid="drawer-cars"
-                className="mb-3 flex w-full items-center justify-between rounded-[12px] border border-edge bg-elevated px-4 py-3 text-start text-[16px] font-semibold">
-                <span>{t('driver.cars.menu')}</span>
-                <span className="flex items-center gap-1.5">
-                  {carAsks > 0 && <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white">{carAsks}</span>}
-                  <span className="text-muted">›</span>
-                </span>
-              </button>
+                </>}>
+                <ScheduledRides onCount={onPrebookCount} />
+              </MenuRow>
+              <MenuRow id="profile" open={menuSec} setOpen={setMenuSec} label={t('driver.nav.profile')} testId="drawer-profile">
+                <ProfileSection dash={dash} />
+              </MenuRow>
+              <MenuRow id="trips" open={menuSec} setOpen={setMenuSec} label={t('driver.nav.trips')} testId="drawer-trips">
+                <TripsSection onOpen={setActiveDetailId} activeDetail={activeDetailId} onCloseDetail={() => setActiveDetailId(null)} onSettled={() => { loadDash(); }} />
+              </MenuRow>
+              {/* «Мои машины» + what he takes: ride-share and (XL) Comfort — next to the car choice (2026-11-26). */}
+              <MenuRow id="cars" open={menuSec} setOpen={setMenuSec} label={t('driver.cars.menu')} testId="drawer-cars"
+                badges={carAsks > 0 ? <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white">{carAsks}</span> : null}>
+                <div className="space-y-4">
+                  <div className="rounded-[12px] border border-edge p-3">
+                    <AcceptsSharedToggle />
+                    <TakesComfortToggle />
+                  </div>
+                  <MyCars bare />
+                </div>
+              </MenuRow>
+              <MenuRow id="settings" open={menuSec} setOpen={setMenuSec} label={t('driver.nav.settings')} testId="drawer-settings">
+                <SettingsSection />
+              </MenuRow>
+              <MenuRow id="docs" open={menuSec} setOpen={setMenuSec} label={t('driver.profile.documents')} testId="drawer-docs">
+                <DriverDocs bare />
+              </MenuRow>
+              <MenuRow id="help" open={menuSec} setOpen={setMenuSec} label={t('driver.profile.help')} testId="drawer-help">
+                <HelpSection dash={dash} />
+              </MenuRow>
               {/* A driver who also owns a fleet (2026-11-20, operator): his fleet's reports, same login. */}
               {fleet && (
                 <a href="/fleet" data-testid="drawer-fleet"
-                  className="mb-3 flex w-full items-center justify-between rounded-[12px] border border-edge bg-elevated px-4 py-3 text-start text-[16px] font-semibold">
+                  className="flex w-full items-center justify-between rounded-[12px] border border-edge bg-elevated px-4 py-3 text-start text-[16px] font-semibold">
                   <span className="min-w-0 truncate">{t('driver.nav.myFleet')} <span className="text-sm font-normal text-muted">· {fleet.name}</span></span>
                   <span className="text-muted">›</span>
                 </a>
               )}
-              <SubTabs value={profileView} onChange={setProfileView} items={[
-                { id: 'me', label: t('driver.nav.profile') },
-                { id: 'trips', label: t('driver.nav.trips') },
-              ]} />
-              {profileView === 'me' && <ProfileSection dash={dash} />}
-              {profileView === 'trips' && <TripsSection onOpen={setActiveDetailId} activeDetail={activeDetailId} onCloseDetail={() => setActiveDetailId(null)} onSettled={() => { loadDash(); }} />}
-            </>
+            </div>
           )}
         </div>
       </aside>
@@ -800,17 +811,6 @@ function TripRow({ t, onClick }: { t: TripCard; onClick?: () => void }) {
 
 // ---- Trips ----
 // Segmented switch for the merged bottom tabs.
-function SubTabs<T extends string>({ value, onChange, items }: { value: T; onChange: (v: T) => void; items: { id: T; label: string; count?: number | null }[] }) {
-  return (
-    <div className="mb-3 flex gap-1 rounded-[12px] border border-edge bg-elevated p-1" role="tablist">
-      {items.map((it) => (
-        <button key={it.id} role="tab" aria-selected={value === it.id} onClick={() => onChange(it.id)} className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-medium ${value === it.id ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>
-          {it.label}{it.count ? ` · ${it.count}` : ''}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 interface FreeOrder {
   bookingId: string; pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string; postcode?: string | null }; stop?: { lat: number; lng: number; label: string } | null;
@@ -1058,76 +1058,109 @@ function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string;
 }
 
 // ---- Profile ----
+type MenuSec = 'prebook' | 'profile' | 'trips' | 'cars' | 'settings' | 'docs' | 'help';
+
+/** One menu section (2026-11-26): the row; when open, its content right under it. */
+function MenuRow({ id, open, setOpen, label, badges, testId, children }: { id: MenuSec; open: MenuSec | null; setOpen: (v: MenuSec | null) => void; label: string; badges?: React.ReactNode; testId: string; children: React.ReactNode }) {
+  const on = open === id;
+  return (
+    <section className={`rounded-[12px] border ${on ? 'border-accent/60' : 'border-edge'} bg-elevated`}>
+      <button type="button" onClick={() => setOpen(on ? null : id)} aria-expanded={on} data-testid={testId}
+        className="flex w-full items-center justify-between gap-2 px-4 py-3 text-start text-[16px] font-semibold">
+        <span className="min-w-0 truncate">{label}</span>
+        <span className="flex items-center gap-1.5">
+          {badges}
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`text-muted transition-transform ${on ? 'rotate-90' : 'rtl:-scale-x-100'}`}><path d="M9 5l7 7-7 7" /></svg>
+        </span>
+      </button>
+      {on && <div className="border-t border-edge px-3 pb-3 pt-3" data-testid={`${testId}-body`}>{children}</div>}
+    </section>
+  );
+}
+
+/** «Визитка» at the top of the menu (2026-11-26): his photo, name, and under it the car and plate. */
+function DriverCard({ dash }: { dash: Dashboard | null }) {
+  const { t } = useT();
+  const [photo, setPhoto] = useState(true);
+  const name = dash?.driver.name ?? t('driver.profile.driverFallback');
+  const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '?';
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[14px] border border-edge bg-elevated p-3" data-testid="driver-card">
+      {photo
+        ? <img src="/api/v1/driver/photo" alt="" onError={() => setPhoto(false)} className="h-14 w-14 shrink-0 rounded-full object-cover" />
+        : <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-lg font-bold text-[#0d1608]">{initials}</span>}
+      <div className="min-w-0">
+        <div className="truncate text-[16px] font-semibold">{name}</div>
+        {dash?.vehicle
+          ? <>
+              <div className="truncate text-xs text-muted">{dash.vehicle.label}</div>
+              <span className="mt-1 inline-block rounded-[6px] border border-edge-strong px-1.5 font-mono text-xs font-bold tracking-wider text-ink" data-testid="driver-card-plate">{dash.vehicle.plate}</span>
+            </>
+          : <div className="truncate text-xs text-muted">{t('driver.profile.noVehicle')}</div>}
+      </div>
+    </div>
+  );
+}
+
+/** Профиль (2026-11-26): rating and access; «Выйти» and «Удалить аккаунт» live here. */
 function ProfileSection({ dash }: { dash: Dashboard | null }) {
   const { t, tp } = useT();
   const { tOr } = useDriverFmt();
   async function signOut() { await api('/auth/logout', { method: 'POST' }).catch(() => {}); window.location.href = '/driver/login'; }
-
   return (
     <div className="space-y-3">
-      <h1 className="text-xl font-semibold">{t('driver.profile.title')}</h1>
-      <div className="card p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="font-semibold">{dash?.driver.name ?? t('driver.profile.driverFallback')}</div>
-          {dash && (dash.driver.rating.count > 0
-            ? <div className="text-sm font-semibold text-accent" title={tp('driver.profile.ratings', dash.driver.rating.count)}>★ {dash.driver.rating.average?.toFixed(1)} <span className="text-xs font-normal text-muted">({dash.driver.rating.count})</span></div>
-            : <div className="text-xs text-muted">{t('driver.profile.noRatings')}</div>)}
-        </div>
-        <div className="text-xs text-muted">{t('driver.profile.eligibility', { value: dash?.driver.eligibility ? tOr(`driver.profile.eligibilityValue.${dash.driver.eligibility}`, dash.driver.eligibility) : '—' })}</div>
-        {/* Notifications in the settings (2026-11-18): status + turn on, next to the language. */}
-        <div className="mt-3 flex items-center justify-between gap-3 border-t border-edge pt-3">
-          <span className="text-sm">{t('driver.profile.notifications')}</span>
-          <NotifyToggle pushUrl="/driver/push" className="text-end" />
-        </div>
-        {/* Ride-share «Беру попутчиков» (Task 022). */}
-        <div className="mt-3 border-t border-edge pt-3">
-          <AcceptsSharedToggle />
-        </div>
-        {/* «Брать заказы Comfort» — only for an XL car (2026-11-25). */}
-        <TakesComfortToggle />
-        {/* App colour (2026-11-19): chosen at registration, changed here. */}
-        <div className="mt-3 border-t border-edge pt-3">
-          <div className="mb-2 text-sm">{t('common.theme.title')}</div>
-          <ThemePicker role="driver" />
-        </div>
-        {/* App language (2026-11-17): set by the phone's language; changed only here. */}
-        <div className="mt-3 flex items-center justify-between gap-3 border-t border-edge pt-3">
-          <span className="text-sm">{t('common.language')}</span>
-          <LanguageSwitcher only={DRIVER_LOCALES} />
-        </div>
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-muted">{t('driver.profile.eligibility', { value: dash?.driver.eligibility ? tOr(`driver.profile.eligibilityValue.${dash.driver.eligibility}`, dash.driver.eligibility) : '—' })}</span>
+        {dash && (dash.driver.rating.count > 0
+          ? <span className="font-semibold text-accent" title={tp('driver.profile.ratings', dash.driver.rating.count)}>★ {dash.driver.rating.average?.toFixed(1)} <span className="text-xs font-normal text-muted">({dash.driver.rating.count})</span></span>
+          : <span className="text-xs text-muted">{t('driver.profile.noRatings')}</span>)}
       </div>
-
-      <div className="card p-4">
-        <div className="mb-1 font-medium">{t('driver.profile.vehicle')}</div>
-        {dash?.vehicle ? <div className="text-sm">{dash.vehicle.plate} · {dash.vehicle.label} · {dash.vehicle.vClass} · {tp('driver.profile.seats', dash.vehicle.seats)}</div> : <div className="text-sm text-muted">{t('driver.profile.noVehicle')}</div>}
-        <p className="mt-1 text-xs text-muted">{t('driver.profile.vehicleNote')}</p>
-      </div>
-
-      {/* Documents (2026-11-24): marker from 7 days before expiry; the driver uploads the new one himself. */}
-      <DriverDocs />
-
-      <div className="card p-4">
-        <div className="mb-1 font-medium">{t('driver.profile.help')}</div>
-        {dash?.support && (dash.support.phone || dash.support.email) ? (
-          <div className="space-y-1 text-sm">
-            {dash.support.operatorName && <div className="text-muted">{dash.support.operatorName}</div>}
-            {dash.support.phone && <a href={`tel:${dash.support.phone}`} className="block text-accent">📞 {dash.support.phone}</a>}
-            {dash.support.email && <a href={`mailto:${dash.support.email}`} className="block text-accent">✉️ {dash.support.email}</a>}
-          </div>
-        ) : <p className="text-sm text-muted">{t('driver.profile.noSupport')}</p>}
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-          <a href="/privacy" className="underline">{t('promo.privacy')}</a>
-          <a href="/terms" className="underline">{t('promo.terms')}</a>
-          <a href="/support" className="underline">{t('promo.support')}</a>
-        </div>
-      </div>
-
-      <StaffPasswordForm />
-
-      <button onClick={signOut} className="btn-ghost w-full !text-danger">{t('driver.profile.signOut')}</button>
-
+      <button onClick={signOut} className="btn-ghost w-full !text-danger" data-testid="driver-signout">{t('driver.profile.signOut')}</button>
       {/* Delete the account inside the app (2026-11-26; App Store / Google Play rule, GDPR). */}
       <DeleteDriverAccount />
+    </div>
+  );
+}
+
+/** Настройки (2026-11-26): notifications, app colour, language, password. */
+function SettingsSection() {
+  const { t } = useT();
+  return (
+    <div className="divide-y divide-edge">
+      <div className="flex items-center justify-between gap-3 pb-3">
+        <span className="text-sm">{t('driver.profile.notifications')}</span>
+        <NotifyToggle pushUrl="/driver/push" className="text-end" />
+      </div>
+      <div className="py-3">
+        <div className="mb-2 text-sm">{t('common.theme.title')}</div>
+        <ThemePicker role="driver" />
+      </div>
+      <div className="flex items-center justify-between gap-3 py-3">
+        <span className="text-sm">{t('common.language')}</span>
+        <LanguageSwitcher only={DRIVER_LOCALES} />
+      </div>
+      <div className="pt-3"><StaffPasswordForm bare /></div>
+    </div>
+  );
+}
+
+/** Помощь: the operator's phone and e-mail, and the legal pages. */
+function HelpSection({ dash }: { dash: Dashboard | null }) {
+  const { t } = useT();
+  return (
+    <div>
+      {dash?.support && (dash.support.phone || dash.support.email) ? (
+        <div className="space-y-1 text-sm">
+          {dash.support.operatorName && <div className="text-muted">{dash.support.operatorName}</div>}
+          {dash.support.phone && <a href={`tel:${dash.support.phone}`} className="block text-accent">📞 {dash.support.phone}</a>}
+          {dash.support.email && <a href={`mailto:${dash.support.email}`} className="block text-accent">✉️ {dash.support.email}</a>}
+        </div>
+      ) : <p className="text-sm text-muted">{t('driver.profile.noSupport')}</p>}
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+        <a href="/privacy" className="underline">{t('promo.privacy')}</a>
+        <a href="/terms" className="underline">{t('promo.terms')}</a>
+        <a href="/support" className="underline">{t('promo.support')}</a>
+      </div>
     </div>
   );
 }

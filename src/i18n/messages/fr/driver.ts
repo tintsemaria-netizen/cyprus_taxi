@@ -345,6 +345,7 @@ const driver: Catalog<typeof en> = {
   },
   prebookFab: { single: "P", pair: "PS", singleAria: "Nouvelle réservation", pairAria: "Nouvelle réservation partagée" },
   nav: {
+    settings: "Paramètres",
     myFleet: "Ma flotte",
     orders: "Commandes",
     work: "Courses & gains",

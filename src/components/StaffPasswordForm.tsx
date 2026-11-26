@@ -6,7 +6,8 @@ import { useT } from '@/i18n/I18nProvider';
 import { PasswordInput } from '@/components/PasswordInput';
 
 // Change own password for drivers and staff (2026-11-14). Other devices are signed out.
-export function StaffPasswordForm() {
+// bare (2026-11-26, driver settings): one «Сменить пароль ›» row instead of a card with the words twice.
+export function StaffPasswordForm({ bare = false }: { bare?: boolean } = {}) {
   const { t, tError } = useT();
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState('');
@@ -21,6 +22,16 @@ export function StaffPasswordForm() {
     } catch (err) { setMsg(err instanceof ApiRequestError ? tError(err) : t('auth.account.couldNotSave')); }
     finally { setBusy(false); }
   }
+  if (!open && bare) {
+    return (
+      <div>
+        <button type="button" className="flex w-full items-center justify-between py-1 text-start text-sm" onClick={() => { setOpen(true); setMsg(null); }} data-testid="pw-open">
+          <span>{t('auth.pw.title')}</span><span className="text-muted" aria-hidden>›</span>
+        </button>
+        {msg && <p className="text-sm text-accent">{msg}</p>}
+      </div>
+    );
+  }
   if (!open) {
     return (
       <div className="card flex items-center justify-between gap-3 p-4">
@@ -33,7 +44,7 @@ export function StaffPasswordForm() {
     );
   }
   return (
-    <form onSubmit={submit} className="card space-y-3 p-4">
+    <form onSubmit={submit} className={bare ? 'space-y-3' : 'card space-y-3 p-4'}>
       <div className="font-medium">{t('auth.pw.title')}</div>
       <div>
         <label className="label" htmlFor="spw-current">{t('auth.pw.current')}</label>

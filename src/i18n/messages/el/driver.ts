@@ -345,6 +345,7 @@ const driver: Catalog<typeof en> = {
   },
   prebookFab: { single: "P", pair: "PS", singleAria: "Νέα προκράτηση", pairAria: "Νέα κοινή προκράτηση" },
   nav: {
+    settings: "Ρυθμίσεις",
     myFleet: "Ο στόλος μου",
     orders: 'Παραγγελίες',
     work: 'Διαδρομές & έσοδα',

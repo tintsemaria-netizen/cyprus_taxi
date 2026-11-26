@@ -198,12 +198,12 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
           {me.role === 'ADMIN' && <NotifyToggle pushUrl="/staff/push" onlyProblems className="hidden sm:block" />}
           {me.role !== 'DRIVER' && <LanguageSwitcher compact />}
           {me.role !== 'DRIVER' && <button onClick={logout} className="btn-ghost !min-h-0 !py-1.5 text-sm">{t('common.signOut')}</button>}
-          {/* Drivers (2026-11-18): ☰ in the top-right corner opens the side menu (profile, trips, earnings). */}
+          {/* Drivers: a round button with his initials (like the passenger's, 2026-11-26) opens the side menu. */}
           {me.role === 'DRIVER' && (
             <button type="button" data-testid="driver-menu-btn" aria-label={t('driver.navigation.menu')}
               onClick={() => window.dispatchEvent(new Event('il-y:driver-menu'))}
-              className="-me-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink hover:bg-white/5">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+              className="-me-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-[#0d1608]">
+              {(me.displayName || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '?'}
             </button>
           )}
         </div>

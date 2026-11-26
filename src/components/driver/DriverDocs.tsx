@@ -31,7 +31,7 @@ export function useSlotName() {
 /** What needs him first: returned, expired, expiring, waiting — then the rest. */
 const attn = (d: DriverDoc) => (d.renewal?.status === 'ACTION_NEEDED' ? 4 : d.renewal ? 1 : d.status === 'EXPIRED' ? 3 : d.status === 'EXPIRING' ? 2 : 0);
 
-export function DriverDocs() {
+export function DriverDocs({ bare = false }: { bare?: boolean } = {}) {
   const { t } = useT();
   const [docs, setDocs] = useState<Docs | null>(null);
   const load = useCallback(() => { api<Docs>('/driver/documents').then(setDocs).catch(() => {}); }, []);
@@ -39,8 +39,8 @@ export function DriverDocs() {
   useRefreshOnReturn(load);
 
   return (
-    <div className="card p-4" id="driver-docs" data-testid="driver-docs">
-      <div className="mb-1 font-medium">{t('driver.profile.documents')}</div>
+    <div className={bare ? '' : 'card p-4'} id="driver-docs" data-testid="driver-docs">
+      {!bare && <div className="mb-1 font-medium">{t('driver.profile.documents')}</div>}
       {!docs ? <p className="text-sm text-muted">{t('common.loading')}</p> : !docs.available ? <p className="text-sm text-muted">{t('driver.profile.docsLegacy')}</p> : docs.documents.length === 0 ? <p className="text-sm text-muted">{t('driver.profile.noDocuments')}</p> : (
         <ul className="divide-y divide-edge text-sm">{[...docs.documents].sort((a, b) => attn(b) - attn(a)).map((d) => <DocRow key={d.slot} d={d} onDone={load} />)}</ul>
       )}
