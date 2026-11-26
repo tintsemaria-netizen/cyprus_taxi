@@ -41,6 +41,15 @@
 - Test: lifecycle.db.test.ts «the passenger is told what to pay».
 - Open: offer one shared receipt component for «Мои поездки» too; no-show push demo was promised to the operator next.
 
+## 2026-11-26 ~23:35 — driver new-order screen (deployed, branch offer-screen)
+- While an offer shows (home tab, no trip): no BottomNav, no earnings pill, menu button hidden (html[data-driver-offer] in globals.css); the card sits 12 px from the bottom.
+- Card: «Новый заказ» + plain «N с» (no chip/⏳ — also next-offer and free-order cards); small «Отклонить» top right; ClientLine (name, PaxRating, class) under the minutes; RouteLines (from ● / stop / to ○ + postcode) in the frame; the sum without a frame; one big «Принять».
+- OFFER_TTL_SEC 10 → 15 (tests/dispatch.db updated).
+- Route line width by zoom for every map: src/lib/route-stroke.ts (Google zoom_changed + MapLibre interpolate): 3 px island view → full width ≥ z15.
+- sheetFitPadding(true) for the offer map: bottom 42 % + 30, top 90.
+- PaxRating always shown: no ratings → ★ 5.0 (lime). Co-rider rating: pairStopsFor adds stop.rating; DriverNavigation shows it.
+- Full suite 520 passed.
+
 ## 2026-11-26 ~21:55 — start page v2 (deployed, branch welcome-2)
 - Cards: airport (now «Ларнака, Пафос и Эрджан», no price sentence), share, prebook, track. Price and 8-languages cards removed (keys deleted); driver block without the three ticks (drv1–3 deleted); «Заказать поездку» + install prompt moved after the cards.
 - NOTE: Ercan (ECN) is only in the promo text — src/lib/airports.ts knows LCA and PFO only (airport areas, stands, ride-share). Tell the operator if Ercan service needs them.
