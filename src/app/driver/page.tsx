@@ -1089,7 +1089,7 @@ function DriverCard({ dash }: { dash: Dashboard | null }) {
   const name = dash?.driver.name ?? t('driver.profile.driverFallback');
   const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '?';
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[14px] border border-edge bg-elevated p-3" data-testid="driver-card">
+    <div className="flex min-w-0 flex-1 items-center gap-3 py-1" data-testid="driver-card">
       {photo
         ? <img src="/api/v1/driver/photo" alt="" onError={() => setPhoto(false)} className="h-14 w-14 shrink-0 rounded-full object-cover" />
         : <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-lg font-bold text-[#0d1608]">{initials}</span>}
@@ -1129,15 +1129,21 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
 /** Настройки (2026-11-26): notifications, app colour, language, password. */
 function SettingsSection() {
   const { t } = useT();
+  const [themeOpen, setThemeOpen] = useState(false);
   return (
     <div className="divide-y divide-edge">
       <div className="flex items-center justify-between gap-3 pb-3">
         <span className="text-sm">{t('driver.profile.notifications')}</span>
         <NotifyToggle pushUrl="/driver/push" className="text-end" />
       </div>
+      {/* «Цвет приложения» opens / closes like the menu rows (2026-11-26, operator). */}
       <div className="py-3">
-        <div className="mb-2 text-sm">{t('common.theme.title')}</div>
-        <ThemePicker role="driver" />
+        <button type="button" onClick={() => setThemeOpen((v) => !v)} aria-expanded={themeOpen} data-testid="theme-toggle"
+          className="flex w-full items-center justify-between text-start text-sm">
+          <span>{t('common.theme.title')}</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`text-muted transition-transform ${themeOpen ? 'rotate-90' : 'rtl:-scale-x-100'}`}><path d="M9 5l7 7-7 7" /></svg>
+        </button>
+        {themeOpen && <div className="mt-2"><ThemePicker role="driver" /></div>}
       </div>
       <div className="flex items-center justify-between gap-3 py-3">
         <span className="text-sm">{t('common.language')}</span>
