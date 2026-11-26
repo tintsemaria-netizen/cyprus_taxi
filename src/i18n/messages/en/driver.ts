@@ -277,6 +277,7 @@ const driver = {
     noVehicle: 'No approved vehicle.',
     vehicleNote: 'A vehicle change goes through operator review; you can’t change the operational binding yourself.',
     documents: 'Documents',
+    docsLegacy: "Your account predates in-app documents; document checks are handled by the operator.",
     noDocuments: 'No documents on file.',
     docStatus: {
       VALID: 'valid',

@@ -280,6 +280,7 @@ const driver: Catalog<typeof en> = {
     noVehicle: "אין רכב מאושר.",
     vehicleNote: "החלפת רכב עוברת בדיקה של המפעיל; לא ניתן לשנות את השיוך בעצמכם.",
     documents: "מסמכים",
+    docsLegacy: "החשבון שלך נוצר לפני שהמסמכים עברו לאפליקציה; את המסמכים בודק המפעיל.",
     noDocuments: "אין מסמכים בתיק.",
     docStatus: {
       VALID: "בתוקף",

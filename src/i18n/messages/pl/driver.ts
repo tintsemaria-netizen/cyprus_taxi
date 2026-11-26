@@ -280,6 +280,7 @@ const driver: Catalog<typeof en> = {
     noVehicle: "Brak zatwierdzonego pojazdu.",
     vehicleNote: "Zmiana pojazdu wymaga weryfikacji operatora; nie możesz sam zmienić przypisania.",
     documents: "Dokumenty",
+    docsLegacy: "Twoje konto powstało przed dokumentami w aplikacji; dokumenty sprawdza operator.",
     noDocuments: "Brak dokumentów.",
     docStatus: {
       VALID: "ważny",

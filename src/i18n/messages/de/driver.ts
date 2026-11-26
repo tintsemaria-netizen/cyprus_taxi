@@ -280,6 +280,7 @@ const driver: Catalog<typeof en> = {
     noVehicle: "Kein freigegebenes Fahrzeug.",
     vehicleNote: "Ein Fahrzeugwechsel wird vom Betreiber geprüft; die Zuordnung können Sie nicht selbst ändern.",
     documents: "Dokumente",
+    docsLegacy: "Ihr Konto stammt aus der Zeit vor den Dokumenten in der App; die Dokumente prüft der Betreiber.",
     noDocuments: "Keine Dokumente hinterlegt.",
     docStatus: {
       VALID: "gültig",

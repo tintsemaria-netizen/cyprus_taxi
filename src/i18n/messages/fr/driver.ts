@@ -280,6 +280,7 @@ const driver: Catalog<typeof en> = {
     noVehicle: "Aucun véhicule validé.",
     vehicleNote: "Un changement de véhicule passe par l’opérateur ; vous ne pouvez pas modifier l’association vous-même.",
     documents: "Documents",
+    docsLegacy: "Votre compte date d’avant les documents dans l’application ; l’exploitant vérifie les documents.",
     noDocuments: "Aucun document enregistré.",
     docStatus: {
       VALID: "valide",
