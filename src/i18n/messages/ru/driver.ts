@@ -46,11 +46,7 @@ const driver: Catalog<typeof en> = {
   },
   // «Стоянка с очередью» (2026-11-25).
   // «Брать заказы Comfort» for an XL car (2026-11-25).
-  classes: {
-    comfort: "Брать заказы Comfort",
-    onHint: "У вас машина XL: приходят заказы XL и Comfort (оплата по цене Comfort).",
-    offHint: "Только заказы XL.",
-  },
+  classes: { title: "Заказы Comfort & XL", turnedOn: "Вы включили заказы {cls}.", turnedOff: "Вы выключили заказы {cls}.", keepOne: "Хотя бы один класс должен быть включён." },
   // Delete the account in the app (2026-11-26).
   deleteAccount: {
     button: "Удалить аккаунт",

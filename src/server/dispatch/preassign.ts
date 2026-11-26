@@ -123,7 +123,7 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
     where: {
       status: 'REQUESTED',
       scheduledAt: { gt: new Date(now.getTime() + (p.convertMinutes + 5) * MIN), lt: new Date(now.getTime() + p.horizonHours * 3600_000) },
-      vClass: { in: takesClasses(vehicle.vClass, driver?.takesComfort) },
+      vClass: { in: takesClasses(vehicle.vClass, driver?.takesComfort, driver?.takesXl) },
       passengerCount: { lte: vehicle.seats },
       preAssignments: { none: { status: 'COMMITTED' } },
     },
@@ -212,7 +212,7 @@ export async function claimScheduled(driverId: string, bookingId: string, now: D
       const driver = await tx.driver.findUnique({ where: { id: driverId }, include: { user: true } });
       if (!driver || !driver.active || !driver.user.active || !canWork(driver)) return fail(409, 'DRIVER_INELIGIBLE', 'Your account can’t take rides right now.');
       const vehicle = await boundVehicle(tx, driverId);
-      if (!vehicle || !carTakes(vehicle.vClass, driver.takesComfort, b.vClass) || vehicle.seats < b.passengerCount) return fail(409, 'VEHICLE_INELIGIBLE', 'Your vehicle doesn’t fit this ride.');
+      if (!vehicle || !carTakes(vehicle.vClass, driver.takesComfort, b.vClass, driver.takesXl) || vehicle.seats < b.passengerCount) return fail(409, 'VEHICLE_INELIGIBLE', 'Your vehicle doesn’t fit this ride.');
       if (await isPairBlocked(driverId, b.passengerId, tx)) return fail(409, 'BOOKING_GONE', 'This ride is no longer available.');
       // Ride-share pair (Task 022): only the host's ride is claimed; the driver must take co-riders
       // and have seats for both bookings.

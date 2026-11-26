@@ -121,7 +121,8 @@ const share = {
     noShowConfirm: 'Passenger didn’t come? Their ride will be cancelled; the other passenger pays the full price.',
     noShowFee: 'No-show fee: {amount}',
     setting: 'Take co-riders',
-    settingHint: 'Airport and intercity only. Each passenger gets {pct}% off; you earn both fares.',
+    settingHint: "Airport and intercity only.",
+    settingInfo: "• Only trips from Larnaca or Paphos airport and between Larnaca, Nicosia, Paphos and Ayia Napa. No co-riders inside one town.\n• At most two orders in the car. All passengers and suitcases must fit.\n• Each passenger gets {pct}% off; you earn both fares.\n• On the way you may get «Co-rider on the way»: how much longer the trip is, the stop order and what you earn. No answer counts as «No».\n• A pre-booking with a co-rider is one order for two in «Pre-bookings».\n• If one passenger cancels or does not come out («No-show»), the other pays the full price.",
     boardPair: 'Shared · {n} people · {bags} suitcases',
     boardSecond: '2nd passenger {time}: {from} → {to}',
     state: {

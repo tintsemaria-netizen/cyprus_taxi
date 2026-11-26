@@ -528,30 +528,47 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   );
 }
 
-/** An XL car takes Comfort orders too; the driver switches that off here (2026-11-25, operator). */
+/** «Заказы Comfort & XL» (2026-11-26, operator): two small switches; a short note after each change. XL cars only. */
 function TakesComfortToggle() {
   const { t } = useT();
-  const [st, setSt] = useState<{ vClass: string | null; takesComfort: boolean } | null>(null);
-  useEffect(() => { api<{ vClass: string | null; takesComfort: boolean }>('/driver/classes').then(setSt).catch(() => {}); }, []);
+  const [st, setSt] = useState<{ vClass: string | null; takesComfort: boolean; takesXl: boolean } | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const timer = useRef<number | undefined>(undefined);
+  useEffect(() => { api<{ vClass: string | null; takesComfort: boolean; takesXl: boolean }>('/driver/classes').then(setSt).catch(() => {}); }, []);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
   if (!st || st.vClass !== 'XL') return null;
-  const on = st.takesComfort;
-  async function toggle(v: boolean) {
-    setSt((x) => (x ? { ...x, takesComfort: v } : x));
-    try { const r = await api<{ takesComfort: boolean }>('/driver/classes', { method: 'PATCH', body: { takesComfort: v } }); setSt((x) => (x ? { ...x, takesComfort: r.takesComfort } : x)); }
-    catch { setSt((x) => (x ? { ...x, takesComfort: !v } : x)); }
+  const flash = (text: string) => { setNote(text); window.clearTimeout(timer.current); timer.current = window.setTimeout(() => setNote(null), 3000); };
+  async function toggle(key: 'takesComfort' | 'takesXl', v: boolean) {
+    const cls = key === 'takesComfort' ? 'Comfort' : 'XL';
+    const other = key === 'takesComfort' ? st!.takesXl : st!.takesComfort;
+    if (!v && !other) { flash(t('driver.classes.keepOne')); return; }
+    setSt((x) => (x ? { ...x, [key]: v } : x));
+    try {
+      const r = await api<{ takesComfort: boolean; takesXl: boolean }>('/driver/classes', { method: 'PATCH', body: { [key]: v } });
+      setSt((x) => (x ? { ...x, ...r } : x));
+      flash(t(v ? 'driver.classes.turnedOn' : 'driver.classes.turnedOff', { cls }));
+    } catch { setSt((x) => (x ? { ...x, [key]: !v } : x)); }
   }
-  return (
-    <div className="mt-3 border-t border-edge pt-3">
-      <label className="flex cursor-pointer items-center justify-between gap-3" data-testid="takes-comfort">
-        <span className="min-w-0">
-          <span className="block text-sm">{t('driver.classes.comfort')}</span>
-          <span className="block text-xs text-muted">{t(on ? 'driver.classes.onHint' : 'driver.classes.offHint')}</span>
-        </span>
-        <input type="checkbox" role="switch" className="sr-only" checked={on} onChange={(e) => toggle(e.target.checked)} />
-        <span aria-hidden className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? 'bg-accent' : 'bg-edge-strong'}`}>
-          <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? 'start-[22px]' : 'start-0.5'}`} />
+  const Mini = ({ k, label }: { k: 'takesComfort' | 'takesXl'; label: string }) => {
+    const on = st[k];
+    return (
+      <label className="flex cursor-pointer flex-col items-center gap-1" data-testid={`class-${label}`}>
+        <span className="text-xs font-semibold">{label}</span>
+        <input type="checkbox" role="switch" className="sr-only" aria-label={label} checked={on} onChange={(e) => toggle(k, e.target.checked)} />
+        <span aria-hidden className={`relative block h-5 w-9 rounded-full transition ${on ? 'bg-accent' : 'bg-edge-strong'}`}>
+          <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${on ? 'start-[18px]' : 'start-0.5'}`} />
         </span>
       </label>
+    );
+  };
+  return (
+    <div className="mt-3 border-t border-edge pt-3" data-testid="takes-comfort">
+      <div className="text-sm">{t('driver.classes.title')}</div>
+      <div className="mt-2 flex gap-8">
+        <Mini k="takesComfort" label="Comfort" />
+        <Mini k="takesXl" label="XL" />
+      </div>
+      {note && <p role="status" className="mt-2 text-xs text-accent" data-testid="class-note">{note}</p>}
     </div>
   );
 }

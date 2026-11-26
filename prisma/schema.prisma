@@ -106,6 +106,8 @@ model Driver {
   acceptsShared Boolean @default(false)
   // An XL car takes Comfort orders too (2026-11-25, operator); its driver can switch that off in settings.
   takesComfort  Boolean @default(true)
+  // XL car: also take XL orders (2026-11-26, operator: separate «Comfort» / «XL» switches; one stays on).
+  takesXl       Boolean @default(true)
 
   bindings       DriverVehicleBinding[]
   assignments    Assignment[]
