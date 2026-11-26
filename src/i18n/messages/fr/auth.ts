@@ -37,6 +37,9 @@ const auth: Catalog<typeof en> = {
     changeNumber: "Changer de numéro",
   },
   menu: {
+    invite: "Inviter un ami",
+    inviteText: "Je commande mes taxis à Chypre avec IL-Y : le prix avant la course, la voiture sur la carte. Essaie :",
+    inviteCopied: "Lien copié",
     button: "Menu du compte",
     label: "Compte",
     savedPlaces: "Lieux enregistrés",

@@ -3,11 +3,12 @@ import type en from '../en/promo';
 
 const promo: Catalog<typeof en> = {
   title: "Taxi na całym Cyprze",
+  slogan: "Nie spróbujesz — nie zrozumiesz",
   lead: "Zamów w minutę. Cenę widzisz przed jazdą, a auto na mapie aż do podjazdu.",
   book: "Zamów przejazd",
   install: "Zainstaluj aplikację",
-  airportT: "Lotniska w stałej cenie",
-  airportD: "Larnaka i Pafos ↔ Twoja okolica: jedna cena w dzień i w nocy.",
+  airportT: "Lotniska Larnaka i Pafos",
+  airportD: "Zawieziemy na lotnisko i odbierzemy po przylocie. Cenę widać przed zamówieniem.",
   shareT: "Współpasażer −30%",
   shareD: "Jedź z kimś w tę samą stronę i płać o 30% mniej.",
   prebookT: "Zamówienie z wyprzedzeniem",

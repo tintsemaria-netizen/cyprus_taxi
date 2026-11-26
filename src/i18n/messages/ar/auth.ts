@@ -37,6 +37,9 @@ const auth: Catalog<typeof en> = {
     changeNumber: "تغيير الرقم",
   },
   menu: {
+    invite: "ادعُ صديقًا",
+    inviteText: "أطلب سيارات الأجرة في قبرص عبر IL-Y: ترى السعر قبل الرحلة والسيارة على الخريطة. جرّبه:",
+    inviteCopied: "تم نسخ الرابط",
     button: "قائمة الحساب",
     label: "الحساب",
     savedPlaces: "الأماكن المحفوظة",

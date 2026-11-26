@@ -3,11 +3,12 @@ import type en from '../en/promo';
 
 const promo: Catalog<typeof en> = {
   title: "Taxi in ganz Zypern",
+  slogan: "Probieren geht über Studieren",
   lead: "In einer Minute gebucht. Sie sehen den Preis vor der Fahrt und das Auto auf der Karte, bis es da ist.",
   book: "Fahrt buchen",
   install: "App installieren",
-  airportT: "Flughäfen zum Festpreis",
-  airportD: "Larnaka und Paphos ↔ Ihre Gegend: ein Preis, Tag und Nacht.",
+  airportT: "Flughäfen Larnaka und Paphos",
+  airportD: "Wir bringen Sie zum Flughafen und holen Sie nach der Landung ab. Den Preis sehen Sie vor der Buchung.",
   shareT: "Mitfahrer −30 %",
   shareD: "Teilen Sie die Fahrt mit jemandem in Ihre Richtung und zahlen Sie 30 % weniger.",
   prebookT: "Vorausbuchung",

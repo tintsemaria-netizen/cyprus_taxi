@@ -34,6 +34,9 @@ const auth = {
     changeNumber: 'Change number',
   },
   menu: {
+    invite: "Invite a friend",
+    inviteText: "I book taxis in Cyprus with IL-Y: you see the price before the ride and the car on the map. Try it:",
+    inviteCopied: "Link copied",
     button: 'Account menu',
     label: 'Account',
     savedPlaces: 'Saved places',

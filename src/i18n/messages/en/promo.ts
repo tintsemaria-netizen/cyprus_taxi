@@ -1,11 +1,12 @@
 // The welcome page /welcome (2026-11-26): what IL-Y is, for passengers and drivers (QR flyers point here).
 const promo = {
   title: "Taxi across Cyprus",
+  slogan: "You won’t know until you try",
   lead: "Book in a minute. See the price before you go and the car on the map until it arrives.",
   book: "Book a ride",
   install: "Install the app",
-  airportT: "Airports at a fixed price",
-  airportD: "Larnaca and Paphos ↔ your area: one price, day and night.",
+  airportT: "Larnaca and Paphos airports",
+  airportD: "We take you to the airport and pick you up after landing. You see the price before you book.",
   shareT: "Co-rider −30%",
   shareD: "Share the ride with someone going the same way and pay 30% less.",
   prebookT: "Book ahead",
