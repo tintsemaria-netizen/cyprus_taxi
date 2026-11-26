@@ -111,6 +111,9 @@ describe('passenger export + account deletion', () => {
     const data = await exportPassengerData(p.id);
     expect(data!.account.email).toBe(p.email);
     expect(data!.savedPlaces).toHaveLength(1);
+    expect(data!.savedPlaces[0]).toHaveProperty('name');
+    expect(data!.receiptEmails.mode).toBe('EACH');
+    expect(data!.account).toHaveProperty('language');
     expect(data!.rides).toHaveLength(1);
     expect(data!.rides[0].reference).toBe(b.reference);
     expect(data!.rides[0].yourChatMessages.map((m) => m.body)).toEqual(['I am at the gate']);

@@ -31,7 +31,7 @@ export default function Account() {
   const [openCat, setOpenCat] = useState<string | null>(null);
   const pushed = useRef(false);
   useEffect(() => {
-    const fromHash = () => { const h = window.location.hash.replace('#', ''); setOpenCat(h || null); if (!h) pushed.current = false; };
+    const fromHash = () => { const raw = window.location.hash.replace('#', ''); const h = raw === 'data' ? 'personal' : raw; setOpenCat(h || null); if (!h) pushed.current = false; };
     fromHash();
     window.addEventListener('hashchange', fromHash);
     window.addEventListener('popstate', fromHash);
@@ -95,6 +95,8 @@ export default function Account() {
         {msg && <p className="text-sm text-muted">{msg}</p>}
         <button className="btn-primary min-h-[44px] w-full" disabled={busy || !name.trim()}>{busy ? t('auth.saving') : t('auth.account.save')}</button>
       </form>
+      {/* «Ваши данные» (download / delete) lives here since 2026-11-26 (operator): one section, not two similar names. */}
+      <div className="mt-5 border-t border-edge pt-4" id="data"><DataRights /></div>
       </Category>
 
       <Category back={pushed.current ? closeCat : undefined} id="security" icon="🔒" title={t('auth.cat.security')} sub={me.hasPassword ? t('auth.pw.title') : t('auth.pw.setTitle')} open={openCat} onToggle={toggleCat}>
@@ -118,9 +120,6 @@ export default function Account() {
         <p className="text-sm text-muted">{t('auth.account.notifications')}</p>
       </Category>
 
-      <Category back={pushed.current ? closeCat : undefined} id="data" icon="🛡️" title={t('auth.data.title')} open={openCat} onToggle={toggleCat}>
-        <DataRights />
-      </Category>
       </div>
       {/* «Выйти»: small, on the left, with a confirmation (2026-11-26, operator). */}
       {!openCat && <button type="button" onClick={() => setAskOut(true)} className="px-1 py-2 text-sm text-danger hover:underline" data-testid="logout">{t('auth.logOut')}</button>}
