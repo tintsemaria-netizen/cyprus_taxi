@@ -1,16 +1,29 @@
-// Versioned Cyprus URBAN regulated-meter ESTIMATE (cents). Source figures verified from
+// Versioned Cyprus URBAN meter ESTIMATE (cents) — published rates + our own +5 % (2026-11-26). Source figures verified from
 // Visit Cyprus (see docs/research/CYPRUS-TAXI-MARKET-AND-FARES.md, 2026-09-13). This is an
 // estimate, NOT a certified taximeter amount. All money is integer cents.
 
-export const TARIFF_VERSION = 'cy-urban-2026-09-13';
+export const TARIFF_VERSION = 'cy-urban-2026-09-13+own5-2026-11-26';
 // Rule version for XL quotes: the urban meter + our XL vehicle surcharge.
-export const TARIFF_VERSION_XL = 'cy-urban-2026-09-13+xl40-2026-11-16';
+export const TARIFF_VERSION_XL = 'cy-urban-2026-09-13+own5-2026-11-26+xl40-2026-11-16';
 
-export const TARIFF = {
+/** The published urban meter (Visit Cyprus, 2026-09-13), before our own +5 %. */
+export const TARIFF_BASE = {
   day: { initialCents: 380, perKmCents: 95 }, // 06:01–20:30
   night: { initialCents: 480, perKmCents: 110 }, // 20:31–06:00
-  // Waiting, urban taximeter: €17.00/h day, €19.00/h night (same source as above).
-  waitingPerHourCents: { day: 1700, night: 1900 },
+  waitingPerHourCents: { day: 1700, night: 1900 }, // €17.00/h day, €19.00/h night
+};
+/** OUR OWN +5 % on flag-fall, per-km and waiting (owner 2026-11-26, «Добавь 5%»): test rides Limassol → LCA showed the
+ *  cars' meters 5–7 % above the GPS / road distance (2026-11-19 night 85.23 € vs 68.4 km; 2026-11-26 day 72.50 € vs
+ *  GPS 68.65 €). Used by the estimate, the GPS meter and the stop waiting. Luggage / holiday / pickup waiting unchanged;
+ *  fixed prices and minimums are set in admin and are not touched. 0 = the published meter. */
+export const OWN_METER_MARKUP_PCT = 0.05;
+const up = (c: number) => Math.round(c * (1 + OWN_METER_MARKUP_PCT));
+
+export const TARIFF = {
+  day: { initialCents: up(TARIFF_BASE.day.initialCents), perKmCents: TARIFF_BASE.day.perKmCents * (1 + OWN_METER_MARKUP_PCT) }, // 3.99 € + 0.9975 €/km
+  night: { initialCents: up(TARIFF_BASE.night.initialCents), perKmCents: TARIFF_BASE.night.perKmCents * (1 + OWN_METER_MARKUP_PCT) }, // 5.04 € + 1.155 €/km
+  // Waiting / slow traffic: 17.85 €/h day, 19.95 €/h night (published 17 / 19 + 5 %). The cross-over speed is unchanged.
+  waitingPerHourCents: { day: up(TARIFF_BASE.waitingPerHourCents.day), night: up(TARIFF_BASE.waitingPerHourCents.night) },
   luggagePieceCents: 140,
   holidaySurchargeCents: 200,
   // Passenger surcharge on the fare (regulated): 5 pax +20%, 6 pax +40%.

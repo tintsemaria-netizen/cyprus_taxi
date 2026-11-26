@@ -78,7 +78,7 @@ describe('booking with a stop', () => {
 
   it('stop waiting is priced by the taximeter waiting tariff, no grace', () => {
     const t0 = new Date('2026-01-02T10:00:00Z'); // 12:00 Nicosia (day)
-    expect(stopWaitCentsFor(t0, new Date('2026-01-02T10:03:00Z'))).toBe(85); // 3 min × €17/h
+    expect(stopWaitCentsFor(t0, new Date('2026-01-02T10:03:00Z'))).toBe(89); // 3 min × €17.85/h
     expect(stopWaitCentsFor(t0, t0)).toBe(0);
   });
 });

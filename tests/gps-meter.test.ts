@@ -17,13 +17,13 @@ function drive(start: Date, kmh: number, seconds: number, every = 5, from = { la
 }
 
 describe('GPS taximeter', () => {
-  it('motorway at 140 km/h: 68.4 km at night = €4.80 + 68.4 × €1.10 (speed does not change the fare)', () => {
+  it('motorway at 140 km/h: 68.4 km at night = €5.04 + 68.4 × €1.155 (+5 % 2026-11-26) (speed does not change the fare)', () => {
     const secs = 1760; // 68.4 km at 140 km/h, rounded to whole 5-s GPS samples
     const m = computeGpsMeter(drive(NIGHT, 140, secs), { startedAt: NIGHT });
     expect(m.night).toBe(true);
     expect(m.totalKm).toBeCloseTo(68.4, 0);
     expect(m.slowSec).toBe(0);
-    expect(Math.abs(m.totalCents - 8004)).toBeLessThan(15);
+    expect(Math.abs(m.totalCents - 8404)).toBeLessThan(15);
     // The same road at 70 km/h costs the same.
     const slower = computeGpsMeter(drive(NIGHT, 70, secs * 2), { startedAt: NIGHT });
     expect(Math.abs(slower.totalCents - m.totalCents)).toBeLessThan(20);
@@ -38,7 +38,7 @@ describe('GPS taximeter', () => {
     const m = computeGpsMeter(pts, { startedAt: DAY });
     expect(m.slowSec).toBe(600);
     expect(m.distanceCents).toBe(0);
-    expect(m.timeCents).toBe(Math.round((600 / 3600) * 1700)); // €17/h day → €2.83
+    expect(Math.abs(m.timeCents - (600 / 3600) * 1785)).toBeLessThanOrEqual(1); // €17.85/h day → €2.975 (float sum of stretches)
   });
 
   it('crawling at 10 km/h is charged by time; at 30 km/h by distance (cross-over ≈ 18 km/h by day)', () => {
@@ -46,7 +46,7 @@ describe('GPS taximeter', () => {
     expect([crawl.slowSec, crawl.distanceCents]).toEqual([360, 0]);
     const city = computeGpsMeter(drive(DAY, 30, 360), { startedAt: DAY });
     expect(city.slowSec).toBe(0);
-    expect(city.distanceCents).toBe(Math.round(3 * 95));
+    expect(city.distanceCents).toBe(Math.round(3 * 99.75));
   });
 
   it('a GPS jump is ignored; a gap without GPS is charged as road distance', () => {
@@ -68,12 +68,12 @@ describe('GPS taximeter', () => {
     const s = new Date('2026-11-19T18:25:00Z');
     const m = computeGpsMeter(drive(s, 60, 1200), { startedAt: s });
     expect(m.night).toBe(false);
-    expect(m.distanceCents).toBeGreaterThan(20 * 95);
-    expect(m.distanceCents).toBeLessThan(20 * 110);
+    expect(m.distanceCents).toBeGreaterThan(20 * 99.75);
+    expect(m.distanceCents).toBeLessThan(20 * 115.5);
   });
 
   it('extras as in the estimate: luggage and XL', () => {
     const m = computeGpsMeter(drive(DAY, 60, 600), { startedAt: DAY, luggageCount: 2, vClass: 'XL' });
-    expect(m.extrasCents).toBe(Math.round((380 + m.distanceCents) * 0.4) + 280);
+    expect(m.extrasCents).toBe(Math.round((399 + m.distanceCents) * 0.4) + 280);
   });
 });

@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-26 — own +5 % on the urban meter (branch meter-plus5)
+- Owner «Добавь 5%» after the 2026-11-26 day test ride Limassol → LCA: car meter 72.50 € vs GPS meter 68.65 € (67.1 km),
+  estimate 67.93 €; on the A1 stretch the car meter counted 4.5 % more km than GPS (tyres 225/50R17 on W212 2013 do not explain it).
+- src/lib/tariff.ts: TARIFF_BASE = published rates; OWN_METER_MARKUP_PCT = 0.05 → TARIFF day 3.99 € + 0.9975 €/km,
+  night 5.04 € + 1.155 €/km, waiting 17.85 / 19.95 €/h. Rule versions now `…+own5-2026-11-26`.
+- Affects estimate (quote), GPS meter, stop waiting. Not: fixed prices, minimums, luggage, holiday, pickup waiting.
+- Tests updated: tariff, tariff-waiting, gps-meter, booking-stop.
+
 ## 2026-11-26 ~11:10 — store readiness + /welcome (deployed d337d69)
 - /welcome (promo, 8 langs, src/i18n/messages/*/promo.ts); /privacy + /terms real texts (src/content/legal.ts, EN/RU/EL; others EN + note; DRAFT for a Cyprus lawyer); /support (trader info from settings: operatorName, NEW operatorAddress, supportPhone, supportEmail); links: account menu «Помощь и конфиденциальность» → /support, welcome footer, driver profile «Помощь».
 - Driver account deletion: DELETE /api/v1/driver/account {confirm:"DELETE"} → src/server/driver/delete-account.ts (refused with an active/next ride or committed pre-booking). Test tests/driver-delete.db.test.ts.
