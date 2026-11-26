@@ -150,3 +150,6 @@ input[type='time']::-webkit-date-and-time-value, input[type='date']::-webkit-dat
 @keyframes ily-row-alert { 0%,100% { background-color: rgb(255 69 58 / .10); box-shadow: inset 3px 0 0 rgb(255 69 58) } 50% { background-color: rgb(255 69 58 / .28); box-shadow: inset 3px 0 0 rgb(255 69 58) } }
 .row-alert { animation: ily-row-alert 1.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .row-alert { animation: none; background-color: rgb(255 69 58 / .18); box-shadow: inset 3px 0 0 rgb(255 69 58); } }
+
+/* A new order fills the driver's screen (2026-11-26): the menu button in the top bar hides meanwhile. */
+html[data-driver-offer] [data-testid="driver-menu-btn"] { visibility: hidden; }

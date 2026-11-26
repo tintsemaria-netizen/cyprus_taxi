@@ -1,5 +1,6 @@
 'use client';
 
+import { routeStrokeExpr } from '@/lib/route-stroke';
 import { useEffect, useRef, useState } from 'react';
 import type * as maplibregl from 'maplibre-gl';
 import { loadMaplibre } from '@/lib/maplibre';
@@ -344,8 +345,8 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         type: 'line',
         source: id,
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        // Bold line with rounded bends (2026-11-17).
-        paint: { 'line-color': '#C8FF46', 'line-width': routeWidth, 'line-opacity': 0.95 },
+        // Rounded bends (2026-11-17); thin from afar, full width close up (2026-11-26).
+        paint: { 'line-color': '#C8FF46', 'line-width': routeStrokeExpr(routeWidth) as maplibregl.ExpressionSpecification, 'line-opacity': 0.95 },
       });
     }
   }, [route, ready, routeWidth]);

@@ -12,8 +12,8 @@ import { attachMatchedGuestTx } from '@/server/share';
 import { passengerRatingOf } from '@/server/passenger-rating';
 
 // How long one driver has to accept before the request moves on to the next eligible driver.
-// 10 s since 2026-11-12 (was 20 s).
-export const OFFER_TTL_SEC = 10;
+// 10 s since 2026-11-12 (was 20 s); 15 s since 2026-11-26.
+export const OFFER_TTL_SEC = 15; // 15 s since 2026-11-26 (operator)
 
 // Create an expiring offer to a reserved driver. The DB active* unique columns enforce
 // one active offer per booking and per driver; a collision (race) returns null.
