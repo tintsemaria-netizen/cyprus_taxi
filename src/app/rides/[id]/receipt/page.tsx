@@ -1,6 +1,7 @@
 'use client';
 
 import { PassengerTopBar } from '@/components/PassengerTopBar';
+import { BackArrow } from '@/components/BackArrow';
 import { use, useEffect, useState } from 'react';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT, useLocale, I18nProvider } from '@/i18n/I18nProvider';
@@ -70,9 +71,10 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div>
-    <PassengerTopBar back={`/rides/${id}`} />
+    <PassengerTopBar back={false} />
     <div className="mx-auto max-w-lg p-4 sm:p-6">
 
+      {(error || !receipt) && <BackArrow className="-ms-2 mb-2" fallback={`/rides/${id}`} />}
       {error ? (
         <div className="card p-6 text-center text-sm text-muted">
           {error}
@@ -82,7 +84,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         <p className="text-muted">{t('common.loading')}</p>
       ) : (
         <I18nProvider locale={lang}>
-          <ReceiptCard receipt={receipt} lang={lang} onLang={setLang} sendMail={sendMail} mailBusy={mailBusy} mailNote={mailNote} />
+          <ReceiptCard back={`/rides/${id}`} receipt={receipt} lang={lang} onLang={setLang} sendMail={sendMail} mailBusy={mailBusy} mailNote={mailNote} />
         </I18nProvider>
       )}
       {receipt && <div className="mt-4"><GoogleReviewCard compact /></div>}
@@ -93,14 +95,14 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
 const RECEIPT_ORDER: Locale[] = ['en', 'ru', ...LOCALES.filter((l) => l !== 'en' && l !== 'ru')];
 
-function ReceiptCard({ receipt, lang, onLang, sendMail, mailBusy, mailNote }: { receipt: Receipt; lang: Locale; onLang: (l: Locale) => void; sendMail: () => void; mailBusy: boolean; mailNote: string | null }) {
+function ReceiptCard({ back, receipt, lang, onLang, sendMail, mailBusy, mailNote }: { back: string; receipt: Receipt; lang: Locale; onLang: (l: Locale) => void; sendMail: () => void; mailBusy: boolean; mailNote: string | null }) {
   const { t, fmt } = useT();
   const eur = (cents: number, ccy: string) => fmt.money(cents, ccy);
   const f = receipt.fare;
   return (
         <div className="card p-5">
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-lg font-bold">{t('rides.receipt.title')}</h1>
+            <div className="flex items-center gap-1"><BackArrow className="-ms-3" fallback={back} /><h1 className="text-lg font-bold">{t('rides.receipt.title')}</h1></div>
             {/* Receipts are in English or Russian; any other language on request (2026-11-17). */}
             <select value={lang} onChange={(e) => onLang(e.target.value as Locale)} aria-label={t('common.language')} data-testid="receipt-lang"
               className="min-h-[30px] rounded-[8px] border border-edge bg-elevated px-1.5 text-xs text-ink">
