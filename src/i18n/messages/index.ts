@@ -9,6 +9,7 @@ import enTrack from './en/track';
 import enAuth from './en/auth';
 import enDriver from './en/driver';
 import enDriverReg from './en/driverReg';
+import enPromo from './en/promo';
 import enRides from './en/rides';
 import enStaff from './en/staff';
 import elCommon from './el/common';
@@ -18,6 +19,7 @@ import elTrack from './el/track';
 import elAuth from './el/auth';
 import elDriver from './el/driver';
 import elDriverReg from './el/driverReg';
+import elPromo from './el/promo';
 import elRides from './el/rides';
 import elStaff from './el/staff';
 import ruCommon from './ru/common';
@@ -27,6 +29,7 @@ import ruTrack from './ru/track';
 import ruAuth from './ru/auth';
 import ruDriver from './ru/driver';
 import ruDriverReg from './ru/driverReg';
+import ruPromo from './ru/promo';
 import ruRides from './ru/rides';
 import ruStaff from './ru/staff';
 import heCommon from './he/common';
@@ -36,6 +39,7 @@ import heTrack from './he/track';
 import heAuth from './he/auth';
 import heDriver from './he/driver';
 import heDriverReg from './he/driverReg';
+import hePromo from './he/promo';
 import heRides from './he/rides';
 import arCommon from './ar/common';
 import arErrors from './ar/errors';
@@ -44,6 +48,7 @@ import arTrack from './ar/track';
 import arAuth from './ar/auth';
 import arDriver from './ar/driver';
 import arDriverReg from './ar/driverReg';
+import arPromo from './ar/promo';
 import arRides from './ar/rides';
 import plCommon from './pl/common';
 import plErrors from './pl/errors';
@@ -52,6 +57,7 @@ import plTrack from './pl/track';
 import plAuth from './pl/auth';
 import plDriver from './pl/driver';
 import plDriverReg from './pl/driverReg';
+import plPromo from './pl/promo';
 import plRides from './pl/rides';
 import deCommon from './de/common';
 import deErrors from './de/errors';
@@ -60,6 +66,7 @@ import deTrack from './de/track';
 import deAuth from './de/auth';
 import deDriver from './de/driver';
 import deDriverReg from './de/driverReg';
+import dePromo from './de/promo';
 import deRides from './de/rides';
 import frCommon from './fr/common';
 import frErrors from './fr/errors';
@@ -68,6 +75,7 @@ import frTrack from './fr/track';
 import frAuth from './fr/auth';
 import frDriver from './fr/driver';
 import frDriverReg from './fr/driverReg';
+import frPromo from './fr/promo';
 import frRides from './fr/rides';
 
 import enShare from './en/share';
@@ -87,6 +95,7 @@ const en = {
   auth: enAuth,
   driver: enDriver,
   driverReg: enDriverReg,
+  promo: enPromo,
   rides: enRides,
   staff: enStaff,
   share: enShare,
@@ -101,6 +110,7 @@ const el: Catalog<Messages> = {
   auth: elAuth,
   driver: elDriver,
   driverReg: elDriverReg,
+  promo: elPromo,
   rides: elRides,
   staff: elStaff,
   share: elShare,
@@ -113,6 +123,7 @@ const ru: Catalog<Messages> = {
   auth: ruAuth,
   driver: ruDriver,
   driverReg: ruDriverReg,
+  promo: ruPromo,
   rides: ruRides,
   staff: ruStaff,
   share: ruShare,
@@ -127,6 +138,7 @@ const he: Catalog<Messages> = {
   auth: heAuth,
   driver: heDriver,
   driverReg: heDriverReg,
+  promo: hePromo,
   rides: heRides,
   staff: enStaff,
   share: heShare,
@@ -140,6 +152,7 @@ const ar: Catalog<Messages> = {
   auth: arAuth,
   driver: arDriver,
   driverReg: arDriverReg,
+  promo: arPromo,
   rides: arRides,
   staff: enStaff,
   share: arShare,
@@ -153,6 +166,7 @@ const pl: Catalog<Messages> = {
   auth: plAuth,
   driver: plDriver,
   driverReg: plDriverReg,
+  promo: plPromo,
   rides: plRides,
   staff: enStaff,
   share: plShare,
@@ -166,6 +180,7 @@ const de: Catalog<Messages> = {
   auth: deAuth,
   driver: deDriver,
   driverReg: deDriverReg,
+  promo: dePromo,
   rides: deRides,
   staff: enStaff,
   share: deShare,
@@ -179,6 +194,7 @@ const fr: Catalog<Messages> = {
   auth: frAuth,
   driver: frDriver,
   driverReg: frDriverReg,
+  promo: frPromo,
   rides: frRides,
   staff: enStaff,
   share: frShare,
