@@ -197,6 +197,7 @@ const staff: Catalog<typeof en> = {
     queueSince: 'с {t}',
     airportLCA: "Ларнака",
     airportPFO: "Пафос",
+    airportECN: "Эрджан",
     deletePoint: 'Удалить точку «{name}»?',
     dropName: 'Название (например: Вылет)',
     noDrop: 'Нет точек высадки — клиента высадят там, где он указал.',

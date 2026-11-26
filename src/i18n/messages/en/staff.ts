@@ -195,6 +195,7 @@ const staff = {
     queueSince: 'since {t}',
     airportLCA: "Larnaca",
     airportPFO: "Paphos",
+    airportECN: "Ercan",
     deletePoint: 'Delete the point «{name}»?',
     dropName: 'Name (e.g. Departures)',
     noDrop: 'No drop-off points — the passenger is dropped where he chose.',

@@ -10,7 +10,7 @@ describe('popular places', () => {
   });
   it('a kind of place: nearest town first, then further', () => {
     const near = matchPopular('аэропорт', { lat: 34.77, lng: 32.42 }).map((p) => p.name);
-    expect(near).toEqual(['Paphos Airport (PFO)', 'Larnaca Airport (LCA)']);
+    expect(near).toEqual(['Paphos Airport (PFO)', 'Larnaca Airport (LCA)', 'Ercan Airport (ECN)']);
     const far = matchPopular('аэропорт', { lat: 34.92, lng: 33.63 }).map((p) => p.name);
     expect(far[0]).toBe('Larnaca Airport (LCA)');
     expect(matchPopular('марина', limassol)[0].name).toBe('Limassol Marina');

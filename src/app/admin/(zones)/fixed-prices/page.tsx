@@ -23,7 +23,7 @@ interface Draft { id: string | null; name: string; comfort: string; xl: string; 
 
 const COLORS = ['#4C9AFF', '#FFC83D', '#FF7A59', '#B07CFF', '#3DD9C1', '#FF5C93'];
 const parseCodes = (v: string) => v.split(/[\s,;]+/).map((c) => c.trim()).filter(Boolean);
-const AIRPORT_NAMES: Record<string, string> = { PFO: 'Paphos (PFO)', LCA: 'Larnaca (LCA)' };
+const AIRPORT_NAMES: Record<string, string> = { PFO: 'Paphos (PFO)', LCA: 'Larnaca (LCA)', ECN: 'Ercan (ECN)' };
 
 export default function Page() {
   return <FixedPrices />; // menu + shared map: app/admin/(zones)/layout.tsx
@@ -225,7 +225,7 @@ function FixedPrices() {
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted">{t('staff.fixed.airport')}:</span>
-        {(airports.length ? airports : [{ code: 'PFO' }, { code: 'LCA' }]).map((a) => (
+        {(airports.length ? airports : [{ code: 'PFO' }, { code: 'LCA' }, { code: 'ECN' }]).map((a) => (
           <button key={a.code} type="button" onClick={() => { if (dirty) { setMsg(t('staff.zoneMap.saveFirst')); return; } setCode(a.code); setDraft(null); }}
             className={`rounded-full border px-3 py-1.5 text-sm ${code === a.code ? 'border-accent bg-accent/15 text-accent' : 'border-edge text-ink'}`}>{AIRPORT_NAMES[a.code] ?? a.code}</button>
         ))}

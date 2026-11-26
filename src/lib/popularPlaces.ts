@@ -34,6 +34,7 @@ const AIRPORT = 'airport аэропорт аэропорта аеропорт α
 export const POPULAR: PopularPlace[] = [
   { name: 'Paphos Airport (PFO)', city: 'Paphos', rank: 1, words: `${AIRPORT} pfo`, at: { lat: 34.7180, lng: 32.4857 } },
   { name: 'Larnaca Airport (LCA)', city: 'Larnaca', rank: 1, words: `${AIRPORT} lca`, at: { lat: 34.8751, lng: 33.6249 } },
+  { name: 'Ercan Airport (ECN)', city: 'Nicosia', rank: 2, words: `${AIRPORT} ecn ercan эрджан эркан ερτζάν tymbou`, at: { lat: 35.1547, lng: 33.4961 } },
   { name: 'Paphos Harbour', city: 'Paphos', rank: 2, words: 'harbour port порт гавань λιμάνι kato като', at: { lat: 34.7536, lng: 32.4076 } },
   { name: 'Limassol Marina', city: 'Limassol', rank: 1, words: 'marina марина μαρίνα', at: { lat: 34.6706, lng: 33.0413 } },
   { name: 'Limassol Old Port', city: 'Limassol', rank: 2, words: 'old port старый порт παλιό λιμάνι', at: { lat: 34.6512, lng: 33.0447 } },

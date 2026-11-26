@@ -15,6 +15,7 @@ const CYPRUS_PLACES: Place[] = [
   { label: 'Limassol Castle', lat: 34.6722, lng: 33.0426, kind: 'landmark' },
   { label: 'Larnaca Airport (LCA)', lat: 34.8751, lng: 33.6249, kind: 'airport' },
   { label: 'Paphos Airport (PFO)', lat: 34.7180, lng: 32.4857, kind: 'airport' },
+  { label: 'Ercan Airport (ECN)', lat: 35.1547, lng: 33.4961, kind: 'airport' },
   { label: 'Nicosia city centre', lat: 35.1748, lng: 33.3644, kind: 'city' },
   { label: 'Ayia Napa harbour', lat: 34.9884, lng: 34.0006, kind: 'landmark' },
   { label: 'Paphos harbour', lat: 34.7536, lng: 32.4076, kind: 'landmark' },
