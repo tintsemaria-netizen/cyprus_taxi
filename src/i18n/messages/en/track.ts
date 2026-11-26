@@ -42,8 +42,8 @@ const track = {
   pickup: 'Pickup',
   destination: 'Destination',
   freshness: { fresh: 'live', stale: 'delayed', disconnected: 'offline' },
-  locationLine: 'Location {freshness} · updated {time}',
-  locationLineLowAcc: 'Location {freshness} · low accuracy · updated {time}',
+  locationLine: 'Location {freshness}',
+  locationLineLowAcc: 'Location {freshness} · low accuracy',
   livePaused: 'Live position paused — reconnecting…',
   gpsApprox: "No signal from the car · approximate position",
   etaUnavailable: 'ETA unavailable — waiting for the driver’s GPS.',
@@ -117,6 +117,7 @@ const track = {
   },
   timelineEntry: '· {event} — {time}',
   chat: {
+    short: "Chat",
     translatedShowOriginal: 'Translated · show original',
     showTranslation: 'Show translation',
     titleDriver: '💬 Chat with driver',

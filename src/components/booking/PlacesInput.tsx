@@ -82,9 +82,9 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
     function onDoc(e: MouseEvent) {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
     }
-    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('pointerdown', onDoc); // pointerdown: iPhone Safari never sends mousedown for a tap on plain page parts (2026-11-26)
     return () => {
-      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('pointerdown', onDoc);
       invalidatePending();
     };
      

@@ -5,7 +5,7 @@ import { useDeadReckoning } from '@/components/useDeadReckoning';
 import { DR } from '@/lib/nav';
 import { FixedTop } from '@/components/FixedTop';
 import { PassengerTopBar } from '@/components/PassengerTopBar';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { Logo } from '@/components/Brand';
 import { ChatPanel } from '@/components/ChatPanel';
@@ -21,6 +21,7 @@ import { useT } from '@/i18n/I18nProvider';
 import type { MsgKey } from '@/i18n/I18nProvider';
 import { useSheetDrag } from '@/components/useSheetDrag';
 import { PlacesInput, type Selected } from '@/components/booking/PlacesInput';
+import { fareRangeText } from '@/lib/price-type';
 import { ShareProposalCard, SharedBadge, type ShareProposalView, type SharedView } from '@/components/share/SharePassenger';
 
 interface TrackView {
@@ -50,6 +51,8 @@ interface TrackView {
   finishingAt?: { lat: number; lng: number } | null;
   pickupEtaApprox: boolean;
   fareCents: number | null;
+  priceType?: string | null;
+  fareMinCents?: number | null;
   startCode: string | null;
   waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
   receipt: null | { estimateCents: number | null; waitingCents: number; finalCents: number | null; currency: string; priceType: string; paymentMethod: string; paymentStatus: string };
@@ -80,6 +83,9 @@ export default function TrackApp() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [safety, setSafety] = useState(false);
+  // Chat: a button next to the code (operator 2026-11-26); kept mounted so new messages show a badge on it.
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatUnread, setChatUnread] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(0);
@@ -413,7 +419,7 @@ export default function TrackApp() {
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-page" style={kbBox}>
-      <FixedTop top={kbBox?.top}><PassengerTopBar sticky={false} /></FixedTop>
+      <FixedTop top={kbBox?.top}><PassengerTopBar sticky={false} back={false} account={false} /></FixedTop>{/* no «‹» and no account button on the ride screen (operator 2026-11-26) */}
 
       <div className="relative flex-1">
         <div className="absolute inset-0">
@@ -439,14 +445,27 @@ export default function TrackApp() {
         {/* Ride-share proposal: a light notification on top of the map (Task 022). */}
         {view.shareProposal && !terminal && <ShareProposalCard key={view.shareProposal.groupId} p={view.shareProposal} onAnswered={load} route={{ from: view.pickup.label, to: view.dropoff.label }} />}
 
+        {/* Chat over the map (2026-11-26, as on the driver's screen), opened by «💬 Чат» next to the code. */}
+        {view.vehicle && !terminal && (
+          <div className={chatOpen ? 'fixed inset-0 z-[60] flex flex-col justify-end bg-black/50' : 'hidden'} onClick={(e) => { if (e.target === e.currentTarget) setChatOpen(false); }} data-testid="track-chat">
+            <div className="rounded-t-[18px] bg-page p-2" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+              <ChatPanel listUrl="/tracking/messages" postUrl="/tracking/messages" pushUrl="/tracking/push" me="PASSENGER" peerLabel="driver" large
+                expandedOverride={chatOpen} onUnread={setChatUnread} callHref={view.vehicle.phone ? `tel:${view.vehicle.phone}` : null} onClose={() => setChatOpen(false)} />
+            </div>
+          </div>
+        )}
+
         {/* bottom sheet */}
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end sm:block">
           <div className="pointer-events-auto relative w-full sm:absolute sm:bottom-4 sm:start-4 sm:w-[400px]">
             {/* ☰ above the sheet (2026-11-15): «Поделиться» and «Безопасность» live in this menu. */}
             {!terminal && (
               <div className="absolute bottom-full end-3 z-20 mb-2">
+                {/* A tap anywhere else closes the menu (operator 2026-11-26) — the menu is a sheet over a dark layer (always on screen, also
+                    when the panel is pulled up); a tap on the layer closes it, on iPhone too (Safari sends no click for a tap on the map or plain page parts to document listeners). */}
                 {menuOpen && (
-                  <div className="absolute bottom-full end-0 mb-2 w-56 overflow-hidden rounded-[14px] border border-edge bg-page shadow-2xl" role="menu">
+                  <div className="fixed inset-0 z-[60] flex cursor-pointer flex-col justify-end bg-black/45" onClick={(e) => { if (e.target === e.currentTarget) setMenuOpen(false); }} data-testid="track-menu-backdrop">
+                  <div className="mx-auto w-full max-w-md cursor-auto overflow-hidden rounded-t-[18px] border border-edge bg-page shadow-2xl sm:mb-4 sm:rounded-[18px]" role="menu" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                     <button type="button" role="menuitem" className="flex w-full items-center gap-3 px-4 py-3.5 text-start text-[15px] hover:bg-white/5" onClick={() => { setMenuOpen(false); share(); }}>{t('track.shareTrip')}</button>
                     <button type="button" role="menuitem" className="flex w-full items-center gap-3 border-t border-edge px-4 py-3.5 text-start text-[15px] hover:bg-white/5" onClick={() => { setMenuOpen(false); setSafety(true); }}>{t('track.safety')}</button>
                     {/* «Отменить заказ» lives in this menu (2026-11-19), not as a button on the sheet. */}
@@ -455,9 +474,10 @@ export default function TrackApp() {
                         onClick={() => { setMenuOpen(false); setConfirmCancel(true); }}>{cancelling ? t('track.cancelling') : t('track.cancelBooking')}</button>
                     )}
                   </div>
+                  </div>
                 )}
-                <button type="button" aria-label={t('track.menu')} aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)}
-                  className="flex h-12 w-12 items-center justify-center rounded-full border border-edge bg-page/95 shadow-lg">
+                <button type="button" aria-label={t('track.menu')} aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)} data-testid="track-menu"
+                  className="relative z-20 flex h-12 w-12 items-center justify-center rounded-full border border-edge bg-page/95 shadow-lg">
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="text-ink" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" /></svg>
                 </button>
               </div>
@@ -533,8 +553,37 @@ export default function TrackApp() {
                 ) : null /* searching: the pulsing pin on the map says it — no «Закрепляем…» box (2026-11-15) */}
 
               </div>
-              <div ref={sheetBodyRef} className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pt-3 sm:p-5 sm:pt-3 ${panelOpen ? '' : 'hidden'}`}>
+              <div ref={sheetBodyRef} className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pt-2 sm:p-5 sm:pt-2 ${panelOpen ? '' : 'hidden'}`}>
                 {actionError && <p role="alert" className="mb-3 rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{actionError}</p>}
+
+                {/* Confirmation code (operator 2026-11-26): between the driver and the addresses, in ONE row —
+                    «Код подтверждения», the switch, then the digits when it is on. */}
+                {/* The row also holds «Чат с водителем» on the right (operator 2026-11-26, out of ☰); it wraps on narrow screens
+                    so the code digits and the chat button never overlap. */}
+                {!terminal && (prePickup || view.vehicle) && (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {prePickup && (
+                  <label className="flex min-h-[32px] cursor-pointer items-center gap-2.5" data-testid="start-code-row">
+                    <span className="text-[13px] font-semibold">{t('track.startCodeToggle')}</span>
+                    <input type="checkbox" role="switch" className="peer sr-only" checked={!!view.startCode} disabled={codeBusy}
+                      onChange={(e) => toggleStartCode(e.target.checked)} data-testid="start-code-switch" />
+                    <span aria-hidden className={`relative h-5 w-9 shrink-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent ${view.startCode ? 'bg-accent' : 'bg-edge'} ${codeBusy ? 'opacity-60' : ''}`}>
+                      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${view.startCode ? 'start-[18px]' : 'start-0.5'}`} />
+                    </span>
+                    {view.startCode && (
+                      <span className="font-mono text-xl font-bold tracking-[0.25em] text-accent" aria-label={t('track.startCodeAria', { code: view.startCode.split('').join(' ') })}>{view.startCode}</span>
+                    )}
+                  </label>
+                  )}
+                  {view.vehicle && (
+                    <button type="button" onClick={() => setChatOpen(true)} data-testid="track-chat-open"
+                      className="relative ms-auto flex shrink-0 items-center gap-1.5 rounded-full border border-edge bg-elevated px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-white/5">
+                      💬 {t('track.chat.short')}
+                      {chatUnread > 0 && <span className="absolute -end-1.5 -top-1.5 min-w-[18px] rounded-full bg-danger px-1 text-center text-[11px] font-bold leading-[18px] text-white">{chatUnread}</span>}
+                    </button>
+                  )}
+                  </div>
+                )}
 
                 {/* pickup waiting timer (after arrival) */}
                 {view.status === 'ARRIVED' && view.waiting && (() => {
@@ -552,7 +601,7 @@ export default function TrackApp() {
 
                 {/* Route (2026-11-15): the same dotted box as when ordering, with room between points;
                     a stop can be added/removed in the middle until the car reaches it. */}
-                <TrackRoute view={view} editable={!terminal && !view.stop?.arrivedAt && !(view.status === 'NO_DRIVER' && !view.canRetry) && !(view.scheduledAt && view.status !== 'REQUESTED')} canAddStop={!view.shareOptIn && !view.shared} onChanged={load} />
+                <TrackRoute price={view.shared ? fareRangeText(view.shared.fareCents, 'SHARED_FIXED', (c) => fmt.money(c)) : view.fareCents != null ? fareRangeText(view.fareCents, view.priceType, (c) => fmt.money(c), view.fareMinCents) : null} view={view} editable={!terminal && !view.stop?.arrivedAt && !(view.status === 'NO_DRIVER' && !view.canRetry) && !(view.scheduledAt && view.status !== 'REQUESTED')} canAddStop={!view.shareOptIn && !view.shared} onChanged={load} />
                 {view.stop?.arrivedAt && !view.stop.departedAt && (
                   <p className="mt-2 rounded-[10px] border border-[#FFC83D]/40 bg-[#FFC83D]/10 px-3 py-2 text-xs text-[#FFC83D]">{view.stop.waitStartedAt ? t('track.stopWaitingPaid') : t('track.atStop')}</p>
                 )}
@@ -562,7 +611,6 @@ export default function TrackApp() {
                   <p className="mt-2 text-xs text-muted">
                     {t(liveLocation.poorAccuracy ? 'track.locationLineLowAcc' : 'track.locationLine', {
                       freshness: ['fresh', 'stale', 'disconnected'].includes(liveLocation.freshness) ? t(`track.freshness.${liveLocation.freshness}` as MsgKey) : liveLocation.freshness,
-                      time: fmt.time(liveLocation.sampledAt),
                     })}
                   </p>
                 )}
@@ -572,31 +620,7 @@ export default function TrackApp() {
                 {/* actions */}
                 {!terminal && (
                   <div className="mt-4 space-y-2">
-                    {/* Optional confirmation code, no frame: label, the switch under it, the digits under that.
-                        («Показать водителю, где я» removed for now, 2026-11-17.) */}
-                    {prePickup && (
-                      <div className="py-1">
-                        <div>
-                          <label className="flex cursor-pointer flex-col items-start gap-2">
-                            <span className="text-sm font-semibold">{t('track.startCodeToggle')}</span>
-                            <input type="checkbox" role="switch" className="peer sr-only" checked={!!view.startCode} disabled={codeBusy}
-                              onChange={(e) => toggleStartCode(e.target.checked)} data-testid="start-code-switch" />
-                            <span aria-hidden className={`relative h-7 w-12 shrink-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent ${view.startCode ? 'bg-accent' : 'bg-edge'} ${codeBusy ? 'opacity-60' : ''}`}>
-                              <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${view.startCode ? 'start-[22px]' : 'start-0.5'}`} />
-                            </span>
-                          </label>
-                          {view.startCode && (
-                            <div className="mt-2 font-mono text-3xl font-bold tracking-[0.3em] text-accent" aria-label={t('track.startCodeAria', { code: view.startCode.split('').join(' ') })}>{view.startCode}</div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    {view.vehicle?.phone && (
-                      <a href={`tel:${view.vehicle.phone}`} className="btn-primary w-full">{t('track.callDriver')}</a>
-                    )}
-                    {view.vehicle && (
-                      <ChatPanel listUrl="/tracking/messages" postUrl="/tracking/messages" pushUrl="/tracking/push" me="PASSENGER" peerLabel="driver" />
-                    )}
+                    {/* «Позвонить водителю» removed and the chat moved to ☰ (operator 2026-11-26): the call is in the chat header. */}
                     {view.canRetry && (
                       <button className="btn-primary w-full" onClick={retry} disabled={retrying}>
                         {retrying ? t('track.searching') : t('track.searchAgain')}
@@ -678,19 +702,21 @@ function Centered({ children }: { children: React.ReactNode }) {
 // rows, and the stop in the middle — add one if plans changed, or remove it — while the car has
 // not reached it. The estimate is re-quoted on the server; the driver is notified.
 type RoutePoint = { lat: number; lng: number; label: string };
-function TrackRoute({ view, editable, canAddStop = true, onChanged }: { view: { pickup: RoutePoint; dropoff: RoutePoint; stop?: (RoutePoint & { arrivedAt?: string | null }) | null }; editable: boolean; canAddStop?: boolean; onChanged: () => void }) {
+function TrackRoute({ view, editable, canAddStop = true, onChanged, price }: { price?: string | null; view: { pickup: RoutePoint; dropoff: RoutePoint; stop?: (RoutePoint & { arrivedAt?: string | null }) | null }; editable: boolean; canAddStop?: boolean; onChanged: () => void }) {
   const { t, tError } = useT();
   const [picking, setPicking] = useState(false);
   const [sel, setSel] = useState<Selected | null>(null);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const ROW = 58;
-  const rows: { key: string; label: string; dot: 'p' | 's' | 'd' | 'add' }[] = [
+  const ROW = 52; // a little lower than before (operator 2026-11-26)
+  const rows: { key: string; label: string; dot: 'p' | 's' | 'd' }[] = [
     { key: 'p', label: view.pickup.label, dot: 'p' },
-    ...(view.stop ? [{ key: 's', label: view.stop.label, dot: 's' as const }] : editable && canAddStop ? [{ key: 'add', label: t('booking.form.addStop'), dot: 'add' as const }] : []),
+    ...(view.stop ? [{ key: 's', label: view.stop.label, dot: 's' as const }] : []),
     { key: 'd', label: view.dropoff.label, dot: 'd' },
   ];
+  // «Добавить остановку» is a button under the box now, not a row inside it (operator 2026-11-26: «занимает много места»).
+  const canAdd = !view.stop && editable && canAddStop;
   async function save(stop: Selected | null) {
     setBusy(true); setErr(null);
     try {
@@ -702,28 +728,35 @@ function TrackRoute({ view, editable, canAddStop = true, onChanged }: { view: { 
     finally { setBusy(false); }
   }
   return (
-    <div className="mt-4">
+    <div className="mt-2">
       <div className="relative rounded-[14px] border border-edge-strong bg-elevated px-3">
         <span aria-hidden className="absolute start-[19px] w-[2px]" style={{ top: ROW / 2, height: (rows.length - 1) * (ROW + 1), background: 'rgba(200,255,70,0.45)' }} />
         {rows.map((r, i) => (
-          <div key={r.key} className={`relative flex items-center gap-3 ${i ? 'border-t border-white/[0.08]' : ''}`} style={{ minHeight: ROW }}>
+          <Fragment key={r.key}>
+          {i > 0 && (
+            // The divider between two addresses; «＋ Добавить остановку» sits ON it (operator 2026-11-26), so the box stays the same size.
+            <div className="relative h-0 border-t border-white/[0.08]">
+              {canAdd && i === rows.length - 1 && (
+                <button type="button" onClick={() => { setPicking(true); setErr(null); }} data-testid="track-add-stop"
+                  className="absolute start-7 top-0 z-10 -translate-y-1/2 bg-elevated px-1.5 text-[11px] font-medium leading-4 text-muted hover:text-ink">＋ {t('booking.form.addStop')}</button>
+              )}
+            </div>
+          )}
+          <div className="relative flex items-center gap-3" style={{ minHeight: ROW }}>
             <span className="relative z-10 flex w-4 shrink-0 justify-center" aria-hidden>
               {r.dot === 'p' ? <span className="block h-3.5 w-3.5 rounded-full border-[3px] border-accent bg-elevated" />
                 : r.dot === 's' ? <span className="block h-3 w-3 rounded-[3px] bg-[#FFC83D]" />
-                : r.dot === 'add' ? <span className="block h-3 w-3 rounded-full border-2 border-dashed border-muted bg-elevated" />
                 : <span className="block h-3.5 w-3.5 rounded-full bg-accent" />}
             </span>
-            {r.dot === 'add' ? (
-              <button type="button" onClick={() => { setPicking(true); setErr(null); }} className="flex-1 py-2 text-start text-[15px] font-medium text-accent">＋ {r.label}</button>
-            ) : (
-              <span className="min-w-0 flex-1 py-2 text-[15px] font-medium leading-snug text-ink">{r.label}</span>
-            )}
+            <span className="min-w-0 flex-1 py-2 text-[15px] font-medium leading-snug text-ink">{r.label}</span>
             {r.dot === 's' && editable && (
               <button type="button" disabled={busy} onClick={() => void save(null)} aria-label={t('booking.form.removeStop')} className="flex h-9 w-8 shrink-0 items-center justify-center text-xl text-muted hover:text-danger">×</button>
             )}
           </div>
+          </Fragment>
         ))}
       </div>
+      {price && <p className="mt-2 text-sm text-muted" data-testid="track-price">{rich(t('track.fareLine', { fare: '\u0000' }), <span className="whitespace-nowrap text-[17px] font-bold text-ink">{price}</span>)}</p>}
       {err && !picking && <p className="mt-1 text-xs text-danger">{err}</p>}
       {picking && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label={t('booking.form.addStop')}

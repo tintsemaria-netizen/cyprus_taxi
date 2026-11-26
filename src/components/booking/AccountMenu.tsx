@@ -44,9 +44,9 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
       close();
     }
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') { e.preventDefault(); close(); } }
-    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('pointerdown', onDoc); // pointerdown: iPhone Safari never sends mousedown for a tap on plain page parts (2026-11-26)
     document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+    return () => { document.removeEventListener('pointerdown', onDoc); document.removeEventListener('keydown', onKey); };
      
   }, [open]);
 

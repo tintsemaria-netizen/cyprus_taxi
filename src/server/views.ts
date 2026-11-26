@@ -172,6 +172,8 @@ export async function trackingView(bookingId: string) {
     finishingNearby,
     finishingAt,
     fareCents: booking.fareCents ?? null,
+    priceType: booking.priceType ?? null, // price with its ± range on the ride screen (2026-11-26)
+    fareMinCents: booking.fareMinCents ?? null,
     canCancel: PASSENGER_CANCELABLE.includes(booking.status),
     // «Искать снова» only right after the search failed (2026-11-20), not on an old order.
     canRetry: noDriverRetryable(booking.status, [...booking.events].reverse().find((e) => e.afterStatus === 'NO_DRIVER')?.createdAt ?? booking.updatedAt),

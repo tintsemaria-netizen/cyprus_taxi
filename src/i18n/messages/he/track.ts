@@ -54,8 +54,8 @@ const track: Catalog<typeof en> = {
     stale: "באיחור",
     disconnected: "לא מחובר",
   },
-  locationLine: "מיקום {freshness} · עודכן {time}",
-  locationLineLowAcc: "מיקום {freshness} · דיוק נמוך · עודכן {time}",
+  locationLine: "מיקום {freshness}",
+  locationLineLowAcc: "מיקום {freshness} · דיוק נמוך",
   livePaused: "המיקום החי מושהה — מתחבר מחדש…",
   gpsApprox: "אין אות מהרכב · מיקום משוער",
   etaUnavailable: "זמן ההגעה אינו זמין — ממתינים ל-GPS של הנהג.",
@@ -129,6 +129,7 @@ const track: Catalog<typeof en> = {
   },
   timelineEntry: "· {event} — {time}",
   chat: {
+    short: "צ'אט",
     translatedShowOriginal: "תורגם · הצגת המקור",
     showTranslation: "הצגת התרגום",
     titleDriver: "💬 צ׳אט עם הנהג",

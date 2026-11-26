@@ -10,7 +10,7 @@ import { recordVisit, goBack as trailBack } from '@/lib/navTrail';
 // Shared top bar for every passenger page except the home booking screen (2026-11-14):
 // a back arrow, the logo (→ home), the language switcher and the account avatar (initial),
 // or a "Log in" link when signed out. Always present, so the user can never get stuck.
-export function PassengerTopBar({ back = '/', sticky = true }: { back?: string | false; sticky?: boolean }) {
+export function PassengerTopBar({ back = '/', sticky = true, account = true }: { back?: string | false; sticky?: boolean; account?: boolean }) {
   const { t } = useT();
   const [passenger, setPassenger] = useState<PassengerInfo | null | undefined>(undefined);
   useEffect(() => {
@@ -43,7 +43,7 @@ export function PassengerTopBar({ back = '/', sticky = true }: { back?: string |
         <a href="/" aria-label="IL-Y" className="shrink-0"><Logo className="h-9" /></a>
       </div>
       <div className="flex items-center gap-2">
-        {passenger ? (
+        {!account ? null : passenger ? (
           <AccountMenu passenger={passenger} onLoggedOut={() => { setPassenger(null); window.location.href = '/'; }} />
         ) : passenger === null ? (
           <a href="/login" className="btn-ghost !min-h-0 !py-1.5 text-base">{t('booking.nav.login')}</a>

@@ -54,8 +54,8 @@ const track: Catalog<typeof en> = {
     stale: "متأخر",
     disconnected: "غير متصل",
   },
-  locationLine: "الموقع {freshness} · تحديث {time}",
-  locationLineLowAcc: "الموقع {freshness} · دقة منخفضة · تحديث {time}",
+  locationLine: "الموقع {freshness}",
+  locationLineLowAcc: "الموقع {freshness} · دقة منخفضة",
   livePaused: "الموقع المباشر متوقف مؤقتًا — جارٍ إعادة الاتصال…",
   gpsApprox: "لا توجد إشارة من السيارة · موقع تقريبي",
   etaUnavailable: "وقت الوصول غير متاح — بانتظار GPS السائق.",
@@ -129,6 +129,7 @@ const track: Catalog<typeof en> = {
   },
   timelineEntry: "· {event} — {time}",
   chat: {
+    short: "دردشة",
     translatedShowOriginal: "مترجم · عرض الأصل",
     showTranslation: "عرض الترجمة",
     titleDriver: "💬 الدردشة مع السائق",

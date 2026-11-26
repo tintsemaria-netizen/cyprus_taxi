@@ -50,8 +50,8 @@ const track: Catalog<typeof en> = {
   pickup: 'Подача',
   destination: 'Назначение',
   freshness: { fresh: 'в реальном времени', stale: 'с задержкой', disconnected: 'нет связи' },
-  locationLine: 'Местоположение {freshness} · обновлено в {time}',
-  locationLineLowAcc: 'Местоположение {freshness} · низкая точность · обновлено в {time}',
+  locationLine: 'Местоположение {freshness}',
+  locationLineLowAcc: 'Местоположение {freshness} · низкая точность',
   livePaused: 'Отслеживание приостановлено — переподключаемся…',
   gpsApprox: "Нет связи с машиной · показываем примерно",
   etaUnavailable: 'Время подачи неизвестно — ждём GPS водителя.',
@@ -125,6 +125,7 @@ const track: Catalog<typeof en> = {
   },
   timelineEntry: '· {event} — {time}',
   chat: {
+    short: "Чат",
     translatedShowOriginal: 'Переведено · показать оригинал',
     showTranslation: 'Показать перевод',
     titleDriver: '💬 Чат с водителем',

@@ -1,5 +1,14 @@
 # Session handoff
 
+## 2026-11-26 — passenger ride screen tidy-up (branch track-panel)
+- TrackApp: top bar = logo only (PassengerTopBar back={false} account={false}); «Позвонить водителю» removed (call = 📞 in the
+  chat header); «💬 Чат» button (track.chat.short, 8 langs) right of the start-code row, unread badge; chat overlay as on the driver.
+- Start code: one compact row between driver card and route (label, small switch, digits). Route box rows 52 px; «＋ Добавить
+  остановку» = small grey text ON the divider between addresses; «Стоимость: lo–hi» (fareRangeText; view.priceType/fareMinCents).
+- Location line without «обновлено в …» (track.locationLine*, 8 langs).
+- ☰ menu = bottom sheet over a dark layer; a tap on the layer closes it (iPhone Safari sends no document click/mousedown for
+  plain taps). PlacesInput + AccountMenu outside-close switched mousedown → pointerdown for the same reason.
+
 ## 2026-11-26 — own +5 % on the urban meter (branch meter-plus5)
 - Owner «Добавь 5%» after the 2026-11-26 day test ride Limassol → LCA: car meter 72.50 € vs GPS meter 68.65 € (67.1 km),
   estimate 67.93 €; on the A1 stretch the car meter counted 4.5 % more km than GPS (tyres 225/50R17 on W212 2013 do not explain it).

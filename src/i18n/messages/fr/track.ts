@@ -54,8 +54,8 @@ const track: Catalog<typeof en> = {
     stale: "retardée",
     disconnected: "hors ligne",
   },
-  locationLine: "Position {freshness} · mise à jour {time}",
-  locationLineLowAcc: "Position {freshness} · faible précision · mise à jour {time}",
+  locationLine: "Position {freshness}",
+  locationLineLowAcc: "Position {freshness} · faible précision",
   livePaused: "Position en direct en pause — reconnexion…",
   gpsApprox: "Pas de signal de la voiture · position approximative",
   etaUnavailable: "Heure d’arrivée indisponible — en attente du GPS du chauffeur.",
@@ -129,6 +129,7 @@ const track: Catalog<typeof en> = {
   },
   timelineEntry: "· {event} — {time}",
   chat: {
+    short: "Chat",
     translatedShowOriginal: "Traduit · voir l’original",
     showTranslation: "Voir la traduction",
     titleDriver: "💬 Discuter avec le chauffeur",

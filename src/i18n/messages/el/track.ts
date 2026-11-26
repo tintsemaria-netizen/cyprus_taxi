@@ -45,8 +45,8 @@ const track: Catalog<typeof en> = {
   pickup: 'Παραλαβή',
   destination: 'Προορισμός',
   freshness: { fresh: 'σε πραγματικό χρόνο', stale: 'με καθυστέρηση', disconnected: 'εκτός σύνδεσης' },
-  locationLine: 'Θέση {freshness} · ενημέρωση {time}',
-  locationLineLowAcc: 'Θέση {freshness} · χαμηλή ακρίβεια · ενημέρωση {time}',
+  locationLine: 'Θέση {freshness}',
+  locationLineLowAcc: 'Θέση {freshness} · χαμηλή ακρίβεια',
   livePaused: 'Η ζωντανή θέση σε παύση — επανασύνδεση…',
   gpsApprox: "Χωρίς σήμα από το όχημα · κατά προσέγγιση θέση",
   etaUnavailable: 'Ο χρόνος άφιξης δεν είναι διαθέσιμος — αναμονή για το GPS του οδηγού.',
@@ -120,6 +120,7 @@ const track: Catalog<typeof en> = {
   },
   timelineEntry: '· {event} — {time}',
   chat: {
+    short: "Μηνύματα",
     translatedShowOriginal: 'Μετάφραση · εμφάνιση πρωτοτύπου',
     showTranslation: 'Εμφάνιση μετάφρασης',
     titleDriver: '💬 Συνομιλία με τον οδηγό',
