@@ -379,6 +379,8 @@ const driver: Catalog<typeof en> = {
     staffLogin: 'Σύνδεση προσωπικού / διαχειριστή',
   },
   scheduled: {
+    tagFree: "Ελεύθερη",
+    tagMine: "Αναληφθείσα",
     arrive: 'Να είναι εκεί {from}–{to}',
     passengerN: 'Επιβάτης {n}',
     trip: 'Διαδρομή',

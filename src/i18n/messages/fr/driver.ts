@@ -379,6 +379,8 @@ const driver: Catalog<typeof en> = {
     staffLogin: "Connexion personnel / admin",
   },
   scheduled: {
+    tagFree: "Libre",
+    tagMine: "Acceptée",
     arrive: 'Sur place {from}–{to}',
     passengerN: 'Passager {n}',
     trip: "Course",

@@ -379,6 +379,8 @@ const driver: Catalog<typeof en> = {
     staffLogin: "כניסת צוות / מנהל",
   },
   scheduled: {
+    tagFree: "פנויה",
+    tagMine: "התקבלה",
     arrive: 'להגיע {from}–{to}',
     passengerN: 'נוסע {n}',
     trip: "נסיעה",

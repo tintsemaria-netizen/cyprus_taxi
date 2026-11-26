@@ -376,6 +376,8 @@ const driver = {
     staffLogin: 'Staff / admin login',
   },
   scheduled: {
+    tagFree: "Free",
+    tagMine: "Taken",
     arrive: 'Be there {from}–{to}',
     passengerN: 'Passenger {n}',
     trip: 'Trip',
