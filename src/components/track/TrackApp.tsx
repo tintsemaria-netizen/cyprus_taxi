@@ -610,7 +610,7 @@ export default function TrackApp() {
 
                 {/* Route (2026-11-15): the same dotted box as when ordering, with room between points;
                     a stop can be added/removed in the middle until the car reaches it. */}
-                <TrackRoute price={terminal ? null : view.shared ? fareRangeText(view.shared.fareCents, 'SHARED_FIXED', (c) => fmt.money(c)) : view.fareCents != null ? fareRangeText(view.fareCents, view.priceType, (c) => fmt.money(c), view.fareMinCents) : null} view={view} editable={!terminal && !view.stop?.arrivedAt && !(view.status === 'NO_DRIVER' && !view.canRetry) && !(view.scheduledAt && view.status !== 'REQUESTED')} canAddStop={!view.shareOptIn && !view.shared} onChanged={load} />
+                <TrackRoute onCancel={view.status === 'SEARCHING' && view.canCancel ? () => setConfirmCancel(true) : null} price={terminal ? null : view.shared ? fareRangeText(view.shared.fareCents, 'SHARED_FIXED', (c) => fmt.money(c)) : view.fareCents != null ? fareRangeText(view.fareCents, view.priceType, (c) => fmt.money(c), view.fareMinCents) : null} view={view} editable={!terminal && !view.stop?.arrivedAt && !(view.status === 'NO_DRIVER' && !view.canRetry) && !(view.scheduledAt && view.status !== 'REQUESTED')} canAddStop={!view.shareOptIn && !view.shared} onChanged={load} />
                 {view.stop?.arrivedAt && !view.stop.departedAt && (
                   <p className="mt-2 rounded-[10px] border border-[#FFC83D]/40 bg-[#FFC83D]/10 px-3 py-2 text-xs text-[#FFC83D]">{view.stop.waitStartedAt ? t('track.stopWaitingPaid') : t('track.atStop')}</p>
                 )}
@@ -717,7 +717,7 @@ function Centered({ children }: { children: React.ReactNode }) {
 // rows, and the stop in the middle — add one if plans changed, or remove it — while the car has
 // not reached it. The estimate is re-quoted on the server; the driver is notified.
 type RoutePoint = { lat: number; lng: number; label: string };
-function TrackRoute({ view, editable, canAddStop = true, onChanged, price }: { price?: string | null; view: { pickup: RoutePoint; dropoff: RoutePoint; stop?: (RoutePoint & { arrivedAt?: string | null }) | null }; editable: boolean; canAddStop?: boolean; onChanged: () => void }) {
+function TrackRoute({ view, editable, canAddStop = true, onChanged, price, onCancel }: { price?: string | null; onCancel?: (() => void) | null; view: { pickup: RoutePoint; dropoff: RoutePoint; stop?: (RoutePoint & { arrivedAt?: string | null }) | null }; editable: boolean; canAddStop?: boolean; onChanged: () => void }) {
   const { t, tError } = useT();
   const [picking, setPicking] = useState(false);
   const [sel, setSel] = useState<Selected | null>(null);
@@ -771,7 +771,14 @@ function TrackRoute({ view, editable, canAddStop = true, onChanged, price }: { p
           </Fragment>
         ))}
       </div>
-      {price && <p className="mt-2 text-sm text-muted" data-testid="track-price">{rich(t('track.fareLine', { fare: '\u0000' }), <span className="whitespace-nowrap text-[17px] font-bold text-ink">{price}</span>)}</p>}
+      {(price || onCancel) && (
+        <div className="mt-2 flex items-center gap-3">
+          {price && <p className="min-w-0 flex-1 text-sm text-muted" data-testid="track-price">{rich(t('track.fareLine', { fare: '\u0000' }), <span className="whitespace-nowrap text-[17px] font-bold text-ink">{price}</span>)}</p>}
+          {/* While a driver is being searched: «Отменить» right of the price, small, red (operator 2026-11-26). */}
+          {onCancel && <button type="button" onClick={onCancel} data-testid="track-cancel-inline"
+            className="ms-auto shrink-0 rounded-full border border-danger/50 px-3 py-1 text-xs font-medium text-danger hover:bg-danger/10">{t('track.cancelShort')}</button>}
+        </div>
+      )}
       {err && !picking && <p className="mt-1 text-xs text-danger">{err}</p>}
       {picking && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label={t('booking.form.addStop')}

@@ -67,6 +67,7 @@ const track = {
   searching: 'Searching…',
   searchAgain: 'Search again',
   cancelling: 'Cancelling…',
+  cancelShort: "Cancel",
   cancelBooking: 'Cancel booking',
   receiptTitle: 'Trip receipt',
   fareEstimate: 'Fare estimate',

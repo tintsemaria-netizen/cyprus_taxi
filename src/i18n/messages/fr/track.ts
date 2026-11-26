@@ -79,6 +79,7 @@ const track: Catalog<typeof en> = {
   searching: "Recherche…",
   searchAgain: "Relancer la recherche",
   cancelling: "Annulation…",
+  cancelShort: "Annuler",
   cancelBooking: "Annuler la réservation",
   receiptTitle: "Reçu de la course",
   fareEstimate: "Prix estimé",

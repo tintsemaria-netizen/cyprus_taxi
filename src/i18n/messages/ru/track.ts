@@ -75,6 +75,7 @@ const track: Catalog<typeof en> = {
   searching: 'Ищем…',
   searchAgain: 'Искать снова',
   cancelling: 'Отменяем…',
+  cancelShort: "Отменить",
   cancelBooking: 'Отменить заказ',
   receiptTitle: 'Чек за поездку',
   fareEstimate: 'Оценка стоимости',

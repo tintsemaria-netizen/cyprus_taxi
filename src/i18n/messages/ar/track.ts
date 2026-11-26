@@ -79,6 +79,7 @@ const track: Catalog<typeof en> = {
   searching: "جارٍ البحث…",
   searchAgain: "ابحث مرة أخرى",
   cancelling: "جارٍ الإلغاء…",
+  cancelShort: "إلغاء",
   cancelBooking: "إلغاء الحجز",
   receiptTitle: "إيصال الرحلة",
   fareEstimate: "الأجرة المقدّرة",

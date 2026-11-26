@@ -70,6 +70,7 @@ const track: Catalog<typeof en> = {
   searching: 'Αναζήτηση…',
   searchAgain: 'Αναζήτηση ξανά',
   cancelling: 'Ακύρωση…',
+  cancelShort: "Ακύρωση",
   cancelBooking: 'Ακύρωση κράτησης',
   receiptTitle: 'Απόδειξη διαδρομής',
   fareEstimate: 'Εκτίμηση κομίστρου',

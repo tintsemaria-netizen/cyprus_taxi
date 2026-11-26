@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-26 — «Отменить» next to the price while searching (branch search-cancel)
+- TrackRoute `onCancel`: SEARCHING + canCancel → small red «Отменить» (track.cancelShort, 8 langs) right of the price;
+  opens the same ConfirmSheet. ☰ → «Отменить заказ» unchanged. Passenger cannot cancel IN_PROGRESS (PASSENGER_CANCELABLE).
+
 ## 2026-11-26 — pickup time «по факту» (branch span-fact)
 - Co-rider pre-bookings show ONE time (sharePickupFrom = the hour the passenger chose) + «Время может сместиться, если
   найдётся попутчик» (booking.slots.mayShift / driver.scheduled.mayShift, 8 langs) instead of «11:00–11:15»:

@@ -79,6 +79,7 @@ const track: Catalog<typeof en> = {
   searching: "Szukanie…",
   searchAgain: "Szukaj ponownie",
   cancelling: "Anulowanie…",
+  cancelShort: "Anuluj",
   cancelBooking: "Anuluj zamówienie",
   receiptTitle: "Paragon za przejazd",
   fareEstimate: "Szacowana cena",
