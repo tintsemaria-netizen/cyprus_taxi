@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-26 ~15:35 — support / legal tidy (deployed, branch support-fix)
+- /support: delete-account hint removed (promo.deleteHint key deleted in 8 langs); LegalLinks({current}) hides the link to the page you are on (support, privacy, terms).
+- legal.ts EN/RU/EL «your rights» path now «Profile settings → Personal details».
+- Operator still to fill admin Settings (name, address, phone, e-mail — dev shows examples) and get a lawyer to review /privacy + /terms.
+- Next screenshots in the operator's list: driver profile, admin settings, welcome.
+
 ## 2026-11-26 ~15:15 — «‹» beside the page title on passenger pages (deployed 2437c20, branch title-arrow)
 - /rides, /rides/[id] (date + status row above the map), /rides/[id]/receipt (inside the receipt card; also in loading/error), /prebookings, /support, /privacy + /terms (LegalShell): PassengerTopBar back={false}, BackArrow before the h1 (same trail fallbacks as before).
 - Not changed: /welcome (landing), the ride screen (operator removed the arrow there earlier).
