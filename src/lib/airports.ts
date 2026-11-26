@@ -11,6 +11,7 @@ import { pointInPolygon } from '@/lib/geo';
 export const AIRPORTS = [
   { code: 'LCA', lat: 34.8751, lng: 33.6249 }, // Larnaca
   { code: 'PFO', lat: 34.718, lng: 32.4857 }, // Paphos
+  { code: 'ECN', lat: 35.1547, lng: 33.4961 }, // Ercan (north, 2026-11-26, operator) — counts once the admin marks its territory
 ] as const;
 export type AirportCode = (typeof AIRPORTS)[number]['code'];
 export const AIRPORT_CODES = AIRPORTS.map((a) => a.code) as unknown as [AirportCode, ...AirportCode[]];
