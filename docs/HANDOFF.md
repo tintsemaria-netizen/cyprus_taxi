@@ -15,6 +15,11 @@
 - Test: lifecycle.db.test.ts «the passenger is told what to pay».
 - Open: offer one shared receipt component for «Мои поездки» too; no-show push demo was promised to the operator next.
 
+## 2026-11-26 ~19:40 — admin notifications strip (deployed); admin Settings parked
+- StaffShell: the phone-only NotifyToggle strip under the admin tabs removed; the switch is a card in /staff/security (ADMIN only). Desktop header toggle unchanged.
+- PARKED by the operator: Admin → Настройки rework — list + screenshot in docs/todo/ADMIN-SETTINGS.md. Ask the operator before starting; he will add more.
+- Next in the operator's screenshot list: the welcome page.
+
 ## 2026-11-26 ~19:20 — driver menu rebuilt (deployed, branch driver-menu)
 - StaffShell: ☰ → round initials button (driver). Drawer: «визитка» (photo from GET /api/v1/driver/photo = his application selfie, else initials; name; car; plate). Tap the plate → CarPick list (switch via /driver/cars/switch, same rules; «+ Добавить новую машину» opens «Мои машины»).
 - Sections bottom-up (Предзаказы lowest): Предзаказы, Профиль (rating, Выйти, Удалить аккаунт), Поездки, Мои машины (share switch + Comfort/XL switches + MyCars bare), Настройки (notifications, colour — collapsible, language, one «Сменить пароль ›» via StaffPasswordForm bare), Документы (DriverDocs bare), Помощь. One open at a time, opens upwards.
