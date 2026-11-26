@@ -675,6 +675,14 @@ export default function BookingApp() {
     if (dropTerr && dropTerr.on < 0) chooseDrop(dropTerr.nearest);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dropTerr]);
+  // «Show our point first» (operator 2026-11-26): when the pickup / destination went to a territory's point and both
+  // ends are set, the form step keeps the map on that point; the whole route shows after «Заказать поездку».
+  const spotKeyOf = (kind: 'p' | 'd', pt: { lat: number; lng: number } | null) => (pt ? `${kind}:${pt.lat.toFixed(5)},${pt.lng.toFixed(5)}` : '');
+  const pickSpotKey = terr && terr.on >= 0 ? spotKeyOf('p', pickup) : '';
+  const dropSpotKey = dropTerr && dropTerr.on >= 0 && (dropTerr.t.dropPoints ?? []).length ? spotKeyOf('d', dropoff) : '';
+  const spotFocus: { lat: number; lng: number; key: string } | null = !(pickup && dropoff) || step !== 'form' ? null
+    : pickSpotKey ? { lat: pickup.lat, lng: pickup.lng, key: pickSpotKey }
+    : dropSpotKey ? { lat: dropoff.lat, lng: dropoff.lng, key: dropSpotKey } : null;
   const offTimer = useRef<number | null>(null);
   function onCenterPick(p: { lat: number; lng: number; zoom: number }) {
     setPinLift(false);
@@ -757,6 +765,8 @@ export default function BookingApp() {
       return { id: `spot-${ti}-${i}`, lat: sp.lat, lng: sp.lng, kind: 'spot' as const, label: active ? sp.name || t.name : '', active, noFit: true };
     })),
   ], [markers, terr, terrList, showSpots, nearSet]);
+  // While a territory point is shown first (spotFocus), nothing is framed — the camera stays on the point.
+  const mapMarkersNoFit = useMemo<MapMarker[]>(() => mapMarkers.map((m) => ({ ...m, noFit: true })), [mapMarkers]);
   // A territory's outline only when the logo (or a chosen pickup / drop-off) is on it or near it — not always on the
   // map (operator 2026-11-25). Letting the logo go next to it still slides to its point at any zoom (onCenterPick).
   const mapAreas = useMemo(() => terrList.map((t, ti) => ({ t, ti })).filter(({ t }) => nearSet.has(t))
@@ -1435,13 +1445,15 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-page" />
           ) : (
-            <AutoMapView markers={mapMarkers} areas={mapAreas} route={route?.line} fitRoute fleet={fleet} fleetLikeSelf focus={pickup && dropoff ? null : camFocus} focusZoom={pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} holdCamera={onSpot && !landing} onGlideEnd={() => { if (landTimer.current) window.clearTimeout(landTimer.current); setLanding(false); }} glideMs={landing ? SPOT_GLIDE_MS : undefined} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
+            <AutoMapView markers={spotFocus ? mapMarkersNoFit : mapMarkers} areas={mapAreas} route={route?.line} fitRoute={!spotFocus} fleet={fleet} fleetLikeSelf focus={spotFocus ?? (pickup && dropoff ? null : camFocus)} focusZoom={spotFocus ? 15 : pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} holdCamera={onSpot && !landing} onGlideEnd={() => { if (landTimer.current) window.clearTimeout(landTimer.current); setLanding(false); }} glideMs={landing ? SPOT_GLIDE_MS : undefined} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
           )}
           {step === 'form' && (terr || dropTerr) && (
-            <div className="pointer-events-none absolute inset-x-3 top-3 z-[6] mx-auto max-w-sm space-y-2">
+            // Below the point the map is centred on, and see-through (operator 2026-11-26), so the point stays visible.
+            <div className="pointer-events-none absolute inset-x-3 z-[6] mx-auto max-w-sm space-y-2"
+              style={{ top: mapBox.h > 0 ? pinPoint(fitPadding, mapBox.w, mapBox.h).y + 34 : '58%' }}>
               {terr && (
-            <div className="pointer-events-auto rounded-[14px] border border-[#4C9AFF] bg-elevated/95 px-3 py-2 text-[13px] leading-snug text-ink shadow-lg" data-testid="pickup-territory">
-              <div className="font-medium">📍 {t(terr.t.points.length > 1 ? 'booking.pickupPoints' : 'booking.pickupPoint', { name: terr.t.name })}</div>
+            <div className="pointer-events-auto rounded-[14px] border border-[#4C9AFF]/70 bg-elevated/55 px-3 py-2 backdrop-blur-[2px] text-[13px] leading-snug text-ink shadow-lg" data-testid="pickup-territory">
+              <div className="flex items-start gap-2"><div className="flex-1 font-medium">📍 {t(terr.t.points.length > 1 ? 'booking.pickupPoints' : 'booking.pickupPoint', { name: terr.t.name })}</div></div>
               {terr.t.points.length > 1 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {terr.t.points.map((sp, i) => (
@@ -1455,8 +1467,8 @@ export default function BookingApp() {
             </div>
               )}
               {dropTerr && (dropTerr.t.dropPoints ?? []).length > 0 && (
-                <div className="pointer-events-auto rounded-[14px] border border-[#FFC83D] bg-elevated/95 px-3 py-2 text-[13px] leading-snug text-ink shadow-lg" data-testid="drop-territory">
-                  <div className="font-medium">🏁 {t((dropTerr.t.dropPoints ?? []).length > 1 ? 'booking.dropPoints' : 'booking.dropPoint', { name: dropTerr.t.name, point: (dropTerr.t.dropPoints ?? [])[Math.max(0, dropTerr.on)]?.name || dropTerr.t.name })}</div>
+                <div className="pointer-events-auto rounded-[14px] border border-[#FFC83D]/70 bg-elevated/55 px-3 py-2 backdrop-blur-[2px] text-[13px] leading-snug text-ink shadow-lg" data-testid="drop-territory">
+                  <div className="flex items-start gap-2"><div className="flex-1 font-medium">🏁 {t((dropTerr.t.dropPoints ?? []).length > 1 ? 'booking.dropPoints' : 'booking.dropPoint', { name: dropTerr.t.name, point: (dropTerr.t.dropPoints ?? [])[Math.max(0, dropTerr.on)]?.name || dropTerr.t.name })}</div></div>
                   {(dropTerr.t.dropPoints ?? []).length > 1 && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {(dropTerr.t.dropPoints ?? []).map((sp, i) => (

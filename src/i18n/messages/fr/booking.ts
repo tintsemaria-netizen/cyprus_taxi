@@ -211,6 +211,7 @@ const booking: Catalog<typeof en> = {
   },
   pickupPoint: 'Ici, la prise en charge se fait à un seul point : {name}',
   pickupPoints: 'Ici, prise en charge uniquement aux points «{name}» — choisissez-en un :',
+  spotOk: "Compris",
   dropPoint: 'Ici, dépose uniquement à un point : {point}',
   dropPoints: 'Ici, dépose uniquement aux points «{name}» — choisissez-en un :',
   pickupAt: {

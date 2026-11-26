@@ -198,6 +198,7 @@ const booking: Catalog<typeof en> = {
   },
   pickupPoint: 'Η παραλαβή εδώ γίνεται μόνο σε ένα σημείο: {name}',
   pickupPoints: 'Η παραλαβή εδώ γίνεται μόνο στα σημεία «{name}» — επιλέξτε ένα:',
+  spotOk: "Εντάξει",
   dropPoint: 'Η αποβίβαση εδώ γίνεται μόνο σε ένα σημείο: {point}',
   dropPoints: 'Η αποβίβαση εδώ γίνεται μόνο στα σημεία «{name}» — επιλέξτε ένα:',
   pickupAt: {

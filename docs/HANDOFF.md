@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-26 — booking: show our territory point first (branch snap-focus)
+- BookingApp: when pickup+dropoff are set on the form step and one of them was moved to a territory / no-go-zone point,
+  the map stays on that point (spotFocus, zoom 15, all markers noFit); the whole route shows from the class step on.
+- Territory banners sit just below the focused point (pinPoint(fitPadding).y + 34) and are see-through (bg-elevated/55).
+- booking.spotOk key exists (8 langs) but is unused now («Понятно» removed by the operator).
+
 ## 2026-11-26 — finished ride: receipt + rating window + «ride.completed» push (branch ride-done)
 - completeTrip enqueues a passenger push `ride.completed` {totalC} (sw.js MSG_TEXT, 8 langs; `ride.completedNoSum` fallback),
   amount = completedTotalCents (driver's typed meter amount wins, fixed price stays) — same as receipt / «Итого».

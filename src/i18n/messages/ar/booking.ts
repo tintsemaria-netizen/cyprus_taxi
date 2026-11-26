@@ -211,6 +211,7 @@ const booking: Catalog<typeof en> = {
   },
   pickupPoint: 'الاستلام هنا من نقطة واحدة فقط: {name}',
   pickupPoints: 'الاستلام هنا فقط من نقاط «{name}» — اختر واحدة:',
+  spotOk: "حسنًا",
   dropPoint: 'الإنزال هنا فقط في نقطة واحدة: {point}',
   dropPoints: 'الإنزال هنا فقط في نقاط «{name}» — اختر واحدة:',
   pickupAt: {
