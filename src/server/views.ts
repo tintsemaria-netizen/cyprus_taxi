@@ -375,6 +375,8 @@ export async function driverCurrentTrip(driverId: string) {
       passengerLocation: passengerLocationForDriver(b, new Date(), await prisma.latestDriverLocation.findUnique({ where: { driverId }, select: { lat: true, lng: true } })),
       dropoff: { lat: b.dropoffLat, lng: b.dropoffLng, label: b.dropoffLabel, postcode: b.dropoffPostcode ?? null },
       stop: stopView(b),
+      // His own pre-booking whose time came (converted into this trip): the trip screen shows it in violet (2026-11-27).
+      prebooked: !!(await prisma.preAssignment.findFirst({ where: { bookingId: b.id, driverId, status: 'CONVERTED' }, select: { id: true } })),
       passengerName: b.passengerName,
       // Drivers' average rating of this passenger (2026-11-15) — shown next to the name.
       passengerRating: b.passengerId ? ((await passengerRatingSummary([b.passengerId])).get(b.passengerId) ?? null) : null,

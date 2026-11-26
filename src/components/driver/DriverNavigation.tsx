@@ -3,6 +3,7 @@
 import { PaxRating } from '@/components/driver/PaxRating';
 import { Postcode } from '@/components/driver/Postcode';
 import { coRiderNext, type PairStops } from '@/lib/pair-stops';
+import { PREBOOK_MINE_COLOR } from '@/components/driver/OrderBits';
 import { PairLegs } from '@/components/share/PairLegs';
 import { BackArrow } from '@/components/BackArrow';
 import { ApiRequestError } from '@/lib/api-client';
@@ -37,7 +38,7 @@ import { bearingDeg, cumulative, distM, DR, locate, maneuverIcon, nextStep, offs
 export interface NavTrip {
   bookingId: string; reference: string; status: string;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string; postcode?: string | null };
-  payment?: 'CASH' | 'CARD'; startCodeRequired?: boolean; passengerName: string; passengerRating?: { average: number; count: number } | null; passengerPhone: string; note: string | null; flightNumber?: string | null; arrive?: { from: string; by: string } | null; passengerCount: number; luggageCount?: number; vClass: string;
+  payment?: 'CASH' | 'CARD'; startCodeRequired?: boolean; passengerName: string; prebooked?: boolean; passengerRating?: { average: number; count: number } | null; passengerPhone: string; note: string | null; flightNumber?: string | null; arrive?: { from: string; by: string } | null; passengerCount: number; luggageCount?: number; vClass: string;
   waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
   /** Passenger's live position, only if they chose to share it, only before pickup (2026-11-15). */
   passengerLocation?: { lat: number; lng: number; accuracyM: number; ageSec: number } | null;
@@ -453,7 +454,7 @@ export function DriverNavigation(props: {
           </>}
       </div>
       {/* Info sheet: collapses to the summary line (handle tap or swipe). */}
-      <div className="pointer-events-auto rounded-t-[18px] border-t border-edge bg-elevated sm:rounded-[18px] sm:border shadow-[0_-6px_20px_rgba(0,0,0,0.35)]" ref={sheetDrag.panelRef} style={{ paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }} data-testid="nav-sheet">
+      <div className={`pointer-events-auto rounded-t-[18px] bg-elevated sm:rounded-[18px] shadow-[0_-6px_20px_rgba(0,0,0,0.35)] ${trip.prebooked ? 'border-x-2 border-t-2 sm:border-2' : 'border-t border-edge sm:border'}`} data-prebook={trip.prebooked ? 'mine' : undefined} ref={sheetDrag.panelRef} style={{ ...(trip.prebooked ? { borderColor: PREBOOK_MINE_COLOR } : {}), paddingBottom: 'env(safe-area-inset-bottom)', ...sheetDrag.style }} data-testid="nav-sheet">
         <button type="button" aria-expanded={panelOpen} aria-label={panelOpen ? t('booking.sheet.collapse') : t('booking.sheet.expand')}
           onClick={() => { if (!swiped.current) setPanelOpen((o) => !o); swiped.current = false; }}
           onPointerDown={(e) => { swipeY.current = e.clientY; }}

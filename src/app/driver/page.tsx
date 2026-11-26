@@ -1,6 +1,6 @@
 'use client';
 
-import { PaxRating, type PaxRatingValue } from '@/components/driver/PaxRating';
+import { type PaxRatingValue } from '@/components/driver/PaxRating';
 import { DutyPane } from '@/components/reports/DutyPane';
 import { EarningsReport, type Range } from '@/components/reports/EarningsReport';
 import { fareRangeText } from '@/lib/price-type';
@@ -10,7 +10,7 @@ import EdgeShine from '@/components/EdgeShine';
 import { StaffShell } from '@/components/staff/StaffShell';
 import { NotifyToggle } from '@/components/NotifyToggle';
 import { ThemePicker } from '@/components/ThemePicker';
-import { Postcode } from '@/components/driver/Postcode';
+import { ClientLine, RouteLines, PREBOOK_FREE_COLOR } from '@/components/driver/OrderBits';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
@@ -471,6 +471,8 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
         {/* «Визитка» on top (2026-11-26, operator): photo, name, car and plate; × on the right. */}
         <div className="flex shrink-0 items-start gap-3 px-4 pb-3 pt-3">
           <DriverCard dash={dash} onSwitched={loadDash} openCars={() => setMenuSec('cars')} />
+          {/* Language: a round button next to the card, as in the passenger's menu (2026-11-27, operator). */}
+          <LanguageSwitcher round only={DRIVER_LOCALES} className="mt-2" />
           <button type="button" onClick={() => setDrawer(false)} aria-label={t('common.close')} className="-me-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-2xl text-ink hover:bg-white/5">×</button>
         </div>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
@@ -562,10 +564,10 @@ function TakesComfortToggle() {
       flash(t(v ? 'driver.classes.turnedOn' : 'driver.classes.turnedOff', { cls }));
     } catch { setSt((x) => (x ? { ...x, [key]: !v } : x)); }
   }
-  const Mini = ({ k, label }: { k: 'takesComfort' | 'takesXl'; label: string }) => {
+  const mini = (k: 'takesComfort' | 'takesXl', label: string) => {
     const on = st[k];
     return (
-      <label className="flex cursor-pointer flex-col items-center gap-1" data-testid={`class-${label}`}>
+      <label key={k} className="flex cursor-pointer flex-col items-center gap-1" data-testid={`class-${label}`}>
         <span className="text-xs font-semibold">{label}</span>
         <input type="checkbox" role="switch" className="sr-only" aria-label={label} checked={on} onChange={(e) => toggle(k, e.target.checked)} />
         <span aria-hidden className={`relative block h-5 w-9 rounded-full transition ${on ? 'bg-accent' : 'bg-edge-strong'}`}>
@@ -578,8 +580,8 @@ function TakesComfortToggle() {
     <div className="mt-3 border-t border-edge pt-3" data-testid="takes-comfort">
       <div className="text-sm">{t('driver.classes.title')}</div>
       <div className="mt-2 flex gap-8">
-        <Mini k="takesComfort" label="Comfort" />
-        <Mini k="takesXl" label="XL" />
+        {mini('takesComfort', 'Comfort')}
+        {mini('takesXl', 'XL')}
       </div>
       {note && <p role="status" className="mt-2 text-xs text-accent" data-testid="class-note">{note}</p>}
     </div>
@@ -794,7 +796,8 @@ function HomeSection(props: {
         )}
       {/* Offer takes priority */}
       {offer && !trip && (
-        <div key={offer.offerId} className="ily-offer-in card pointer-events-auto max-h-[58dvh] overflow-y-auto border-2 border-accent p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.55)]">
+        <div key={offer.offerId} className="ily-offer-in card pointer-events-auto max-h-[58dvh] overflow-y-auto border-2 border-accent p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.55)]"
+          style={offer.scheduledAt ? { borderColor: PREBOOK_FREE_COLOR } : undefined} data-prebook={offer.scheduledAt ? 'free' : undefined}>
           {/* «Отклонить» small at the top right; the timer next to the title (2026-11-26, operator). */}
           <div className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-2"><span className="font-semibold text-accent">{t('driver.offer.title')}</span><span className={`text-sm font-semibold tabular-nums ${offerSecs <= 5 ? 'text-danger' : 'text-muted'}`}>{t('driver.units.sec', { n: offerSecs })}</span></span>
@@ -906,21 +909,19 @@ function FreeOrdersSection({ pos, onDuty, onTaken }: { pos: { lat: number; lng: 
               onClick={() => setViewId(o.bookingId)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setViewId(o.bookingId); } }}
               className="card cursor-pointer p-4 transition hover:border-accent/50 active:scale-[0.99]">
-              {o.distanceM != null && <p className="mb-2 text-lg font-bold text-ink">{t('driver.offer.away', { dist: km(o.distanceM) })}</p>}
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="text-muted">{t('driver.offer.pickup')}</span><span className="ms-auto text-end font-medium">{o.pickup.label}</span></div>
-                {o.stop && <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-[#FFC83D]" /><span className="text-muted">{t('driver.map.stop')}</span><span className="ms-auto text-end font-medium">{o.stop.label}</span></div>}
-                <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-ink" /><span className="text-muted">{t('driver.offer.destination')}</span><span className="ms-auto text-end font-medium">{o.dropoff.label}<Postcode code={o.dropoff.postcode} /></span></div>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
-                <span className="rounded-md border-2 border-white/25 px-2 py-0.5 text-[13px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${o.vClass}` as MsgKey)}</span>
-                {o.scheduledAt && <span className="rounded-full bg-elevated px-2 py-1">🕒 {fmt.dateTime(o.scheduledAt)}</span>}
-                {o.flightNumber && <span className="rounded-full bg-elevated px-2 py-1">✈ {o.flightNumber}</span>}
-              </div>
-              <p className="mt-2 text-sm font-medium">{o.passengerName} <PaxRating r={o.passengerRating} /></p>
+              {/* Same look as «Новый заказ» (2026-11-27, operator): distance, the client, from / to in the frame, the sum. */}
+              {o.distanceM != null && <p className="text-lg font-bold text-ink">{t('driver.offer.away', { dist: km(o.distanceM) })}</p>}
+              <ClientLine name={o.passengerName} rating={o.passengerRating} vClass={o.vClass} />
+              <RouteLines pickup={o.pickup} stop={o.stop} dropoff={o.dropoff} />
+              {(o.scheduledAt || o.flightNumber) && (
+                <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted">
+                  {o.scheduledAt && <span className="rounded-full bg-elevated px-2 py-1">🕒 {fmt.dateTime(o.scheduledAt)}</span>}
+                  {o.flightNumber && <span className="rounded-full bg-elevated px-2 py-1">✈ {o.flightNumber}</span>}
+                </div>
+              )}
               {o.note && <p className="mt-1 text-xs text-muted">{t('driver.offer.note', { note: o.note })}</p>}
               <div className="mt-3 flex items-center justify-between gap-3">
-                <div className="text-sm"><span className="font-semibold">{o.fareCents != null ? fareRangeText(o.fareCents, o.priceType, (c) => money(c, o.currency), o.minCents) : '—'}</span></div>
+                <div className="text-[17px] font-bold">{o.fareCents != null ? fareRangeText(o.fareCents, o.priceType, (c) => money(c, o.currency), o.minCents) : '—'}</div>
                 <button className="btn-primary min-h-[44px]" onClick={() => setViewId(o.bookingId)}>{t('driver.free.view')}</button>
               </div>
             </div>
@@ -964,7 +965,11 @@ function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
         <div className="card pointer-events-auto max-h-[60dvh] overflow-y-auto border-2 border-accent p-4">
           {!o ? <p className="py-6 text-center text-sm text-muted">{t('common.loading')}</p> : (
             <>
-              <div className="flex items-center justify-between"><span className="font-semibold text-accent">{t('driver.free.title')}</span><span className={`text-sm font-semibold tabular-nums ${leftSec! <= 30 ? 'text-danger' : 'text-muted'}`}>{t('driver.free.left', { sec: leftSec! })}</span></div>
+              {/* As «Новый заказ» (2026-11-27, operator): title + seconds, a small «‹ Назад» top right, one big button. */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-2 whitespace-nowrap"><span className="truncate font-semibold text-accent">{t('driver.free.title')}</span><span className={`text-sm font-semibold tabular-nums ${leftSec! <= 30 ? 'text-danger' : 'text-muted'}`}>{t('driver.units.sec', { n: leftSec! })}</span></span>
+                <button type="button" className="shrink-0 whitespace-nowrap rounded-full border border-edge-strong px-3 py-1 text-xs font-semibold text-ink" onClick={() => onBack(false)} data-testid="free-back">{t('driver.free.back')}</button>
+              </div>
               <div className="mt-2 flex items-baseline gap-3">
                 <span className="text-3xl font-bold text-ink">{o.pickupEtaSec != null ? t('driver.offer.minShort', { min: Math.max(1, Math.round(o.pickupEtaSec / 60)) }) : '—'}</span>
                 {o.pickupDistanceM != null && <span className="text-xl font-semibold text-muted">{km(o.pickupDistanceM)}</span>}
@@ -983,9 +988,9 @@ function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
               {!onDuty && <p className="mt-2 rounded-[12px] border border-warn/40 bg-warn/10 p-2 text-xs text-warn">{t('driver.free.goOnline')}</p>}
             </>
           )}
-          <div className="sticky -bottom-4 -mx-4 -mb-4 mt-4 grid grid-cols-2 gap-2 bg-panel px-4 pb-4 pt-2">
-            <button className="btn-ghost min-h-[44px]" onClick={() => onBack(false)}>{t('driver.free.back')}</button>
-            <button className="btn-primary min-h-[44px]" disabled={!o || !onDuty || busy} onClick={onTake}>{busy ? t('driver.free.taking') : t('driver.free.take')}</button>
+          <div className="sticky -bottom-4 -mx-4 -mb-4 mt-4 bg-panel px-4 pb-4 pt-2">
+            {!o && <button className="btn-ghost mb-2 min-h-[44px] w-full" onClick={() => onBack(false)}>{t('driver.free.back')}</button>}
+            <button className="btn-primary min-h-[60px] w-full text-xl font-extrabold" disabled={!o || !onDuty || busy} onClick={onTake} data-testid="free-take">{busy ? t('driver.free.taking') : t('driver.free.take')}</button>
           </div>
         </div>
       </div>
@@ -1198,7 +1203,9 @@ function CarPick({ onDone, openCars, tError }: { onDone: () => void; openCars: (
 function ProfileSection({ dash }: { dash: Dashboard | null }) {
   const { t, tp } = useT();
   const { tOr } = useDriverFmt();
-  async function signOut() { await api('/auth/logout', { method: 'POST' }).catch(() => {}); window.location.href = '/driver/login'; }
+  const [askOut, setAskOut] = useState(false);
+  const [outBusy, setOutBusy] = useState(false);
+  async function signOut() { setOutBusy(true); await api('/auth/logout', { method: 'POST' }).catch(() => {}); window.location.href = '/driver/login'; }
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 text-sm">
@@ -1207,14 +1214,16 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
           ? <span className="font-semibold text-accent" title={tp('driver.profile.ratings', dash.driver.rating.count)}>★ {dash.driver.rating.average?.toFixed(1)} <span className="text-xs font-normal text-muted">({dash.driver.rating.count})</span></span>
           : <span className="text-xs text-muted">{t('driver.profile.noRatings')}</span>)}
       </div>
-      <button onClick={signOut} className="btn-ghost w-full !text-danger" data-testid="driver-signout">{t('driver.profile.signOut')}</button>
+      {/* «Выйти» small, on the left, with a question first — as the passenger's (2026-11-27, operator). */}
+      <button type="button" onClick={() => setAskOut(true)} className="px-1 py-1 text-sm text-danger hover:underline" data-testid="driver-signout">{t('driver.profile.signOut')}</button>
+      {askOut && <ConfirmSheet title={t('auth.logOutAsk')} confirmLabel={t('driver.profile.signOut')} danger busy={outBusy} onConfirm={signOut} onCancel={() => setAskOut(false)} />}
       {/* Delete the account inside the app (2026-11-26; App Store / Google Play rule, GDPR). */}
       <DeleteDriverAccount />
     </div>
   );
 }
 
-/** Настройки (2026-11-26): notifications, app colour, language, password. */
+/** Настройки (2026-11-26): notifications, app colour, password (the language is the round button by the card). */
 function SettingsSection() {
   const { t } = useT();
   const [themeOpen, setThemeOpen] = useState(false);
@@ -1232,10 +1241,6 @@ function SettingsSection() {
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`text-muted transition-transform ${themeOpen ? 'rotate-90' : 'rtl:-scale-x-100'}`}><path d="M9 5l7 7-7 7" /></svg>
         </button>
         {themeOpen && <div className="mt-2"><ThemePicker role="driver" /></div>}
-      </div>
-      <div className="flex items-center justify-between gap-3 py-3">
-        <span className="text-sm">{t('common.language')}</span>
-        <LanguageSwitcher only={DRIVER_LOCALES} />
       </div>
       <div className="pt-3"><StaffPasswordForm bare /></div>
     </div>
@@ -1319,37 +1324,12 @@ function BottomNav({ tab, setTab, hasOffer, freeCount }: { tab: Tab; setTab: (t:
 
 // ---- Next order (2026-11-25): offered while the passenger is on board, 5 min before the drop-off (7 when the
 // new client is within 1 km of it). Accepting keeps the current trip; the new ride starts when it ends.
-/** The client: name, ★ rating and the class next to it (2026-11-26, operator). */
-function ClientLine({ name, rating, vClass }: { name: string; rating?: PaxRatingValue; vClass: string }) {
-  const { t } = useT();
-  return (
-    <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="client-line">
-      <span className="text-[17px] font-semibold">{name}</span>
-      <PaxRating r={rating} />
-      <span className="shrink-0 rounded-md border-2 border-white/25 px-1.5 py-px text-[12px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${vClass}` as MsgKey)}</span>
-    </div>
-  );
-}
-
-/** Where from, and under it where to (and a stop between), with the line joining them — in the frame (2026-11-26, operator). */
-function RouteLines({ pickup, stop, dropoff }: { pickup: { label: string }; stop?: { label: string } | null; dropoff: { label: string; postcode?: string | null } }) {
-  return (
-    <div className="mt-2 rounded-[12px] border border-edge bg-elevated p-3 text-sm" data-testid="route-lines">
-      <div className="flex items-start gap-2.5"><span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-accent" /><span className="font-medium">{pickup.label}</span></div>
-      {stop && <div className="flex items-start gap-2.5"><span className="ms-[3px] h-4 w-px shrink-0 bg-edge-strong" /></div>}
-      {stop && <div className="flex items-start gap-2.5"><span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#FFC83D]" /><span className="font-medium">{stop.label}</span></div>}
-      <div className="flex items-start gap-2.5"><span className="ms-[4px] h-4 w-px shrink-0 bg-edge-strong" /></div>
-      <div className="flex items-start gap-2.5"><span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-ink" /><span className="font-medium">{dropoff.label}<Postcode code={dropoff.postcode} /></span></div>
-    </div>
-  );
-}
-
 function NextOfferCard({ offer, secs, busy, onAccept, onDecline }: { offer: Offer; secs: number; busy: boolean; onAccept: (id: string) => void; onDecline: (id: string) => void }) {
   const { t } = useT();
   const { money, km } = useDriverFmt();
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] mx-auto max-w-lg px-3 pb-[calc(12px+env(safe-area-inset-bottom))]" data-testid="next-offer">
-      <div key={offer.offerId} className="ily-offer-in card pointer-events-auto border-2 border-accent p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.55)]">
+      <div key={offer.offerId} className="ily-offer-in card pointer-events-auto border-2 border-accent p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.55)]" style={offer.scheduledAt ? { borderColor: PREBOOK_FREE_COLOR } : undefined}>
         <div className="flex items-center justify-between gap-2"><span className="font-semibold text-accent">{t('driver.offer.nextTitle')}</span><span className={`text-sm font-semibold tabular-nums ${secs <= 5 ? 'text-danger' : 'text-muted'}`}>{t('driver.units.sec', { n: secs })}</span></div>
         <div className="mt-2 flex items-baseline gap-3">
           <span className="text-3xl font-bold text-ink">{offer.pickupEtaSec != null ? t('driver.offer.minShort', { min: Math.max(1, Math.round(offer.pickupEtaSec / 60)) }) : '—'}</span>
