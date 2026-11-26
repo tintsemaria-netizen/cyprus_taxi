@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-26 — driver pre-bookings: info button, class by client, tappable cards (branch prebook-detail)
+- ScheduledRides: class badge next to the client in the opened ride; per-card time rules removed; «ⓘ Инфо» under the tabs
+  opens all pre-booking rules (rule1–5 + ruleFar, 8 langs). Minutes come from GET /driver/scheduled `rules`
+  (config: protect / convert / scheduleLead / lateRelease) — the old client constant 75 was stale (server default 60).
+- Whole card opens the ride; price bigger on the right.
+
 ## 2026-11-26 — client rating next to the name on driver cards (branch pax-rating)
 - src/server/passenger-rating.ts (passengerRatingSummary moved here; trip-close re-exports) + passengerRatingOf.
 - passengerRating added to: driver offer (offers.ts), free orders (free-orders.ts), pre-booking detail (preassign.ts).

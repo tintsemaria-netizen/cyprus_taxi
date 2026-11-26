@@ -39,11 +39,9 @@ function SharePairBox({ s }: { s: ShareBoard }) {
   );
 }
 // No «быть на месте» on the driver's screens (operator, 2026-11-23): only the time between the stops.
-interface Board { available: Item[]; mine: Item[]; blocked: string | null }
+interface Board { available: Item[]; mine: Item[]; blocked: string | null; rules?: { protectMin: number; convertMin: number; leadMin: number; lateReleaseMin: number } }
 
 // Mirrors config.dispatch.preassign defaults (display only; the server enforces the real values).
-const PROTECT_MIN = 75;
-const CONVERT_MIN = 30;
 
 export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolean, mine: number) => void }) {
   const { t, tp, fmt, tError } = useT();
@@ -54,6 +52,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
   const [ask, setAsk] = useState<Item | null>(null);
   // Two lists (2026-11-13): open pre-bookings to take, and the ones this driver has accepted.
   const [view, setView] = useState<'available' | 'mine'>('available');
+  const [info, setInfo] = useState(false); // «ⓘ» pre-booking rules (2026-11-26)
   // Review first (2026-11-13): a card opens the ride's details; take / release from there.
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -91,7 +90,10 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
   );
 
   const row = (i: Item, action: React.ReactNode) => i.share ? pairRow(i, i.share) : (
-    <div key={i.bookingId} className="rounded-[12px] border border-edge bg-elevated p-3">
+    // The whole card opens the ride too, not only «Посмотреть» (operator 2026-11-26).
+    <div key={i.bookingId} role="button" tabIndex={0} data-testid="prebook-card" onClick={() => setOpenId(i.bookingId)}
+      onKeyDown={(e) => { if (e.key === 'Enter') setOpenId(i.bookingId); }}
+      className="cursor-pointer rounded-[12px] border border-edge bg-elevated p-3 active:bg-white/[0.04]">
       <div className="flex items-center justify-between gap-2">
         <span className="font-semibold">{i.span ? `${fmt.dateTime(i.span.from)}–${fmt.time(i.span.to)}` : fmt.dateTime(i.pickupAt)}</span>
         <span className="flex shrink-0 gap-1">
@@ -102,18 +104,14 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
         <div className="flex gap-2"><span className="text-accent">●</span><span className="min-w-0">{i.pickupLabel}</span></div>
         <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0">{i.dropoffLabel}<Postcode code={i.dropoffPostcode} /></span></div>
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-        {i.flightNumber && <span className="font-mono text-ink">{t('driver.scheduled.flight', { flight: formatFlight(i.flightNumber) })}</span>}
-        {i.fareCents != null && <span>{fareRangeText(i.fareCents, i.priceType, (c) => fmt.money(c), i.minCents)}</span>}
+      {/* The price bigger, on the right (operator 2026-11-26). */}
+      <div className="mt-2 flex items-center gap-3">
+        {i.flightNumber && <span className="font-mono text-xs text-ink">{t('driver.scheduled.flight', { flight: formatFlight(i.flightNumber) })}</span>}
+        {i.fareCents != null && <span className="ms-auto text-[17px] font-bold text-ink" data-testid="prebook-card-price">{fareRangeText(i.fareCents, i.priceType, (c) => fmt.money(c), i.minCents)}</span>}
       </div>
       {i.share && <SharePairBox s={i.share} />}
       {i.note && <p className="mt-2 rounded-[10px] border border-warn/30 bg-warn/5 px-2.5 py-1.5 text-xs text-warn">💬 {i.note}</p>}
-      {/* This ride's own time rules (2026-11-13: moved here from the page header). */}
-      <div className="mt-2 space-y-0.5 rounded-[10px] border border-edge bg-page px-2.5 py-2 text-xs text-muted">
-        <div>🕒 {t('driver.scheduled.freeUntil', { time: fmt.time(new Date(new Date(i.pickupAt).getTime() - PROTECT_MIN * 60_000)), min: PROTECT_MIN })}</div>
-        <div>🚖 {t('driver.scheduled.activeAt', { time: fmt.time(new Date(new Date(i.pickupAt).getTime() - CONVERT_MIN * 60_000)), min: CONVERT_MIN })}</div>
-      </div>
-      <div className="mt-3">{action}</div>
+      <div className="mt-3" onClick={(e) => e.stopPropagation()}>{action}</div>
     </div>
   );
 
@@ -150,6 +148,23 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
               );
             })}
           </div>
+          {/* «ⓘ Инфо» under «Принятые»: all the pre-booking rules in one place (operator 2026-11-26). */}
+          {board.rules && (
+            <div className="-mt-1 mb-1 flex justify-end">
+              <button type="button" onClick={() => setInfo((o) => !o)} aria-expanded={info} data-testid="prebook-info"
+                className="rounded-full border border-edge px-2.5 py-0.5 text-xs font-medium text-muted hover:text-ink">ⓘ {t('driver.scheduled.infoBtn')}</button>
+            </div>
+          )}
+          {info && board.rules && (
+            <div className="mb-2 space-y-1.5 rounded-[12px] border border-edge bg-page px-3 py-2.5 text-xs leading-snug text-muted" data-testid="prebook-rules">
+              <div>🕒 {t('driver.scheduled.rule1', { min: board.rules.protectMin })}</div>
+              <div>🧭 {t('driver.scheduled.rule2', { min: board.rules.protectMin })}</div>
+              <div>🚖 {t('driver.scheduled.rule3', { min: board.rules.convertMin })}</div>
+              <div>📍 {t('driver.scheduled.ruleFar')}</div>
+              <div>⏳ {t('driver.scheduled.rule4', { min: board.rules.leadMin })}</div>
+              <div>↩️ {t('driver.scheduled.rule5', { min: board.rules.lateReleaseMin })}</div>
+            </div>
+          )}
 
           {view === 'mine' && (board.mine.length === 0 ? <p className="text-sm text-muted">{t('driver.scheduled.noneMine')}</p> : board.mine.map((i) => row(i,
             <button className="btn-ghost !min-h-[44px] w-full border border-edge" onClick={() => setOpenId(i.bookingId)}>{t('driver.free.view')}</button>)))}
@@ -161,6 +176,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
               {i.conflict && <p className="mb-2 text-xs text-warn">{t('driver.scheduled.conflict')}</p>}
               <button className="btn-primary !min-h-[44px] w-full" onClick={() => setOpenId(i.bookingId)}>{t('driver.free.view')}</button>
             </>)))}
+
         </>
       )}
       {ask && (
@@ -265,9 +281,8 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
             <>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-lg font-bold">{d.span ? `${fmt.dateTime(d.span.from)}–${fmt.time(d.span.to)}` : fmt.dateTime(d.pickupAt)}</span>
-                <span className="flex shrink-0 gap-1">
-                  <span className="rounded-md border-2 border-white/25 px-2 py-0.5 text-[15px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${d.vClass}` as 'common.vClass.COMFORT')}</span>
-                </span>
+                {/* A pair has no client row: the class stays up here (2026-11-26). */}
+                {d.pair && <span className="shrink-0 rounded-md border-2 border-white/25 px-2 py-0.5 text-[15px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${d.vClass}` as 'common.vClass.COMFORT')}</span>}
               </div>
               {/* A pair has its own stop list and totals instead of one passenger's from/to and sum. */}
               {!d.pair && <>
@@ -276,7 +291,9 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
                 <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0 font-medium">{d.dropoff.label}<Postcode code={d.dropoff.postcode} /></span></div>
               </div>
               <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{d.passengerName}</span><PaxRating r={d.passengerRating} /></div>
+                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{d.passengerName}</span><PaxRating r={d.passengerRating} />
+                  {/* The class next to the client, on the right — as on the «Новый заказ» card (operator 2026-11-26). */}
+                  <span className="ms-auto shrink-0 rounded-md border-2 border-white/25 px-2 py-0.5 text-[13px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${d.vClass}` as 'common.vClass.COMFORT')}</span></div>
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.scheduled.trip')}</span><span className="font-medium">{km(d.trip.distanceM)} · {t('driver.offer.minShort', { min: Math.max(1, Math.round(d.trip.etaSec / 60)) })}</span>{!d.trip.roadRouted && <span className="text-xs text-muted">≈</span>}</div>
                 <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{d.fareCents != null ? fareRangeText(d.fareCents, d.priceType, (c) => fmt.money(c), d.minCents) : '—'}</span></div>
               </div>
@@ -284,10 +301,7 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
               {d.pair ? <PairStops p={d.pair} s={d.share} /> : d.share && <SharePairBox s={d.share} />}
               {d.note && <p className="mt-2 rounded-[10px] border border-warn/30 bg-warn/5 px-2.5 py-1.5 text-xs text-warn">💬 {d.note}</p>}
               {d.flightNumber && <p className="mt-2 font-mono text-xs text-ink">{t('driver.scheduled.flight', { flight: formatFlight(d.flightNumber) })}</p>}
-              <div className="mt-2 space-y-0.5 rounded-[10px] border border-edge bg-page px-2.5 py-2 text-xs text-muted">
-                <div>🕒 {t('driver.scheduled.freeUntil', { time: fmt.time(new Date(new Date(d.pickupAt).getTime() - PROTECT_MIN * 60_000)), min: PROTECT_MIN })}</div>
-                <div>🚖 {t('driver.scheduled.activeAt', { time: fmt.time(new Date(new Date(d.pickupAt).getTime() - CONVERT_MIN * 60_000)), min: CONVERT_MIN })}</div>
-              </div>
+              {/* The «🕒 до … свободны / 🚖 станет активной» rules live on the pre-bookings list card only (operator 2026-11-26). */}
               {!d.mine && d.conflict && <p className="mt-2 text-xs text-warn">{t('driver.scheduled.conflict')}</p>}
             </>
           )}
