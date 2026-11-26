@@ -30,7 +30,7 @@ const promo: Catalog<typeof en> = {
   address: "Adresse",
   phoneL: "Téléphone",
   emailL: "E-mail",
-  deleteHint: "Supprimer votre compte : Compte → Vos données → Supprimer le compte. Chauffeurs : ☰ → Profil → Supprimer le compte.",
+  deleteHint: "Supprimer votre compte : Paramètres du profil → Informations personnelles → Supprimer le compte. Chauffeurs : ☰ → Profil → Supprimer le compte.",
   privacy: "Politique de confidentialité",
   terms: "Conditions d’utilisation",
   support: "Assistance",
