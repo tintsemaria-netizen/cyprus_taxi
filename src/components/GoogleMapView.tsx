@@ -1,6 +1,7 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { routeStroke } from '@/lib/route-stroke';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { CYPRUS_BOUNDS } from '@/lib/config';
@@ -542,11 +543,18 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
         path: shownRoute.map(([lng, lat]) => ({ lat, lng })),
         strokeColor: '#C8FF46',
         strokeOpacity: 0.95,
-        strokeWeight: routeWidth,
+        strokeWeight: routeStroke(map.getZoom(), routeWidth),
         map,
       });
     }
   }, [shownRoute, ready, routeWidth]);
+  // Thin route from afar, full width close up (2026-11-26).
+  useEffect(() => {
+    const map = mapRef.current, g = gRef.current;
+    if (!map || !g || !ready) return;
+    const l = map.addListener('zoom_changed', () => polyRef.current?.setOptions({ strokeWeight: routeStroke(map.getZoom(), routeWidth) }));
+    return () => g.event.removeListener(l);
+  }, [ready, routeWidth]);
 
   // Shaded areas (pickup territory, 2026-11-24).
   const areaObjs = useRef<any[]>([]);

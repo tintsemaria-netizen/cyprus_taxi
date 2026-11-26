@@ -129,11 +129,11 @@ describe('autonomous dispatch worker', () => {
     await runOnce();
     const first = await getDriverActiveOffer(near);
     expect(first).not.toBeNull();
-    // The driver has 10 s to accept (OFFER_TTL_SEC, 2026-11-12).
+    // The driver has 15 s to accept (OFFER_TTL_SEC, 2026-11-26; was 10 s).
     const row = await prisma.driverOffer.findUnique({ where: { id: first!.offerId } });
-    expect(row!.expiresAt.getTime() - row!.createdAt.getTime()).toBeGreaterThanOrEqual(9_900);
-    expect(row!.expiresAt.getTime() - row!.createdAt.getTime()).toBeLessThanOrEqual(10_500);
-    expect(first!.expiresInMs).toBeLessThanOrEqual(10_000);
+    expect(row!.expiresAt.getTime() - row!.createdAt.getTime()).toBeGreaterThanOrEqual(14_900);
+    expect(row!.expiresAt.getTime() - row!.createdAt.getTime()).toBeLessThanOrEqual(15_500);
+    expect(first!.expiresInMs).toBeLessThanOrEqual(15_000);
 
     // Force the offer to have expired.
     await prisma.driverOffer.update({ where: { id: first!.offerId }, data: { expiresAt: new Date(Date.now() - 1000) } });

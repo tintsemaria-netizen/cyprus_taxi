@@ -81,8 +81,11 @@ type Tab = 'home' | 'free' | 'prebook' | 'profile' | 'earnings' | 'cars';
 // Map padding that keeps the driver's car and the client ABOVE a bottom sheet (offer / free-order
 // details): the sheet is up to ~60% of the screen plus the bottom nav, so frame the points in the
 // band between the header overlays and the sheet's top edge.
-function sheetFitPadding() {
+function sheetFitPadding(offer = false) {
   const h = typeof window !== 'undefined' ? window.innerHeight : 800;
+  // A new order (2026-11-26, operator): the card is lower and shorter (no tabs, one button) — less room kept for
+  // it, so the route sits in the middle of the free map and a bit closer.
+  if (offer) return { top: 90, right: 40, bottom: Math.round(h * 0.42) + 30, left: 40 };
   return { top: 110, right: 50, bottom: Math.round(h * 0.6) + 90, left: 50 };
 }
 
@@ -389,8 +392,16 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   }
 
 
+  // The menu button lives in the shell: hide it while a new order fills the screen (2026-11-26).
+  const offerOn = !!offer && !data?.trip && tab === 'home';
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-driver-offer', offerOn);
+    return () => document.documentElement.removeAttribute('data-driver-offer');
+  }, [offerOn]);
+
   if (!data) return <div className="p-8 text-muted">{t('common.loading')}</div>;
   const trip = data.trip;
+  const offerScreen = offerOn;
   if (!trip && rateFor) return <RatePassengerSheet bookingId={rateFor.bookingId} passengerName={rateFor.name} onDone={() => setRateFor(null)} />;
   const offerSecs = offer ? Math.max(0, Math.ceil(((offer.localDeadline ?? new Date(offer.expiresAt).getTime()) - nowMs) / 1000)) : 0;
 
@@ -524,7 +535,8 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
           {prebookPair ? t('driver.prebookFab.pair') : t('driver.prebookFab.single')}
         </button>
       )}
-      <BottomNav tab={tab} setTab={setTab} hasOffer={!!offer} freeCount={freeCount} />
+      {/* A new order fills the screen (2026-11-26, operator): no tabs, no menu button, no earnings while it shows. */}
+      {!offerScreen && <BottomNav tab={tab} setTab={setTab} hasOffer={!!offer} freeCount={freeCount} />}
     </div>
   );
 }
@@ -619,14 +631,15 @@ function HomeSection(props: {
       <DriverHomeMap pos={props.pos} fullscreen onCounts={onCounts}
         pickup={offer && !trip ? offer.pickup : null}
         dropoff={offer && !trip ? offer.dropoff : null} via={offer && !trip ? offer.stop ?? null : null}
-        fitPadding={offer && !trip ? sheetFitPadding() : undefined} />
+        fitPadding={offer && !trip ? sheetFitPadding(true) : undefined} />
 
       {/* Top: status + messages */}
       <div style={{ top: 'calc(64px + env(safe-area-inset-top))' }} className="pointer-events-none fixed inset-x-0 z-10 mx-auto flex max-w-lg flex-col items-start gap-2 px-3 pt-2">
         {/* No status pill (2026-11-13): the Go online / offline button already shows the state. */}
         <div className="flex w-full items-start justify-end gap-2">
-        {/* Today's recorded earnings as a figure over the map; tap → today's card (2026-11-20). */}
-        {dash && (
+        {/* Today's recorded earnings as a figure over the map; tap → today's card (2026-11-20). Hidden while a new
+            order shows (2026-11-26, operator). */}
+        {dash && !(offer && !trip) && (
           <button className={`${pill} shrink-0 px-3 py-1.5 text-end`} onClick={() => { if (!earnPop) { props.refreshDash?.(); setEarnView('main'); } setEarnPop((v) => !v); }} aria-label={t('driver.home.earnedToday')} aria-expanded={earnPop} data-testid="earn-pill">
             <span className="block text-base font-bold leading-tight text-accent">{dash.today.recordedEarnings.length ? dash.today.recordedEarnings.map((e) => money(e.cents, e.currency)).join(' + ') : money(0, 'EUR')}</span>
             <span className="block text-[10px] leading-tight text-muted">{t('driver.home.earnedToday')}</span>
@@ -634,7 +647,7 @@ function HomeSection(props: {
         )}
         </div>
         {/* Today's card (2026-11-20): what the pill sums up, and «Подробнее» → the full earnings screen. */}
-        {dash && earnPop && (
+        {dash && earnPop && !(offer && !trip) && (
           <>
             <div className="pointer-events-auto fixed inset-0" onClick={() => setEarnPop(false)} aria-hidden />
             <div className="pointer-events-auto relative ms-auto w-[min(290px,100%)] rounded-[16px] border border-edge bg-page/95 p-4 shadow-card backdrop-blur" data-testid="earn-pop" role="dialog" aria-label={t('driver.home.earnedToday')}>
@@ -735,8 +748,8 @@ function HomeSection(props: {
         )}
       </div>
 
-      {/* Bottom: online/offline button + cars count, or the offer sheet */}
-      <div className="pointer-events-none fixed inset-x-0 z-10 mx-auto max-w-lg px-3" style={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
+      {/* Bottom: online/offline button + cars count, or the offer sheet (no tabs under it — it sits lower). */}
+      <div className="pointer-events-none fixed inset-x-0 z-10 mx-auto max-w-lg px-3" style={{ bottom: offer && !trip ? 'calc(12px + env(safe-area-inset-bottom))' : 'calc(64px + env(safe-area-inset-bottom))' }}>
         {!offer && (
           <div className="flex flex-col items-center gap-2">
             {/* «Стоянка с очередью» (2026-11-25, operator chose the big number): his place among the cars of his
@@ -782,7 +795,11 @@ function HomeSection(props: {
       {/* Offer takes priority */}
       {offer && !trip && (
         <div key={offer.offerId} className="ily-offer-in card pointer-events-auto max-h-[58dvh] overflow-y-auto border-2 border-accent p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.55)]">
-          <div className="flex items-center justify-between"><span className="font-semibold text-accent">{t('driver.offer.title')}</span><span className={`chip ${offerSecs <= 5 ? '!text-danger' : ''}`}>⏳ {t('driver.units.sec', { n: offerSecs })}</span></div>
+          {/* «Отклонить» small at the top right; the timer next to the title (2026-11-26, operator). */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2"><span className="font-semibold text-accent">{t('driver.offer.title')}</span><span className={`chip ${offerSecs <= 5 ? '!text-danger' : ''}`}>⏳ {t('driver.units.sec', { n: offerSecs })}</span></span>
+            <button className="rounded-full border border-danger/50 px-3 py-1 text-xs font-semibold text-danger" disabled={offerBusy} onClick={() => props.onDecline(offer.offerId)} data-testid="offer-decline">{t('driver.offer.decline')}</button>
+          </div>
           {/* 1) How far the client is: time and km to the pickup (the pickup is also on the map). */}
           <div className="mt-2 flex items-baseline gap-3">
             <span className="text-3xl font-bold text-ink">{offer.pickupEtaSec != null ? t('driver.offer.minShort', { min: Math.max(1, Math.round(offer.pickupEtaSec / 60)) }) : '—'}</span>
@@ -801,9 +818,8 @@ function HomeSection(props: {
             {offer.flightNumber && <div className="font-mono text-xs text-ink">✈ {t('driver.scheduled.flight', { flight: formatFlight(offer.flightNumber) })}</div>}
           </div>
           {/* Kept in view while the details scroll. */}
-          <div className="sticky -bottom-4 -mx-4 -mb-4 mt-4 grid grid-cols-2 gap-2 bg-panel px-4 pb-4 pt-2">
-            <button className="btn-ghost min-h-[44px] !text-danger border border-danger/40" disabled={offerBusy} onClick={() => props.onDecline(offer.offerId)}>{t('driver.offer.decline')}</button>
-            <button className="btn-primary min-h-[44px]" disabled={offerBusy || offerSecs === 0} onClick={() => props.onAccept(offer.offerId)}>{t('driver.offer.accept')}</button>
+          <div className="sticky -bottom-4 -mx-4 -mb-4 mt-4 bg-panel px-4 pb-4 pt-2">
+            <button className="btn-primary min-h-[60px] w-full text-xl font-extrabold" disabled={offerBusy || offerSecs === 0} onClick={() => props.onAccept(offer.offerId)} data-testid="offer-accept">{t('driver.offer.accept')}</button>
           </div>
         </div>
       )}
