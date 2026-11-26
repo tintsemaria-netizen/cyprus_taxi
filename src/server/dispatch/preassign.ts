@@ -133,7 +133,7 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
     },
     orderBy: { scheduledAt: 'asc' },
     take: 50,
-    select: { id: true, passengerId: true, passengerName: true, reference: true, scheduledAt: true, pickupLabel: true, dropoffLabel: true, dropoffPostcode: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, vClass: true, passengerCount: true, fareCents: true, priceType: true, flightNumber: true, note: true, arriveFrom: true, arriveBy: true, sharePickupFrom: true, sharePickupTo: true, fareMinCents: true },
+    select: { id: true, passengerId: true, reference: true, scheduledAt: true, pickupLabel: true, dropoffLabel: true, dropoffPostcode: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, vClass: true, passengerCount: true, fareCents: true, priceType: true, flightNumber: true, note: true, arriveFrom: true, arriveBy: true, sharePickupFrom: true, sharePickupTo: true, fareMinCents: true },
   });
   const gap = p.minGapMinutes * MIN;
   // Never offer a passenger this driver is blocked with (1-star either way, blocked-pairs.ts).
@@ -148,7 +148,8 @@ export async function scheduledBoard(driverId: string, now: Date = new Date()) {
   };
   const ratings = await passengerRatingSummary(rows.map((r) => r.passengerId ?? '').filter(Boolean));
   const available: BoardItem[] = rows.filter((b) => (!b.passengerId || !blockedPax.has(b.passengerId)) && fitsPair(b.id)).map((b) => ({
-    passengerName: b.passengerName, passengerRating: (b.passengerId && ratings.get(b.passengerId)) || null,
+    // No name on the open board (privacy rule: identity only in the ride's details and once taken); the rating is fine.
+    passengerRating: (b.passengerId && ratings.get(b.passengerId)) || null,
     share: pairs.get(b.id)?.info ?? null,
     bookingId: b.id, reference: b.reference, pickupAt: b.scheduledAt!.toISOString(),
     // A ride-share pair shows approximate addresses until the ride starts (operator, 2026-11-19).

@@ -11,7 +11,7 @@ export function ClientLine({ name, rating, vClass }: { name: string; rating?: Pa
   const { t } = useT();
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="client-line">
-      <span className="text-[17px] font-semibold">{name}</span>
+      {name && <span className="text-[17px] font-semibold">{name}</span>}
       <PaxRating r={rating} />
       <span className="shrink-0 rounded-md border-2 border-white/25 px-1.5 py-px text-[12px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${vClass}` as MsgKey)}</span>
     </div>
