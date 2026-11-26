@@ -811,7 +811,7 @@ function HomeSection(props: {
           {/* From → to (2026-11-26, operator: «как обычно» — where from, and under it where to). */}
           <RouteLines pickup={offer.pickup} stop={offer.stop} dropoff={offer.dropoff} />
           {/* 2) Main info: where to, client name, the sum. */}
-          <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
+          <div className="mt-3 space-y-1.5 px-1 text-sm">
             <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{offer.fareCents != null ? fareRangeText(offer.fareCents, offer.priceType, (c) => money(c, offer.currency), offer.minCents) : '—'}</span></div>
             {offer.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(offer.scheduledAt)}</div>}
             {offer.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: offer.note })}</div>}
@@ -974,7 +974,7 @@ function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
               {o.pickupEtaSec == null && <p className="text-xs text-muted">{t('driver.map.noGps')}</p>}
               <ClientLine name={o.passengerName} rating={o.passengerRating} vClass={o.vClass} />
               <RouteLines pickup={o.pickup} stop={o.stop} dropoff={o.dropoff} />
-              <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
+              <div className="mt-3 space-y-1.5 px-1 text-sm">
                 <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{o.fareCents != null ? fareRangeText(o.fareCents, o.priceType, (c) => money(c, o.currency), o.minCents) : '—'}</span></div>
                 {o.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(o.scheduledAt)}</div>}
                 {o.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: o.note })}</div>}
@@ -1331,10 +1331,10 @@ function ClientLine({ name, rating, vClass }: { name: string; rating?: PaxRating
   );
 }
 
-/** Where from, and under it where to (and a stop between), with the line joining them (2026-11-26, operator). */
+/** Where from, and under it where to (and a stop between), with the line joining them — in the frame (2026-11-26, operator). */
 function RouteLines({ pickup, stop, dropoff }: { pickup: { label: string }; stop?: { label: string } | null; dropoff: { label: string; postcode?: string | null } }) {
   return (
-    <div className="mt-2 text-sm" data-testid="route-lines">
+    <div className="mt-2 rounded-[12px] border border-edge bg-elevated p-3 text-sm" data-testid="route-lines">
       <div className="flex items-start gap-2.5"><span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-accent" /><span className="font-medium">{pickup.label}</span></div>
       {stop && <div className="flex items-start gap-2.5"><span className="ms-[3px] h-4 w-px shrink-0 bg-edge-strong" /></div>}
       {stop && <div className="flex items-start gap-2.5"><span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#FFC83D]" /><span className="font-medium">{stop.label}</span></div>}
@@ -1359,7 +1359,7 @@ function NextOfferCard({ offer, secs, busy, onAccept, onDecline }: { offer: Offe
         <div className="mt-1 text-xs text-muted">{t('driver.offer.nextHint')}</div>
         <ClientLine name={offer.passengerName} rating={offer.passengerRating} vClass={offer.vClass} />
         <RouteLines pickup={offer.pickup} stop={offer.stop} dropoff={offer.dropoff} />
-        <div className="mt-2 space-y-1 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
+        <div className="mt-2 space-y-1 px-1 text-sm">
           <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="font-bold">{offer.fareCents != null ? fareRangeText(offer.fareCents, offer.priceType, (c) => money(c, offer.currency), offer.minCents) : '—'}</span></div>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
