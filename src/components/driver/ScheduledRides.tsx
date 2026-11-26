@@ -1,7 +1,7 @@
 'use client';
 
-import { PaxRating, type PaxRatingValue } from '@/components/driver/PaxRating';
-import { Postcode } from '@/components/driver/Postcode';
+import { type PaxRatingValue } from '@/components/driver/PaxRating';
+import { ClientLine, RouteLines } from '@/components/driver/OrderBits';
 import { fareRangeText } from '@/lib/price-type';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api-client';
@@ -13,6 +13,7 @@ import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
 
 // Driver pre-booking board (scheduled rides). Server: src/server/dispatch/preassign.ts.
 interface Item {
+  passengerName?: string; passengerRating?: { average: number; count: number } | null; // card: name ★ class (2026-11-27)
   bookingId: string; reference: string; pickupAt: string; pickupLabel: string; dropoffLabel: string; dropoffPostcode?: string | null;
   vClass: string; passengerCount: number; fareCents: number | null; priceType: string | null; minCents?: number | null;
   flightNumber: string | null; airport: boolean; conflict?: boolean; canReleaseFreely?: boolean;
@@ -94,16 +95,10 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
     <div key={i.bookingId} role="button" tabIndex={0} data-testid="prebook-card" onClick={() => setOpenId(i.bookingId)}
       onKeyDown={(e) => { if (e.key === 'Enter') setOpenId(i.bookingId); }}
       className="cursor-pointer rounded-[12px] border border-edge bg-elevated p-3 active:bg-white/[0.04]">
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-semibold">{fmt.dateTime(i.span ? i.span.from : i.pickupAt)}{i.span && <span className="block text-xs font-normal text-muted">{t('driver.scheduled.mayShift')}</span>}</span>
-        <span className="flex shrink-0 gap-1">
-          <span className="rounded-md border-2 border-white/25 px-2 py-0.5 text-[13px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${i.vClass}` as 'common.vClass.COMFORT')}</span>
-        </span>
-      </div>
-      <div className="mt-2 space-y-1 text-sm">
-        <div className="flex gap-2"><span className="text-accent">●</span><span className="min-w-0">{i.pickupLabel}</span></div>
-        <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0">{i.dropoffLabel}<Postcode code={i.dropoffPostcode} /></span></div>
-      </div>
+      {/* Same look as «Новый заказ» (2026-11-27, operator): when, the client (name ★ class), from / to in the frame. */}
+      <div className="text-lg font-semibold">{fmt.dateTime(i.span ? i.span.from : i.pickupAt)}{i.span && <span className="block text-xs font-normal text-muted">{t('driver.scheduled.mayShift')}</span>}</div>
+      <ClientLine name={i.passengerName ?? ''} rating={i.passengerRating} vClass={i.vClass} />
+      <RouteLines pickup={{ label: i.pickupLabel }} dropoff={{ label: i.dropoffLabel, postcode: i.dropoffPostcode }} />
       {/* The price bigger, on the right (operator 2026-11-26). */}
       <div className="mt-2 flex items-center gap-3">
         {i.flightNumber && <span className="font-mono text-xs text-ink">{t('driver.scheduled.flight', { flight: formatFlight(i.flightNumber) })}</span>}
@@ -286,14 +281,10 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
               </div>
               {/* A pair has its own stop list and totals instead of one passenger's from/to and sum. */}
               {!d.pair && <>
-              <div className="mt-2 space-y-1 text-sm">
-                <div className="flex gap-2"><span className="text-accent">●</span><span className="min-w-0 font-medium">{d.pickup.label}</span></div>
-                <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0 font-medium">{d.dropoff.label}<Postcode code={d.dropoff.postcode} /></span></div>
-              </div>
-              <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{d.passengerName}</span><PaxRating r={d.passengerRating} />
-                  {/* The class next to the client, on the right — as on the «Новый заказ» card (operator 2026-11-26). */}
-                  <span className="ms-auto shrink-0 rounded-md border-2 border-white/25 px-2 py-0.5 text-[13px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${d.vClass}` as 'common.vClass.COMFORT')}</span></div>
+              {/* Same look as «Новый заказ» (2026-11-27): the client, from / to in the frame, then trip and sum. */}
+              <ClientLine name={d.passengerName} rating={d.passengerRating} vClass={d.vClass} />
+              <RouteLines pickup={d.pickup} dropoff={d.dropoff} />
+              <div className="mt-3 space-y-1.5 px-1 text-sm">
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.scheduled.trip')}</span><span className="font-medium">{km(d.trip.distanceM)} · {t('driver.offer.minShort', { min: Math.max(1, Math.round(d.trip.etaSec / 60)) })}</span>{!d.trip.roadRouted && <span className="text-xs text-muted">≈</span>}</div>
                 <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{d.fareCents != null ? fareRangeText(d.fareCents, d.priceType, (c) => fmt.money(c), d.minCents) : '—'}</span></div>
               </div>

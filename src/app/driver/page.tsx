@@ -1,6 +1,6 @@
 'use client';
 
-import { PaxRating, type PaxRatingValue } from '@/components/driver/PaxRating';
+import { type PaxRatingValue } from '@/components/driver/PaxRating';
 import { DutyPane } from '@/components/reports/DutyPane';
 import { EarningsReport, type Range } from '@/components/reports/EarningsReport';
 import { fareRangeText } from '@/lib/price-type';
@@ -10,7 +10,7 @@ import EdgeShine from '@/components/EdgeShine';
 import { StaffShell } from '@/components/staff/StaffShell';
 import { NotifyToggle } from '@/components/NotifyToggle';
 import { ThemePicker } from '@/components/ThemePicker';
-import { Postcode } from '@/components/driver/Postcode';
+import { ClientLine, RouteLines } from '@/components/driver/OrderBits';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
@@ -562,10 +562,10 @@ function TakesComfortToggle() {
       flash(t(v ? 'driver.classes.turnedOn' : 'driver.classes.turnedOff', { cls }));
     } catch { setSt((x) => (x ? { ...x, [key]: !v } : x)); }
   }
-  const Mini = ({ k, label }: { k: 'takesComfort' | 'takesXl'; label: string }) => {
+  const mini = (k: 'takesComfort' | 'takesXl', label: string) => {
     const on = st[k];
     return (
-      <label className="flex cursor-pointer flex-col items-center gap-1" data-testid={`class-${label}`}>
+      <label key={k} className="flex cursor-pointer flex-col items-center gap-1" data-testid={`class-${label}`}>
         <span className="text-xs font-semibold">{label}</span>
         <input type="checkbox" role="switch" className="sr-only" aria-label={label} checked={on} onChange={(e) => toggle(k, e.target.checked)} />
         <span aria-hidden className={`relative block h-5 w-9 rounded-full transition ${on ? 'bg-accent' : 'bg-edge-strong'}`}>
@@ -578,8 +578,8 @@ function TakesComfortToggle() {
     <div className="mt-3 border-t border-edge pt-3" data-testid="takes-comfort">
       <div className="text-sm">{t('driver.classes.title')}</div>
       <div className="mt-2 flex gap-8">
-        <Mini k="takesComfort" label="Comfort" />
-        <Mini k="takesXl" label="XL" />
+        {mini('takesComfort', 'Comfort')}
+        {mini('takesXl', 'XL')}
       </div>
       {note && <p role="status" className="mt-2 text-xs text-accent" data-testid="class-note">{note}</p>}
     </div>
@@ -906,21 +906,19 @@ function FreeOrdersSection({ pos, onDuty, onTaken }: { pos: { lat: number; lng: 
               onClick={() => setViewId(o.bookingId)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setViewId(o.bookingId); } }}
               className="card cursor-pointer p-4 transition hover:border-accent/50 active:scale-[0.99]">
-              {o.distanceM != null && <p className="mb-2 text-lg font-bold text-ink">{t('driver.offer.away', { dist: km(o.distanceM) })}</p>}
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="text-muted">{t('driver.offer.pickup')}</span><span className="ms-auto text-end font-medium">{o.pickup.label}</span></div>
-                {o.stop && <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-[#FFC83D]" /><span className="text-muted">{t('driver.map.stop')}</span><span className="ms-auto text-end font-medium">{o.stop.label}</span></div>}
-                <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-ink" /><span className="text-muted">{t('driver.offer.destination')}</span><span className="ms-auto text-end font-medium">{o.dropoff.label}<Postcode code={o.dropoff.postcode} /></span></div>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
-                <span className="rounded-md border-2 border-white/25 px-2 py-0.5 text-[13px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${o.vClass}` as MsgKey)}</span>
-                {o.scheduledAt && <span className="rounded-full bg-elevated px-2 py-1">🕒 {fmt.dateTime(o.scheduledAt)}</span>}
-                {o.flightNumber && <span className="rounded-full bg-elevated px-2 py-1">✈ {o.flightNumber}</span>}
-              </div>
-              <p className="mt-2 text-sm font-medium">{o.passengerName} <PaxRating r={o.passengerRating} /></p>
+              {/* Same look as «Новый заказ» (2026-11-27, operator): distance, the client, from / to in the frame, the sum. */}
+              {o.distanceM != null && <p className="text-lg font-bold text-ink">{t('driver.offer.away', { dist: km(o.distanceM) })}</p>}
+              <ClientLine name={o.passengerName} rating={o.passengerRating} vClass={o.vClass} />
+              <RouteLines pickup={o.pickup} stop={o.stop} dropoff={o.dropoff} />
+              {(o.scheduledAt || o.flightNumber) && (
+                <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted">
+                  {o.scheduledAt && <span className="rounded-full bg-elevated px-2 py-1">🕒 {fmt.dateTime(o.scheduledAt)}</span>}
+                  {o.flightNumber && <span className="rounded-full bg-elevated px-2 py-1">✈ {o.flightNumber}</span>}
+                </div>
+              )}
               {o.note && <p className="mt-1 text-xs text-muted">{t('driver.offer.note', { note: o.note })}</p>}
               <div className="mt-3 flex items-center justify-between gap-3">
-                <div className="text-sm"><span className="font-semibold">{o.fareCents != null ? fareRangeText(o.fareCents, o.priceType, (c) => money(c, o.currency), o.minCents) : '—'}</span></div>
+                <div className="text-[17px] font-bold">{o.fareCents != null ? fareRangeText(o.fareCents, o.priceType, (c) => money(c, o.currency), o.minCents) : '—'}</div>
                 <button className="btn-primary min-h-[44px]" onClick={() => setViewId(o.bookingId)}>{t('driver.free.view')}</button>
               </div>
             </div>
@@ -1319,31 +1317,6 @@ function BottomNav({ tab, setTab, hasOffer, freeCount }: { tab: Tab; setTab: (t:
 
 // ---- Next order (2026-11-25): offered while the passenger is on board, 5 min before the drop-off (7 when the
 // new client is within 1 km of it). Accepting keeps the current trip; the new ride starts when it ends.
-/** The client: name, ★ rating and the class next to it (2026-11-26, operator). */
-function ClientLine({ name, rating, vClass }: { name: string; rating?: PaxRatingValue; vClass: string }) {
-  const { t } = useT();
-  return (
-    <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="client-line">
-      <span className="text-[17px] font-semibold">{name}</span>
-      <PaxRating r={rating} />
-      <span className="shrink-0 rounded-md border-2 border-white/25 px-1.5 py-px text-[12px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${vClass}` as MsgKey)}</span>
-    </div>
-  );
-}
-
-/** Where from, and under it where to (and a stop between), with the line joining them — in the frame (2026-11-26, operator). */
-function RouteLines({ pickup, stop, dropoff }: { pickup: { label: string }; stop?: { label: string } | null; dropoff: { label: string; postcode?: string | null } }) {
-  return (
-    <div className="mt-2 rounded-[12px] border border-edge bg-elevated p-3 text-sm" data-testid="route-lines">
-      <div className="flex items-start gap-2.5"><span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-accent" /><span className="font-medium">{pickup.label}</span></div>
-      {stop && <div className="flex items-start gap-2.5"><span className="ms-[3px] h-4 w-px shrink-0 bg-edge-strong" /></div>}
-      {stop && <div className="flex items-start gap-2.5"><span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#FFC83D]" /><span className="font-medium">{stop.label}</span></div>}
-      <div className="flex items-start gap-2.5"><span className="ms-[4px] h-4 w-px shrink-0 bg-edge-strong" /></div>
-      <div className="flex items-start gap-2.5"><span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-ink" /><span className="font-medium">{dropoff.label}<Postcode code={dropoff.postcode} /></span></div>
-    </div>
-  );
-}
-
 function NextOfferCard({ offer, secs, busy, onAccept, onDecline }: { offer: Offer; secs: number; busy: boolean; onAccept: (id: string) => void; onDecline: (id: string) => void }) {
   const { t } = useT();
   const { money, km } = useDriverFmt();
