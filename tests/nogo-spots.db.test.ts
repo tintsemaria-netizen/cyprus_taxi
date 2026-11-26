@@ -2,6 +2,11 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { prisma } from '@/lib/db';
 import { firstNoGo, invalidateNoGoCache, noGoSchema, snapPickup, snapDropoff } from '@/server/no-go';
 import { GET as publicNoGo } from '@/app/api/v1/no-go/route';
+import { airportAt, pinAirportAreas } from '@/lib/airports';
+import { ensureAirportAreas, pointMin } from '@/server/no-go';
+import { createQuote } from '@/server/quote';
+import { invalidateFixedFareCache } from '@/server/fixed-fares';
+import { invalidateMinFareCache } from '@/server/min-fares';
 
 // «Запретная зона» with pickup / drop-off points NEXT TO it (operator 2026-11-26: «Нет, рядом с ней»).
 const dbUrl = process.env.DATABASE_URL || '';
@@ -53,5 +58,33 @@ describe('no-go zone with points next to it', () => {
     expect(noGoSchema.safeParse({ ...base, points: [pick], dropPoints: [drop] }).success).toBe(true);
     expect(noGoSchema.safeParse({ ...base, points: [{ ...insideZ, name: '' }], dropPoints: [] }).success).toBe(false);
     expect(noGoSchema.safeParse({ ...base, points: [{ lat: 34.72, lng: 33.035, name: '' }], dropPoints: [] }).success).toBe(false);
+  });
+
+  it('chosen for an airport\'s fixed prices: the zone and its points next to it count as that airport', async () => {
+    pinAirportAreas(null);
+    try {
+      const row = await make([pick], [drop]);
+      await prisma.noGoZone.update({ where: { id: row.id }, data: { airport: 'PFO' } });
+      invalidateNoGoCache(); await ensureAirportAreas();
+      const p = await snapPickup({ ...insideZ, label: '' as string | undefined });
+      const d = await snapDropoff({ ...insideZ });
+      expect(airportAt(p.lat, p.lng)).toBe('PFO');
+      expect(airportAt(d.lat, d.lng)).toBe('PFO');
+      expect(airportAt(34.70, 33.06)).toBeNull();
+    } finally { await prisma.noGoZone.deleteMany({ where: { name: { startsWith: 'NS test' } } }); invalidateNoGoCache(); await ensureAirportAreas(); }
+  });
+
+  it('«Минимальный заказ отсюда» of a no-go zone: a pickup moved from inside to its point costs at least that', async () => {
+    const row = await make([pick], [drop]);
+    await prisma.noGoZone.update({ where: { id: row.id }, data: { minComfortCents: 2000, minXlCents: 3000 } });
+    await prisma.minFareZone.deleteMany({});
+    invalidateNoGoCache(); invalidateFixedFareCache(); invalidateMinFareCache();
+    const from = await snapPickup({ ...insideZ, label: '' as string | undefined });
+    expect(await pointMin(from, 'COMFORT')).toEqual({ cents: 2000, zone: 'NS test zone' });
+    const q = await createQuote({ pickup: from, dropoff: { lat: 34.692, lng: 33.046 }, vClass: 'COMFORT', passengerCount: 1, scheduledAtUtc: null });
+    expect(q.ok && q.quote.totalCents).toBe(2000);
+    expect((await pointMin({ lat: 34.692, lng: 33.046 }, 'COMFORT'))).toBeNull();
+    await prisma.noGoZone.update({ where: { id: row.id }, data: { minActive: false } }); invalidateNoGoCache();
+    expect(await pointMin(from, 'COMFORT')).toBeNull();
   });
 });

@@ -156,6 +156,7 @@ const staff = {
   zoneMap: { close: "Close", saveFirst: "There are unsaved changes — save them first or press «Cancel».", discard: "Discard the unsaved changes?",menu: "Menu", info: "Info", hide: "Hide the panel", show: "Show the panel"},
   confirm: { on: "Switch on «{name}»?", off: "Switch off «{name}»?", activate: "Activate «{name}»?", deactivate: "Deactivate «{name}»?" },
   noGo: {
+    pickToolZone: "Press «Zone corners», «Pickup points» or «Drop-off points» to change them on the map.",
     modeCornersZone: "Zone corners",
     spotNotNext: "Put the zone's point next to it: outside, on land, within 3 km — where the taxi can drive up.",
     nogoPointHint: "Click on the map next to the zone — where the taxi can drive up. A passenger inside the zone is moved to the nearest point.",
@@ -239,6 +240,7 @@ const staff = {
     row: 'Comfort from {comfort} € · XL from {xl} €',
   },
   fixed: {
+    nogoTag: "no-go zone",
     point: "Territory for these fares (from and to)",
     pointNone: "— not chosen —",
     noAirportArea: "No territory chosen — this airport's fixed fares do not apply now.",

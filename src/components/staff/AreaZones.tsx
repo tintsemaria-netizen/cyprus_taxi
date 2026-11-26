@@ -171,7 +171,7 @@ function AreaZones({ kind }: { kind: Kind }) {
     try {
       const body = { name: draft.name.trim() || `${t(draft.kind === 'POINT' ? 'staff.noGo.pointTitle' : draft.kind === 'STAND' ? 'staff.noGo.standTitle' : 'staff.noGo.title')} ${zones.length + 1}`, kind: draft.kind, polygon: draft.polygon, points: draft.points, dropPoints: draft.dropPoints, active: draft.active, ...(draft.kind === 'STAND' ? { forZoneId: standSource(draft)?.id ?? null, airport: standSource(draft)?.airport ?? null } : {}),
         ...(draft.kind === 'POINT' ? { minComfortCents: euroCents(draft.minComfort), minXlCents: euroCents(draft.minXl), minActive: draft.minOn, pointsActive: draft.pointsOn } : {}),
-        ...(draft.kind === 'NOGO' ? { pointsActive: draft.pointsOn } : {}) };
+        ...(draft.kind === 'NOGO' ? { minComfortCents: euroCents(draft.minComfort), minXlCents: euroCents(draft.minXl), minActive: draft.minOn, pointsActive: draft.pointsOn } : {}) };
       if (draft.id) await api(`/admin/no-go/${draft.id}`, { method: 'PUT', body });
       else await api('/admin/no-go', { method: 'POST', body });
       setDraft(null); setMsg(t('staff.noGo.saved'));
@@ -237,7 +237,7 @@ function AreaZones({ kind }: { kind: Kind }) {
                 className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-[10px] bg-accent px-3 py-2 text-sm font-semibold text-[#0b0f10] shadow-lg disabled:bg-page/90 disabled:text-muted">
                 <span className="text-lg leading-none">↶</span>{t('staff.fixed.stepBack')}
               </button>
-              <div className="min-w-0 flex-1 rounded-[10px] bg-page/90 px-3 py-2 text-xs text-ink">{draft.kind === 'NOGO' && (mode === 'pick' || mode === 'drop') ? t('staff.noGo.nogoPointHint') : mode === 'drop' ? t('staff.noGo.dropHint') : mode === 'pick' ? t('staff.noGo.pointHint') : mode === 'none' ? t('staff.noGo.pickTool') : t('staff.fixed.hint')}</div>
+              <div className="min-w-0 flex-1 rounded-[10px] bg-page/90 px-3 py-2 text-xs text-ink">{draft.kind === 'NOGO' && (mode === 'pick' || mode === 'drop') ? t('staff.noGo.nogoPointHint') : mode === 'drop' ? t('staff.noGo.dropHint') : mode === 'pick' ? t('staff.noGo.pointHint') : mode === 'none' ? t(draft.kind === 'NOGO' ? 'staff.noGo.pickToolZone' : 'staff.noGo.pickTool') : t('staff.fixed.hint')}</div>
             </div>
           )}
         
@@ -250,8 +250,8 @@ function AreaZones({ kind }: { kind: Kind }) {
               <label className="block text-sm">{t('staff.noGo.name')}
                 <input className="field mt-1" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder={t('staff.noGo.placeholder')} data-testid="nogo-name" />
               </label>
-              {draft.kind === 'POINT' && (
-                // «Минимальный заказ отсюда» (operator 2026-11-25): empty = no minimum.
+              {hasPoints(draft.kind) && (
+                // «Минимальный заказ отсюда» (operator 2026-11-25; a no-go zone too 2026-11-26 — from its pickup points): empty = no minimum.
                 <div className="text-sm" data-testid="nogo-min">
                   {/* The switch asks first (operator 2026-11-25): it changes what passengers pay. */}
                   <Switch checked={draft.minOn} onChange={(on) => setDraft({ ...draft, minOn: on })} label={t('staff.noGo.minFrom')} testid="nogo-min-on"

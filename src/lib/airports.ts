@@ -22,6 +22,15 @@ export interface AirportArea { code: string; polygon: [number, number][] }
 // app from /api/v1/no-go. Tests pin their own areas so a DB load does not replace them.
 let areas: AirportArea[] = [];
 let pinned = false;
+/** A no-go zone chosen for an airport's fixed prices (2026-11-26): the zone itself plus a small square (~40 m) around
+ *  each of its pickup / drop-off points — they stand next to the zone, and the trip starts / ends there. */
+export function zoneAirportAreas(code: string, polygon: [number, number][], spots: { lat: number; lng: number }[]): AirportArea[] {
+  const sq = (p: { lat: number; lng: number }): [number, number][] => {
+    const dl = 40 / 110540, dn = 40 / (111320 * Math.cos((p.lat * Math.PI) / 180));
+    return [[p.lat - dl, p.lng - dn], [p.lat - dl, p.lng + dn], [p.lat + dl, p.lng + dn], [p.lat + dl, p.lng - dn]];
+  };
+  return [{ code, polygon }, ...spots.map((s) => ({ code, polygon: sq(s) }))];
+}
 export function setAirportAreas(list: AirportArea[]): void { if (!pinned) areas = list; }
 /** Tests: fix the areas (null = back to normal, loaded from the DB). */
 export function pinAirportAreas(list: AirportArea[] | null): void { pinned = !!list; areas = list ?? []; }

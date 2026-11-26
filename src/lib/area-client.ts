@@ -1,7 +1,7 @@
 import { onCyprusIsland } from './cyprus-island';
 import { pointInPolygon } from './geo';
 import { api } from './api-client';
-import { setAirportAreas } from './airports';
+import { setAirportAreas, zoneAirportAreas } from './airports';
 
 // Where a passenger may put a point (2026-11-24): on the island of Cyprus and outside every active
 // «Запретная зона». The zones come from /api/v1/no-go (refreshed every 5 min); the server checks again.
@@ -19,7 +19,8 @@ export function loadNoGo(): Promise<void> {
     .then((r) => {
       zones = r.zones ?? []; territories = [...(r.territories ?? []), ...(r.zoneSpots ?? [])]; loadedAt = Date.now(); // no-go zones with points next to them snap like territories (2026-11-26)
       // The airport is a territory marked «это аэропорт» (2026-11-25): the co-rider places use it here too.
-      setAirportAreas(territories.filter((t) => t.airport && !t.nogo).map((t) => ({ code: t.airport!, polygon: t.polygon })));
+      setAirportAreas([...territories.filter((t) => t.airport && !t.nogo).map((t) => ({ code: t.airport!, polygon: t.polygon })),
+        ...territories.filter((t) => t.airport && t.nogo).flatMap((t) => zoneAirportAreas(t.airport!, t.polygon, [...t.points, ...(t.dropPoints ?? [])]))]); // a no-go zone + its points (2026-11-26)
     })
     .catch(() => { /* keep what we had; the server still refuses */ })
     .finally(() => { loading = null; });

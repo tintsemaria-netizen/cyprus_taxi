@@ -33,7 +33,7 @@ function FixedPrices() {
   const { t } = useT();
   const [airports, setAirports] = useState<Airport[]>([]);
   // Pickup territories by name — one is chosen as «the point» of this airport's fixed fares (2026-11-25).
-  const [territories, setTerritories] = useState<{ id: string; name: string; airport: string | null }[]>([]);
+  const [territories, setTerritories] = useState<{ id: string; name: string; airport: string | null; nogo?: boolean }[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
   const [code, setCode] = useState('PFO');
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -64,7 +64,7 @@ function FixedPrices() {
   const resetHist = () => { hist.current = []; lastChange.current = 0; setHistLen(0); };
 
   const load = useCallback(async () => {
-    const r = await api<{ airports: Airport[]; territories?: { id: string; name: string; airport: string | null }[]; zones: Zone[] }>('/admin/fixed-zones');
+    const r = await api<{ airports: Airport[]; territories?: { id: string; name: string; airport: string | null; nogo?: boolean }[]; zones: Zone[] }>('/admin/fixed-zones');
     setAirports(r.airports);
     setTerritories(r.territories ?? []);
     setZones(r.zones);
@@ -249,7 +249,7 @@ function FixedPrices() {
           }}>
           <option value="">{t('staff.fixed.pointNone')}</option>
           {territories.map((x) => (
-            <option key={x.id} value={x.id}>{x.name}{x.airport && x.airport !== code ? ` (${AIRPORT_NAMES[x.airport] ?? x.airport})` : ''}</option>
+            <option key={x.id} value={x.id}>{x.name}{x.nogo ? ` · ${t('staff.fixed.nogoTag')}` : ''}{x.airport && x.airport !== code ? ` (${AIRPORT_NAMES[x.airport] ?? x.airport})` : ''}</option>
           ))}
         </select>
         {!territories.length && <Link href="/admin/pickup-points" className="font-semibold text-accent">{t('staff.fixed.toPickupPoints')} ›</Link>}

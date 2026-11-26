@@ -4,7 +4,7 @@ import { pointInPolygon } from '@/lib/geo';
 import { onCyprusIsland } from '@/lib/cyprus-island';
 import { smoothRing } from '@/lib/ring';
 import { parsePolygon } from '@/server/fixed-fares';
-import { AIRPORT_CODES, setAirportAreas } from '@/lib/airports';
+import { AIRPORT_CODES, setAirportAreas, zoneAirportAreas } from '@/lib/airports';
 
 // «Запретная зона» (2026-11-24, operator): red areas the taxi does not go to. No pickup, stop or destination
 // inside an active zone — the booking, the price and a stop added on the way are refused (NO_GO_ZONE).
@@ -12,7 +12,7 @@ import { AIRPORT_CODES, setAirportAreas } from '@/lib/airports';
 export interface NoGo { id: string; name: string; polygon: [number, number][] }
 /** A «Запретная зона» with pickup / drop-off points NEXT TO it (operator 2026-11-26): the taxi does not drive in;
  *  a pickup put inside goes to the nearest pickup point, a destination inside to the nearest drop-off point. */
-export interface NoGoSpots extends NoGo { points: Spot[]; dropPoints: Spot[] }
+export interface NoGoSpots extends NoGo { points: Spot[]; dropPoints: Spot[]; airport: string | null; minComfortCents: number | null; minXlCents: number | null; minActive: boolean }
 /** «Точки подачи» (2026-11-24): inside the territory every pickup goes to the nearest of its points. */
 export interface Spot { lat: number; lng: number; name: string }
 export interface PickupPoint extends NoGo { points: Spot[]; dropPoints: Spot[]; airport: string | null; minComfortCents: number | null; minXlCents: number | null; minActive: boolean; pointsActive: boolean }
@@ -46,11 +46,13 @@ async function load(now: number) {
     at: now,
     rows: rows.filter((r) => r.kind === 'NOGO').map(z),
     points: rows.filter((r) => r.kind === 'POINT').map((r) => ({ ...z(r), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints), airport: r.airport ?? null, minComfortCents: r.minComfortCents ?? null, minXlCents: r.minXlCents ?? null, minActive: r.minActive, pointsActive: r.pointsActive })),
-    nogoSpots: rows.filter((r) => r.kind === 'NOGO' && r.pointsActive).map((r) => ({ ...z(r), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints) })).filter((n) => n.points.length || n.dropPoints.length),
+    nogoSpots: rows.filter((r) => r.kind === 'NOGO' && r.pointsActive).map((r) => ({ ...z(r), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints), airport: r.airport ?? null, minComfortCents: r.minComfortCents ?? null, minXlCents: r.minXlCents ?? null, minActive: r.minActive })).filter((n) => n.points.length || n.dropPoints.length),
     stands: rows.filter((r) => r.kind === 'STAND').map((r) => ({ ...z(r), active: r.active, airport: r.airport ?? null, forZoneId: r.forZoneId ?? null })),
   };
   // The airport is a territory marked «это аэропорт» (2026-11-25) — by the same rounded outline the passenger sees.
-  setAirportAreas(cache.points.filter((t) => t.airport).map((t) => ({ code: t.airport!, polygon: t.polygon })));
+  // …or (2026-11-26) a no-go zone chosen on the fixed-prices page: the zone plus its points next to it.
+  setAirportAreas([...cache.points.filter((t) => t.airport).map((t) => ({ code: t.airport!, polygon: t.polygon })),
+    ...cache.nogoSpots.filter((n) => n.airport).flatMap((n) => zoneAirportAreas(n.airport!, n.polygon, [...n.points, ...n.dropPoints]))]);
 }
 /** No-go zones that have pickup / drop-off points next to them (2026-11-26). */
 export async function noGoSpots(now = Date.now()): Promise<NoGoSpots[]> {
@@ -147,9 +149,11 @@ export const noGoSchema = z.object({
 export function noGoData(d: z.infer<typeof noGoSchema>) {
   return { name: d.name, kind: d.kind ?? 'NOGO', polygon: d.polygon, points: d.kind === 'POINT' || d.kind === 'NOGO' ? (d.points ?? []) : undefined, dropPoints: d.kind === 'POINT' || d.kind === 'NOGO' ? (d.dropPoints ?? []) : undefined, active: d.active ?? true,
     // Not sent (e.g. the on/off switch) → unchanged; a no-go zone is never an airport.
-    ...(d.kind === 'POINT' || d.kind === 'STAND' ? (d.airport !== undefined ? { airport: d.airport } : {}) : { airport: null }),
+    // A no-go zone keeps its fixed-prices link (set on the fixed-prices page, 2026-11-26) when its form is saved.
+    ...(d.kind === 'POINT' || d.kind === 'STAND' ? (d.airport !== undefined ? { airport: d.airport } : {}) : {}),
     ...(d.kind === 'STAND' ? (d.forZoneId !== undefined ? { forZoneId: d.forZoneId } : {}) : { forZoneId: null }),
-    ...(d.kind === 'POINT' ? { ...(d.minComfortCents !== undefined ? { minComfortCents: d.minComfortCents } : {}), ...(d.minXlCents !== undefined ? { minXlCents: d.minXlCents } : {}), ...(d.minActive !== undefined ? { minActive: d.minActive } : {}), ...(d.pointsActive !== undefined ? { pointsActive: d.pointsActive } : {}) } : { minComfortCents: null, minXlCents: null, ...(d.kind === 'NOGO' && d.pointsActive !== undefined ? { pointsActive: d.pointsActive } : {}) }) };
+    // «Минимальный заказ отсюда» — a territory's, and (2026-11-26) a no-go zone's: from its pickup points next to it.
+    ...(d.kind === 'POINT' || d.kind === 'NOGO' ? { ...(d.minComfortCents !== undefined ? { minComfortCents: d.minComfortCents } : {}), ...(d.minXlCents !== undefined ? { minXlCents: d.minXlCents } : {}), ...(d.minActive !== undefined ? { minActive: d.minActive } : {}), ...(d.pointsActive !== undefined ? { pointsActive: d.pointsActive } : {}) } : { minComfortCents: null, minXlCents: null }) };
 }
 export const zoneView = (r: { points: unknown; dropPoints?: unknown; polygon: unknown } & Record<string, unknown>) =>
   ({ ...r, polygon: parsePolygon(r.polygon), points: parseSpots(r.points), dropPoints: parseSpots(r.dropPoints) });
@@ -167,6 +171,13 @@ export async function pointMin(pickup: { lat: number; lng: number }, vClass: str
     const onSpot = t.points.some((s) => Math.hypot((s.lat - pickup.lat) * 110540, (s.lng - pickup.lng) * 111320 * Math.cos((pickup.lat * Math.PI) / 180)) <= 30);
     if (!onSpot && !inside(pickup, t.polygon)) continue;
     if (!best || cents > best.cents) best = { cents, zone: t.name };
+  }
+  // A no-go zone's minimum (2026-11-26): the pickup is on one of its pickup points next to it (moved there from inside).
+  for (const n of await noGoSpots()) {
+    const cents = vClass === 'XL' ? n.minXlCents : n.minComfortCents;
+    if (!cents || !n.minActive) continue;
+    if (!n.points.some((s) => Math.hypot((s.lat - pickup.lat) * 110540, (s.lng - pickup.lng) * 111320 * Math.cos((pickup.lat * Math.PI) / 180)) <= 30)) continue;
+    if (!best || cents > best.cents) best = { cents, zone: n.name };
   }
   return best;
 }

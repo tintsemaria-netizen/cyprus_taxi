@@ -10,5 +10,5 @@ export async function GET() {
   // A no-go zone with points next to it (2026-11-26) is sent as a «territory» to snap to (nogo: true), not as a block.
   const spots = await noGoSpots();
   const withSpots = new Set(spots.map((z) => z.id));
-  return apiOk({ zoneSpots: spots.map((z) => ({ name: z.name, polygon: z.polygon, points: z.points, dropPoints: z.dropPoints, nogo: true })), zones: (await noGoZones()).filter((z) => !withSpots.has(z.id)).map((z) => z.polygon), territories: (await pickupPoints()).map((z) => ({ name: z.name, polygon: z.polygon, points: z.pointsActive ? z.points : [], dropPoints: z.pointsActive ? z.dropPoints : [], airport: z.airport })) });
+  return apiOk({ zoneSpots: spots.map((z) => ({ name: z.name, polygon: z.polygon, points: z.points, dropPoints: z.dropPoints, airport: z.airport, nogo: true })), zones: (await noGoZones()).filter((z) => !withSpots.has(z.id)).map((z) => z.polygon), territories: (await pickupPoints()).map((z) => ({ name: z.name, polygon: z.polygon, points: z.pointsActive ? z.points : [], dropPoints: z.pointsActive ? z.dropPoints : [], airport: z.airport })) });
 }

@@ -15,8 +15,12 @@ export async function GET() {
   const rows = await prisma.fixedFareZone.findMany({ orderBy: [{ airport: 'asc' }, { createdAt: 'asc' }] });
   // Where each airport is (2026-11-25): the pickup territory chosen for its fixed fares — shown instead of the old circle.
   const terr = await pickupPoints();
-  const airports = AIRPORTS.map((a) => ({ ...a, areas: terr.filter((t) => t.airport === a.code).map((t) => ({ name: t.name, polygon: t.polygon })) }));
-  const territories = terr.map((t) => ({ id: t.id, name: t.name, airport: t.airport }));
+  // …or a no-go zone (2026-11-26): the trip starts / ends at its points next to it.
+  const nogo = (await prisma.noGoZone.findMany({ where: { kind: 'NOGO', active: true }, orderBy: { createdAt: 'asc' } }))
+    .map((r) => ({ id: r.id, name: r.name, airport: r.airport ?? null, polygon: parsePolygon(r.polygon) as [number, number][] }));
+  const all = [...terr.map((t) => ({ ...t, nogo: false })), ...nogo.map((t) => ({ ...t, nogo: true }))];
+  const airports = AIRPORTS.map((a) => ({ ...a, areas: all.filter((t) => t.airport === a.code).map((t) => ({ name: t.name, polygon: t.polygon })) }));
+  const territories = all.map((t) => ({ id: t.id, name: t.name, airport: t.airport, nogo: t.nogo }));
   return apiOk({ airports, territories, zones: rows.map((r) => ({ ...r, polygon: parsePolygon(r.polygon) })) });
 }
 

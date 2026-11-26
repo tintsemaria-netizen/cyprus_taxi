@@ -66,8 +66,8 @@ describe('airport = a pickup territory marked «это аэропорт»', () =
     invalidateNoGoCache(); await ensureAirportAreas();
     expect(airportAt(PFO.lat, PFO.lng)).toBeNull();
     expect((await prisma.noGoZone.findUnique({ where: { id: t.id } }))?.airport).toBe('PFO');
-    // A no-go zone can never be an airport.
-    expect(noGoData(noGoSchema.parse({ name: 'x', kind: 'NOGO', polygon: terr, airport: 'PFO' })).airport).toBeNull();
+    // A no-go zone's form never changes its fixed-prices link (only the fixed-prices page sets it, 2026-11-26).
+    expect('airport' in noGoData(noGoSchema.parse({ name: 'x', kind: 'NOGO', polygon: terr, airport: 'PFO' }))).toBe(false);
     expect(noGoSchema.safeParse({ name: 'x', kind: 'POINT', polygon: terr, points: [{ lat: 34.718, lng: 32.4857 }], airport: 'XXX' }).success).toBe(false);
   });
 });

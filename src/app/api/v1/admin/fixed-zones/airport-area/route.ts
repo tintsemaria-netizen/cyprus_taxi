@@ -20,10 +20,10 @@ export async function PUT(req: Request) {
   const { airport, territoryId } = parsed.data;
   if (territoryId) {
     const t = await prisma.noGoZone.findUnique({ where: { id: territoryId }, select: { kind: true } });
-    if (!t || t.kind !== 'POINT') return Errors.validation({ territoryId: 'Not a pickup territory.' });
+    if (!t || (t.kind !== 'POINT' && t.kind !== 'NOGO')) return Errors.validation({ territoryId: 'Not a pickup territory or a no-go zone.' }); // a no-go zone too (2026-11-26)
   }
   const name = await prisma.$transaction(async (tx) => {
-    await tx.noGoZone.updateMany({ where: { airport, kind: 'POINT', ...(territoryId ? { id: { not: territoryId } } : {}) }, data: { airport: null } });
+    await tx.noGoZone.updateMany({ where: { airport, kind: { in: ['POINT', 'NOGO'] }, ...(territoryId ? { id: { not: territoryId } } : {}) }, data: { airport: null } });
     if (!territoryId) return null;
     const row = await tx.noGoZone.update({ where: { id: territoryId }, data: { airport } });
     return row.name;

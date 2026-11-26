@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-26 — no-go zone: fixed-prices link + «Минимальный заказ отсюда» (branch nogo-fixed)
+- Fixed-prices «Территория для этих цен» lists no-go zones too (« · запретная зона»); PUT airport-area accepts kind NOGO.
+  Airport area of such a zone = its polygon + ~40 m squares around its points (lib/airports zoneAirportAreas), server and client.
+- No-go zone form saves never touch `airport` (only the fixed-prices page sets it).
+- No-go zone form has «Минимальный заказ отсюда» (minComfort/minXl/minActive); pointMin applies it to pickups ≤30 m from
+  the zone's pickup points. Tests: tests/nogo-spots.db.test.ts, tests/airport-territory.db.test.ts (updated).
+
 ## 2026-11-26 — no-go zone points next to the zone (branch nogo-points)
 - «Запретная зона» form has «Углы зоны / 📍 Точки подачи / 🏁 Точки высадки» + «Точки подачи и высадки» switch (confirm).
 - Points must be outside the zone, on land, ≤ 3 km (NOGO_SPOT_M; noGoSchema + AreaZones spotOk).
