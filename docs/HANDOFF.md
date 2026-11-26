@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-26 ~12:20 — passenger account menu + profile settings + receipts (deployed 102ff99, branch menu-tidy)
+- Account menu: language = round button right of the name (LanguageSwitcher `round`), «Помощь и конфиденциальность» small, «Выйти» removed from the menu.
+- /account: each category opens as its own screen (hash #personal/#security/#receipts/#theme/#notifications; #places only from the menu; old #data → #personal); «‹» beside each page title (top-bar arrow off on this page); «Выйти» small, left, with ConfirmSheet (auth.logOutAsk, 8 langs).
+- «Ваши данные» (download / delete) moved into «Личные данные». Export now has account.language, receiptEmails {mode,since}, savedPlaces[].name.
+- Receipts section: Passenger.receiptMode EACH|WEEKLY|MONTHLY|OFF (+receiptModeSince), migration 20261126120000_receipt_mode, model ReceiptDigest; src/server/email/receipt-digest.ts (schedule from maintenance, drain each tick; previous Cyprus Mon–Sun week / month, from 08:00); GET/PATCH /api/v1/passenger/receipts; enqueueReceiptEmail only for EACH. Account deletion now also removes ReceiptEmail/ReceiptDigest rows.
+- Tests: receipt-email.db (6 new), privacy.db; full suite 516 passed. Live: /health/ready ready, /api/v1/passenger/receipts 401, chunks contain the new markers. Not checked on a real phone; e-mails only go out once an e-mail provider is configured.
+- Next: operator goes through the remaining screenshots one by one (support, privacy, driver profile, admin settings, welcome). Open question: move «‹» beside the title on the other 7 passenger pages too?
+
 ## 2026-11-26 — passenger ride screen tidy-up (branch track-panel)
 - TrackApp: top bar = logo only (PassengerTopBar back={false} account={false}); «Позвонить водителю» removed (call = 📞 in the
   chat header); «💬 Чат» button (track.chat.short, 8 langs) right of the start-code row, unread badge; chat overlay as on the driver.
