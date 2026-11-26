@@ -21,10 +21,15 @@ export function WelcomeAnimation() {
         @keyframes ily-pulse { 0% { transform: scale(.6); opacity: .9 } 100% { transform: scale(2.4); opacity: 0 } }
         @keyframes ily-flag { 0%, 50% { transform: scale(0) } 60% { transform: scale(1.25) } 66%, 92% { transform: scale(1) } 100% { transform: scale(0) } }
         @keyframes ily-drive { 0%, 12% { offset-distance: 0%; opacity: 0 } 16% { opacity: 1 } 60%, 86% { offset-distance: 100%; opacity: 1 } 96%, 100% { offset-distance: 100%; opacity: 0 } }
+        .ily-t1 { animation: ily-t1 6s ease-in-out infinite; }
+        .ily-t2 { animation: ily-t2 6s ease-in-out infinite; }
+        @keyframes ily-t1 { 0%, 58% { opacity: 1; transform: none } 64%, 92% { opacity: 0; transform: translateY(-10px) } 100% { opacity: 1; transform: none } }
+        @keyframes ily-t2 { 0%, 60% { opacity: 0; transform: translateY(10px) } 66%, 90% { opacity: 1; transform: none } 96%, 100% { opacity: 0; transform: translateY(-10px) } }
         .ily-in { animation: ily-in .6s ease-out both; }
         @keyframes ily-in { from { transform: translateY(14px); opacity: 0 } to { transform: none; opacity: 1 } }
         @media (prefers-reduced-motion: reduce) {
-          .ily-anim .drop, .ily-anim .pulse, .ily-in { animation: none }
+          .ily-anim .drop, .ily-anim .pulse, .ily-in, .ily-t1 { animation: none }
+          .ily-t2 { animation: none; opacity: 0 }
           .ily-anim .route { animation: none; stroke-dashoffset: 0 }
           .ily-anim .flag { animation: none; transform: none }
           .ily-anim .car { animation: none; offset-distance: 100% }

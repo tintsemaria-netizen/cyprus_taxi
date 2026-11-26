@@ -3,6 +3,7 @@ import type en from '../en/promo';
 
 const promo: Catalog<typeof en> = {
   title: "Taxi na całym Cyprze",
+  slogan: "Nie spróbujesz — nie zrozumiesz",
   lead: "Zamów w minutę. Cenę widzisz przed jazdą, a auto na mapie aż do podjazdu.",
   book: "Zamów przejazd",
   install: "Zainstaluj aplikację",

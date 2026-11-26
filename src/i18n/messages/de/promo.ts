@@ -3,6 +3,7 @@ import type en from '../en/promo';
 
 const promo: Catalog<typeof en> = {
   title: "Taxi in ganz Zypern",
+  slogan: "Probieren geht über Studieren",
   lead: "In einer Minute gebucht. Sie sehen den Preis vor der Fahrt und das Auto auf der Karte, bis es da ist.",
   book: "Fahrt buchen",
   install: "App installieren",

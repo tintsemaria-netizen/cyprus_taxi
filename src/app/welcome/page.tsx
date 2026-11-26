@@ -27,7 +27,11 @@ export default function Welcome() {
         <section className="pt-10 text-center" data-testid="welcome-hero">
           {/* Animation instead of the still logo (2026-11-26, operator). */}
           <WelcomeAnimation />
-          <h1 className="ily-in mt-4 text-3xl font-extrabold leading-tight sm:text-4xl">{t('promo.title')}</h1>
+          <h1 className="ily-in mt-4 grid text-3xl font-extrabold leading-tight sm:text-4xl">
+            {/* When the car arrives the title gives way to the slogan, then comes back (2026-11-26, operator). */}
+            <span className="ily-t1 [grid-area:1/1]">{t('promo.title')}</span>
+            <span className="ily-t2 [grid-area:1/1]" aria-hidden>{t('promo.slogan')}</span>
+          </h1>
           <p className="ily-in mx-auto mt-3 max-w-xl text-base text-muted" style={{ animationDelay: '.15s' }}>{t('promo.lead')}</p>
           <div className="mt-6 flex flex-col items-center gap-3">
             <a href="/" className="btn-primary w-full max-w-xs text-center text-lg" data-testid="welcome-book">{t('promo.book')}</a>

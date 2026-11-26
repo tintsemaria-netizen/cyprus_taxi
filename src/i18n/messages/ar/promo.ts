@@ -3,6 +3,7 @@ import type en from '../en/promo';
 
 const promo: Catalog<typeof en> = {
   title: "تاكسي في كل قبرص",
+  slogan: "لن تعرف حتى تجرّب",
   lead: "احجز في دقيقة. ترى السعر قبل الرحلة والسيارة على الخريطة حتى تصل.",
   book: "احجز رحلة",
   install: "ثبّت التطبيق",

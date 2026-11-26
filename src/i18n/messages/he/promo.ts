@@ -3,6 +3,7 @@ import type en from '../en/promo';
 
 const promo: Catalog<typeof en> = {
   title: "מוניות בכל קפריסין",
+  slogan: "אם לא תנסה — לא תבין",
   lead: "הזמנה בדקה. רואים את המחיר לפני הנסיעה ואת הרכב על המפה עד שהוא מגיע.",
   book: "הזמינו נסיעה",
   install: "התקינו את האפליקציה",

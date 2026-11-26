@@ -1,6 +1,7 @@
 // The welcome page /welcome (2026-11-26): what IL-Y is, for passengers and drivers (QR flyers point here).
 const promo = {
   title: "Taxi across Cyprus",
+  slogan: "You won’t know until you try",
   lead: "Book in a minute. See the price before you go and the car on the map until it arrives.",
   book: "Book a ride",
   install: "Install the app",

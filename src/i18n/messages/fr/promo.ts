@@ -3,6 +3,7 @@ import type en from '../en/promo';
 
 const promo: Catalog<typeof en> = {
   title: "Taxi dans tout Chypre",
+  slogan: "Il faut l’essayer pour comprendre",
   lead: "Réservez en une minute. Vous voyez le prix avant le départ et la voiture sur la carte jusqu’à son arrivée.",
   book: "Réserver une course",
   install: "Installer l’application",
