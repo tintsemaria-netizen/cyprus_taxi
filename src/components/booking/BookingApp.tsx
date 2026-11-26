@@ -680,9 +680,9 @@ export default function BookingApp() {
   const spotKeyOf = (kind: 'p' | 'd', pt: { lat: number; lng: number } | null) => (pt ? `${kind}:${pt.lat.toFixed(5)},${pt.lng.toFixed(5)}` : '');
   const pickSpotKey = terr && terr.on >= 0 ? spotKeyOf('p', pickup) : '';
   const dropSpotKey = dropTerr && dropTerr.on >= 0 && (dropTerr.t.dropPoints ?? []).length ? spotKeyOf('d', dropoff) : '';
-  const spotFocus: { lat: number; lng: number; key: string } | null = !(pickup && dropoff) || step !== 'form' ? null
-    : pickSpotKey ? { lat: pickup.lat, lng: pickup.lng, key: pickSpotKey }
-    : dropSpotKey ? { lat: dropoff.lat, lng: dropoff.lng, key: dropSpotKey } : null;
+  const spotFocus: { lat: number; lng: number; key: string; name: string } | null = !(pickup && dropoff) || step !== 'form' ? null
+    : pickSpotKey ? { lat: pickup.lat, lng: pickup.lng, key: pickSpotKey, name: terr!.t.points[terr!.on]?.name || terr!.t.name }
+    : dropSpotKey ? { lat: dropoff.lat, lng: dropoff.lng, key: dropSpotKey, name: (dropTerr!.t.dropPoints ?? [])[dropTerr!.on]?.name || dropTerr!.t.name } : null;
   const offTimer = useRef<number | null>(null);
   function onCenterPick(p: { lat: number; lng: number; zoom: number }) {
     setPinLift(false);
@@ -766,7 +766,11 @@ export default function BookingApp() {
     })),
   ], [markers, terr, terrList, showSpots, nearSet]);
   // While a territory point is shown first (spotFocus), nothing is framed — the camera stays on the point.
-  const mapMarkersNoFit = useMemo<MapMarker[]>(() => mapMarkers.map((m) => ({ ...m, noFit: true })), [mapMarkers]);
+  // …and the point carries its name on the map, as the admin wrote it (e.g. «Departures») — 2026-11-26.
+  const spotName = spotFocus?.name ?? '';
+  const mapMarkersNoFit = useMemo<MapMarker[]>(() => [...mapMarkers.map((m) => ({ ...m, noFit: true })),
+    ...(spotFocus ? [{ id: 'spot-focus', lat: spotFocus.lat, lng: spotFocus.lng, kind: 'spot' as const, active: true, label: spotName, noFit: true }] : [])],
+  [mapMarkers, spotFocus?.lat, spotFocus?.lng, spotName]); // eslint-disable-line react-hooks/exhaustive-deps
   // A territory's outline only when the logo (or a chosen pickup / drop-off) is on it or near it — not always on the
   // map (operator 2026-11-25). Letting the logo go next to it still slides to its point at any zoom (onCenterPick).
   const mapAreas = useMemo(() => terrList.map((t, ti) => ({ t, ti })).filter(({ t }) => nearSet.has(t))
@@ -1445,7 +1449,7 @@ export default function BookingApp() {
           {picker ? (
             <div className="h-full w-full bg-page" />
           ) : (
-            <AutoMapView markers={spotFocus ? mapMarkersNoFit : mapMarkers} areas={mapAreas} route={route?.line} fitRoute={!spotFocus} fleet={fleet} fleetLikeSelf focus={spotFocus ?? (pickup && dropoff ? null : camFocus)} focusZoom={spotFocus ? 15 : pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} holdCamera={onSpot && !landing} onGlideEnd={() => { if (landTimer.current) window.clearTimeout(landTimer.current); setLanding(false); }} glideMs={landing ? SPOT_GLIDE_MS : undefined} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
+            <AutoMapView markers={spotFocus ? mapMarkersNoFit : mapMarkers} areas={mapAreas} route={route?.line} fitRoute={!spotFocus} fleet={fleet} fleetLikeSelf focus={spotFocus ?? (pickup && dropoff ? null : camFocus)} focusZoom={spotFocus ? 17 : pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} holdCamera={onSpot && !landing} onGlideEnd={() => { if (landTimer.current) window.clearTimeout(landTimer.current); setLanding(false); }} glideMs={landing ? SPOT_GLIDE_MS : undefined} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
           )}
           {step === 'form' && (terr || dropTerr) && (
             // Below the point the map is centred on, and see-through (operator 2026-11-26), so the point stays visible.

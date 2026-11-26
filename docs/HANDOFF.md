@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-26 — booking point focus: zoom 17 + the point's name on the map (branch spot-label)
+- spotFocus carries the point name (admin-given, else the territory name); a 'spot' marker (active) shows it at the point.
+- Prod points of Lca / Pfo / New port Limassol have no names yet — the operator was told to name them (Departures / Arrivals).
+
 ## 2026-11-26 — booking: show our territory point first (branch snap-focus)
 - BookingApp: when pickup+dropoff are set on the form step and one of them was moved to a territory / no-go-zone point,
   the map stays on that point (spotFocus, zoom 15, all markers noFit); the whole route shows from the class step on.
