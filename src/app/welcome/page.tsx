@@ -12,9 +12,7 @@ const FEATURES = [
   ['✈', 'airport'],
   ['👥', 'share'],
   ['🗓', 'prebook'],
-  ['€', 'price'],
   ['📍', 'track'],
-  ['🌐', 'lang'],
 ] as const;
 
 export default function Welcome() {
@@ -33,30 +31,29 @@ export default function Welcome() {
             <span className="ily-t2 [grid-area:1/1]" aria-hidden>{t('promo.slogan')}</span>
           </h1>
           <p className="ily-in mx-auto mt-3 max-w-xl text-base text-muted" style={{ animationDelay: '.15s' }}>{t('promo.lead')}</p>
-          <div className="mt-6 flex flex-col items-center gap-3">
-            <a href="/" className="btn-primary w-full max-w-xs text-center text-lg" data-testid="welcome-book">{t('promo.book')}</a>
-            <InstallPrompt app="passenger" className="w-full max-w-xs" />
-          </div>
         </section>
 
-        <section className="mt-12 grid gap-3 sm:grid-cols-2" data-testid="welcome-features">
+        <section className="mt-10 grid gap-3 sm:grid-cols-2" data-testid="welcome-features">
           {FEATURES.map(([icon, k], i) => (
             <div key={k} className="ily-in flex gap-3 rounded-[16px] border border-edge bg-elevated p-4" style={{ animationDelay: `${0.3 + i * 0.12}s` }}>
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xl font-bold text-accent">{icon}</span>
               <span className="min-w-0">
                 <span className="block font-semibold">{t(`promo.${k}T` as 'promo.airportT')}</span>
-                <span className="mt-0.5 block text-sm text-muted" dir={k === 'lang' ? 'ltr' : undefined}>{t(`promo.${k}D` as 'promo.airportD')}</span>
+                <span className="mt-0.5 block text-sm text-muted">{t(`promo.${k}D` as 'promo.airportD')}</span>
               </span>
             </div>
           ))}
         </section>
 
+        {/* «Заказать поездку» after the four cards (2026-11-26, operator). */}
+        <div className="ily-in mt-6 flex flex-col items-center gap-3" style={{ animationDelay: '.8s' }}>
+          <a href="/" className="btn-primary w-full max-w-xs text-center text-lg" data-testid="welcome-book">{t('promo.book')}</a>
+          <InstallPrompt app="passenger" className="w-full max-w-xs" />
+        </div>
+
         <section className="mt-12 rounded-[20px] border border-accent/40 bg-accent/10 p-6" data-testid="welcome-drivers">
           <h2 className="text-2xl font-bold">{t('promo.drvTitle')}</h2>
           <p className="mt-1 text-muted">{t('promo.drvLead')}</p>
-          <ul className="mt-4 space-y-2 text-sm">
-            {(['drv1', 'drv2', 'drv3'] as const).map((k) => <li key={k} className="flex gap-2"><span className="text-accent">✓</span>{t(`promo.${k}`)}</li>)}
-          </ul>
           <a href="/driver/register" className="btn-primary mt-5 inline-flex" data-testid="welcome-driver">{t('promo.drvCta')}</a>
         </section>
         <LegalLinks />
