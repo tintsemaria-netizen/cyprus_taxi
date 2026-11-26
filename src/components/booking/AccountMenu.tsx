@@ -15,6 +15,15 @@ export interface PassengerInfo { phone: string | null; name?: string | null; ema
 // aria-haspopup/expanded, Esc + outside-click close, focus returns to the trigger.
 // «Выйти» lives in Profile settings since 2026-11-26 (operator); `onLoggedOut` is kept for callers.
 export function AccountMenu({ passenger }: { passenger: PassengerInfo; onLoggedOut?: () => void }) {
+  const [copied, setCopied] = useState(false);
+  async function invite() {
+    const url = `${window.location.origin}/welcome?ref=invite`;
+    const text = t('auth.menu.inviteText');
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try { await navigator.share({ title: 'IL-Y', text, url }); setOpen(false); return; } catch { /* dismissed — copy instead */ }
+    }
+    try { await navigator.clipboard.writeText(`${text} ${url}`); setCopied(true); window.setTimeout(() => setCopied(false), 2500); } catch { /* nothing more to do */ }
+  }
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -97,6 +106,10 @@ export function AccountMenu({ passenger }: { passenger: PassengerInfo; onLoggedO
             <MenuLink href="/prebookings" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('rides.prebookings.menu')}</MenuLink>
             <MenuLink href="/account#places" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.savedPlaces')}</MenuLink>
             <MenuLink href="/account" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.profile')}</MenuLink>
+            {/* «Пригласить друга» (2026-11-26, operator): the friend gets the start page (/welcome), whatever phone. */}
+            <button type="button" role="menuitem" onClick={invite} className="w-full rounded-[10px] px-3 py-3 text-start text-sm hover:bg-page" data-testid="menu-invite">
+              {copied ? `✓ ${t('auth.menu.inviteCopied')}` : t('auth.menu.invite')}
+            </button>
             {/* Help and privacy — small and quiet (2026-11-26, operator). */}
             <a href="/support" role="menuitem" onClick={() => { markLeftViaMenu(); setOpen(false); }} className="block rounded-[10px] px-3 py-2 text-xs text-muted hover:bg-page" data-testid="menu-help">{t('auth.menu.help')}</a>
             {/* «Выйти» moved to Profile settings (2026-11-26, operator). */}

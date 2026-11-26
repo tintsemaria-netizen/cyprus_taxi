@@ -37,6 +37,9 @@ const auth: Catalog<typeof en> = {
     changeNumber: "שינוי מספר",
   },
   menu: {
+    invite: "הזמנת חבר",
+    inviteText: "אני מזמין מוניות בקפריסין עם IL-Y: רואים את המחיר לפני הנסיעה ואת הרכב במפה. נסה:",
+    inviteCopied: "הקישור הועתק",
     button: "תפריט חשבון",
     label: "חשבון",
     savedPlaces: "מקומות שמורים",

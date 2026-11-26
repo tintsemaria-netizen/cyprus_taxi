@@ -37,6 +37,9 @@ const auth: Catalog<typeof en> = {
     changeNumber: 'Изменить номер',
   },
   menu: {
+    invite: "Пригласить друга",
+    inviteText: "Заказываю такси на Кипре в IL-Y: цена видна до поездки, машина на карте. Попробуй:",
+    inviteCopied: "Ссылка скопирована",
     button: 'Меню аккаунта',
     label: 'Аккаунт',
     savedPlaces: 'Сохранённые места',
