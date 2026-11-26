@@ -16,6 +16,7 @@ const auth: Catalog<typeof en> = {
   becomeDriver: 'Γίνετε οδηγός',
   backToBooking: '‹ Πίσω στην κράτηση',
   logOut: 'Αποσύνδεση',
+  logOutAsk: "Αποσύνδεση από τον λογαριασμό;",
   signingOut: 'Αποσύνδεση…',
   myRides: 'Οι διαδρομές μου',
   couldNotSignIn: 'Η σύνδεση απέτυχε. Δοκιμάστε ξανά.',

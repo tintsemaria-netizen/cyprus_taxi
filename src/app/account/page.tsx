@@ -24,6 +24,7 @@ export default function Account() {
   const [name, setName] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [askOut, setAskOut] = useState(false);
   const { t, tError } = useT();
   // Each settings category opens as its own full screen (2026-11-26, operator) with «‹» back to the list.
   // /account#places (from the menu) opens that screen directly; then «‹» goes back to where the menu was.
@@ -51,7 +52,7 @@ export default function Account() {
     catch (err) { setMsg(err instanceof ApiRequestError ? tError(err) : t('auth.account.couldNotSave')); }
     finally { setBusy(false); }
   }
-  async function logout() { await api('/passenger/logout', { method: 'POST' }).catch(() => {}); window.location.href = '/'; }
+  async function logout() { setBusy(true); await api('/passenger/logout', { method: 'POST' }).catch(() => {}); window.location.href = '/'; }
 
   if (authed === false) {
     return (
@@ -121,7 +122,9 @@ export default function Account() {
         <DataRights />
       </Category>
       </div>
-      {!openCat && <button onClick={logout} className="btn-ghost w-full !text-danger">{t('auth.logOut')}</button>}
+      {/* «Выйти»: small, on the left, with a confirmation (2026-11-26, operator). */}
+      {!openCat && <button type="button" onClick={() => setAskOut(true)} className="px-1 py-2 text-sm text-danger hover:underline" data-testid="logout">{t('auth.logOut')}</button>}
+      {askOut && <ConfirmSheet title={t('auth.logOutAsk')} confirmLabel={t('auth.logOut')} danger busy={busy} onConfirm={logout} onCancel={() => setAskOut(false)} />}
     </div>
     </div>
   );

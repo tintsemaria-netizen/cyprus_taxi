@@ -13,6 +13,7 @@ const auth = {
   becomeDriver: 'Become a driver',
   backToBooking: '‹ Back to booking',
   logOut: 'Log out',
+  logOutAsk: "Log out of your account?",
   signingOut: 'Signing out…',
   myRides: 'My rides',
   couldNotSignIn: 'Could not sign in. Try again.',

@@ -16,6 +16,7 @@ const auth: Catalog<typeof en> = {
   becomeDriver: "הצטרפות כנהג",
   backToBooking: "‹ חזרה להזמנה",
   logOut: "התנתקות",
+  logOutAsk: "להתנתק מהחשבון?",
   signingOut: "מתנתק…",
   myRides: "הנסיעות שלי",
   couldNotSignIn: "ההתחברות נכשלה. נסו שוב.",

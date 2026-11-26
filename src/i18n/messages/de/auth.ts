@@ -16,6 +16,7 @@ const auth: Catalog<typeof en> = {
   becomeDriver: "Fahrer werden",
   backToBooking: "‹ Zurück zur Buchung",
   logOut: "Abmelden",
+  logOutAsk: "Vom Konto abmelden?",
   signingOut: "Abmeldung…",
   myRides: "Meine Fahrten",
   couldNotSignIn: "Anmeldung fehlgeschlagen. Versuchen Sie es erneut.",
