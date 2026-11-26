@@ -2,6 +2,7 @@
 
 import { ThemePicker } from '@/components/ThemePicker';
 import { PassengerTopBar } from '@/components/PassengerTopBar';
+import { BackArrow } from '@/components/BackArrow';
 import { useEffect, useRef, useState } from 'react';
 import { PlacesInput, Selected } from '@/components/booking/PlacesInput';
 import { api, ApiRequestError } from '@/lib/api-client';
@@ -67,13 +68,14 @@ export default function Account() {
 
   return (
     <div>
-    <PassengerTopBar onBack={openCat && pushed.current ? closeCat : undefined} />
+    <PassengerTopBar back={false} />
     <div className="mx-auto max-w-md space-y-4 p-4 sm:p-6">
-      {!openCat && <h1 className="text-2xl font-semibold">{t('auth.account.title')}</h1>}
+      {/* «‹» sits beside each page title (2026-11-26, operator), not in the top bar. */}
+      {!openCat && <div className="flex items-center gap-1"><BackArrow className="-ms-2" /><h1 className="text-2xl font-semibold">{t('auth.account.title')}</h1></div>}
 
       {/* Settings categories: a list of rows; each opens its own screen. */}
       <div className={openCat ? '' : 'card divide-y divide-edge overflow-hidden !p-0'}>
-      <Category id="personal" icon="👤" title={t('auth.cat.personal')} sub={me.name || me.email || me.phone || ''} open={openCat} onToggle={toggleCat}>
+      <Category back={pushed.current ? closeCat : undefined} id="personal" icon="👤" title={t('auth.cat.personal')} sub={me.name || me.email || me.phone || ''} open={openCat} onToggle={toggleCat}>
       <form onSubmit={save} className="space-y-3">
         <div>
           <label className="label" htmlFor="account-f1">{t('auth.name')}</label>
@@ -94,28 +96,28 @@ export default function Account() {
       </form>
       </Category>
 
-      <Category id="security" icon="🔒" title={t('auth.cat.security')} sub={me.hasPassword ? t('auth.pw.title') : t('auth.pw.setTitle')} open={openCat} onToggle={toggleCat}>
+      <Category back={pushed.current ? closeCat : undefined} id="security" icon="🔒" title={t('auth.cat.security')} sub={me.hasPassword ? t('auth.pw.title') : t('auth.pw.setTitle')} open={openCat} onToggle={toggleCat}>
         <ChangePassword hasPassword={!!me.hasPassword} />
       </Category>
 
       {/* Saved places: only from the account menu (it has its own item there), not listed here. */}
-      <Category id="places" listed={false} icon="📍" title={t('auth.places.title')} sub={t('auth.cat.placesSub')} open={openCat} onToggle={toggleCat}>
+      <Category back={pushed.current ? closeCat : undefined} id="places" listed={false} icon="📍" title={t('auth.places.title')} sub={t('auth.cat.placesSub')} open={openCat} onToggle={toggleCat}>
         <SavedPlaces />
       </Category>
 
-      <Category id="receipts" icon="🧾" title={t('auth.receipts.title')} sub={t('auth.receipts.sub')} open={openCat} onToggle={toggleCat}>
+      <Category back={pushed.current ? closeCat : undefined} id="receipts" icon="🧾" title={t('auth.receipts.title')} sub={t('auth.receipts.sub')} open={openCat} onToggle={toggleCat}>
         <Receipts />
       </Category>
 
-      <Category id="theme" icon="🎨" title={t('common.theme.title')} open={openCat} onToggle={toggleCat}>
+      <Category back={pushed.current ? closeCat : undefined} id="theme" icon="🎨" title={t('common.theme.title')} open={openCat} onToggle={toggleCat}>
         <ThemePicker role="passenger" />
       </Category>
 
-      <Category id="notifications" icon="🔔" title={t('auth.cat.notifications')} open={openCat} onToggle={toggleCat}>
+      <Category back={pushed.current ? closeCat : undefined} id="notifications" icon="🔔" title={t('auth.cat.notifications')} open={openCat} onToggle={toggleCat}>
         <p className="text-sm text-muted">{t('auth.account.notifications')}</p>
       </Category>
 
-      <Category id="data" icon="🛡️" title={t('auth.data.title')} open={openCat} onToggle={toggleCat}>
+      <Category back={pushed.current ? closeCat : undefined} id="data" icon="🛡️" title={t('auth.data.title')} open={openCat} onToggle={toggleCat}>
         <DataRights />
       </Category>
       </div>
@@ -338,11 +340,11 @@ function ChangePassword({ hasPassword }: { hasPassword: boolean }) {
 }
 
 // One settings category (2026-11-26): a row in the list; tapped, it becomes its own full screen.
-function Category({ id, icon, title, sub, open, onToggle, listed = true, children }: { id: string; icon: string; title: string; sub?: string; open: string | null; onToggle: (id: string) => void; listed?: boolean; children: React.ReactNode }) {
+function Category({ id, icon, title, sub, open, onToggle, listed = true, back, children }: { back?: () => void; id: string; icon: string; title: string; sub?: string; open: string | null; onToggle: (id: string) => void; listed?: boolean; children: React.ReactNode }) {
   if (open === id) {
     return (
       <section id={id} className="space-y-4">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold"><span aria-hidden="true">{icon}</span>{title}</h1>
+        <div className="flex items-center gap-1"><BackArrow className="-ms-2" onBack={back} fallback="/account" /><h1 className="flex items-center gap-2 text-2xl font-semibold"><span aria-hidden="true">{icon}</span>{title}</h1></div>
         <div className="card p-4">{children}</div>
       </section>
     );
