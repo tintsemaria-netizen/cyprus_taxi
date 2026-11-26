@@ -16,13 +16,14 @@ export function useOperator(): OperatorInfo | null {
   return o;
 }
 
-export function LegalLinks() {
+// `current` hides the link to the page you are on (2026-11-26, operator).
+export function LegalLinks({ current }: { current?: 'privacy' | 'terms' | 'support' }) {
   const { t } = useT();
   return (
     <nav className="mt-10 flex flex-wrap gap-x-4 gap-y-1 border-t border-edge pt-4 text-sm text-muted">
-      <a href="/privacy" className="hover:text-ink">{t('promo.privacy')}</a>
-      <a href="/terms" className="hover:text-ink">{t('promo.terms')}</a>
-      <a href="/support" className="hover:text-ink">{t('promo.support')}</a>
+      {current !== 'privacy' && <a href="/privacy" className="hover:text-ink">{t('promo.privacy')}</a>}
+      {current !== 'terms' && <a href="/terms" className="hover:text-ink">{t('promo.terms')}</a>}
+      {current !== 'support' && <a href="/support" className="hover:text-ink">{t('promo.support')}</a>}
     </nav>
   );
 }
@@ -48,7 +49,7 @@ export function LegalPage({ kind }: { kind: 'privacy' | 'terms' }) {
             </section>
           ))}
         </div>
-        <LegalLinks />
+        <LegalLinks current={kind} />
       </main>
     </div>
   );

@@ -30,7 +30,6 @@ const promo: Catalog<typeof en> = {
   address: "Adres",
   phoneL: "Telefon",
   emailL: "E-mail",
-  deleteHint: "Usuwanie konta: Ustawienia profilu → Dane osobowe → Usuń konto. Kierowcy: ☰ → Profil → Usuń konto.",
   privacy: "Polityka prywatności",
   terms: "Regulamin",
   support: "Pomoc",
