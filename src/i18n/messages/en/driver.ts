@@ -83,6 +83,7 @@ const driver = {
     goOnline: 'Go online',
   },
   offer: {
+    newClient: "new",
     nextTitle: 'Next ride — after the drop-off',
     cancelNext: 'Cancel',
     giveBackConfirm: 'Give back the next ride? The client will get another driver.',

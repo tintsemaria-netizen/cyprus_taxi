@@ -797,7 +797,7 @@ function HomeSection(props: {
         <div key={offer.offerId} className="ily-offer-in card pointer-events-auto max-h-[58dvh] overflow-y-auto border-2 border-accent p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.55)]">
           {/* «Отклонить» small at the top right; the timer next to the title (2026-11-26, operator). */}
           <div className="flex items-center justify-between gap-2">
-            <span className="flex items-center gap-2"><span className="font-semibold text-accent">{t('driver.offer.title')}</span><span className={`chip ${offerSecs <= 5 ? '!text-danger' : ''}`}>⏳ {t('driver.units.sec', { n: offerSecs })}</span></span>
+            <span className="flex items-center gap-2"><span className="font-semibold text-accent">{t('driver.offer.title')}</span><span className={`text-sm font-semibold tabular-nums ${offerSecs <= 5 ? 'text-danger' : 'text-muted'}`}>{t('driver.units.sec', { n: offerSecs })}</span></span>
             <button className="rounded-full border border-danger/50 px-3 py-1 text-xs font-semibold text-danger" disabled={offerBusy} onClick={() => props.onDecline(offer.offerId)} data-testid="offer-decline">{t('driver.offer.decline')}</button>
           </div>
           {/* 1) How far the client is: time and km to the pickup (the pickup is also on the map). */}
@@ -964,7 +964,7 @@ function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
         <div className="card pointer-events-auto max-h-[60dvh] overflow-y-auto border-2 border-accent p-4">
           {!o ? <p className="py-6 text-center text-sm text-muted">{t('common.loading')}</p> : (
             <>
-              <div className="flex items-center justify-between"><span className="font-semibold text-accent">{t('driver.free.title')}</span><span className={`chip ${leftSec! <= 30 ? '!text-danger' : ''}`}>⏳ {t('driver.free.left', { sec: leftSec! })}</span></div>
+              <div className="flex items-center justify-between"><span className="font-semibold text-accent">{t('driver.free.title')}</span><span className={`text-sm font-semibold tabular-nums ${leftSec! <= 30 ? 'text-danger' : 'text-muted'}`}>{t('driver.free.left', { sec: leftSec! })}</span></div>
               <div className="mt-2 flex items-baseline gap-3">
                 <span className="text-3xl font-bold text-ink">{o.pickupEtaSec != null ? t('driver.offer.minShort', { min: Math.max(1, Math.round(o.pickupEtaSec / 60)) }) : '—'}</span>
                 {o.pickupDistanceM != null && <span className="text-xl font-semibold text-muted">{km(o.pickupDistanceM)}</span>}
@@ -1331,7 +1331,7 @@ function NextOfferCard({ offer, secs, busy, onAccept, onDecline }: { offer: Offe
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] mx-auto max-w-lg px-3 pb-[calc(12px+env(safe-area-inset-bottom))]" data-testid="next-offer">
       <div key={offer.offerId} className="ily-offer-in card pointer-events-auto border-2 border-accent p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.55)]">
-        <div className="flex items-center justify-between gap-2"><span className="font-semibold text-accent">{t('driver.offer.nextTitle')}</span><span className={`chip ${secs <= 5 ? '!text-danger' : ''}`}>⏳ {t('driver.units.sec', { n: secs })}</span></div>
+        <div className="flex items-center justify-between gap-2"><span className="font-semibold text-accent">{t('driver.offer.nextTitle')}</span><span className={`text-sm font-semibold tabular-nums ${secs <= 5 ? 'text-danger' : 'text-muted'}`}>{t('driver.units.sec', { n: secs })}</span></div>
         <div className="mt-2 flex items-baseline gap-3">
           <span className="text-3xl font-bold text-ink">{offer.pickupEtaSec != null ? t('driver.offer.minShort', { min: Math.max(1, Math.round(offer.pickupEtaSec / 60)) }) : '—'}</span>
           {offer.pickupDistanceM != null && <span className="text-lg font-semibold text-muted">{km(offer.pickupDistanceM)}</span>}
@@ -1341,7 +1341,7 @@ function NextOfferCard({ offer, secs, busy, onAccept, onDecline }: { offer: Offe
         <div className="mt-2 space-y-1 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
           <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-accent" /><span className="font-medium">{offer.pickup.label}</span></div>
           <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{offer.dropoff.label}</span></div>
-          <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span></div>
+          <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span><PaxRating r={offer.passengerRating} /></div>
           <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="font-bold">{offer.fareCents != null ? fareRangeText(offer.fareCents, offer.priceType, (c) => money(c, offer.currency), offer.minCents) : '—'}</span></div>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">

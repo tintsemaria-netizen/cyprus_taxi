@@ -86,6 +86,7 @@ const driver: Catalog<typeof en> = {
     goOnline: "الاتصال",
   },
   offer: {
+    newClient: "جديد",
     nextTitle: 'الطلب التالي — بعد الإنزال',
     cancelNext: 'إلغاء',
     giveBackConfirm: 'التخلي عن الطلب التالي؟ سيحصل العميل على سائق آخر.',
