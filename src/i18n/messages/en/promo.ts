@@ -28,7 +28,6 @@ const promo = {
   address: "Address",
   phoneL: "Phone",
   emailL: "E-mail",
-  deleteHint: "To delete your account: Account → Your data → Delete account. Drivers: ☰ → Profile → Delete account.",
   privacy: "Privacy policy",
   terms: "Terms of service",
   support: "Support",

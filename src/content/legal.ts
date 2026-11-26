@@ -44,7 +44,7 @@ const PRIVACY: Record<LegalLang, LegalDoc> = {
         'A driver\'s latest position is removed within 24 hours after the end of duty. Technical logs: up to 90 days.',
       ] },
       { h: '6. Your rights', p: [
-        'You can see, download and correct your data, and delete your account at any time in the app (Account → Your data). You can also object to or restrict processing and withdraw any consent. Write to {email}.',
+        'You can see, download and correct your data, and delete your account at any time in the app (Profile settings → Personal details). You can also object to or restrict processing and withdraw any consent. Write to {email}.',
         'You may complain to the Commissioner for Personal Data Protection of Cyprus (www.dataprotection.gov.cy).',
       ] },
       { h: '7. Children', p: ['The service is not meant for children under 16 booking on their own. A parent or guardian may book a ride for them.'] },
@@ -78,7 +78,7 @@ const PRIVACY: Record<LegalLang, LegalDoc> = {
         'Последнее местоположение водителя удаляется в течение 24 часов после окончания работы на линии. Технические журналы — до 90 дней.',
       ] },
       { h: '6. Ваши права', p: [
-        'Вы можете посмотреть, скачать и исправить свои данные и в любой момент удалить аккаунт в приложении (Аккаунт → Ваши данные). Вы также можете возразить против обработки или ограничить её и отозвать согласие. Пишите на {email}.',
+        'Вы можете посмотреть, скачать и исправить свои данные и в любой момент удалить аккаунт в приложении (Настройки профиля → Личные данные). Вы также можете возразить против обработки или ограничить её и отозвать согласие. Пишите на {email}.',
         'Вы можете подать жалобу Уполномоченному по защите персональных данных Кипра (www.dataprotection.gov.cy).',
       ] },
       { h: '7. Дети', p: ['Сервис не предназначен для самостоятельного заказа детьми младше 16 лет. Родитель или опекун может заказать поездку для ребёнка.'] },
@@ -112,7 +112,7 @@ const PRIVACY: Record<LegalLang, LegalDoc> = {
         'Η τελευταία θέση του οδηγού διαγράφεται εντός 24 ωρών από το τέλος της βάρδιας. Τεχνικά αρχεία: έως 90 ημέρες.',
       ] },
       { h: '6. Τα δικαιώματά σας', p: [
-        'Μπορείτε να δείτε, να κατεβάσετε και να διορθώσετε τα δεδομένα σας και να διαγράψετε τον λογαριασμό σας ανά πάσα στιγμή στην εφαρμογή (Λογαριασμός → Τα δεδομένα σας). Μπορείτε επίσης να αντιταχθείτε ή να περιορίσετε την επεξεργασία και να ανακαλέσετε συγκατάθεση. Γράψτε στο {email}.',
+        'Μπορείτε να δείτε, να κατεβάσετε και να διορθώσετε τα δεδομένα σας και να διαγράψετε τον λογαριασμό σας ανά πάσα στιγμή στην εφαρμογή (Ρυθμίσεις προφίλ → Προσωπικά στοιχεία). Μπορείτε επίσης να αντιταχθείτε ή να περιορίσετε την επεξεργασία και να ανακαλέσετε συγκατάθεση. Γράψτε στο {email}.',
         'Μπορείτε να υποβάλετε καταγγελία στον Επίτροπο Προστασίας Δεδομένων Προσωπικού Χαρακτήρα της Κύπρου (www.dataprotection.gov.cy).',
       ] },
       { h: '7. Παιδιά', p: ['Η υπηρεσία δεν προορίζεται για παιδιά κάτω των 16 που κάνουν κράτηση μόνα τους. Γονέας ή κηδεμόνας μπορεί να κλείσει διαδρομή για αυτά.'] },

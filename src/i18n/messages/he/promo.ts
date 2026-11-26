@@ -30,7 +30,6 @@ const promo: Catalog<typeof en> = {
   address: "כתובת",
   phoneL: "טלפון",
   emailL: "דוא״ל",
-  deleteHint: "מחיקת חשבון: חשבון → הנתונים שלך → מחיקת חשבון. נהגים: ☰ → פרופיל → מחיקת חשבון.",
   privacy: "מדיניות פרטיות",
   terms: "תנאי שימוש",
   support: "תמיכה",

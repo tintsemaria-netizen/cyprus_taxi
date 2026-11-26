@@ -1,7 +1,7 @@
 'use client';
 
 // «Поддержка» (2026-11-26): who runs IL-Y and how to reach them (EU trader information, app-store support link),
-// how to delete an account, links to the privacy policy and terms. Details come from admin «Настройки».
+// links to the privacy policy and terms (the delete-account hint was removed 2026-11-26, operator). Details come from admin «Настройки».
 import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { BackArrow } from '@/components/BackArrow';
 import { LegalLinks, useOperator } from '@/components/LegalShell';
@@ -30,8 +30,7 @@ export default function Support() {
             </>
           )}
         </div>
-        <p className="mt-6 text-sm text-muted">{t('promo.deleteHint')}</p>
-        <LegalLinks />
+        <LegalLinks current="support" />
       </main>
     </div>
   );
