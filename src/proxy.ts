@@ -46,6 +46,7 @@ function cameOverPlainHttp(req: NextRequest): boolean {
 }
 
 const MUTATION_HEADER = 'x-ily-mutation';
+const WELCOME_COOKIE = 'ily_welcome_seen';
 
 export function proxy(req: NextRequest) {
   if (cameOverPlainHttp(req) && (req.method === 'GET' || req.method === 'HEAD')) {
@@ -57,6 +58,14 @@ export function proxy(req: NextRequest) {
       { error: { code: 'BAD_ORIGIN', message: 'Cross-origin request rejected.', fieldErrors: {}, requestId: '' } },
       { status: 403, headers: { 'Cache-Control': 'no-store' } },
     );
+  }
+  // Start page first (2026-11-26, operator): a passenger opening the site or the installed app on a phone that has
+  // never been here (first time, a new phone, from a QR code or a link) sees /welcome once; after that «/» opens
+  // the booking screen straight away. Someone already signed in on this phone is not sent there.
+  if ((req.method === 'GET' || req.method === 'HEAD') && req.nextUrl.pathname === '/'
+    && !req.cookies.has(WELCOME_COOKIE) && !req.cookies.has('tc_passenger') && !req.headers.get('next-router-prefetch')) {
+    const to = req.nextUrl.clone(); to.pathname = '/welcome';
+    return NextResponse.redirect(to, 307);
   }
   // «Журнал изменений» (2026-11-23): tell requireStaff which changing API call this is, so an admin's
   // change is logged for the owner. Always overwritten here — a client can never set it itself.
@@ -104,6 +113,10 @@ export function proxy(req: NextRequest) {
   const strictNoRef = p === '/track' || p === '/share' || p.startsWith('/api/');
   res.headers.set('Referrer-Policy', strictNoRef ? 'no-referrer' : 'strict-origin-when-cross-origin');
   res.headers.set('Permissions-Policy', 'geolocation=(self), camera=(), microphone=(), payment=()');
+  // The start page was shown on this phone: from now on «/» opens the booking screen (2 years).
+  if (p === '/welcome' && !req.cookies.has(WELCOME_COOKIE)) {
+    res.cookies.set(WELCOME_COOKIE, '1', { path: '/', maxAge: 2 * 365 * 24 * 3600, sameSite: 'lax', httpOnly: true, secure: req.nextUrl.protocol === 'https:' || /"scheme"\s*:\s*"https"/.test(req.headers.get('cf-visitor') || '') });
+  }
   return res;
 }
 
