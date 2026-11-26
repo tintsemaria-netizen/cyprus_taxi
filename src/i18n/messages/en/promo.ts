@@ -22,5 +22,17 @@ const promo = {
   drv2: "Pre-bookings and airport queue stands",
   drv3: "Passengers pay you directly",
   drvCta: "Become an IL-Y driver",
+  supportTitle: "Support",
+  supportLead: "Questions about a ride, a receipt or your account — write or call us.",
+  operator: "Operator",
+  address: "Address",
+  phoneL: "Phone",
+  emailL: "E-mail",
+  deleteHint: "To delete your account: Account → Your data → Delete account. Drivers: ☰ → Profile → Delete account.",
+  privacy: "Privacy policy",
+  terms: "Terms of service",
+  support: "Support",
+  notSet: "Contact details will appear here soon.",
+  englishOnly: "This document is available in English, Greek and Russian.",
 };
 export default promo;

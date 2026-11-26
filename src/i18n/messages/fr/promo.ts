@@ -24,5 +24,17 @@ const promo: Catalog<typeof en> = {
   drv2: "Réservations et file d’attente aux stations d’aéroport",
   drv3: "Les passagers vous paient directement",
   drvCta: "Devenir chauffeur IL-Y",
+  supportTitle: "Assistance",
+  supportLead: "Une question sur une course, un reçu ou votre compte — écrivez-nous ou appelez-nous.",
+  operator: "Exploitant",
+  address: "Adresse",
+  phoneL: "Téléphone",
+  emailL: "E-mail",
+  deleteHint: "Supprimer votre compte : Compte → Vos données → Supprimer le compte. Chauffeurs : ☰ → Profil → Supprimer le compte.",
+  privacy: "Politique de confidentialité",
+  terms: "Conditions d’utilisation",
+  support: "Assistance",
+  notSet: "Les coordonnées apparaîtront bientôt ici.",
+  englishOnly: "Ce document est disponible en anglais, grec et russe.",
 };
 export default promo;

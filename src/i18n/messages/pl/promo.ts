@@ -24,5 +24,17 @@ const promo: Catalog<typeof en> = {
   drv2: "Zamówienia z wyprzedzeniem i kolejka na postojach lotniskowych",
   drv3: "Pasażer płaci bezpośrednio Tobie",
   drvCta: "Zostań kierowcą IL-Y",
+  supportTitle: "Pomoc",
+  supportLead: "Pytania o kurs, paragon lub konto — napisz lub zadzwoń.",
+  operator: "Operator",
+  address: "Adres",
+  phoneL: "Telefon",
+  emailL: "E-mail",
+  deleteHint: "Usuwanie konta: Konto → Twoje dane → Usuń konto. Kierowcy: ☰ → Profil → Usuń konto.",
+  privacy: "Polityka prywatności",
+  terms: "Regulamin",
+  support: "Pomoc",
+  notSet: "Dane kontaktowe wkrótce pojawią się tutaj.",
+  englishOnly: "Dokument jest dostępny po angielsku, grecku i rosyjsku.",
 };
 export default promo;

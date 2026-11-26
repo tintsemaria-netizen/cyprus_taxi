@@ -51,6 +51,16 @@ const driver: Catalog<typeof en> = {
     onHint: "سيارتك XL: تصلك طلبات XL وComfort (Comfort بسعر Comfort).",
     offHint: "طلبات XL فقط.",
   },
+  // Delete the account in the app (2026-11-26).
+  deleteAccount: {
+    button: "حذف الحساب",
+    title: "حذف حسابك؟",
+    body: "سيتم حذف تسجيل الدخول والاسم والهاتف وبيانات التسجيل والمستندات نهائياً. تبقى الرحلات والمدفوعات السابقة في السجلات المالية بدون اسمك. لا يمكن التراجع.",
+    cancel: "إلغاء",
+    confirm: "حذف نهائي",
+    activeRide: "أنهِ أو أعد رحلاتك وحجوزاتك المسبقة أولاً.",
+    failed: "تعذّر حذف الحساب. حاول مرة أخرى أو تواصل مع الدعم.",
+  },
   stand: {
     inQueue: "في طابور من {total}",
     wait: "الانتظار ≈ {min} د",

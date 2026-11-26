@@ -6,6 +6,7 @@ import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { LogoMark } from '@/components/Brand';
 import { useT } from '@/i18n/I18nProvider';
+import { LegalLinks } from '@/components/LegalShell';
 
 const FEATURES = [
   ['✈', 'airport'],
@@ -52,6 +53,7 @@ export default function Welcome() {
           </ul>
           <a href="/driver/register" className="btn-primary mt-5 inline-flex" data-testid="welcome-driver">{t('promo.drvCta')}</a>
         </section>
+        <LegalLinks />
       </main>
     </div>
   );

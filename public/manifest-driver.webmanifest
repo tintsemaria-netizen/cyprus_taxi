@@ -3,6 +3,7 @@
   "name": "IL-Y Driver",
   "short_name": "IL-Y Driver",
   "description": "IL-Y driver app: go online, receive ride offers and navigate.",
+  "categories": ["navigation", "business"],
   "start_url": "/driver",
   "scope": "/",
   "display": "standalone",

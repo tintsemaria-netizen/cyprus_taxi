@@ -48,6 +48,16 @@ const driver = {
     onHint: "Your car is XL: you get XL and Comfort orders (Comfort orders at the Comfort price).",
     offHint: "XL orders only.",
   },
+  // Delete the account in the app (2026-11-26).
+  deleteAccount: {
+    button: "Delete account",
+    title: "Delete your account?",
+    body: "Your sign-in, name, phone, registration data and documents will be deleted for good. Past rides and payouts stay in the financial records, without your name. This cannot be undone.",
+    cancel: "Cancel",
+    confirm: "Delete for good",
+    activeRide: "First finish or give back your rides and pre-bookings.",
+    failed: "The account could not be deleted. Try again or contact support.",
+  },
   stand: {
     inQueue: "in a queue of {total}",
     wait: "Wait ≈ {min} min",

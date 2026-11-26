@@ -51,6 +51,16 @@ const driver: Catalog<typeof en> = {
     onHint: "Masz auto XL: dostajesz zlecenia XL i Comfort (Comfort po cenie Comfort).",
     offHint: "Tylko zlecenia XL.",
   },
+  // Delete the account in the app (2026-11-26).
+  deleteAccount: {
+    button: "Usuń konto",
+    title: "Usunąć konto?",
+    body: "Logowanie, imię, telefon, dane rejestracyjne i dokumenty zostaną usunięte na zawsze. Poprzednie kursy i wypłaty zostaną w dokumentacji finansowej, bez Twojego imienia. Tego nie można cofnąć.",
+    cancel: "Anuluj",
+    confirm: "Usuń na zawsze",
+    activeRide: "Najpierw zakończ lub oddaj swoje kursy i zamówienia z wyprzedzeniem.",
+    failed: "Nie udało się usunąć konta. Spróbuj ponownie lub napisz do wsparcia.",
+  },
   stand: {
     inQueue: "w kolejce {total}",
     wait: "Czekanie ≈ {min} min",

@@ -101,7 +101,7 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
             <MenuLink href="/prebookings" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('rides.prebookings.menu')}</MenuLink>
             <MenuLink href="/account#places" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.savedPlaces')}</MenuLink>
             <MenuLink href="/account" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.profile')}</MenuLink>
-            <MenuLink href="/privacy" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.help')}</MenuLink>
+            <MenuLink href="/support" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.help')}</MenuLink>
             <div className="flex items-center justify-between gap-3 px-3 py-2">
               <span className="text-sm text-muted">{t('common.language')}</span>
               <LanguageSwitcher only={['ru', 'el', 'en']} />

@@ -24,5 +24,17 @@ const promo: Catalog<typeof en> = {
   drv2: "Vorausbuchungen und Warteschlangen an Flughafen-Halteplätzen",
   drv3: "Fahrgäste zahlen direkt an Sie",
   drvCta: "IL-Y-Fahrer werden",
+  supportTitle: "Support",
+  supportLead: "Fragen zu einer Fahrt, einer Quittung oder Ihrem Konto — schreiben oder rufen Sie uns an.",
+  operator: "Betreiber",
+  address: "Adresse",
+  phoneL: "Telefon",
+  emailL: "E-Mail",
+  deleteHint: "Konto löschen: Konto → Ihre Daten → Konto löschen. Fahrer: ☰ → Profil → Konto löschen.",
+  privacy: "Datenschutzerklärung",
+  terms: "Nutzungsbedingungen",
+  support: "Support",
+  notSet: "Die Kontaktdaten erscheinen hier bald.",
+  englishOnly: "Dieses Dokument ist auf Englisch, Griechisch und Russisch verfügbar.",
 };
 export default promo;
