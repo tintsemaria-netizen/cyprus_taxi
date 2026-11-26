@@ -2,7 +2,7 @@
 
 import { ThemePicker } from '@/components/ThemePicker';
 import { PassengerTopBar } from '@/components/PassengerTopBar';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PlacesInput, Selected } from '@/components/booking/PlacesInput';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
@@ -24,15 +24,19 @@ export default function Account() {
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { t, tError } = useT();
-  // Which settings category is expanded. /account#places (from the menu) opens that one.
+  // Each settings category opens as its own full screen (2026-11-26, operator) with «‹» back to the list.
+  // /account#places (from the menu) opens that screen directly; then «‹» goes back to where the menu was.
   const [openCat, setOpenCat] = useState<string | null>(null);
+  const pushed = useRef(false);
   useEffect(() => {
-    const fromHash = () => { const h = window.location.hash.replace('#', ''); if (h) setOpenCat(h); };
+    const fromHash = () => { const h = window.location.hash.replace('#', ''); setOpenCat(h || null); if (!h) pushed.current = false; };
     fromHash();
     window.addEventListener('hashchange', fromHash);
-    return () => window.removeEventListener('hashchange', fromHash);
+    window.addEventListener('popstate', fromHash);
+    return () => { window.removeEventListener('hashchange', fromHash); window.removeEventListener('popstate', fromHash); };
   }, []);
-  const toggleCat = (id: string) => setOpenCat((c) => (c === id ? null : id));
+  const toggleCat = (id: string) => { pushed.current = true; history.pushState(null, '', `#${id}`); setOpenCat(id); window.scrollTo(0, 0); };
+  const closeCat = () => { if (pushed.current) history.back(); else { history.replaceState(null, '', window.location.pathname); setOpenCat(null); } };
 
   useEffect(() => {
     api<Me>('/passenger/me')
@@ -63,12 +67,12 @@ export default function Account() {
 
   return (
     <div>
-    <PassengerTopBar />
+    <PassengerTopBar onBack={openCat && pushed.current ? closeCat : undefined} />
     <div className="mx-auto max-w-md space-y-4 p-4 sm:p-6">
-      <h1 className="text-2xl font-semibold">{t('auth.account.title')}</h1>
+      {!openCat && <h1 className="text-2xl font-semibold">{t('auth.account.title')}</h1>}
 
-      {/* Settings grouped into collapsible categories (2026-11-14). */}
-      <div className="card divide-y divide-edge overflow-hidden !p-0">
+      {/* Settings categories: a list of rows; each opens its own screen. */}
+      <div className={openCat ? '' : 'card divide-y divide-edge overflow-hidden !p-0'}>
       <Category id="personal" icon="👤" title={t('auth.cat.personal')} sub={me.name || me.email || me.phone || ''} open={openCat} onToggle={toggleCat}>
       <form onSubmit={save} className="space-y-3">
         <div>
@@ -94,7 +98,8 @@ export default function Account() {
         <ChangePassword hasPassword={!!me.hasPassword} />
       </Category>
 
-      <Category id="places" icon="📍" title={t('auth.places.title')} sub={t('auth.cat.placesSub')} open={openCat} onToggle={toggleCat}>
+      {/* Saved places: only from the account menu (it has its own item there), not listed here. */}
+      <Category id="places" listed={false} icon="📍" title={t('auth.places.title')} sub={t('auth.cat.placesSub')} open={openCat} onToggle={toggleCat}>
         <SavedPlaces />
       </Category>
 
@@ -114,7 +119,7 @@ export default function Account() {
         <DataRights />
       </Category>
       </div>
-      <button onClick={logout} className="btn-ghost w-full !text-danger">{t('auth.logOut')}</button>
+      {!openCat && <button onClick={logout} className="btn-ghost w-full !text-danger">{t('auth.logOut')}</button>}
     </div>
     </div>
   );
@@ -332,20 +337,27 @@ function ChangePassword({ hasPassword }: { hasPassword: boolean }) {
   );
 }
 
-// One collapsible settings category: icon, title, short summary and a chevron; one open at a time.
-function Category({ id, icon, title, sub, open, onToggle, children }: { id: string; icon: string; title: string; sub?: string; open: string | null; onToggle: (id: string) => void; children: React.ReactNode }) {
-  const isOpen = open === id;
+// One settings category (2026-11-26): a row in the list; tapped, it becomes its own full screen.
+function Category({ id, icon, title, sub, open, onToggle, listed = true, children }: { id: string; icon: string; title: string; sub?: string; open: string | null; onToggle: (id: string) => void; listed?: boolean; children: React.ReactNode }) {
+  if (open === id) {
+    return (
+      <section id={id} className="space-y-4">
+        <h1 className="flex items-center gap-2 text-2xl font-semibold"><span aria-hidden="true">{icon}</span>{title}</h1>
+        <div className="card p-4">{children}</div>
+      </section>
+    );
+  }
+  if (open || !listed) return null;
   return (
     <section id={id}>
-      <button type="button" onClick={() => onToggle(id)} aria-expanded={isOpen} className="flex w-full items-center gap-3 px-4 py-3.5 text-start hover:bg-elevated">
+      <button type="button" onClick={() => onToggle(id)} className="flex w-full items-center gap-3 px-4 py-3.5 text-start hover:bg-elevated" data-testid={`cat-${id}`}>
         <span className="text-xl" aria-hidden="true">{icon}</span>
         <span className="min-w-0 flex-1">
           <span className="block font-medium">{title}</span>
           {sub && <span className="block truncate text-xs text-muted">{sub}</span>}
         </span>
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`shrink-0 text-muted transition-transform ${isOpen ? 'rotate-90' : 'rtl:-scale-x-100'}`}><path d="M9 5l7 7-7 7" /></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-muted rtl:-scale-x-100"><path d="M9 5l7 7-7 7" /></svg>
       </button>
-      {isOpen && <div className="px-4 pb-4 pt-1">{children}</div>}
     </section>
   );
 }
