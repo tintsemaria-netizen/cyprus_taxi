@@ -74,6 +74,10 @@ export async function runOnce(): Promise<void> {
       const { drainReceiptEmails } = await import('@/server/email/receipts');
       await drainReceiptEmails(now);
     } catch (e) { console.error('[receipt-email] drain error', e); }
+    try {
+      const { drainReceiptDigests } = await import('@/server/email/receipt-digest');
+      await drainReceiptDigests(now);
+    } catch (e) { console.error('[receipt-digest] drain error', e); }
 
     // --- Section 3: ANALYTICS EXPORT (no-op unless ClickHouse configured; never blocks ops) ---
     try {
@@ -89,6 +93,8 @@ export async function runOnce(): Promise<void> {
         const r = await runMaintenance(now);
         try { const { enforceDocumentExpiries } = await import('@/server/applications'); await enforceDocumentExpiries(now); } catch (e) { console.error('[expiry] error', e); }
         try { const { runKycRetention } = await import('@/server/kyc-retention'); await runKycRetention(now); } catch (e) { console.error('[kyc-retention] error', e); }
+        // Weekly / monthly receipt summaries (2026-11-26).
+        try { const { scheduleReceiptDigests } = await import('@/server/email/receipt-digest'); await scheduleReceiptDigests(now); } catch (e) { console.error('[receipt-digest] schedule error', e); }
         try { const { rescanPendingDocuments } = await import('@/server/scan'); await rescanPendingDocuments(); } catch (e) { console.error('[rescan] error', e); }
         // Own Cyprus address base: weekly OpenStreetMap refresh in a child process (2026-11-19).
         try { const { maybeStartOsmImport } = await import('@/server/osm/schedule'); const s = await maybeStartOsmImport(now); if (s === 'started') console.log('[osm-import] started'); } catch (e) { console.error('[osm-import] error', e); }

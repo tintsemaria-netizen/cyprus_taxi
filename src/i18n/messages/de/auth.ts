@@ -16,6 +16,7 @@ const auth: Catalog<typeof en> = {
   becomeDriver: "Fahrer werden",
   backToBooking: "‹ Zurück zur Buchung",
   logOut: "Abmelden",
+  logOutAsk: "Vom Konto abmelden?",
   signingOut: "Abmeldung…",
   myRides: "Meine Fahrten",
   couldNotSignIn: "Anmeldung fehlgeschlagen. Versuchen Sie es erneut.",
@@ -77,6 +78,7 @@ const auth: Catalog<typeof en> = {
     placesSub: "Zuhause, Arbeit und Schule für Buchung mit einem Tipp",
     notifications: "Benachrichtigungen",
   },
+  receipts: { title: "Belege", sub: "Alle Fahrtbelege und E-Mail-Einstellungen", mailTitle: "Belege per E-Mail", each: "Nach jeder Fahrt", weekly: "Einmal pro Woche (Übersicht)", monthly: "Einmal pro Monat (Übersicht)", off: "Keine E-Mails", hintEach: "Nach jeder abgeschlossenen Fahrt wird ein Beleg an {email} gesendet.", hintWeekly: "Jeden Montag erhalten Sie an {email} eine E-Mail mit den Fahrten der Vorwoche.", hintMonthly: "Am 1. jedes Monats erhalten Sie an {email} eine E-Mail mit den Fahrten des Vormonats.", hintOff: "Belege werden nicht per E-Mail gesendet. Hier können Sie sie jederzeit ansehen.", noEmail: "Ihr Konto hat keine E-Mail-Adresse, die Belege sind nur hier gespeichert.", saved: "Gespeichert", list: "Meine Belege", empty: "Noch keine abgeschlossenen Fahrten.", more: "Mehr anzeigen", emailed: "Per E-Mail gesendet" },
   pw: {
     title: "Passwort ändern",
     setTitle: "Passwort festlegen",

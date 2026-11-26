@@ -16,6 +16,7 @@ const auth: Catalog<typeof en> = {
   becomeDriver: "הצטרפות כנהג",
   backToBooking: "‹ חזרה להזמנה",
   logOut: "התנתקות",
+  logOutAsk: "להתנתק מהחשבון?",
   signingOut: "מתנתק…",
   myRides: "הנסיעות שלי",
   couldNotSignIn: "ההתחברות נכשלה. נסו שוב.",
@@ -77,6 +78,7 @@ const auth: Catalog<typeof en> = {
     placesSub: "בית, עבודה ובית ספר להזמנה בנגיעה אחת",
     notifications: "התראות",
   },
+  receipts: { title: "קבלות", sub: "כל קבלות הנסיעות ושליחה במייל", mailTitle: "שליחת קבלות במייל", each: "אחרי כל נסיעה", weekly: "פעם בשבוע (סיכום)", monthly: "פעם בחודש (סיכום)", off: "לא לשלוח", hintEach: "קבלה נשלחת אל {email} אחרי כל נסיעה שהסתיימה.", hintWeekly: "בכל יום שני תקבלו אל {email} מייל אחד עם הנסיעות של השבוע הקודם.", hintMonthly: "ב-1 בכל חודש תקבלו אל {email} מייל אחד עם הנסיעות של החודש הקודם.", hintOff: "הקבלות לא נשלחות במייל. תמיד אפשר לראות אותן כאן.", noEmail: "אין מייל בחשבון, לכן הקבלות נשמרות רק כאן.", saved: "נשמר", list: "הקבלות שלי", empty: "אין עדיין נסיעות שהסתיימו.", more: "הצג עוד", emailed: "נשלח במייל" },
   pw: {
     title: "שינוי סיסמה",
     setTitle: "הגדרת סיסמה",

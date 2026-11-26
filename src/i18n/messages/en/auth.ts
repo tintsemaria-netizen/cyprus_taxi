@@ -13,6 +13,7 @@ const auth = {
   becomeDriver: 'Become a driver',
   backToBooking: '‹ Back to booking',
   logOut: 'Log out',
+  logOutAsk: "Log out of your account?",
   signingOut: 'Signing out…',
   myRides: 'My rides',
   couldNotSignIn: 'Could not sign in. Try again.',
@@ -69,6 +70,7 @@ const auth = {
     doneContinue: 'Continue to booking',
   },
   cat: { personal: 'Personal details', security: 'Password & sign-in', placesSub: 'Home, work and school for one-tap booking', notifications: 'Notifications' },
+  receipts: { title: "Receipts", sub: "All your trip receipts and e-mail settings", mailTitle: "E-mail me receipts", each: "After every trip", weekly: "Once a week (summary)", monthly: "Once a month (summary)", off: "Do not e-mail", hintEach: "A receipt is e-mailed to {email} after each completed trip.", hintWeekly: "Every Monday you get one e-mail with the past week’s trips at {email}.", hintMonthly: "On the 1st of each month you get one e-mail with the past month’s trips at {email}.", hintOff: "Receipts are not e-mailed. You can always open them here.", noEmail: "There is no e-mail on your account, so receipts are only kept here.", saved: "Saved", list: "My receipts", empty: "No completed trips yet.", more: "Show more", emailed: "E-mailed" },
   pw: { title: 'Change password', setTitle: 'Set a password', current: 'Current password', next: 'New password', save: 'Save password', changed: 'Password updated.', otherDevices: 'Other devices will be signed out.' },
   account: {
     signInPrompt: 'Please sign in to view your account.',

@@ -25,12 +25,14 @@ const LEASE_MS = 60_000;
 /** A receipt that could not go out for this long (e.g. no provider yet) is dropped, not sent late. */
 const STALE_MS = 7 * 24 * 3600_000;
 
-/** Called inside the completion transaction. No e-mail on the account → nothing queued. */
+/** Called inside the completion transaction. No e-mail on the account, or the passenger chose a summary / no e-mails → nothing queued. */
 export async function enqueueReceiptEmail(db: Db, bookingId: string): Promise<void> {
   const b = await db.booking.findUnique({ where: { id: bookingId }, select: { passengerId: true } });
   if (!b?.passengerId) return;
-  const p = await db.passenger.findUnique({ where: { id: b.passengerId }, select: { email: true, locale: true } });
+  const p = await db.passenger.findUnique({ where: { id: b.passengerId }, select: { email: true, locale: true, receiptMode: true } });
   if (!p?.email) return;
+  // Weekly / monthly summary or no e-mails (2026-11-26): no per-ride e-mail; the receipt stays in the app.
+  if (p.receiptMode !== 'EACH') return;
   const exists = await db.receiptEmail.findUnique({ where: { bookingId }, select: { id: true } });
   if (exists) return;
   await db.receiptEmail.create({ data: { bookingId, passengerId: b.passengerId, toEmail: p.email, locale: receiptLocale(p.locale) } });

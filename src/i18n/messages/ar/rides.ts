@@ -92,6 +92,7 @@ const rides: Catalog<typeof en> = {
     reminderBody: "الانطلاق في {time}",
     menu: "حجوزاتي المسبقة",
   },
+  digest: { subjectWeek: "إيصالات IL-Y · {range}", subjectMonth: "إيصالات IL-Y · {range}", heading: "رحلاتك مع IL-Y", intro: "عدد الرحلات: {count}، {range}.", total: "المجموع", open: "جميع الإيصالات في IL-Y", footer: "اخترت الملخص في إعدادات الملف الشخصي ← الإيصالات. يُدفع المبلغ مباشرة للسائق؛ هذه ليست فاتورة ضريبية." },
   email: {
     subject: "إيصال IL-Y · الرحلة #{ref}",
     heading: "شكرًا لركوبك مع IL-Y",

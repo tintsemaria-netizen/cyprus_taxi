@@ -10,7 +10,8 @@ import { recordVisit, goBack as trailBack } from '@/lib/navTrail';
 // Shared top bar for every passenger page except the home booking screen (2026-11-14):
 // a back arrow, the logo (→ home), the language switcher and the account avatar (initial),
 // or a "Log in" link when signed out. Always present, so the user can never get stuck.
-export function PassengerTopBar({ back = '/', sticky = true, account = true }: { back?: string | false; sticky?: boolean; account?: boolean }) {
+// onBack (2026-11-26): a page with its own sub-screens (Profile settings) steps back inside itself first.
+export function PassengerTopBar({ back = '/', sticky = true, account = true, onBack }: { back?: string | false; sticky?: boolean; account?: boolean; onBack?: () => void }) {
   const { t } = useT();
   const [passenger, setPassenger] = useState<PassengerInfo | null | undefined>(undefined);
   useEffect(() => {
@@ -24,6 +25,7 @@ export function PassengerTopBar({ back = '/', sticky = true, account = true }: {
   function goBack(e: React.MouseEvent) {
     // Exactly one step back inside the app (see src/lib/navTrail.ts).
     e.preventDefault();
+    if (onBack) { onBack(); return; }
     trailBack(typeof back === 'string' ? back : '/');
   }
 

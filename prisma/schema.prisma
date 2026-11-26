@@ -396,6 +396,11 @@ model Passenger {
   appleSub        String?   @unique
   // Last UI language seen when booking (2026-11-17) — used for e-mailed receipts.
   locale          String?
+  // E-mailed receipts (2026-11-26, operator): EACH = one e-mail per completed ride (default),
+  // WEEKLY / MONTHLY = one summary e-mail per period, OFF = none (the receipts stay in the app).
+  receiptMode      String    @default("EACH")
+  // When receiptMode last changed — a summary only lists rides completed after it (no double e-mails).
+  receiptModeSince DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -751,6 +756,32 @@ model ReceiptEmail {
 
   @@index([status, nextAttemptAt])
   @@index([passengerId])
+}
+
+// Weekly / monthly receipt summary e-mail (2026-11-26): one row per passenger per period; same
+// outbox discipline as ReceiptEmail. The unique key keeps a period from being sent twice.
+model ReceiptDigest {
+  id                String    @id @default(uuid())
+  passengerId       String
+  period            String // WEEKLY | MONTHLY
+  periodStart       DateTime
+  periodEnd         DateTime
+  toEmail           String
+  locale            String    @default("en")
+  bookingIds        String[]
+  status            String    @default("PENDING")
+  attempts          Int       @default(0)
+  nextAttemptAt     DateTime  @default(now())
+  leaseToken        String?
+  leaseUntil        DateTime?
+  lastError         String?
+  providerMessageId String?
+  sentAt            DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @default(now()) @updatedAt
+
+  @@unique([passengerId, period, periodStart])
+  @@index([status, nextAttemptAt])
 }
 
 // Durable per-booking dispatch attempt (Task 012 §4). The background worker leases a

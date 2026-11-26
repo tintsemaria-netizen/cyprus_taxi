@@ -36,9 +36,9 @@ async function driverAt(name: 'Andreas' | 'Maria', meters: number) {
   return { driverId: d.id, vehicleId: d.bindings[0].vehicleId };
 }
 
-async function completedBooking(email: string | null = 'rider@example.com', locale = 'ru', meterCents?: number) {
+async function completedBooking(email: string | null = 'rider@example.com', locale = 'ru', meterCents?: number, receiptMode = 'EACH') {
   const { driverId, vehicleId } = await driverAt('Andreas', 20);
-  const passenger = await prisma.passenger.create({ data: { phone: `+35794${RUN.slice(-6)}${++n}`.slice(0, 15), phoneVerifiedAt: new Date(), email: email ? `${n}-${email}` : null, locale } });
+  const passenger = await prisma.passenger.create({ data: { phone: `+35794${RUN.slice(-6)}${++n}`.slice(0, 15), phoneVerifiedAt: new Date(), email: email ? `${n}-${email}` : null, locale, receiptMode, receiptModeSince: receiptMode === 'EACH' ? null : new Date(Date.now() - 1000) } });
   const r = await createBooking(input(), key());
   if (!r.ok) throw new Error('create failed');
   const b = (await prisma.booking.findUnique({ where: { reference: r.body.reference } }))!;
@@ -72,6 +72,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await prisma.receiptEmail.deleteMany({});
+  await prisma.receiptDigest.deleteMany({});
   await prisma.passengerRating.deleteMany({});
   await prisma.tripRating.deleteMany({});
   await prisma.chatMessage.deleteMany({});
@@ -203,5 +204,82 @@ describe('e-mailed trip receipts (2026-11-17)', () => {
     const row = await prisma.receiptEmail.findUniqueOrThrow({ where: { bookingId: t2.bookingId } });
     expect(row.status).toBe('RETRY');
     expect(row.nextAttemptAt.getTime()).toBeGreaterThan(Date.now());
+  });
+});
+
+
+describe('receipt e-mail settings: per trip / weekly / monthly / off (2026-11-26)', () => {
+  const p2 = (x: number) => String(x).padStart(2, '0');
+  const nextWeekNoon = async () => { const { startOfNicosiaDay } = await import('@/lib/timezone'); return new Date(startOfNicosiaDay(new Date(), 7).getTime() + 12 * 3600_000); };
+  const nextMonthSecond = async () => {
+    const { nicosiaDayKey, nicosiaMidnightUtc } = await import('@/lib/timezone');
+    const [y, m] = nicosiaDayKey(new Date()).split('-').map(Number);
+    return new Date(nicosiaMidnightUtc(`${m === 12 ? y + 1 : y}-${p2(m === 12 ? 1 : m + 1)}-02`).getTime() + 12 * 3600_000);
+  };
+
+  it('Cyprus calendar periods: previous Mon–Sun week and previous month', async () => {
+    const { previousPeriod } = await import('@/server/email/receipt-digest');
+    const thu = new Date('2026-11-26T10:00:00Z');
+    expect(previousPeriod('WEEKLY', thu).start.toISOString()).toBe('2026-11-15T22:00:00.000Z'); // Mon 16 Nov 00:00 EET
+    expect(previousPeriod('WEEKLY', thu).end.toISOString()).toBe('2026-11-22T22:00:00.000Z');
+    expect(previousPeriod('MONTHLY', thu).start.toISOString()).toBe('2026-09-30T21:00:00.000Z'); // 1 Oct 00:00 EEST
+    expect(previousPeriod('MONTHLY', thu).end.toISOString()).toBe('2026-10-31T22:00:00.000Z');
+    // A Monday belongs to the new week: the previous week ends at its midnight.
+    expect(previousPeriod('WEEKLY', new Date('2026-11-23T09:00:00Z')).end.toISOString()).toBe('2026-11-22T22:00:00.000Z');
+  });
+
+  it('weekly: no e-mail per trip; one summary after the week, once; sent in the passenger language', async () => {
+    const t = await completedBooking('rider@example.com', 'ru', undefined, 'WEEKLY');
+    expect(await prisma.receiptEmail.count({ where: { bookingId: t.bookingId } })).toBe(0);
+    const { scheduleReceiptDigests, drainReceiptDigests } = await import('@/server/email/receipt-digest');
+    expect(await scheduleReceiptDigests(new Date())).toBe(0); // the week is not over yet
+    const later = await nextWeekNoon();
+    expect(await scheduleReceiptDigests(later)).toBe(1);
+    expect(await scheduleReceiptDigests(later)).toBe(0); // never twice for the same week
+    const row = await prisma.receiptDigest.findFirstOrThrow({ where: { passengerId: t.passengerId } });
+    expect(row.bookingIds).toEqual([t.bookingId]);
+    const calls = mockProvider();
+    await drainReceiptDigests(later);
+    expect(calls).toHaveLength(1);
+    expect(String(calls[0].body.subject)).toContain('Чеки IL-Y');
+    expect(String(calls[0].body.html)).toContain('Limassol Marina');
+    expect(String(calls[0].body.html)).toContain('/account#receipts');
+    expect((await prisma.receiptDigest.findUniqueOrThrow({ where: { id: row.id } })).status).toBe('SENT');
+  });
+
+  it('monthly: one summary after the month', async () => {
+    const t = await completedBooking('rider@example.com', 'en', undefined, 'MONTHLY');
+    expect(await prisma.receiptEmail.count({ where: { bookingId: t.bookingId } })).toBe(0);
+    const { scheduleReceiptDigests } = await import('@/server/email/receipt-digest');
+    expect(await scheduleReceiptDigests(await nextMonthSecond())).toBe(1);
+    expect((await prisma.receiptDigest.findFirstOrThrow({ where: { passengerId: t.passengerId } })).period).toBe('MONTHLY');
+  });
+
+  it('off: nothing is e-mailed; the receipt is still available', async () => {
+    const t = await completedBooking('rider@example.com', 'ru', undefined, 'OFF');
+    expect(await prisma.receiptEmail.count({ where: { bookingId: t.bookingId } })).toBe(0);
+    const { scheduleReceiptDigests } = await import('@/server/email/receipt-digest');
+    expect(await scheduleReceiptDigests(await nextWeekNoon())).toBe(0);
+    expect((await passengerReceipt(t.bookingId, t.passengerId)).ok).toBe(true);
+  });
+
+  it('a trip completed before switching to a summary is not listed again (it already had its own e-mail)', async () => {
+    const t = await completedBooking('rider@example.com', 'ru');
+    expect(await prisma.receiptEmail.count({ where: { bookingId: t.bookingId } })).toBe(1);
+    await prisma.passenger.update({ where: { id: t.passengerId }, data: { receiptMode: 'WEEKLY', receiptModeSince: new Date(Date.now() + 1000) } });
+    const { scheduleReceiptDigests } = await import('@/server/email/receipt-digest');
+    expect(await scheduleReceiptDigests(await nextWeekNoon())).toBe(0);
+  });
+
+  it('switched back to per-trip before the summary went out: the summary is skipped', async () => {
+    const t = await completedBooking('rider@example.com', 'ru', undefined, 'WEEKLY');
+    const { scheduleReceiptDigests, drainReceiptDigests } = await import('@/server/email/receipt-digest');
+    const later = await nextWeekNoon();
+    await scheduleReceiptDigests(later);
+    await prisma.passenger.update({ where: { id: t.passengerId }, data: { receiptMode: 'EACH' } });
+    const calls = mockProvider();
+    await drainReceiptDigests(later);
+    expect(calls).toHaveLength(0);
+    expect((await prisma.receiptDigest.findFirstOrThrow({ where: { passengerId: t.passengerId } })).status).toBe('SKIPPED');
   });
 });

@@ -13,7 +13,7 @@ export const DELETED_LABEL = 'Removed at passenger request';
 export async function exportPassengerData(passengerId: string) {
   const p = await prisma.passenger.findUnique({
     where: { id: passengerId },
-    select: { id: true, phone: true, phoneVerifiedAt: true, name: true, email: true, createdAt: true, updatedAt: true, savedPlaces: { select: { kind: true, label: true, lat: true, lng: true, updatedAt: true } } },
+    select: { id: true, phone: true, phoneVerifiedAt: true, name: true, email: true, locale: true, receiptMode: true, receiptModeSince: true, createdAt: true, updatedAt: true, savedPlaces: { select: { kind: true, name: true, label: true, lat: true, lng: true, updatedAt: true } } },
   });
   if (!p) return null;
   const bookings = await prisma.booking.findMany({
@@ -32,7 +32,9 @@ export async function exportPassengerData(passengerId: string) {
   return {
     generatedAt: new Date().toISOString(),
     controller: 'IL-Y',
-    account: { phone: p.phone, phoneVerifiedAt: p.phoneVerifiedAt, name: p.name, email: p.email, createdAt: p.createdAt, updatedAt: p.updatedAt },
+    account: { phone: p.phone, phoneVerifiedAt: p.phoneVerifiedAt, name: p.name, email: p.email, language: p.locale, createdAt: p.createdAt, updatedAt: p.updatedAt },
+    // How trip receipts are e-mailed (2026-11-26): EACH | WEEKLY | MONTHLY | OFF.
+    receiptEmails: { mode: p.receiptMode, since: p.receiptModeSince },
     savedPlaces: p.savedPlaces,
     rides: bookings.map((b) => ({
       ...b,
@@ -77,6 +79,9 @@ export async function deletePassengerAccount(passengerId: string): Promise<Delet
     await tx.tripRating.updateMany({ where: { passengerId }, data: { passengerId: 'deleted', comment: null } });
     if (p.phone) await tx.phoneVerification.deleteMany({ where: { phone: p.phone } });
     await tx.passengerSession.deleteMany({ where: { passengerId } });
+    // E-mailed receipts carry the address (2026-11-26): the queue rows go with the account.
+    await tx.receiptEmail.deleteMany({ where: { passengerId } });
+    await tx.receiptDigest.deleteMany({ where: { passengerId } });
     await tx.passenger.delete({ where: { id: passengerId } }); // saved places cascade
     return { ok: true, ridesAnonymised: ids.length };
   });

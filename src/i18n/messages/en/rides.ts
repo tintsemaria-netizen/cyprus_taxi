@@ -89,6 +89,7 @@ const rides = {
     reminderBody: 'Pickup at {time}',
     menu: 'My pre-bookings',
   },
+  digest: { subjectWeek: "IL-Y receipts · {range}", subjectMonth: "IL-Y receipts · {range}", heading: "Your trips with IL-Y", intro: "{count} trip(s) from {range}.", total: "Total", open: "All receipts in IL-Y", footer: "You chose summary e-mails in Profile settings → Receipts. Payment goes directly to the driver; this is not a tax invoice." },
   email: {
     subject: "IL-Y receipt · trip #{ref}",
     heading: "Thank you for riding with IL-Y",

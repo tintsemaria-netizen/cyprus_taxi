@@ -16,6 +16,7 @@ const auth: Catalog<typeof en> = {
   becomeDriver: "Zostań kierowcą",
   backToBooking: "‹ Wróć do zamówienia",
   logOut: "Wyloguj się",
+  logOutAsk: "Wylogować się z konta?",
   signingOut: "Wylogowywanie…",
   myRides: "Moje przejazdy",
   couldNotSignIn: "Nie udało się zalogować. Spróbuj ponownie.",
@@ -77,6 +78,7 @@ const auth: Catalog<typeof en> = {
     placesSub: "Dom, praca i szkoła do zamawiania jednym dotknięciem",
     notifications: "Powiadomienia",
   },
+  receipts: { title: "Paragony", sub: "Wszystkie paragony z przejazdów i wysyłka e-mailem", mailTitle: "Wysyłaj paragony e-mailem", each: "Po każdym przejeździe", weekly: "Raz w tygodniu (podsumowanie)", monthly: "Raz w miesiącu (podsumowanie)", off: "Nie wysyłaj", hintEach: "Paragon jest wysyłany na {email} po każdym zakończonym przejeździe.", hintWeekly: "W każdy poniedziałek otrzymasz na {email} jeden e-mail z przejazdami z poprzedniego tygodnia.", hintMonthly: "1. dnia miesiąca otrzymasz na {email} jeden e-mail z przejazdami z poprzedniego miesiąca.", hintOff: "Paragony nie są wysyłane e-mailem. Zawsze możesz je zobaczyć tutaj.", noEmail: "Twoje konto nie ma adresu e-mail, paragony są przechowywane tylko tutaj.", saved: "Zapisano", list: "Moje paragony", empty: "Brak zakończonych przejazdów.", more: "Pokaż więcej", emailed: "Wysłano e-mailem" },
   pw: {
     title: "Zmień hasło",
     setTitle: "Ustaw hasło",

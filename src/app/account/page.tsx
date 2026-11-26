@@ -2,10 +2,12 @@
 
 import { ThemePicker } from '@/components/ThemePicker';
 import { PassengerTopBar } from '@/components/PassengerTopBar';
-import { useEffect, useState } from 'react';
+import { BackArrow } from '@/components/BackArrow';
+import { useEffect, useRef, useState } from 'react';
 import { PlacesInput, Selected } from '@/components/booking/PlacesInput';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import { INTL_TAG } from '@/i18n/config';
 import { PasswordInput } from '@/components/PasswordInput';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 
@@ -22,16 +24,21 @@ export default function Account() {
   const [name, setName] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [askOut, setAskOut] = useState(false);
   const { t, tError } = useT();
-  // Which settings category is expanded. /account#places (from the menu) opens that one.
+  // Each settings category opens as its own full screen (2026-11-26, operator) with «‹» back to the list.
+  // /account#places (from the menu) opens that screen directly; then «‹» goes back to where the menu was.
   const [openCat, setOpenCat] = useState<string | null>(null);
+  const pushed = useRef(false);
   useEffect(() => {
-    const fromHash = () => { const h = window.location.hash.replace('#', ''); if (h) setOpenCat(h); };
+    const fromHash = () => { const raw = window.location.hash.replace('#', ''); const h = raw === 'data' ? 'personal' : raw; setOpenCat(h || null); if (!h) pushed.current = false; };
     fromHash();
     window.addEventListener('hashchange', fromHash);
-    return () => window.removeEventListener('hashchange', fromHash);
+    window.addEventListener('popstate', fromHash);
+    return () => { window.removeEventListener('hashchange', fromHash); window.removeEventListener('popstate', fromHash); };
   }, []);
-  const toggleCat = (id: string) => setOpenCat((c) => (c === id ? null : id));
+  const toggleCat = (id: string) => { pushed.current = true; history.pushState(null, '', `#${id}`); setOpenCat(id); window.scrollTo(0, 0); };
+  const closeCat = () => { if (pushed.current) history.back(); else { history.replaceState(null, '', window.location.pathname); setOpenCat(null); } };
 
   useEffect(() => {
     api<Me>('/passenger/me')
@@ -45,7 +52,7 @@ export default function Account() {
     catch (err) { setMsg(err instanceof ApiRequestError ? tError(err) : t('auth.account.couldNotSave')); }
     finally { setBusy(false); }
   }
-  async function logout() { await api('/passenger/logout', { method: 'POST' }).catch(() => {}); window.location.href = '/'; }
+  async function logout() { setBusy(true); await api('/passenger/logout', { method: 'POST' }).catch(() => {}); window.location.href = '/'; }
 
   if (authed === false) {
     return (
@@ -62,13 +69,14 @@ export default function Account() {
 
   return (
     <div>
-    <PassengerTopBar />
+    <PassengerTopBar back={false} />
     <div className="mx-auto max-w-md space-y-4 p-4 sm:p-6">
-      <h1 className="text-2xl font-semibold">{t('auth.account.title')}</h1>
+      {/* «‹» sits beside each page title (2026-11-26, operator), not in the top bar. */}
+      {!openCat && <div className="flex items-center gap-1"><BackArrow className="-ms-2" /><h1 className="text-2xl font-semibold">{t('auth.account.title')}</h1></div>}
 
-      {/* Settings grouped into collapsible categories (2026-11-14). */}
-      <div className="card divide-y divide-edge overflow-hidden !p-0">
-      <Category id="personal" icon="👤" title={t('auth.cat.personal')} sub={me.name || me.email || me.phone || ''} open={openCat} onToggle={toggleCat}>
+      {/* Settings categories: a list of rows; each opens its own screen. */}
+      <div className={openCat ? '' : 'card divide-y divide-edge overflow-hidden !p-0'}>
+      <Category back={pushed.current ? closeCat : undefined} id="personal" icon="👤" title={t('auth.cat.personal')} sub={me.name || me.email || me.phone || ''} open={openCat} onToggle={toggleCat}>
       <form onSubmit={save} className="space-y-3">
         <div>
           <label className="label" htmlFor="account-f1">{t('auth.name')}</label>
@@ -87,31 +95,108 @@ export default function Account() {
         {msg && <p className="text-sm text-muted">{msg}</p>}
         <button className="btn-primary min-h-[44px] w-full" disabled={busy || !name.trim()}>{busy ? t('auth.saving') : t('auth.account.save')}</button>
       </form>
+      {/* «Ваши данные» (download / delete) lives here since 2026-11-26 (operator): one section, not two similar names. */}
+      <div className="mt-5 border-t border-edge pt-4" id="data"><DataRights /></div>
       </Category>
 
-      <Category id="security" icon="🔒" title={t('auth.cat.security')} sub={me.hasPassword ? t('auth.pw.title') : t('auth.pw.setTitle')} open={openCat} onToggle={toggleCat}>
+      <Category back={pushed.current ? closeCat : undefined} id="security" icon="🔒" title={t('auth.cat.security')} sub={me.hasPassword ? t('auth.pw.title') : t('auth.pw.setTitle')} open={openCat} onToggle={toggleCat}>
         <ChangePassword hasPassword={!!me.hasPassword} />
       </Category>
 
-      <Category id="places" icon="📍" title={t('auth.places.title')} sub={t('auth.cat.placesSub')} open={openCat} onToggle={toggleCat}>
+      {/* Saved places: only from the account menu (it has its own item there), not listed here. */}
+      <Category back={pushed.current ? closeCat : undefined} id="places" listed={false} icon="📍" title={t('auth.places.title')} sub={t('auth.cat.placesSub')} open={openCat} onToggle={toggleCat}>
         <SavedPlaces />
       </Category>
 
-      <Category id="theme" icon="🎨" title={t('common.theme.title')} open={openCat} onToggle={toggleCat}>
+      <Category back={pushed.current ? closeCat : undefined} id="receipts" icon="🧾" title={t('auth.receipts.title')} sub={t('auth.receipts.sub')} open={openCat} onToggle={toggleCat}>
+        <Receipts />
+      </Category>
+
+      <Category back={pushed.current ? closeCat : undefined} id="theme" icon="🎨" title={t('common.theme.title')} open={openCat} onToggle={toggleCat}>
         <ThemePicker role="passenger" />
       </Category>
 
-      <Category id="notifications" icon="🔔" title={t('auth.cat.notifications')} open={openCat} onToggle={toggleCat}>
+      <Category back={pushed.current ? closeCat : undefined} id="notifications" icon="🔔" title={t('auth.cat.notifications')} open={openCat} onToggle={toggleCat}>
         <p className="text-sm text-muted">{t('auth.account.notifications')}</p>
       </Category>
 
-      <Category id="data" icon="🛡️" title={t('auth.data.title')} open={openCat} onToggle={toggleCat}>
-        <DataRights />
-      </Category>
       </div>
-      <button onClick={logout} className="btn-ghost w-full !text-danger">{t('auth.logOut')}</button>
+      {/* «Выйти»: small, on the left, with a confirmation (2026-11-26, operator). */}
+      {!openCat && <button type="button" onClick={() => setAskOut(true)} className="px-1 py-2 text-sm text-danger hover:underline" data-testid="logout">{t('auth.logOut')}</button>}
+      {askOut && <ConfirmSheet title={t('auth.logOutAsk')} confirmLabel={t('auth.logOut')} danger busy={busy} onConfirm={logout} onCancel={() => setAskOut(false)} />}
     </div>
     </div>
+  );
+}
+
+type ReceiptMode = 'EACH' | 'WEEKLY' | 'MONTHLY' | 'OFF';
+interface ReceiptRow { id: string; reference: string; at: string; pickup: string; dropoff: string; totalCents: number | null; currency: string; emailed: boolean }
+
+// Receipts (2026-11-26, operator): how receipts are e-mailed (after every trip — the default — a weekly
+// or monthly summary, or not at all) and the list of every completed trip with its receipt.
+function Receipts() {
+  const { t, tError, locale } = useT();
+  const [mode, setMode] = useState<ReceiptMode | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
+  const [rows, setRows] = useState<ReceiptRow[]>([]);
+  const [next, setNext] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const load = (before?: string) => api<{ mode: ReceiptMode; email: string | null; receipts: ReceiptRow[]; nextBefore: string | null }>(`/passenger/receipts${before ? `?before=${encodeURIComponent(before)}` : ''}`)
+    .then((r) => { setMode(r.mode); setEmail(r.email); setRows((x) => (before ? [...x, ...r.receipts] : r.receipts)); setNext(r.nextBefore); })
+    .catch((e) => setMsg(tError(e)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { void load(); }, []);
+  async function choose(m: ReceiptMode) {
+    if (m === mode) return;
+    const prev = mode; setMode(m); setBusy(true); setMsg(null);
+    try { await api('/passenger/receipts', { method: 'PATCH', body: { mode: m } }); setMsg(t('auth.receipts.saved')); }
+    catch (e) { setMode(prev); setMsg(tError(e)); }
+    finally { setBusy(false); }
+  }
+  if (!mode) return <p className="text-sm text-muted">{msg ?? t('common.loading')}</p>;
+  const money = (c: number, cur: string) => new Intl.NumberFormat(INTL_TAG[locale], { style: 'currency', currency: cur }).format(c / 100);
+  const when = (iso: string) => new Intl.DateTimeFormat(INTL_TAG[locale], { timeZone: 'Europe/Nicosia', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+  const OPTIONS: [ReceiptMode, string][] = [['EACH', t('auth.receipts.each')], ['WEEKLY', t('auth.receipts.weekly')], ['MONTHLY', t('auth.receipts.monthly')], ['OFF', t('auth.receipts.off')]];
+  const hint = ({ EACH: 'auth.receipts.hintEach', WEEKLY: 'auth.receipts.hintWeekly', MONTHLY: 'auth.receipts.hintMonthly', OFF: 'auth.receipts.hintOff' } as const)[mode];
+  return (
+    <section className="space-y-4" data-testid="receipts">
+      <div>
+        <div className="label">{t('auth.receipts.mailTitle')}</div>
+        {email ? (
+          <>
+            <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('auth.receipts.mailTitle')}>
+              {OPTIONS.map(([m, label]) => (
+                <button key={m} type="button" role="radio" aria-checked={mode === m} disabled={busy} onClick={() => choose(m)} data-testid={`receipt-mode-${m}`}
+                  className={`min-h-[44px] rounded-[12px] border px-3 py-2 text-sm ${mode === m ? 'border-accent bg-accent/10 font-medium text-ink' : 'border-edge text-muted hover:bg-page'}`}>{label}</button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-muted">{t(hint, { email })}</p>
+          </>
+        ) : <p className="mt-1 text-xs text-muted">{t('auth.receipts.noEmail')}</p>}
+        {msg && <p className="mt-1 text-xs text-muted" role="status">{msg}</p>}
+      </div>
+      <div>
+        <div className="label">{t('auth.receipts.list')}</div>
+        {rows.length === 0 ? <p className="mt-1 text-sm text-muted">{t('auth.receipts.empty')}</p> : (
+          <ul className="mt-2 divide-y divide-edge rounded-[12px] border border-edge">
+            {rows.map((r) => (
+              <li key={r.id}>
+                <a href={`/rides/${r.id}/receipt`} className="flex items-center gap-3 px-3 py-2.5 hover:bg-page" data-testid="receipt-row">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs text-muted">{when(r.at)}{r.emailed ? ` · ✉ ${t('auth.receipts.emailed')}` : ''}</span>
+                    <span className="block truncate text-sm">{r.pickup} → {r.dropoff}</span>
+                  </span>
+                  <span className="shrink-0 text-sm font-semibold">{r.totalCents != null ? money(r.totalCents, r.currency) : '—'}</span>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-muted rtl:-scale-x-100"><path d="M9 5l7 7-7 7" /></svg>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+        {next && <button type="button" onClick={() => load(next)} className="btn-ghost mt-2 w-full">{t('auth.receipts.more')}</button>}
+      </div>
+    </section>
   );
 }
 
@@ -256,20 +341,27 @@ function ChangePassword({ hasPassword }: { hasPassword: boolean }) {
   );
 }
 
-// One collapsible settings category: icon, title, short summary and a chevron; one open at a time.
-function Category({ id, icon, title, sub, open, onToggle, children }: { id: string; icon: string; title: string; sub?: string; open: string | null; onToggle: (id: string) => void; children: React.ReactNode }) {
-  const isOpen = open === id;
+// One settings category (2026-11-26): a row in the list; tapped, it becomes its own full screen.
+function Category({ id, icon, title, sub, open, onToggle, listed = true, back, children }: { back?: () => void; id: string; icon: string; title: string; sub?: string; open: string | null; onToggle: (id: string) => void; listed?: boolean; children: React.ReactNode }) {
+  if (open === id) {
+    return (
+      <section id={id} className="space-y-4">
+        <div className="flex items-center gap-1"><BackArrow className="-ms-2" onBack={back} fallback="/account" /><h1 className="flex items-center gap-2 text-2xl font-semibold"><span aria-hidden="true">{icon}</span>{title}</h1></div>
+        <div className="card p-4">{children}</div>
+      </section>
+    );
+  }
+  if (open || !listed) return null;
   return (
     <section id={id}>
-      <button type="button" onClick={() => onToggle(id)} aria-expanded={isOpen} className="flex w-full items-center gap-3 px-4 py-3.5 text-start hover:bg-elevated">
+      <button type="button" onClick={() => onToggle(id)} className="flex w-full items-center gap-3 px-4 py-3.5 text-start hover:bg-elevated" data-testid={`cat-${id}`}>
         <span className="text-xl" aria-hidden="true">{icon}</span>
         <span className="min-w-0 flex-1">
           <span className="block font-medium">{title}</span>
           {sub && <span className="block truncate text-xs text-muted">{sub}</span>}
         </span>
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`shrink-0 text-muted transition-transform ${isOpen ? 'rotate-90' : 'rtl:-scale-x-100'}`}><path d="M9 5l7 7-7 7" /></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-muted rtl:-scale-x-100"><path d="M9 5l7 7-7 7" /></svg>
       </button>
-      {isOpen && <div className="px-4 pb-4 pt-1">{children}</div>}
     </section>
   );
 }
