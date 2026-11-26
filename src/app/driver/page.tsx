@@ -458,7 +458,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         {/* «Визитка» on top (2026-11-26, operator): photo, name, car and plate; × on the right. */}
         <div className="flex shrink-0 items-start gap-3 px-4 pb-3 pt-3">
-          <DriverCard dash={dash} />
+          <DriverCard dash={dash} onSwitched={loadDash} openCars={() => setMenuSec('cars')} />
           <button type="button" onClick={() => setDrawer(false)} aria-label={t('common.close')} className="-me-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-2xl text-ink hover:bg-white/5">×</button>
         </div>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
@@ -1082,26 +1082,82 @@ function MenuRow({ id, open, setOpen, label, badges, testId, children }: { id: M
   );
 }
 
-/** «Визитка» at the top of the menu (2026-11-26): his photo, name, and under it the car and plate. */
-function DriverCard({ dash }: { dash: Dashboard | null }) {
-  const { t } = useT();
+/** «Визитка» at the top of the menu (2026-11-26): his photo, name, and under it the car and plate.
+ *  Tapping the plate lists his other cars to switch to (same rules as «Мои машины»: off the line, no ride). */
+function DriverCard({ dash, onSwitched, openCars }: { dash: Dashboard | null; onSwitched: () => void; openCars: () => void }) {
+  const { t, tError } = useT();
   const [photo, setPhoto] = useState(true);
+  const [pick, setPick] = useState(false);
   const name = dash?.driver.name ?? t('driver.profile.driverFallback');
   const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '?';
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-3 py-1" data-testid="driver-card">
-      {photo
-        ? <img src="/api/v1/driver/photo" alt="" onError={() => setPhoto(false)} className="h-14 w-14 shrink-0 rounded-full object-cover" />
-        : <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-lg font-bold text-[#0d1608]">{initials}</span>}
-      <div className="min-w-0">
-        <div className="truncate text-[16px] font-semibold">{name}</div>
-        {dash?.vehicle
-          ? <>
-              <div className="truncate text-xs text-muted">{dash.vehicle.label}</div>
-              <span className="mt-1 inline-block rounded-[6px] border border-edge-strong px-1.5 font-mono text-xs font-bold tracking-wider text-ink" data-testid="driver-card-plate">{dash.vehicle.plate}</span>
-            </>
-          : <div className="truncate text-xs text-muted">{t('driver.profile.noVehicle')}</div>}
+    <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 items-center gap-3 py-1" data-testid="driver-card">
+        {photo
+          ? <img src="/api/v1/driver/photo" alt="" onError={() => setPhoto(false)} className="h-14 w-14 shrink-0 rounded-full object-cover" />
+          : <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-lg font-bold text-[#0d1608]">{initials}</span>}
+        <div className="min-w-0">
+          <div className="truncate text-[16px] font-semibold">{name}</div>
+          {dash?.vehicle
+            ? <>
+                <div className="truncate text-xs text-muted">{dash.vehicle.label}</div>
+                <button type="button" onClick={() => setPick((v) => !v)} aria-expanded={pick} data-testid="driver-card-plate"
+                  className="mt-1 inline-flex items-center gap-1 rounded-[6px] border border-edge-strong px-1.5 font-mono text-xs font-bold tracking-wider text-ink">
+                  {dash.vehicle.plate}
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`text-muted transition-transform ${pick ? 'rotate-180' : ''}`}><path d="M6 9l6 6 6-6" /></svg>
+                </button>
+              </>
+            : <button type="button" onClick={() => setPick((v) => !v)} className="text-xs text-accent underline" data-testid="driver-card-plate">{t('driver.profile.noVehicle')}</button>}
+        </div>
       </div>
+      {pick && <CarPick onDone={() => { setPick(false); onSwitched(); }} openCars={() => { setPick(false); openCars(); }} tError={tError} />}
+    </div>
+  );
+}
+
+interface PickCar { id: string; plate: string; make: string; model: string; color: string; vClass: string; current: boolean; busy: boolean; expired: string | null }
+function CarPick({ onDone, openCars, tError }: { onDone: () => void; openCars: () => void; tError: (e: unknown) => string }) {
+  const { t } = useT();
+  const [d, setD] = useState<{ online: boolean; onTrip: boolean; cars: PickCar[] } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { api<{ online: boolean; onTrip: boolean; cars: PickCar[] }>('/driver/cars').then(setD).catch((e) => setErr(tError(e))); }, []);
+  async function choose(c: PickCar) {
+    setBusy(true); setErr(null);
+    try { await api('/driver/cars/switch', { method: 'POST', body: { vehicleId: c.id } }); onDone(); }
+    catch (e) { setErr(e instanceof ApiRequestError ? tError(e) : t('driver.cars.failed')); }
+    finally { setBusy(false); }
+  }
+  const locked = !!d && (d.online || d.onTrip);
+  return (
+    <div className="mt-2 rounded-[12px] border border-edge bg-elevated p-2" data-testid="car-pick">
+      {!d ? <p className="p-2 text-sm text-muted">{err ?? t('common.loading')}</p> : (
+        <>
+          {locked && <p className="px-2 pb-1 text-xs text-warn">{d.onTrip ? t('driver.cars.lockedTrip') : t('driver.cars.lockedOnline')}</p>}
+          <ul className="divide-y divide-edge">
+            {d.cars.map((c) => {
+              const off = c.current || locked || busy || c.busy || !!c.expired;
+              return (
+                <li key={c.id}>
+                  <button type="button" disabled={off} onClick={() => choose(c)} data-testid={`pick-${c.plate}`}
+                    className={`flex w-full items-center gap-2 px-2 py-2 text-start ${off && !c.current ? 'opacity-60' : ''}`}>
+                    <span className="rounded-[6px] border border-edge px-1.5 font-mono text-xs font-bold">{c.plate}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs text-muted">{c.make} {c.model} · {t(`common.vClass.${c.vClass}` as never)}</span>
+                      {c.busy && !c.current && <span className="block text-[11px] text-warn">{t('driver.cars.busy')}</span>}
+                      {c.expired && <span className="block text-[11px] text-danger">{t('driver.cars.expired')}</span>}
+                    </span>
+                    {c.current && <span className="shrink-0 text-xs font-semibold text-accent">✓ {t('driver.cars.current')}</span>}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          {err && <p className="px-2 pt-1 text-xs text-danger">{err}</p>}
+          <button type="button" onClick={openCars} className="mt-1 w-full px-2 py-2 text-start text-xs text-accent">+ {t('driver.cars.addNew')}</button>
+        </>
+      )}
     </div>
   );
 }
