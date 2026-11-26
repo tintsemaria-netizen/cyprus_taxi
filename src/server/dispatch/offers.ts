@@ -9,6 +9,7 @@ import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events'
 import type { Candidate } from './eligibility';
 import { canWork } from '@/lib/eligibility-policy';
 import { attachMatchedGuestTx } from '@/server/share';
+import { passengerRatingOf } from '@/server/passenger-rating';
 
 // How long one driver has to accept before the request moves on to the next eligible driver.
 // 10 s since 2026-11-12 (was 20 s).
@@ -208,6 +209,7 @@ export async function getDriverActiveOffer(driverId: string) {
     passengerCount: b.passengerCount,
     luggageCount: b.luggageCount,
     passengerName: b.passengerName,
+    passengerRating: await passengerRatingOf(b.passengerId), // ★ next to the name (2026-11-26)
     note: b.note,
     flightNumber: b.flightNumber,
     scheduledAt: b.scheduledAt ? b.scheduledAt.toISOString() : null,

@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-26 — client rating next to the name on driver cards (branch pax-rating)
+- src/server/passenger-rating.ts (passengerRatingSummary moved here; trip-close re-exports) + passengerRatingOf.
+- passengerRating added to: driver offer (offers.ts), free orders (free-orders.ts), pre-booking detail (preassign.ts).
+- <PaxRating> (components/driver/PaxRating.tsx): «★ 4.8» when count > 0 — offer card, free list + detail, ScheduledRides
+  detail, DriverNavigation. Not yet: «next ride» and co-rider names.
+
 ## 2026-11-26 — booking point focus: zoom 17 + the point's name on the map (branch spot-label)
 - spotFocus carries the point name (admin-given, else the territory name); a 'spot' marker (active) shows it at the point.
 - Prod points of Lca / Pfo / New port Limassol have no names yet — the operator was told to name them (Departures / Arrivals).

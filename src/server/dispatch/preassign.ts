@@ -3,6 +3,7 @@ import { carTakes, takesClasses } from '@/lib/vehicle-class';
 import { ensureAirportAreas } from '@/server/no-go';
 import { blockedPassengerIdsForDriver, isPairBlocked } from './blocked-pairs';
 import { prisma } from '@/lib/db';
+import { passengerRatingOf } from '@/server/passenger-rating';
 import { config } from '@/lib/config';
 import { canWork } from '@/lib/eligibility-policy';
 import { isAirportPoint } from '@/lib/airports';
@@ -421,7 +422,7 @@ export async function scheduledRideDetail(bookingId: string, driverId: string, n
   if (!item) return null;
   const b = await prisma.booking.findUnique({
     where: { id: bookingId },
-    select: { passengerName: true, fareBreakdown: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, luggageCount: true },
+    select: { passengerId: true, passengerName: true, fareBreakdown: true, pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true, luggageCount: true },
   });
   if (!b) return null;
   let fareBreakdown: { label: string; cents: number }[] | null = null;
@@ -452,6 +453,7 @@ export async function scheduledRideDetail(bookingId: string, driverId: string, n
       mine: !!mine,
       conflict: mine ? false : (item as BoardItem).conflict,
       passengerName: b.passengerName,
+      passengerRating: await passengerRatingOf(b.passengerId), // ★ next to the name (2026-11-26)
       luggageCount: b.luggageCount,
       fareBreakdown: null,
       pickup: { lat: first.lat, lng: first.lng, label: first.label },
@@ -466,6 +468,7 @@ export async function scheduledRideDetail(bookingId: string, driverId: string, n
     mine: !!mine,
     conflict: mine ? false : (item as BoardItem).conflict,
     passengerName: b.passengerName,
+    passengerRating: await passengerRatingOf(b.passengerId), // ★ next to the name (2026-11-26)
     luggageCount: b.luggageCount,
     fareBreakdown,
     pickup, dropoff, trip,

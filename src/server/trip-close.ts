@@ -56,9 +56,4 @@ export async function ratePassenger(bookingId: string, driverId: string, stars: 
   return { ok: true };
 }
 
-/** Average rating drivers gave a passenger (for staff). */
-export async function passengerRatingSummary(passengerIds: string[]) {
-  if (!passengerIds.length) return new Map<string, { average: number; count: number }>();
-  const rows = await prisma.passengerRating.groupBy({ by: ['passengerId'], where: { passengerId: { in: passengerIds } }, _avg: { stars: true }, _count: { _all: true } });
-  return new Map(rows.filter((r) => r.passengerId).map((r) => [r.passengerId!, { average: Math.round((r._avg.stars ?? 0) * 10) / 10, count: r._count._all }]));
-}
+export { passengerRatingSummary } from '@/server/passenger-rating';

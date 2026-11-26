@@ -1,5 +1,6 @@
 'use client';
 
+import { PaxRating, type PaxRatingValue } from '@/components/driver/PaxRating';
 import { Postcode } from '@/components/driver/Postcode';
 import { fareRangeText } from '@/lib/price-type';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -172,7 +173,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
 }
 
 interface Detail extends Item {
-  mine: boolean; passengerName: string; luggageCount: number;
+  mine: boolean; passengerName: string; passengerRating?: PaxRatingValue; luggageCount: number;
   fareBreakdown: { label: string; cents: number }[] | null;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string; postcode?: string | null };
   trip: { distanceM: number; etaSec: number; path: [number, number][] | null; roadRouted: boolean };
@@ -275,7 +276,7 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
                 <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0 font-medium">{d.dropoff.label}<Postcode code={d.dropoff.postcode} /></span></div>
               </div>
               <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{d.passengerName}</span></div>
+                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{d.passengerName}</span><PaxRating r={d.passengerRating} /></div>
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.scheduled.trip')}</span><span className="font-medium">{km(d.trip.distanceM)} · {t('driver.offer.minShort', { min: Math.max(1, Math.round(d.trip.etaSec / 60)) })}</span>{!d.trip.roadRouted && <span className="text-xs text-muted">≈</span>}</div>
                 <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{d.fareCents != null ? fareRangeText(d.fareCents, d.priceType, (c) => fmt.money(c), d.minCents) : '—'}</span></div>
               </div>

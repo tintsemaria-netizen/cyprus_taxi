@@ -1,5 +1,6 @@
 'use client';
 
+import { PaxRating } from '@/components/driver/PaxRating';
 import { Postcode } from '@/components/driver/Postcode';
 import { coRiderNext, type PairStops } from '@/lib/pair-stops';
 import { PairLegs } from '@/components/share/PairLegs';
@@ -494,7 +495,7 @@ export function DriverNavigation(props: {
         )}
         <div className="mt-2 flex items-center gap-2 text-lg">
           <span className="font-medium">{co ? `👥 ${co.name}` : trip.passengerName}</span>
-          {!co && trip.passengerRating && trip.passengerRating.count > 0 && <span className="text-accent">★ {trip.passengerRating.average.toFixed(1)}</span>}
+          {!co && <PaxRating r={trip.passengerRating} />}
           {/* Payment left of the class (2026-11-15): cash green, card red — only once the ride has started (2026-11-18). */}
           {trip.status === 'IN_PROGRESS' && <span className={`ms-auto rounded-md border px-2 py-0.5 text-sm font-bold ${trip.payment === 'CARD' ? 'border-danger/60 text-danger' : 'border-[#34C759]/60 text-[#34C759]'}`}>{trip.payment === 'CARD' ? 'card' : 'cash'}</span>}
           <span className={`text-muted ${trip.status === 'IN_PROGRESS' ? '' : 'ms-auto'}`}>{t(`common.vClass.${trip.vClass}` as MsgKey)}</span>

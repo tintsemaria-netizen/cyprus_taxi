@@ -1,5 +1,6 @@
 'use client';
 
+import { PaxRating, type PaxRatingValue } from '@/components/driver/PaxRating';
 import { DutyPane } from '@/components/reports/DutyPane';
 import { EarningsReport, type Range } from '@/components/reports/EarningsReport';
 import { fareRangeText } from '@/lib/price-type';
@@ -37,7 +38,7 @@ export const dynamic = 'force-dynamic';
 interface Trip {
   bookingId: string; reference: string; status: string; revision: number;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string; postcode?: string | null }; stop?: NavTrip['stop'];
-  passengerName: string; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; luggageCount?: number; vClass: string;
+  passengerName: string; passengerRating?: PaxRatingValue; passengerPhone: string; note: string | null; flightNumber?: string | null; passengerCount: number; luggageCount?: number; vClass: string;
   scheduledAt: string | null; waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null; allowedNext: string[];
 }
 import { GpsMeterCard, type GpsMeterView } from '@/components/driver/GpsMeterCard';
@@ -54,7 +55,7 @@ interface CurrentTrip {
 interface Offer {
   offerId: string; expiresAt: string; expiresInMs: number; localDeadline?: number; pickupEtaSec: number | null; pickupDistanceM: number | null;
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string; postcode?: string | null }; stop?: { lat: number; lng: number; label: string } | null;
-  vClass: string; passengerCount: number; luggageCount?: number; passengerName: string; note: string | null; flightNumber?: string | null; scheduledAt: string | null;
+  vClass: string; passengerCount: number; luggageCount?: number; passengerName: string; passengerRating?: PaxRatingValue; note: string | null; flightNumber?: string | null; scheduledAt: string | null;
   fareCents: number | null; priceType: string | null; currency: string; fareBreakdown: { label: string; cents: number }[] | null; minCents?: number | null;
   afterTrip?: boolean; // offered while he is on a trip: his next ride (2026-11-25)
 }
@@ -793,7 +794,7 @@ function HomeSection(props: {
           <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
             {offer.stop && <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.stop.via')}</span><span className="font-medium">{offer.stop.label}</span></div>}
             <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{offer.dropoff.label}<Postcode code={offer.dropoff.postcode} /></span></div>
-            <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span><ClassBadge vClass={offer.vClass} /></div>
+            <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{offer.passengerName}</span><PaxRating r={offer.passengerRating} /><ClassBadge vClass={offer.vClass} /></div>
             <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{offer.fareCents != null ? fareRangeText(offer.fareCents, offer.priceType, (c) => money(c, offer.currency), offer.minCents) : '—'}</span></div>
             {offer.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(offer.scheduledAt)}</div>}
             {offer.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: offer.note })}</div>}
@@ -832,7 +833,7 @@ function TripRow({ t, onClick }: { t: TripCard; onClick?: () => void }) {
 
 interface FreeOrder {
   bookingId: string; pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string; postcode?: string | null }; stop?: { lat: number; lng: number; label: string } | null;
-  vClass: string; passengerName: string; passengerCount: number; luggageCount?: number; note: string | null; flightNumber: string | null; scheduledAt: string | null;
+  vClass: string; passengerName: string; passengerRating?: PaxRatingValue; passengerCount: number; luggageCount?: number; note: string | null; flightNumber: string | null; scheduledAt: string | null;
   fareCents: number | null; priceType: string | null; minCents?: number | null; currency: string; waitingSince: string; expiresAt: string; expiresInMs: number; distanceM: number | null;
   localDeadline?: number;
 }
@@ -900,7 +901,7 @@ function FreeOrdersSection({ pos, onDuty, onTaken }: { pos: { lat: number; lng: 
                 {o.scheduledAt && <span className="rounded-full bg-elevated px-2 py-1">🕒 {fmt.dateTime(o.scheduledAt)}</span>}
                 {o.flightNumber && <span className="rounded-full bg-elevated px-2 py-1">✈ {o.flightNumber}</span>}
               </div>
-              <p className="mt-2 text-sm font-medium">{o.passengerName}</p>
+              <p className="mt-2 text-sm font-medium">{o.passengerName} <PaxRating r={o.passengerRating} /></p>
               {o.note && <p className="mt-1 text-xs text-muted">{t('driver.offer.note', { note: o.note })}</p>}
               <div className="mt-3 flex items-center justify-between gap-3">
                 <div className="text-sm"><span className="font-semibold">{o.fareCents != null ? fareRangeText(o.fareCents, o.priceType, (c) => money(c, o.currency), o.minCents) : '—'}</span></div>
@@ -959,7 +960,7 @@ function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
               <div className="mt-3 space-y-1.5 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
                 {o.stop && <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.stop.via')}</span><span className="font-medium">{o.stop.label}</span></div>}
                 <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.whereTo')}</span><span className="font-medium">{o.dropoff.label}<Postcode code={o.dropoff.postcode} /></span></div>
-                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{o.passengerName}</span><ClassBadge vClass={o.vClass} /></div>
+                <div className="flex gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.client')}</span><span className="font-medium">{o.passengerName}</span><PaxRating r={o.passengerRating} /><ClassBadge vClass={o.vClass} /></div>
                 <div className="flex items-baseline gap-2"><span className="w-20 shrink-0 text-muted">{t('driver.offer.sum')}</span><span className="text-lg font-bold">{o.fareCents != null ? fareRangeText(o.fareCents, o.priceType, (c) => money(c, o.currency), o.minCents) : '—'}</span></div>
                 {o.scheduledAt && <div className="text-xs text-muted">🕒 {fmt.dateTime(o.scheduledAt)}</div>}
                 {o.note && <div className="text-xs text-warn">{t('driver.offer.note', { note: o.note })}</div>}

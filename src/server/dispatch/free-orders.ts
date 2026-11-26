@@ -11,6 +11,7 @@ import { recordEvent, driverPseudo, bookingEventPayload } from '@/server/events'
 import { prebookHolds, fitsBeforePrebook } from './preassign-core';
 import { googleConfigured, googleRoute } from '@/server/google';
 import { standAt } from '@/server/stands';
+import { passengerRatingSummary } from '@/server/passenger-rating';
 
 // "Free orders" board (2026-11-12). A ride lands here ONLY after automatic dispatch has offered it
 // to every eligible free driver nearby without anyone accepting (or there was nobody to offer it
@@ -77,6 +78,7 @@ export async function listFreeOrders(driverId: string, now: Date = new Date()): 
   const here = driver.location ? { lat: driver.location.lat, lng: driver.location.lng } : null;
   // Standing in a switched-off «Стоянка с очередью» (2026-11-25): no orders there, the board included.
   if (here && (await standAt(here))?.active === false) return [];
+  const paxRating = await passengerRatingSummary(jobs.map((j) => j.booking.passengerId ?? '')); // ★ next to the name (2026-11-26)
   return jobs
     .map(({ booking: b, openedAt, deadlineAt }) => ({
       bookingId: b.id,
@@ -85,6 +87,7 @@ export async function listFreeOrders(driverId: string, now: Date = new Date()): 
       stop: b.stopLat != null && b.stopLng != null ? { lat: b.stopLat, lng: b.stopLng, label: b.stopLabel ?? '' } : null,
       vClass: b.vClass,
       passengerName: b.passengerName,
+      passengerRating: (b.passengerId && paxRating.get(b.passengerId)) || null,
       passengerCount: b.passengerCount,
       luggageCount: b.luggageCount,
       note: b.note,
