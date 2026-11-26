@@ -6,13 +6,14 @@ import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { StaffPasswordForm } from '@/components/StaffPasswordForm';
 import { PasswordInput } from '@/components/PasswordInput';
+import { NotifyToggle } from '@/components/NotifyToggle';
 
 export const dynamic = 'force-dynamic';
 
 interface Me { mfa?: { eligible: boolean; enabled: boolean; setupRequired: boolean } }
 
 // Two-factor (TOTP) for admins and dispatchers (2026-10-01 audit Stage 1.2).
-function Security() {
+function Security({ admin = false }: { admin?: boolean }) {
   const { t } = useT();
   const [me, setMe] = useState<Me | null>(null);
   const [setup, setSetup] = useState<{ secret: string; uri: string; qrSvg: string } | null>(null);
@@ -89,11 +90,18 @@ function Security() {
           </div>
         )}
       </section>
+      {/* Alerts on this phone (admin): moved here from the strip under the tabs (2026-11-26). */}
+      {admin && (
+        <section className="card mt-4 flex items-center justify-between gap-3 p-4" data-testid="staff-notify">
+          <span className="text-sm font-medium">{t('auth.cat.notifications')}</span>
+          <NotifyToggle pushUrl="/staff/push" className="text-end" />
+        </section>
+      )}
       <div className="mt-4"><StaffPasswordForm /></div>
     </div>
   );
 }
 
 export default function Page() {
-  return <StaffShell roles={['ADMIN', 'DISPATCHER', 'FLEET_OWNER']}>{() => <Security />}</StaffShell>;
+  return <StaffShell roles={['ADMIN', 'DISPATCHER', 'FLEET_OWNER']}>{(me) => <Security admin={me.role === 'ADMIN'} />}</StaffShell>;
 }

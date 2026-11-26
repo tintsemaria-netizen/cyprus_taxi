@@ -237,7 +237,8 @@ export function StaffShell({ roles, children }: { roles: Me['role'][]; children:
           {t('staff.docs.bar', { n: docA.uploaded })} — <span className="underline">{t('staff.docs.open')}</span>
         </a>
       )}
-      {me.role === 'ADMIN' && <NotifyToggle pushUrl="/staff/push" onlyProblems className="border-b border-edge px-4 py-1.5 text-center sm:hidden" />}
+      {/* The phone strip «Включить уведомления» under the tabs was removed (2026-11-26, operator); on a phone the
+          admin turns them on in «Безопасность». */}
       {popup && (
         <div className="fixed inset-x-3 z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-danger bg-elevated p-3 text-sm shadow-xl" style={{ top: 'calc(env(safe-area-inset-top) + 0.75rem)' }} data-testid="change-popup" role="status">
           <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-danger" />
