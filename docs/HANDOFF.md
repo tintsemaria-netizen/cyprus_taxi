@@ -28,7 +28,7 @@
 ## 2026-11-26 ~21:55 — start page v2 (deployed, branch welcome-2)
 - Cards: airport (now «Ларнака, Пафос и Эрджан», no price sentence), share, prebook, track. Price and 8-languages cards removed (keys deleted); driver block without the three ticks (drv1–3 deleted); «Заказать поездку» + install prompt moved after the cards.
 - NOTE: Ercan (ECN) is only in the promo text — src/lib/airports.ts knows LCA and PFO only (airport areas, stands, ride-share). Tell the operator if Ercan service needs them.
-- Hero lead still says «Цена видна до поездки» — operator asked to remove price info from the cards; lead kept, asked.
+- Then (welcome-3, deployed): lead without the price promise; trackD without the 4-digit code line. Still open: Ercan in src/lib/airports.ts?
 
 ## 2026-11-26 ~21:40 — start page (deployed, branch welcome-first)
 - proxy.ts: GET / without cookie ily_welcome_seen and without tc_passenger → 307 /welcome (query kept); /welcome sets the cookie (2 years). So: first visit / new phone / QR / link / invite → start page once; signed-in passengers never.
