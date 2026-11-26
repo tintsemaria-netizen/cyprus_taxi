@@ -471,6 +471,8 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
         {/* «Визитка» on top (2026-11-26, operator): photo, name, car and plate; × on the right. */}
         <div className="flex shrink-0 items-start gap-3 px-4 pb-3 pt-3">
           <DriverCard dash={dash} onSwitched={loadDash} openCars={() => setMenuSec('cars')} />
+          {/* Language: a round button next to the card, as in the passenger's menu (2026-11-27, operator). */}
+          <LanguageSwitcher round only={DRIVER_LOCALES} className="mt-2" />
           <button type="button" onClick={() => setDrawer(false)} aria-label={t('common.close')} className="-me-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-2xl text-ink hover:bg-white/5">×</button>
         </div>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
@@ -963,7 +965,11 @@ function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
         <div className="card pointer-events-auto max-h-[60dvh] overflow-y-auto border-2 border-accent p-4">
           {!o ? <p className="py-6 text-center text-sm text-muted">{t('common.loading')}</p> : (
             <>
-              <div className="flex items-center justify-between"><span className="font-semibold text-accent">{t('driver.free.title')}</span><span className={`text-sm font-semibold tabular-nums ${leftSec! <= 30 ? 'text-danger' : 'text-muted'}`}>{t('driver.free.left', { sec: leftSec! })}</span></div>
+              {/* As «Новый заказ» (2026-11-27, operator): title + seconds, a small «‹ Назад» top right, one big button. */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-2 whitespace-nowrap"><span className="truncate font-semibold text-accent">{t('driver.free.title')}</span><span className={`text-sm font-semibold tabular-nums ${leftSec! <= 30 ? 'text-danger' : 'text-muted'}`}>{t('driver.units.sec', { n: leftSec! })}</span></span>
+                <button type="button" className="shrink-0 whitespace-nowrap rounded-full border border-edge-strong px-3 py-1 text-xs font-semibold text-ink" onClick={() => onBack(false)} data-testid="free-back">{t('driver.free.back')}</button>
+              </div>
               <div className="mt-2 flex items-baseline gap-3">
                 <span className="text-3xl font-bold text-ink">{o.pickupEtaSec != null ? t('driver.offer.minShort', { min: Math.max(1, Math.round(o.pickupEtaSec / 60)) }) : '—'}</span>
                 {o.pickupDistanceM != null && <span className="text-xl font-semibold text-muted">{km(o.pickupDistanceM)}</span>}
@@ -982,9 +988,9 @@ function FreeOrderDetailView({ id, pos, onDuty, busy, onBack, onTake }: {
               {!onDuty && <p className="mt-2 rounded-[12px] border border-warn/40 bg-warn/10 p-2 text-xs text-warn">{t('driver.free.goOnline')}</p>}
             </>
           )}
-          <div className="sticky -bottom-4 -mx-4 -mb-4 mt-4 grid grid-cols-2 gap-2 bg-panel px-4 pb-4 pt-2">
-            <button className="btn-ghost min-h-[44px]" onClick={() => onBack(false)}>{t('driver.free.back')}</button>
-            <button className="btn-primary min-h-[44px]" disabled={!o || !onDuty || busy} onClick={onTake}>{busy ? t('driver.free.taking') : t('driver.free.take')}</button>
+          <div className="sticky -bottom-4 -mx-4 -mb-4 mt-4 bg-panel px-4 pb-4 pt-2">
+            {!o && <button className="btn-ghost mb-2 min-h-[44px] w-full" onClick={() => onBack(false)}>{t('driver.free.back')}</button>}
+            <button className="btn-primary min-h-[60px] w-full text-xl font-extrabold" disabled={!o || !onDuty || busy} onClick={onTake} data-testid="free-take">{busy ? t('driver.free.taking') : t('driver.free.take')}</button>
           </div>
         </div>
       </div>
@@ -1197,7 +1203,9 @@ function CarPick({ onDone, openCars, tError }: { onDone: () => void; openCars: (
 function ProfileSection({ dash }: { dash: Dashboard | null }) {
   const { t, tp } = useT();
   const { tOr } = useDriverFmt();
-  async function signOut() { await api('/auth/logout', { method: 'POST' }).catch(() => {}); window.location.href = '/driver/login'; }
+  const [askOut, setAskOut] = useState(false);
+  const [outBusy, setOutBusy] = useState(false);
+  async function signOut() { setOutBusy(true); await api('/auth/logout', { method: 'POST' }).catch(() => {}); window.location.href = '/driver/login'; }
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 text-sm">
@@ -1206,14 +1214,16 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
           ? <span className="font-semibold text-accent" title={tp('driver.profile.ratings', dash.driver.rating.count)}>★ {dash.driver.rating.average?.toFixed(1)} <span className="text-xs font-normal text-muted">({dash.driver.rating.count})</span></span>
           : <span className="text-xs text-muted">{t('driver.profile.noRatings')}</span>)}
       </div>
-      <button onClick={signOut} className="btn-ghost w-full !text-danger" data-testid="driver-signout">{t('driver.profile.signOut')}</button>
+      {/* «Выйти» small, on the left, with a question first — as the passenger's (2026-11-27, operator). */}
+      <button type="button" onClick={() => setAskOut(true)} className="px-1 py-1 text-sm text-danger hover:underline" data-testid="driver-signout">{t('driver.profile.signOut')}</button>
+      {askOut && <ConfirmSheet title={t('auth.logOutAsk')} confirmLabel={t('driver.profile.signOut')} danger busy={outBusy} onConfirm={signOut} onCancel={() => setAskOut(false)} />}
       {/* Delete the account inside the app (2026-11-26; App Store / Google Play rule, GDPR). */}
       <DeleteDriverAccount />
     </div>
   );
 }
 
-/** Настройки (2026-11-26): notifications, app colour, language, password. */
+/** Настройки (2026-11-26): notifications, app colour, password (the language is the round button by the card). */
 function SettingsSection() {
   const { t } = useT();
   const [themeOpen, setThemeOpen] = useState(false);
@@ -1231,10 +1241,6 @@ function SettingsSection() {
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`text-muted transition-transform ${themeOpen ? 'rotate-90' : 'rtl:-scale-x-100'}`}><path d="M9 5l7 7-7 7" /></svg>
         </button>
         {themeOpen && <div className="mt-2"><ThemePicker role="driver" /></div>}
-      </div>
-      <div className="flex items-center justify-between gap-3 py-3">
-        <span className="text-sm">{t('common.language')}</span>
-        <LanguageSwitcher only={DRIVER_LOCALES} />
       </div>
       <div className="pt-3"><StaffPasswordForm bare /></div>
     </div>
