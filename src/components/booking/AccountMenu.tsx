@@ -17,7 +17,7 @@ export interface PassengerInfo { phone: string | null; name?: string | null; ema
 export function AccountMenu({ passenger }: { passenger: PassengerInfo; onLoggedOut?: () => void }) {
   const [copied, setCopied] = useState(false);
   async function invite() {
-    const url = `${window.location.origin}/welcome?ref=invite`;
+    const url = `${window.location.origin}/?ref=invite`; // the start page once per phone, like any link (2026-11-26)
     const text = t('auth.menu.inviteText');
     if (typeof navigator !== 'undefined' && navigator.share) {
       try { await navigator.share({ title: 'IL-Y', text, url }); setOpen(false); return; } catch { /* dismissed — copy instead */ }
@@ -106,7 +106,7 @@ export function AccountMenu({ passenger }: { passenger: PassengerInfo; onLoggedO
             <MenuLink href="/prebookings" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('rides.prebookings.menu')}</MenuLink>
             <MenuLink href="/account#places" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.savedPlaces')}</MenuLink>
             <MenuLink href="/account" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.profile')}</MenuLink>
-            {/* «Пригласить друга» (2026-11-26, operator): the friend gets the start page (/welcome), whatever phone. */}
+            {/* «Пригласить друга» (2026-11-26, operator): the friend sees the start page once per phone, like any other link. */}
             <button type="button" role="menuitem" onClick={invite} className="w-full rounded-[10px] px-3 py-3 text-start text-sm hover:bg-page" data-testid="menu-invite">
               {copied ? `✓ ${t('auth.menu.inviteCopied')}` : t('auth.menu.invite')}
             </button>
