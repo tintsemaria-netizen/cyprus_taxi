@@ -9,6 +9,14 @@
 - Test: lifecycle.db.test.ts «the passenger is told what to pay».
 - Open: offer one shared receipt component for «Мои поездки» too; no-show push demo was promised to the operator next.
 
+## 2026-11-26 ~19:20 — driver menu rebuilt (deployed, branch driver-menu)
+- StaffShell: ☰ → round initials button (driver). Drawer: «визитка» (photo from GET /api/v1/driver/photo = his application selfie, else initials; name; car; plate). Tap the plate → CarPick list (switch via /driver/cars/switch, same rules; «+ Добавить новую машину» opens «Мои машины»).
+- Sections bottom-up (Предзаказы lowest): Предзаказы, Профиль (rating, Выйти, Удалить аккаунт), Поездки, Мои машины (share switch + Comfort/XL switches + MyCars bare), Настройки (notifications, colour — collapsible, language, one «Сменить пароль ›» via StaffPasswordForm bare), Документы (DriverDocs bare), Помощь. One open at a time, opens upwards.
+- Share switch: hint «Только аэропорт и межгород» + ⓘ with share.driver.settingInfo (8 langs).
+- Driver.takesXl (migration 20261126180000_takes_xl); takesClasses/carTakes take takesXl in eligibility, offers, free-orders, preassign, market, stands; PATCH /driver/classes refuses both off. Keys driver.classes {title, turnedOn, turnedOff, keepOne}.
+- cars.allowedVehicleIds: an admin-set car (no owner, no fleet) the driver was bound to stays allowed after switching away (was lost before).
+- Full suite 520 passed. Dev DB: petros got demo CarAccess rows (demo-pick-1/2), maria set offline.
+
 ## 2026-11-26 ~15:35 — support / legal tidy (deployed, branch support-fix)
 - /support: delete-account hint removed (promo.deleteHint key deleted in 8 langs); LegalLinks({current}) hides the link to the page you are on (support, privacy, terms).
 - legal.ts EN/RU/EL «your rights» path now «Profile settings → Personal details».
