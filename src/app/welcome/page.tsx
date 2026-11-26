@@ -21,7 +21,8 @@ export default function Welcome() {
   const { t } = useT();
   return (
     <div className="min-h-[100dvh]">
-      <PassengerTopBar />
+      {/* The first page: no back arrow, no «Войти» (2026-11-26, operator). */}
+      <PassengerTopBar back={false} account={false} />
       <main className="mx-auto max-w-3xl px-5 pb-16">
         <section className="pt-10 text-center" data-testid="welcome-hero">
           <LogoMark className="mx-auto h-16 w-16" />
