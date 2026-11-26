@@ -92,6 +92,7 @@ const rides: Catalog<typeof en> = {
     reminderBody: "איסוף ב-{time}",
     menu: "ההזמנות מראש שלי",
   },
+  digest: { subjectWeek: "קבלות IL-Y · {range}", subjectMonth: "קבלות IL-Y · {range}", heading: "הנסיעות שלך עם IL-Y", intro: "נסיעות: {count}, {range}.", total: "סה״כ", open: "כל הקבלות ב-IL-Y", footer: "בחרת סיכום בהגדרות פרופיל ← קבלות. התשלום עובר ישירות לנהג; זו אינה חשבונית מס." },
   email: {
     subject: "קבלה מ-IL-Y · נסיעה #{ref}",
     heading: "תודה שנסעתם עם IL-Y",

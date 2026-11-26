@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { api } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher';
 import { markLeftViaMenu, consumeMenuReopen } from '@/lib/navTrail';
@@ -14,9 +13,9 @@ export interface PassengerInfo { phone: string | null; name?: string | null; ema
 // Profile settings, Notifications, Help and Log out (last). Replaces the "Login" link when a
 // passenger session exists. Follows the researched pattern: identity header, log out last,
 // aria-haspopup/expanded, Esc + outside-click close, focus returns to the trigger.
-export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerInfo; onLoggedOut: () => void }) {
+// «Выйти» lives in Profile settings since 2026-11-26 (operator); `onLoggedOut` is kept for callers.
+export function AccountMenu({ passenger }: { passenger: PassengerInfo; onLoggedOut?: () => void }) {
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -52,12 +51,6 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
 
   function close() { setOpen(false); btnRef.current?.focus(); }
 
-  async function logout() {
-    setBusy(true);
-    try { await api('/passenger/logout', { method: 'POST' }); onLoggedOut(); setOpen(false); }
-    catch { /* keep menu open; user can retry */ }
-    finally { setBusy(false); }
-  }
 
   return (
     <div className="relative" ref={rootRef}>
@@ -106,10 +99,7 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
             <MenuLink href="/account" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.profile')}</MenuLink>
             {/* Help and privacy — small and quiet (2026-11-26, operator). */}
             <a href="/support" role="menuitem" onClick={() => { markLeftViaMenu(); setOpen(false); }} className="block rounded-[10px] px-3 py-2 text-xs text-muted hover:bg-page" data-testid="menu-help">{t('auth.menu.help')}</a>
-            <div className="my-1 border-t border-edge" />
-            <button role="menuitem" onClick={logout} disabled={busy} className="w-full rounded-[10px] px-3 py-3 text-start text-sm text-danger hover:bg-page disabled:opacity-60">
-              {busy ? t('auth.signingOut') : t('auth.logOut')}
-            </button>
+            {/* «Выйти» moved to Profile settings (2026-11-26, operator). */}
           </div>
         </MenuPortal>
       )}

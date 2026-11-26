@@ -92,6 +92,7 @@ const rides: Catalog<typeof en> = {
     reminderBody: "Abholung um {time}",
     menu: "Meine Vorbestellungen",
   },
+  digest: { subjectWeek: "IL-Y Belege · {range}", subjectMonth: "IL-Y Belege · {range}", heading: "Ihre Fahrten mit IL-Y", intro: "Fahrten: {count}, {range}.", total: "Gesamt", open: "Alle Belege in IL-Y", footer: "Sie haben die Übersicht in Profileinstellungen → Belege gewählt. Die Zahlung geht direkt an den Fahrer; dies ist keine Steuerrechnung." },
   email: {
     subject: "IL-Y-Quittung · Fahrt #{ref}",
     heading: "Danke, dass Sie mit IL-Y gefahren sind",

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { PlacesInput, Selected } from '@/components/booking/PlacesInput';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
+import { INTL_TAG } from '@/i18n/config';
 import { PasswordInput } from '@/components/PasswordInput';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 
@@ -97,6 +98,10 @@ export default function Account() {
         <SavedPlaces />
       </Category>
 
+      <Category id="receipts" icon="🧾" title={t('auth.receipts.title')} sub={t('auth.receipts.sub')} open={openCat} onToggle={toggleCat}>
+        <Receipts />
+      </Category>
+
       <Category id="theme" icon="🎨" title={t('common.theme.title')} open={openCat} onToggle={toggleCat}>
         <ThemePicker role="passenger" />
       </Category>
@@ -112,6 +117,77 @@ export default function Account() {
       <button onClick={logout} className="btn-ghost w-full !text-danger">{t('auth.logOut')}</button>
     </div>
     </div>
+  );
+}
+
+type ReceiptMode = 'EACH' | 'WEEKLY' | 'MONTHLY' | 'OFF';
+interface ReceiptRow { id: string; reference: string; at: string; pickup: string; dropoff: string; totalCents: number | null; currency: string; emailed: boolean }
+
+// Receipts (2026-11-26, operator): how receipts are e-mailed (after every trip — the default — a weekly
+// or monthly summary, or not at all) and the list of every completed trip with its receipt.
+function Receipts() {
+  const { t, tError, locale } = useT();
+  const [mode, setMode] = useState<ReceiptMode | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
+  const [rows, setRows] = useState<ReceiptRow[]>([]);
+  const [next, setNext] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const load = (before?: string) => api<{ mode: ReceiptMode; email: string | null; receipts: ReceiptRow[]; nextBefore: string | null }>(`/passenger/receipts${before ? `?before=${encodeURIComponent(before)}` : ''}`)
+    .then((r) => { setMode(r.mode); setEmail(r.email); setRows((x) => (before ? [...x, ...r.receipts] : r.receipts)); setNext(r.nextBefore); })
+    .catch((e) => setMsg(tError(e)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { void load(); }, []);
+  async function choose(m: ReceiptMode) {
+    if (m === mode) return;
+    const prev = mode; setMode(m); setBusy(true); setMsg(null);
+    try { await api('/passenger/receipts', { method: 'PATCH', body: { mode: m } }); setMsg(t('auth.receipts.saved')); }
+    catch (e) { setMode(prev); setMsg(tError(e)); }
+    finally { setBusy(false); }
+  }
+  if (!mode) return <p className="text-sm text-muted">{msg ?? t('common.loading')}</p>;
+  const money = (c: number, cur: string) => new Intl.NumberFormat(INTL_TAG[locale], { style: 'currency', currency: cur }).format(c / 100);
+  const when = (iso: string) => new Intl.DateTimeFormat(INTL_TAG[locale], { timeZone: 'Europe/Nicosia', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+  const OPTIONS: [ReceiptMode, string][] = [['EACH', t('auth.receipts.each')], ['WEEKLY', t('auth.receipts.weekly')], ['MONTHLY', t('auth.receipts.monthly')], ['OFF', t('auth.receipts.off')]];
+  const hint = ({ EACH: 'auth.receipts.hintEach', WEEKLY: 'auth.receipts.hintWeekly', MONTHLY: 'auth.receipts.hintMonthly', OFF: 'auth.receipts.hintOff' } as const)[mode];
+  return (
+    <section className="space-y-4" data-testid="receipts">
+      <div>
+        <div className="label">{t('auth.receipts.mailTitle')}</div>
+        {email ? (
+          <>
+            <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('auth.receipts.mailTitle')}>
+              {OPTIONS.map(([m, label]) => (
+                <button key={m} type="button" role="radio" aria-checked={mode === m} disabled={busy} onClick={() => choose(m)} data-testid={`receipt-mode-${m}`}
+                  className={`min-h-[44px] rounded-[12px] border px-3 py-2 text-sm ${mode === m ? 'border-accent bg-accent/10 font-medium text-ink' : 'border-edge text-muted hover:bg-page'}`}>{label}</button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-muted">{t(hint, { email })}</p>
+          </>
+        ) : <p className="mt-1 text-xs text-muted">{t('auth.receipts.noEmail')}</p>}
+        {msg && <p className="mt-1 text-xs text-muted" role="status">{msg}</p>}
+      </div>
+      <div>
+        <div className="label">{t('auth.receipts.list')}</div>
+        {rows.length === 0 ? <p className="mt-1 text-sm text-muted">{t('auth.receipts.empty')}</p> : (
+          <ul className="mt-2 divide-y divide-edge rounded-[12px] border border-edge">
+            {rows.map((r) => (
+              <li key={r.id}>
+                <a href={`/rides/${r.id}/receipt`} className="flex items-center gap-3 px-3 py-2.5 hover:bg-page" data-testid="receipt-row">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs text-muted">{when(r.at)}{r.emailed ? ` · ✉ ${t('auth.receipts.emailed')}` : ''}</span>
+                    <span className="block truncate text-sm">{r.pickup} → {r.dropoff}</span>
+                  </span>
+                  <span className="shrink-0 text-sm font-semibold">{r.totalCents != null ? money(r.totalCents, r.currency) : '—'}</span>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-muted rtl:-scale-x-100"><path d="M9 5l7 7-7 7" /></svg>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+        {next && <button type="button" onClick={() => load(next)} className="btn-ghost mt-2 w-full">{t('auth.receipts.more')}</button>}
+      </div>
+    </section>
   );
 }
 

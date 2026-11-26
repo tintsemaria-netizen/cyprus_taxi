@@ -77,6 +77,7 @@ const auth: Catalog<typeof en> = {
     placesSub: "Domicile, travail et école pour réserver en un geste",
     notifications: "Notifications",
   },
+  receipts: { title: "Reçus", sub: "Tous vos reçus de course et l’envoi par e-mail", mailTitle: "Recevoir les reçus par e-mail", each: "Après chaque course", weekly: "Une fois par semaine (récapitulatif)", monthly: "Une fois par mois (récapitulatif)", off: "Ne pas envoyer", hintEach: "Un reçu est envoyé à {email} après chaque course terminée.", hintWeekly: "Chaque lundi, vous recevez à {email} un e-mail avec les courses de la semaine passée.", hintMonthly: "Le 1er de chaque mois, vous recevez à {email} un e-mail avec les courses du mois passé.", hintOff: "Les reçus ne sont pas envoyés par e-mail. Vous pouvez toujours les consulter ici.", noEmail: "Votre compte n’a pas d’e-mail, les reçus sont seulement conservés ici.", saved: "Enregistré", list: "Mes reçus", empty: "Aucune course terminée pour l’instant.", more: "Afficher plus", emailed: "Envoyé par e-mail" },
   pw: {
     title: "Changer le mot de passe",
     setTitle: "Définir un mot de passe",

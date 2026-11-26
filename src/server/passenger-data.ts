@@ -77,6 +77,9 @@ export async function deletePassengerAccount(passengerId: string): Promise<Delet
     await tx.tripRating.updateMany({ where: { passengerId }, data: { passengerId: 'deleted', comment: null } });
     if (p.phone) await tx.phoneVerification.deleteMany({ where: { phone: p.phone } });
     await tx.passengerSession.deleteMany({ where: { passengerId } });
+    // E-mailed receipts carry the address (2026-11-26): the queue rows go with the account.
+    await tx.receiptEmail.deleteMany({ where: { passengerId } });
+    await tx.receiptDigest.deleteMany({ where: { passengerId } });
     await tx.passenger.delete({ where: { id: passengerId } }); // saved places cascade
     return { ok: true, ridesAnonymised: ids.length };
   });

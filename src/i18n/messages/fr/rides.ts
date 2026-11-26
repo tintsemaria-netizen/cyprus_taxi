@@ -92,6 +92,7 @@ const rides: Catalog<typeof en> = {
     reminderBody: "Prise en charge à {time}",
     menu: "Mes réservations",
   },
+  digest: { subjectWeek: "Reçus IL-Y · {range}", subjectMonth: "Reçus IL-Y · {range}", heading: "Vos courses avec IL-Y", intro: "Courses : {count}, {range}.", total: "Total", open: "Tous les reçus dans IL-Y", footer: "Vous avez choisi le récapitulatif dans Paramètres du profil → Reçus. Le paiement va directement au chauffeur ; ce n’est pas une facture fiscale." },
   email: {
     subject: "Reçu IL-Y · course #{ref}",
     heading: "Merci d’avoir voyagé avec IL-Y",

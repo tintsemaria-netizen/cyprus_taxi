@@ -92,6 +92,7 @@ const rides: Catalog<typeof en> = {
     reminderBody: 'Подача в {time}',
     menu: 'Мои предзаказы',
   },
+  digest: { subjectWeek: "Чеки IL-Y · {range}", subjectMonth: "Чеки IL-Y · {range}", heading: "Ваши поездки с IL-Y", intro: "Поездок: {count}, {range}.", total: "Итого", open: "Все чеки в IL-Y", footer: "Вы выбрали сводку в Настройках профиля → Чеки. Оплата идёт напрямую водителю; это письмо не налоговый счёт." },
   email: {
     subject: "Чек IL-Y · поездка #{ref}",
     heading: "Спасибо, что ездите с IL-Y",

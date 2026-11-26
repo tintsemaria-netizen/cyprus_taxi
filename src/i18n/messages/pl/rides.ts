@@ -92,6 +92,7 @@ const rides: Catalog<typeof en> = {
     reminderBody: "Odbiór o {time}",
     menu: "Moje rezerwacje",
   },
+  digest: { subjectWeek: "Paragony IL-Y · {range}", subjectMonth: "Paragony IL-Y · {range}", heading: "Twoje przejazdy z IL-Y", intro: "Przejazdy: {count}, {range}.", total: "Razem", open: "Wszystkie paragony w IL-Y", footer: "Wybrano podsumowanie w Ustawieniach profilu → Paragony. Płatność trafia bezpośrednio do kierowcy; to nie jest faktura." },
   email: {
     subject: "Paragon IL-Y · przejazd #{ref}",
     heading: "Dziękujemy za przejazd z IL-Y",

@@ -92,6 +92,7 @@ const rides: Catalog<typeof en> = {
     reminderBody: 'Παραλαβή στις {time}',
     menu: 'Οι προκρατήσεις μου',
   },
+  digest: { subjectWeek: "Αποδείξεις IL-Y · {range}", subjectMonth: "Αποδείξεις IL-Y · {range}", heading: "Οι διαδρομές σας με το IL-Y", intro: "Διαδρομές: {count}, {range}.", total: "Σύνολο", open: "Όλες οι αποδείξεις στο IL-Y", footer: "Επιλέξατε σύνοψη στις Ρυθμίσεις προφίλ → Αποδείξεις. Η πληρωμή γίνεται απευθείας στον οδηγό· δεν είναι φορολογικό τιμολόγιο." },
   email: {
     subject: "Απόδειξη IL-Y · διαδρομή #{ref}",
     heading: "Ευχαριστούμε που ταξιδέψατε με την IL-Y",
