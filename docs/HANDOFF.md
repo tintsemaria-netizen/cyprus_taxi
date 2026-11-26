@@ -3261,3 +3261,11 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
   note «Здесь подача только в одной точке: …» (booking.pickupPoint, 8 langs) for 5 s; map follows.
 - Tests: no-go.db.test.ts snap case. The pickup point must be inside its territory and on land (admin + server refine).
   Not yet: driver sees nothing special (just the pickup address = point name).
+
+## 2026-11-27 — deployed adaf28f (cards-unify + driver-polish)
+- Order cards unified (src/components/driver/OrderBits.tsx: ClientLine, RouteLines). Free orders list, pre-booking list and detail use the new-order style; lists stay lime.
+- Frame colours apply only when a pre-booking's time comes. Free pre-booking offer and NextOfferCard: #FFA94D (`offer.scheduledAt`). Accepted pre-booking trip sheet: #A78BFA (`trip.prebooked` in views.ts).
+- Pre-booking board: the available items show the rating only (no name, for privacy); mine items show name + rating.
+- Driver: a small left «Выйти» with ConfirmSheet (driver-signout); the round language button next to DriverCard in the drawer (the language row was removed from Settings); the free-order detail has a small «‹ Назад» top right (free-back), the seconds by the title, and one big «Взять заказ» (free-take).
+- Evidence: tsc clean; vitest 523 passed / 1 skipped; live /api/v1/health/ready = ready; driver chunks contain driver-signout, free-back, free-take, #FFA94D, #A78BFA.
+- Not visually checked live: NextOfferCard and the co-rider trip (need a real trip).
