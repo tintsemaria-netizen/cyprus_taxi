@@ -1115,11 +1115,43 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
             {dash.support.email && <a href={`mailto:${dash.support.email}`} className="block text-accent">✉️ {dash.support.email}</a>}
           </div>
         ) : <p className="text-sm text-muted">{t('driver.profile.noSupport')}</p>}
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+          <a href="/privacy" className="underline">{t('promo.privacy')}</a>
+          <a href="/terms" className="underline">{t('promo.terms')}</a>
+          <a href="/support" className="underline">{t('promo.support')}</a>
+        </div>
       </div>
 
       <StaffPasswordForm />
 
       <button onClick={signOut} className="btn-ghost w-full !text-danger">{t('driver.profile.signOut')}</button>
+
+      {/* Delete the account inside the app (2026-11-26; App Store / Google Play rule, GDPR). */}
+      <DeleteDriverAccount />
+    </div>
+  );
+}
+
+function DeleteDriverAccount() {
+  const { t } = useT();
+  const [step, setStep] = useState<0 | 1>(0);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  async function del() {
+    setBusy(true); setErr(null);
+    try { await api('/driver/account', { method: 'DELETE', body: { confirm: 'DELETE' } }); window.location.href = '/driver/login'; }
+    catch (e) { setErr(e instanceof ApiRequestError && e.body.code === 'ACTIVE_RIDE' ? t('driver.deleteAccount.activeRide') : t('driver.deleteAccount.failed')); setBusy(false); }
+  }
+  if (step === 0) return <button type="button" onClick={() => setStep(1)} className="w-full py-2 text-center text-xs text-muted underline" data-testid="driver-delete-account">{t('driver.deleteAccount.button')}</button>;
+  return (
+    <div className="card border-danger/50 p-4" data-testid="driver-delete-confirm">
+      <div className="font-semibold text-danger">{t('driver.deleteAccount.title')}</div>
+      <p className="mt-1 text-sm text-muted">{t('driver.deleteAccount.body')}</p>
+      {err && <p className="mt-2 text-sm text-danger">{err}</p>}
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => setStep(0)} className="btn-ghost" disabled={busy}>{t('driver.deleteAccount.cancel')}</button>
+        <button type="button" onClick={del} className="btn-primary !bg-danger !text-white" disabled={busy} data-testid="driver-delete-yes">{t('driver.deleteAccount.confirm')}</button>
+      </div>
     </div>
   );
 }

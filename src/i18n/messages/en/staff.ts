@@ -286,6 +286,8 @@ const staff = {
     sub: 'Timezone fixed to Europe/Nicosia in beta. Secrets are never stored or shown here.',
     saved: 'Saved.',
     operator: 'Operator name',
+    operatorAddress: "Operator address",
+    operatorAddressPh: "Street, number, city, postcode — for «Support» and the legal pages",
     operatorPh: 'Not published if empty',
     supportPhone: 'Support phone',
     supportEmail: 'Support email',

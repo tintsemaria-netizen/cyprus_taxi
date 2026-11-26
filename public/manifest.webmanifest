@@ -3,6 +3,7 @@
   "name": "IL-Y",
   "short_name": "IL-Y",
   "description": "Book and track a ride across Cyprus with IL-Y.",
+  "categories": ["travel", "navigation"],
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

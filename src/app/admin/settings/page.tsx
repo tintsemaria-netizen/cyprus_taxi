@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
 
 interface Settings {
   operatorName: string | null;
+  operatorAddress?: string | null;
   supportPhone: string | null;
   supportEmail: string | null;
   googleReviewUrl: string | null;
@@ -44,6 +45,7 @@ function SettingsForm() {
         method: 'PATCH',
         body: {
           operatorName: s.operatorName || null,
+          operatorAddress: s.operatorAddress?.trim() || null,
           supportPhone: s.supportPhone || null,
           supportEmail: s.supportEmail || null,
           googleReviewUrl: s.googleReviewUrl?.trim() || null,
@@ -73,6 +75,7 @@ function SettingsForm() {
       {msg && <p className="mt-3 rounded-[12px] border border-accent/40 bg-accent/10 px-3 py-2 text-sm">{msg}</p>}
       <form onSubmit={save} className="card mt-4 space-y-4 p-4">
         <Row label={t('staff.settings.operator')}><input className="field" value={s.operatorName ?? ''} onChange={(e) => setS({ ...s, operatorName: e.target.value })} placeholder={t('staff.settings.operatorPh')} /></Row>
+        <Row label={t('staff.settings.operatorAddress')}><input className="field" value={s.operatorAddress ?? ''} onChange={(e) => setS({ ...s, operatorAddress: e.target.value })} placeholder={t('staff.settings.operatorAddressPh')} /></Row>
         <Row label={t('staff.settings.supportPhone')}><input className="field" value={s.supportPhone ?? ''} onChange={(e) => setS({ ...s, supportPhone: e.target.value })} placeholder={t('staff.settings.hiddenPh')} /></Row>
         <Row label={t('staff.settings.supportEmail')}><input className="field" value={s.supportEmail ?? ''} onChange={(e) => setS({ ...s, supportEmail: e.target.value })} placeholder={t('staff.settings.hiddenPh')} /></Row>
         <Row label={t('staff.settings.googleReview')}><input className="field" value={s.googleReviewUrl ?? ''} onChange={(e) => setS({ ...s, googleReviewUrl: e.target.value })} placeholder={t('staff.settings.googleReviewPh')} /></Row>

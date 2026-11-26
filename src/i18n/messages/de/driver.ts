@@ -51,6 +51,16 @@ const driver: Catalog<typeof en> = {
     onHint: "Ihr Auto ist XL: Sie erhalten XL- und Comfort-Aufträge (Comfort zum Comfort-Preis).",
     offHint: "Nur XL-Aufträge.",
   },
+  // Delete the account in the app (2026-11-26).
+  deleteAccount: {
+    button: "Konto löschen",
+    title: "Ihr Konto löschen?",
+    body: "Anmeldung, Name, Telefon, Registrierungsdaten und Dokumente werden endgültig gelöscht. Frühere Fahrten und Auszahlungen bleiben in den Finanzunterlagen, ohne Ihren Namen. Das kann nicht rückgängig gemacht werden.",
+    cancel: "Abbrechen",
+    confirm: "Endgültig löschen",
+    activeRide: "Beenden oder geben Sie zuerst Ihre Fahrten und Vorausbuchungen zurück.",
+    failed: "Das Konto konnte nicht gelöscht werden. Versuchen Sie es erneut oder wenden Sie sich an den Support.",
+  },
   stand: {
     inQueue: "in einer Schlange von {total}",
     wait: "Wartezeit ≈ {min} Min.",
@@ -270,6 +280,7 @@ const driver: Catalog<typeof en> = {
     noVehicle: "Kein freigegebenes Fahrzeug.",
     vehicleNote: "Ein Fahrzeugwechsel wird vom Betreiber geprüft; die Zuordnung können Sie nicht selbst ändern.",
     documents: "Dokumente",
+    docsLegacy: "Ihr Konto stammt aus der Zeit vor den Dokumenten in der App; die Dokumente prüft der Betreiber.",
     noDocuments: "Keine Dokumente hinterlegt.",
     docStatus: {
       VALID: "gültig",

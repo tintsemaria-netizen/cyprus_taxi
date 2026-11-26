@@ -25,6 +25,8 @@ export interface OperationalSettings {
   /** Google review link (2026-11-17): a Place ID (ChIJ…) or a full https link. null = no review prompt. */
   googleReviewUrl: string | null;
   operatorName: string | null;
+  /** The operator's address for the legal pages and «Поддержка» (2026-11-26; EU trader information). */
+  operatorAddress: string | null;
   classes: { key: 'COMFORT' | 'XL'; label: string; maxPassengers: number }[];
 }
 
@@ -43,6 +45,7 @@ const DEFAULTS: OperationalSettings = {
   supportEmail: null,
   googleReviewUrl: null,
   operatorName: null,
+  operatorAddress: null,
   classes: [
     { key: 'COMFORT', label: 'Comfort', maxPassengers: 4 },
     { key: 'XL', label: 'XL', maxPassengers: 6 },
@@ -89,6 +92,7 @@ export async function getPublicConfig() {
     timezone: config.timezone,
     currency: config.currency,
     operatorName: s.operatorName,
+    operatorAddress: s.operatorAddress,
     supportPhone: s.supportPhone,
     supportEmail: s.supportEmail,
     googleReviewUrl: reviewLink(s.googleReviewUrl),

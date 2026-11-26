@@ -41,7 +41,7 @@ export function DriverDocs() {
   return (
     <div className="card p-4" id="driver-docs" data-testid="driver-docs">
       <div className="mb-1 font-medium">{t('driver.profile.documents')}</div>
-      {!docs ? <p className="text-sm text-muted">{t('common.loading')}</p> : !docs.available ? <p className="text-sm text-muted">{docs.note}</p> : docs.documents.length === 0 ? <p className="text-sm text-muted">{t('driver.profile.noDocuments')}</p> : (
+      {!docs ? <p className="text-sm text-muted">{t('common.loading')}</p> : !docs.available ? <p className="text-sm text-muted">{t('driver.profile.docsLegacy')}</p> : docs.documents.length === 0 ? <p className="text-sm text-muted">{t('driver.profile.noDocuments')}</p> : (
         <ul className="divide-y divide-edge text-sm">{[...docs.documents].sort((a, b) => attn(b) - attn(a)).map((d) => <DocRow key={d.slot} d={d} onDone={load} />)}</ul>
       )}
     </div>

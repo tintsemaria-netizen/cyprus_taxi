@@ -51,6 +51,16 @@ const driver: Catalog<typeof en> = {
     onHint: "Votre voiture est XL : vous recevez des courses XL et Comfort (Comfort au prix Comfort).",
     offHint: "Courses XL uniquement.",
   },
+  // Delete the account in the app (2026-11-26).
+  deleteAccount: {
+    button: "Supprimer le compte",
+    title: "Supprimer votre compte ?",
+    body: "Votre connexion, nom, téléphone, données d’inscription et documents seront supprimés définitivement. Les courses et versements passés restent dans les registres financiers, sans votre nom. C’est irréversible.",
+    cancel: "Annuler",
+    confirm: "Supprimer définitivement",
+    activeRide: "Terminez ou rendez d’abord vos courses et réservations.",
+    failed: "Le compte n’a pas pu être supprimé. Réessayez ou contactez le support.",
+  },
   stand: {
     inQueue: "dans une file de {total}",
     wait: "Attente ≈ {min} min",
@@ -270,6 +280,7 @@ const driver: Catalog<typeof en> = {
     noVehicle: "Aucun véhicule validé.",
     vehicleNote: "Un changement de véhicule passe par l’opérateur ; vous ne pouvez pas modifier l’association vous-même.",
     documents: "Documents",
+    docsLegacy: "Votre compte date d’avant les documents dans l’application ; l’exploitant vérifie les documents.",
     noDocuments: "Aucun document enregistré.",
     docStatus: {
       VALID: "valide",

@@ -288,6 +288,8 @@ const staff: Catalog<typeof en> = {
     sub: 'Часовой пояс в бете — Europe/Nicosia. Секреты здесь не хранятся и не показываются.',
     saved: 'Сохранено.',
     operator: 'Название оператора',
+    operatorAddress: "Адрес оператора",
+    operatorAddressPh: "Улица, дом, город, индекс — для «Поддержки» и юридических страниц",
     operatorPh: 'Не публикуется, если пусто',
     supportPhone: 'Телефон поддержки',
     supportEmail: 'Email поддержки',
