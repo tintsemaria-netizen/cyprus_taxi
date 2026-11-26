@@ -4,7 +4,7 @@ import type en from '../en/promo';
 const promo: Catalog<typeof en> = {
   title: "Taxi na całym Cyprze",
   slogan: "Nie spróbujesz — nie zrozumiesz",
-  lead: "Zamów w minutę. Cenę widzisz przed jazdą, a auto na mapie aż do podjazdu.",
+  lead: "Zamów w minutę. Auto widzisz na mapie aż do podjazdu.",
   book: "Zamów przejazd",
   install: "Zainstaluj aplikację",
   airportT: "Lotniska Larnaka, Pafos i Ercan",
@@ -14,7 +14,7 @@ const promo: Catalog<typeof en> = {
   prebookT: "Zamówienie z wyprzedzeniem",
   prebookD: "Wybierz dzień i godzinę — auto będzie, kiedy go potrzebujesz.",
   trackT: "Kierowca na mapie",
-  trackD: "Patrz, jak jedzie auto, i rozpocznij kurs swoim 4-cyfrowym kodem.",
+  trackD: "Patrz, jak auto jedzie do Ciebie.",
   drvTitle: "Jesteś kierowcą?",
   drvLead: "Jeździj z IL-Y we własnym grafiku.",
   drvCta: "Zostań kierowcą IL-Y",

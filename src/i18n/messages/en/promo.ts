@@ -2,7 +2,7 @@
 const promo = {
   title: "Taxi across Cyprus",
   slogan: "You won’t know until you try",
-  lead: "Book in a minute. See the price before you go and the car on the map until it arrives.",
+  lead: "Book in a minute. See the car on the map until it arrives.",
   book: "Book a ride",
   install: "Install the app",
   airportT: "Larnaca, Paphos and Ercan airports",
@@ -12,7 +12,7 @@ const promo = {
   prebookT: "Book ahead",
   prebookD: "Choose the day and time — the car is there when you need it.",
   trackT: "Your driver on the map",
-  trackD: "Watch the car come and start the ride with your 4-digit code.",
+  trackD: "Watch the car on its way to you.",
   drvTitle: "Are you a driver?",
   drvLead: "Drive with IL-Y on your own schedule.",
   drvCta: "Become an IL-Y driver",
