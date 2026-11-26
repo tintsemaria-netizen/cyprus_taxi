@@ -67,6 +67,8 @@ const track = {
   searching: 'Searching…',
   searchAgain: 'Search again',
   cancelling: 'Cancelling…',
+  cancelBodyLate: "{name} has been waiting for you for over {min} min. Cancelling now costs a {fee} no-show fee.",
+  cancelBodyPrebookLate: "Less than {min} min to pickup. Cancelling now costs {fee}.",
   cancelShort: "Cancel",
   cancelBooking: 'Cancel booking',
   receiptTitle: 'Trip receipt',
@@ -126,7 +128,6 @@ const track = {
   },
   timelineEntry: '· {event} — {time}',
   chat: {
-    short: "Chat",
     translatedShowOriginal: 'Translated · show original',
     showTranslation: 'Show translation',
     titleDriver: '💬 Chat with driver',

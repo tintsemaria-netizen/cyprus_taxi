@@ -79,6 +79,8 @@ const track: Catalog<typeof en> = {
   searching: "Szukanie…",
   searchAgain: "Szukaj ponownie",
   cancelling: "Anulowanie…",
+  cancelBodyLate: "{name} czeka na Ciebie już ponad {min} min. Anulowanie teraz kosztuje {fee} opłaty za niestawienie się.",
+  cancelBodyPrebookLate: "Do odbioru zostało mniej niż {min} min. Anulowanie teraz kosztuje {fee}.",
   cancelShort: "Anuluj",
   cancelBooking: "Anuluj zamówienie",
   receiptTitle: "Paragon za przejazd",
@@ -138,7 +140,6 @@ const track: Catalog<typeof en> = {
   },
   timelineEntry: "· {event} — {time}",
   chat: {
-    short: "Czat",
     translatedShowOriginal: "Przetłumaczono · pokaż oryginał",
     showTranslation: "Pokaż tłumaczenie",
     titleDriver: "💬 Czat z kierowcą",

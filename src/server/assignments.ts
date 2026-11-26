@@ -2,6 +2,8 @@ import { prisma } from '@/lib/db';
 import { carTakes } from '@/lib/vehicle-class';
 import { Prisma, BookingStatus, Role } from '@prisma/client';
 import { canTransition, isTerminal, PASSENGER_CANCELABLE } from '@/lib/status-machine';
+import { lateCancelAt } from '@/lib/late-cancel';
+import { bookingLateCancels } from '@/server/late-cancel';
 import { computeFreshness } from '@/lib/freshness';
 import { canWork } from '@/lib/eligibility-policy';
 import { recordEvent, driverPseudo } from '@/server/events';
@@ -289,7 +291,13 @@ export async function changeStatus(params: {
     if (params.to === 'CANCELED') await endPreAssignmentTx(tx, booking.id, 'RELEASED', 'booking canceled', { notifyDriver: 'A ride you pre-booked was canceled by the passenger.', notifyDriverKey: 'drv.preCanceled' });
     if (params.to === 'CANCELED' || params.to === 'NO_DRIVER') await leaveShareTx(tx, booking.id, `booking ${String(params.to).toLowerCase()}`);
 
-    const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: params.to, revision: { increment: 1 } } });
+    // Late-cancel fee (2026-11-26, card only): no-show at the pickup, or a pre-booking cancelled close to pickup.
+    let lateFee: number | null = null;
+    if (params.actor === 'PASSENGER' && params.to === 'CANCELED') {
+      const w = booking.status === 'ARRIVED' ? await tx.waitingSession.findUnique({ where: { bookingId: booking.id } }) : null;
+      lateFee = lateCancelAt(bookingLateCancels(booking, w), new Date())?.feeCents ?? null;
+    }
+    const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: params.to, revision: { increment: 1 }, ...(lateFee != null ? { lateCancelFeeCents: lateFee } : {}) } });
     await tx.bookingEvent.create({
       data: { bookingId: booking.id, type: `STATUS_${params.to}`, actorType: params.actor, actorId: params.actorId, beforeStatus: booking.status, afterStatus: params.to, reason: params.reason },
     });

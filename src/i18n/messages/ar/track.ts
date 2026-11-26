@@ -79,6 +79,8 @@ const track: Catalog<typeof en> = {
   searching: "جارٍ البحث…",
   searchAgain: "ابحث مرة أخرى",
   cancelling: "جارٍ الإلغاء…",
+  cancelBodyLate: "ينتظرك {name} منذ أكثر من {min} دقيقة. الإلغاء الآن يكلّف {fee} رسوم عدم حضور.",
+  cancelBodyPrebookLate: "بقي أقل من {min} دقيقة على الاستلام. الإلغاء الآن يكلّف {fee}.",
   cancelShort: "إلغاء",
   cancelBooking: "إلغاء الحجز",
   receiptTitle: "إيصال الرحلة",
@@ -138,7 +140,6 @@ const track: Catalog<typeof en> = {
   },
   timelineEntry: "· {event} — {time}",
   chat: {
-    short: "دردشة",
     translatedShowOriginal: "مترجم · عرض الأصل",
     showTranslation: "عرض الترجمة",
     titleDriver: "💬 الدردشة مع السائق",

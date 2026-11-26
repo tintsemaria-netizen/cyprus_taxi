@@ -21,6 +21,15 @@ These must be done BEFORE the native apps are sent to the stores — not optiona
 
 ---
 
+## 0. Server settings to check once the operator has server access (operator 2026-11-26)
+- `DISPATCH_WAITING_RATE_CENTS_PER_MIN` — paid waiting at the pickup after the free minutes. Code default is **0**
+  (= waiting is never paid). Set the real per-minute rate in `deploy/.env.production` (server Claude, not in chat).
+- `DISPATCH_WAITING_GRACE_SECONDS` — free waiting (code default 180 = 3 min). Passenger and driver both show this value.
+- `LATE_CANCEL_FEE_CENTS` (default 400) / `LATE_CANCEL_AFTER_PAID_MIN` (default 2) — no-show fee when the passenger
+  cancels after free + paid minutes. Card payment only; dormant until card payments exist (`src/lib/payment-method.ts`).
+- `PREBOOK_CANCEL_FEE_CENTS` (default 1000) / `PREBOOK_CANCEL_MIN` (default 30) — a pre-booking cancelled less than 30 min
+  before pickup. Card only, dormant the same way.
+
 ## 1. Real SMS (passenger + driver OTP)
 
 - **Status:** Twilio Verify adapter implemented (`src/server/sms.ts`). Prod has only

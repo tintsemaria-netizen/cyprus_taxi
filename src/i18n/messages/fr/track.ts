@@ -79,6 +79,8 @@ const track: Catalog<typeof en> = {
   searching: "Recherche…",
   searchAgain: "Relancer la recherche",
   cancelling: "Annulation…",
+  cancelBodyLate: "{name} vous attend depuis plus de {min} min. Annuler maintenant coûte {fee} de frais de non-présentation.",
+  cancelBodyPrebookLate: "Moins de {min} min avant la prise en charge. Annuler maintenant coûte {fee}.",
   cancelShort: "Annuler",
   cancelBooking: "Annuler la réservation",
   receiptTitle: "Reçu de la course",
@@ -138,7 +140,6 @@ const track: Catalog<typeof en> = {
   },
   timelineEntry: "· {event} — {time}",
   chat: {
-    short: "Chat",
     translatedShowOriginal: "Traduit · voir l’original",
     showTranslation: "Voir la traduction",
     titleDriver: "💬 Discuter avec le chauffeur",

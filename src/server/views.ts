@@ -1,6 +1,8 @@
 import { pairStopsFor } from '@/server/pair-route';
 import { completedTotalCents } from '@/lib/fare-total';
 import { config } from '@/lib/config';
+import { lateCancelAfterMin } from '@/lib/late-cancel';
+import { bookingLateCancels } from '@/server/late-cancel';
 import { noDriverRetryable } from '@/lib/ride-outcome';
 import { gpsMeterFor } from '@/server/gps-meter';
 import { passengerRatingSummary } from '@/server/trip-close';
@@ -152,6 +154,13 @@ export async function trackingView(bookingId: string) {
     scheduledAt: booking.scheduledAt?.toISOString() ?? null,
     startCode: showCode ? booking.startCode ?? null : null,
     waiting: waiting ? { arrivedAt: waiting.arrivedAt.toISOString(), graceSeconds: waiting.graceSeconds, paidRateCentsPerMin: waiting.paidRateCentsPerMin } : null,
+    // Late-cancel fee, shown in the cancel window only when it applies (card payment, 2026-11-26): the client counts
+    // down to each `at` itself. Empty for cash — i.e. for every ride until card payments exist.
+    lateCancel: PASSENGER_CANCELABLE.includes(booking.status)
+      ? bookingLateCancels(booking, waiting).map((f) => ({ kind: f.kind, feeCents: f.feeCents, at: f.at.toISOString(),
+          afterMin: waiting ? lateCancelAfterMin(waiting.graceSeconds, { afterPaidMin: config.dispatch.lateCancelAfterPaidMin }) : 0,
+          beforeMin: config.dispatch.prebookCancelMin }))
+      : [],
     receipt: fareRec
       ? { totalCents: completedTotalCents(fareRec, fareCorrection), completedAt, estimateCents: fareRec.estimateCents, waitingCents: fareRec.waitingCents, finalCents: fareRec.finalCents, currency: fareRec.currency, priceType: fareRec.priceType, paymentMethod: fareRec.paymentMethod, paymentStatus: fareRec.paymentStatus }
       : null,

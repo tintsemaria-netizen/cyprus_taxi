@@ -52,6 +52,7 @@ interface TrackView {
   finishingAt?: { lat: number; lng: number } | null;
   pickupEtaApprox: boolean;
   fareCents: number | null;
+  lateCancel?: { kind: 'noShow' | 'prebook'; feeCents: number; at: string; afterMin: number; beforeMin: number }[];
   priceType?: string | null;
   fareMinCents?: number | null;
   startCode: string | null;
@@ -481,6 +482,14 @@ export default function TrackApp() {
                   </div>
                   </div>
                 )}
+                {/* «💬» chat with the driver right above ☰ — always on screen, the panel up or down (operator 2026-11-27). */}
+                {view.vehicle && (
+                  <button type="button" onClick={() => setChatOpen(true)} data-testid="track-chat-open" aria-label={t('track.chat.titleDriver')}
+                    className="relative mb-2 flex h-12 w-12 items-center justify-center rounded-full border border-edge bg-page/95 text-[22px] shadow-lg">
+                    💬
+                    {chatUnread > 0 && <span className="absolute -end-1 -top-1 min-w-[20px] rounded-full bg-danger px-1 text-center text-[11px] font-bold leading-5 text-white">{chatUnread}</span>}
+                  </button>
+                )}
                 <button type="button" aria-label={t('track.menu')} aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)} data-testid="track-menu"
                   className="relative z-20 flex h-12 w-12 items-center justify-center rounded-full border border-edge bg-page/95 shadow-lg">
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="text-ink" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" /></svg>
@@ -567,9 +576,8 @@ export default function TrackApp() {
 
                 {/* Confirmation code (operator 2026-11-26): between the driver and the addresses, in ONE row —
                     «Код подтверждения», the switch, then the digits when it is on. */}
-                {/* The row also holds «Чат с водителем» on the right (operator 2026-11-26, out of ☰); it wraps on narrow screens
-                    so the code digits and the chat button never overlap. */}
-                {!terminal && (prePickup || view.vehicle) && (
+                {/* Confirmation code row (the chat button moved above ☰, 2026-11-27). */}
+                {!terminal && prePickup && (
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   {prePickup && (
                   <label className="flex min-h-[32px] cursor-pointer items-center gap-2.5" data-testid="start-code-row">
@@ -583,13 +591,6 @@ export default function TrackApp() {
                       <span className="font-mono text-xl font-bold tracking-[0.25em] text-accent" aria-label={t('track.startCodeAria', { code: view.startCode.split('').join(' ') })}>{view.startCode}</span>
                     )}
                   </label>
-                  )}
-                  {view.vehicle && (
-                    <button type="button" onClick={() => setChatOpen(true)} data-testid="track-chat-open"
-                      className="relative ms-auto flex shrink-0 items-center gap-1.5 rounded-full border border-edge bg-elevated px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-white/5">
-                      💬 {t('track.chat.short')}
-                      {chatUnread > 0 && <span className="absolute -end-1.5 -top-1.5 min-w-[18px] rounded-full bg-danger px-1 text-center text-[11px] font-bold leading-[18px] text-white">{chatUnread}</span>}
-                    </button>
                   )}
                   </div>
                 )}
@@ -616,7 +617,8 @@ export default function TrackApp() {
                 )}
 
                 {liveLocation && dr.estimated && <p className="mt-2 text-xs text-warn" data-testid="gps-approx">📡 {t('track.gpsApprox')}</p>}
-                {liveLocation && !dr.estimated && (
+                {/* Not once the driver is at the pickup (operator 2026-11-26). */}
+                {liveLocation && !dr.estimated && view.status !== 'ARRIVED' && (
                   <p className="mt-2 text-xs text-muted">
                     {t(liveLocation.poorAccuracy ? 'track.locationLineLowAcc' : 'track.locationLine', {
                       freshness: ['fresh', 'stale', 'disconnected'].includes(liveLocation.freshness) ? t(`track.freshness.${liveLocation.freshness}` as MsgKey) : liveLocation.freshness,
@@ -672,11 +674,19 @@ export default function TrackApp() {
           </div>
         </div>
       </div>
-      {confirmCancel && (
+      {confirmCancel && (() => { const due = (view.lateCancel ?? []).filter((f) => Date.now() >= new Date(f.at).getTime()); const lateFee = due.length ? due.reduce((x, y) => (y.feeCents > x.feeCents ? y : x)) : null; return (
         <ConfirmSheet
           title={t('track.cancelTitle')}
-          body={view.vehicle
-            ? (etaText ? t('track.cancelBodyDriverEta', { name: view.vehicle.driverName, eta: etaText }) : t('track.cancelBodyDriver', { name: view.vehicle.driverName }))
+          // A late-cancel fee text only once it applies, and only with card payment (operator 2026-11-26).
+          body={lateFee
+            // The amount stands out: big, bold, red (operator 2026-11-26).
+            ? rich(lateFee.kind === 'prebook'
+              ? t('track.cancelBodyPrebookLate', { min: lateFee.beforeMin, fee: '\u0000' })
+              : t('track.cancelBodyLate', { name: view.vehicle?.driverName ?? '', min: lateFee.afterMin, fee: '\u0000' }),
+              <span className="whitespace-nowrap text-lg font-bold text-danger" data-testid="late-fee">{fmt.money(lateFee.feeCents)}</span>)
+            : view.vehicle
+            ? (etaText && view.status !== 'ARRIVED' ? t('track.cancelBodyDriverEta', { name: view.vehicle.driverName, eta: etaText }) : t('track.cancelBodyDriver', { name: view.vehicle.driverName }))
+            : view.confirmedDriver ? t('track.cancelBodyDriver', { name: view.confirmedDriver.name })
             : t('track.cancelBodySearching')}
           confirmLabel={t('track.cancelConfirm')}
           danger
@@ -684,7 +694,7 @@ export default function TrackApp() {
           onConfirm={cancel}
           onCancel={() => setConfirmCancel(false)}
         />
-      )}
+      ); })()}
       {safety && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-4 sm:items-center sm:pb-0" onClick={() => setSafety(false)}>
           <div role="dialog" aria-modal="true" aria-labelledby="safety-title" className="card w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>

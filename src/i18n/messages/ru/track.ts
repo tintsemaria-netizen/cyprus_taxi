@@ -75,6 +75,8 @@ const track: Catalog<typeof en> = {
   searching: 'Ищем…',
   searchAgain: 'Искать снова',
   cancelling: 'Отменяем…',
+  cancelBodyLate: "Водитель {name} ждёт вас уже больше {min} мин. За отмену сейчас спишется {fee} за неявку.",
+  cancelBodyPrebookLate: "До подачи меньше {min} мин. За отмену сейчас спишется {fee}.",
   cancelShort: "Отменить",
   cancelBooking: 'Отменить заказ',
   receiptTitle: 'Чек за поездку',
@@ -134,7 +136,6 @@ const track: Catalog<typeof en> = {
   },
   timelineEntry: '· {event} — {time}',
   chat: {
-    short: "Чат",
     translatedShowOriginal: 'Переведено · показать оригинал',
     showTranslation: 'Показать перевод',
     titleDriver: '💬 Чат с водителем',

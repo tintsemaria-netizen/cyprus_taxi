@@ -63,6 +63,14 @@ export const config = {
     // Pre-pickup paid waiting rate. Kept 0 for REGULATED_METER_ESTIMATE by default because
     // the app-side pre-boarding waiting penalty is not verified against RTD rules (§6.4).
     waitingRateCentsPerMin: num('DISPATCH_WAITING_RATE_CENTS_PER_MIN', 0),
+    // Late cancel = no-show (operator 2026-11-26): the driver is at the pickup, the free wait plus this many paid
+    // minutes are over, and the passenger cancels → this fee. ONLY for cashless (card) payment — dormant until card
+    // payments exist (src/lib/payment-method.ts).
+    lateCancelFeeCents: num('LATE_CANCEL_FEE_CENTS', 400),
+    lateCancelAfterPaidMin: num('LATE_CANCEL_AFTER_PAID_MIN', 2),
+    // …and a pre-booking cancelled less than this many minutes before pickup → this fee (operator 2026-11-26, card only).
+    prebookCancelFeeCents: num('PREBOOK_CANCEL_FEE_CENTS', 1000),
+    prebookCancelMin: num('PREBOOK_CANCEL_MIN', 30),
     gpsLossRematchSeconds: num('DISPATCH_GPS_LOSS_REMATCH_SECONDS', 90), // prolonged pre-pickup GPS loss → expire assignment + rematch
     // Pre-assignment of scheduled rides (driver commits in advance; converted near pickup).
     preassign: {

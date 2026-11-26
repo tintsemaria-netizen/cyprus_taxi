@@ -1,5 +1,16 @@
 # Session handoff
 
+## 2026-11-27 — passenger: chat above ☰, late-cancel fees (dormant), arrived tidy (branch arrived-tidy)
+- TrackApp: «💬» round button above ☰ whenever a driver is assigned (unread badge); the «Чат» button left the code row
+  (track.chat.short removed). «Местоположение в реальном времени» hidden at ARRIVED. Cancel window at ARRIVED has no ETA;
+  confirmed pre-booking: «Водитель {name} получит уведомление».
+- Late-cancel fees, CARD ONLY — dormant until card payments (src/lib/payment-method.ts paysByCard() = false):
+  no-show 4 € after free wait + 2 paid min at the pickup; pre-booking 10 € inside 30 min before the booked time; the
+  larger applies. src/lib/late-cancel.ts + src/server/late-cancel.ts; Booking.lateCancelFeeCents (migration
+  20261126230000_late_cancel_fee); view.lateCancel[]; cancel window shows the fee big/red only once it applies.
+  Config: LATE_CANCEL_FEE_CENTS / LATE_CANCEL_AFTER_PAID_MIN / PREBOOK_CANCEL_FEE_CENTS / PREBOOK_CANCEL_MIN.
+- Server settings to check are listed at the top of docs/EXTERNAL-ENABLEMENT.md (paid waiting rate default 0!).
+
 ## 2026-11-26 — «Отменить» next to the price while searching (branch search-cancel)
 - TrackRoute `onCancel`: SEARCHING + canCancel → small red «Отменить» (track.cancelShort, 8 langs) right of the price;
   opens the same ConfirmSheet. ☰ → «Отменить заказ» unchanged. Passenger cannot cancel IN_PROGRESS (PASSENGER_CANCELABLE).

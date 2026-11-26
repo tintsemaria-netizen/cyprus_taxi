@@ -534,6 +534,7 @@ model Booking {
   // Pre-booking minimum fixed AT BOOKING (operator 2026-11-23): a later price change in admin does not touch
   // existing bookings — the passenger and the driver keep the minimum that was shown when it was booked.
   fareMinCents          Int?
+  lateCancelFeeCents    Int? // no-show fee on a late passenger cancel, card payment only (2026-11-26)
   fareMinZone           String?
   priceType             String? // REGULATED_METER_ESTIMATE | REGULATED_FIXED | UPFRONT_DYNAMIC
   fareBreakdown         String? // JSON snapshot of the quote breakdown

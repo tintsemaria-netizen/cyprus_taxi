@@ -70,6 +70,8 @@ const track: Catalog<typeof en> = {
   searching: 'Αναζήτηση…',
   searchAgain: 'Αναζήτηση ξανά',
   cancelling: 'Ακύρωση…',
+  cancelBodyLate: "Ο οδηγός {name} σας περιμένει πάνω από {min} λεπτά. Η ακύρωση τώρα κοστίζει {fee} για μη εμφάνιση.",
+  cancelBodyPrebookLate: "Λιγότερο από {min} λεπτά για την παραλαβή. Η ακύρωση τώρα κοστίζει {fee}.",
   cancelShort: "Ακύρωση",
   cancelBooking: 'Ακύρωση κράτησης',
   receiptTitle: 'Απόδειξη διαδρομής',
@@ -129,7 +131,6 @@ const track: Catalog<typeof en> = {
   },
   timelineEntry: '· {event} — {time}',
   chat: {
-    short: "Μηνύματα",
     translatedShowOriginal: 'Μετάφραση · εμφάνιση πρωτοτύπου',
     showTranslation: 'Εμφάνιση μετάφρασης',
     titleDriver: '💬 Συνομιλία με τον οδηγό',

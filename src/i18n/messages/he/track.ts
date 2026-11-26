@@ -79,6 +79,8 @@ const track: Catalog<typeof en> = {
   searching: "מחפש…",
   searchAgain: "חיפוש מחדש",
   cancelling: "מבטל…",
+  cancelBodyLate: "{name} מחכה לכם כבר יותר מ־{min} דק׳. ביטול עכשיו יעלה {fee} דמי אי־הגעה.",
+  cancelBodyPrebookLate: "נותרו פחות מ־{min} דק׳ לאיסוף. ביטול עכשיו יעלה {fee}.",
   cancelShort: "ביטול",
   cancelBooking: "ביטול ההזמנה",
   receiptTitle: "קבלה על הנסיעה",
@@ -138,7 +140,6 @@ const track: Catalog<typeof en> = {
   },
   timelineEntry: "· {event} — {time}",
   chat: {
-    short: "צ'אט",
     translatedShowOriginal: "תורגם · הצגת המקור",
     showTranslation: "הצגת התרגום",
     titleDriver: "💬 צ׳אט עם הנהג",
