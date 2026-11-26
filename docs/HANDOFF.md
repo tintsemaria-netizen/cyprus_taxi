@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-26 ~11:10 — store readiness + /welcome (deployed d337d69)
+- /welcome (promo, 8 langs, src/i18n/messages/*/promo.ts); /privacy + /terms real texts (src/content/legal.ts, EN/RU/EL; others EN + note; DRAFT for a Cyprus lawyer); /support (trader info from settings: operatorName, NEW operatorAddress, supportPhone, supportEmail); links: account menu «Помощь и конфиденциальность» → /support, welcome footer, driver profile «Помощь».
+- Driver account deletion: DELETE /api/v1/driver/account {confirm:"DELETE"} → src/server/driver/delete-account.ts (refused with an active/next ride or committed pre-booking). Test tests/driver-delete.db.test.ts.
+- PWA manifest categories; legacy driver documents note → driver.profile.docsLegacy (8 langs).
+- Suite 510 passed / 1 skipped. Live: /welcome 200, /support 200, DELETE /api/v1/driver/account 401 (exists), manifest categories, health ready.
+- Owner: fill operator name/address/phone/e-mail in admin «Настройки»; lawyer review of /privacy and /terms; DEMO_MODE banner still on.
+
 ## 2026-11-26 — no-go zone: fixed-prices link + «Минимальный заказ отсюда» (branch nogo-fixed)
 - Fixed-prices «Территория для этих цен» lists no-go zones too (« · запретная зона»); PUT airport-area accepts kind NOGO.
   Airport area of such a zone = its polygon + ~40 m squares around its points (lib/airports zoneAirportAreas), server and client.
