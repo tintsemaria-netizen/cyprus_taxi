@@ -1,6 +1,7 @@
 'use client';
 
 import { PassengerTopBar } from '@/components/PassengerTopBar';
+import { BackArrow } from '@/components/BackArrow';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PassengerLoginModal } from '@/components/booking/PassengerLoginModal';
@@ -47,9 +48,9 @@ export default function Page() {
 
   return (
     <div>
-    <PassengerTopBar back={'/'} />
+    <PassengerTopBar back={false} />
     <div className="mx-auto max-w-lg p-4 sm:p-6">
-      <h1 className="mb-3 text-xl font-bold">{t('rides.title')}</h1>
+      <div className="mb-3 flex items-center gap-1"><BackArrow className="-ms-2" /><h1 className="text-xl font-bold">{t('rides.title')}</h1></div>
       {needLogin ? (
         <div className="card p-6 text-center">
           <p className="text-sm text-muted">{t('rides.signInPrompt')}</p>

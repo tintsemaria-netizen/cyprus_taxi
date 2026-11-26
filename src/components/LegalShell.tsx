@@ -3,6 +3,7 @@
 // Legal pages and «Поддержка» (2026-11-26): the operator's details from admin «Настройки», links between the three.
 import { useEffect, useState } from 'react';
 import { PassengerTopBar } from '@/components/PassengerTopBar';
+import { BackArrow } from '@/components/BackArrow';
 import { useT, useLocale } from '@/i18n/I18nProvider';
 import { api } from '@/lib/api-client';
 import { legalDoc, LEGAL_UPDATED } from '@/content/legal';
@@ -34,10 +35,10 @@ export function LegalPage({ kind }: { kind: 'privacy' | 'terms' }) {
   const { doc, lang } = legalDoc(kind, locale, v);
   return (
     <div className="min-h-[100dvh]">
-      <PassengerTopBar />
+      <PassengerTopBar back={false} />
       <main className="mx-auto max-w-2xl px-5 py-8" lang={lang} dir="ltr" data-testid={`legal-${kind}`}>
         {lang !== locale && <p className="mb-4 rounded-[12px] border border-edge px-3 py-2 text-xs text-muted" dir="auto">{t('promo.englishOnly')}</p>}
-        <h1 className="text-2xl font-bold">{doc.title}</h1>
+        <div className="flex items-center gap-1"><BackArrow className="-ms-2" /><h1 className="text-2xl font-bold">{doc.title}</h1></div>
         <p className="mt-1 text-xs text-muted">{doc.updated}: {fmt.date(LEGAL_UPDATED)}</p>
         <div className="mt-6 space-y-6 text-sm leading-relaxed">
           {doc.sections.map((s) => (

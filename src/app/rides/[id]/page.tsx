@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from 'react';
 import { PassengerTopBar } from '@/components/PassengerTopBar';
+import { BackArrow } from '@/components/BackArrow';
 import AutoMapView, { type MapMarker } from '@/components/AutoMapView';
 import { RateTripModal } from '@/components/booking/RateTripModal';
 import { api, ApiRequestError } from '@/lib/api-client';
@@ -69,8 +70,9 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div>
-      <PassengerTopBar back="/rides" />
+      <PassengerTopBar back={false} />
       <div className="mx-auto max-w-lg p-4 sm:p-6">
+        {(error || !ride) && <BackArrow className="-ms-2 mb-2" fallback="/rides" />}
         {error ? (
           <div className="card p-6 text-center text-sm text-muted">
             {error}
@@ -80,21 +82,24 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
           <p className="text-muted">{t('common.loading')}</p>
         ) : (
           <>
+            {/* «‹» beside the page title (2026-11-26, operator): date + status above the map. */}
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-1">
+                <BackArrow className="-ms-2" fallback="/rides" />
+                <div>
+                  <h1 className="text-lg font-bold">{fmt.dateTime(ride.at)}</h1>
+                  <p className="text-xs text-muted">#{ride.reference}</p>
+                </div>
+              </div>
+              <span className="chip shrink-0">{statusText(ride.status)}</span>
+            </div>
             <div className="overflow-hidden rounded-[16px] border border-edge" data-testid="ride-map">
               <AutoMapView markers={markers} route={route.length ? route : undefined} center={ride.pickup} zoom={12} fitRoute
                 interactive className="h-60 w-full" fitPadding={{ top: 40, right: 40, bottom: 40, left: 40 }} />
             </div>
 
             <div className="card mt-3 p-4" data-testid="ride-detail">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h1 className="text-lg font-bold">{fmt.dateTime(ride.at)}</h1>
-                  <p className="text-xs text-muted">#{ride.reference}</p>
-                </div>
-                <span className="chip shrink-0">{statusText(ride.status)}</span>
-              </div>
-
-              <div className="mt-3 space-y-1.5 text-sm">
+              <div className="space-y-1.5 text-sm">
                 <div className="flex gap-2"><span className="text-accent">●</span><span className="min-w-0">{ride.pickup.label}</span></div>
                 {ride.stop && <div className="flex gap-2"><span className="text-[#FFC83D]">◆</span><span className="min-w-0">{ride.stop.label}</span></div>}
                 <div className="flex gap-2"><span className="text-muted">○</span><span className="min-w-0">{ride.dropoff.label}</span></div>

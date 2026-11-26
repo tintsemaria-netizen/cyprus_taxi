@@ -3,6 +3,7 @@
 // «Поддержка» (2026-11-26): who runs IL-Y and how to reach them (EU trader information, app-store support link),
 // how to delete an account, links to the privacy policy and terms. Details come from admin «Настройки».
 import { PassengerTopBar } from '@/components/PassengerTopBar';
+import { BackArrow } from '@/components/BackArrow';
 import { LegalLinks, useOperator } from '@/components/LegalShell';
 import { useT } from '@/i18n/I18nProvider';
 
@@ -15,9 +16,9 @@ export default function Support() {
   );
   return (
     <div className="min-h-[100dvh]">
-      <PassengerTopBar />
+      <PassengerTopBar back={false} />
       <main className="mx-auto max-w-2xl px-5 py-8" data-testid="support-page">
-        <h1 className="text-2xl font-bold">{t('promo.supportTitle')}</h1>
+        <div className="flex items-center gap-1"><BackArrow className="-ms-2" /><h1 className="text-2xl font-bold">{t('promo.supportTitle')}</h1></div>
         <p className="mt-2 text-muted">{t('promo.supportLead')}</p>
         <div className="card mt-6 px-4 text-sm">
           {!o ? <p className="py-3 text-muted">…</p> : !any ? <p className="py-3 text-muted">{t('promo.notSet')}</p> : (
