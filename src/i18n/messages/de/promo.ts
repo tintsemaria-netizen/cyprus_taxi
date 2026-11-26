@@ -4,7 +4,7 @@ import type en from '../en/promo';
 const promo: Catalog<typeof en> = {
   title: "Taxi in ganz Zypern",
   slogan: "Probieren geht über Studieren",
-  lead: "In einer Minute gebucht. Sie sehen den Preis vor der Fahrt und das Auto auf der Karte, bis es da ist.",
+  lead: "In einer Minute gebucht. Sie sehen das Auto auf der Karte, bis es da ist.",
   book: "Fahrt buchen",
   install: "App installieren",
   airportT: "Flughäfen Larnaka, Paphos und Ercan",
@@ -14,7 +14,7 @@ const promo: Catalog<typeof en> = {
   prebookT: "Vorausbuchung",
   prebookD: "Wählen Sie Tag und Uhrzeit — das Auto ist da, wenn Sie es brauchen.",
   trackT: "Ihr Fahrer auf der Karte",
-  trackD: "Sehen Sie das Auto kommen und starten Sie mit Ihrem 4-stelligen Code.",
+  trackD: "Sehen Sie, wie das Auto zu Ihnen kommt.",
   drvTitle: "Sie sind Fahrer?",
   drvLead: "Fahren Sie mit IL-Y nach Ihrem eigenen Zeitplan.",
   drvCta: "IL-Y-Fahrer werden",
