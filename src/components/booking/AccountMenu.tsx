@@ -88,24 +88,24 @@ export function AccountMenu({ passenger, onLoggedOut }: { passenger: PassengerIn
             aria-label={t('auth.menu.label')}
             className="fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-[16px] border border-edge bg-elevated p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:inset-x-auto sm:bottom-auto sm:right-[var(--menu-right)] sm:top-[var(--menu-top)] sm:w-64 sm:rounded-[14px] sm:pb-2 sm:shadow-xl"
           >
-            {/* Identity header → profile settings */}
-            <a href="/account" role="menuitem" className="flex items-center gap-3 rounded-[10px] px-3 py-3 hover:bg-page" onClick={() => { markLeftViaMenu(); setOpen(false); }}>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-[#0d1608]">{initials}</span>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-medium">{label}</span>
-                <span className="block truncate text-xs text-muted">{secondary}</span>
-              </span>
-            </a>
+            {/* Identity header → profile settings; the language as a round button on its right (2026-11-26, operator). */}
+            <div className="flex items-center gap-2 pe-2">
+              <a href="/account" role="menuitem" className="flex min-w-0 flex-1 items-center gap-3 rounded-[10px] px-3 py-3 hover:bg-page" onClick={() => { markLeftViaMenu(); setOpen(false); }}>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-[#0d1608]">{initials}</span>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium">{label}</span>
+                  <span className="block truncate text-xs text-muted">{secondary}</span>
+                </span>
+              </a>
+              <LanguageSwitcher round only={['ru', 'el', 'en']} />
+            </div>
             <div className="my-1 border-t border-edge" />
             <MenuLink href="/rides" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.myRides')}</MenuLink>
             <MenuLink href="/prebookings" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('rides.prebookings.menu')}</MenuLink>
             <MenuLink href="/account#places" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.savedPlaces')}</MenuLink>
             <MenuLink href="/account" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.profile')}</MenuLink>
-            <MenuLink href="/support" onSelect={() => { markLeftViaMenu(); setOpen(false); }}>{t('auth.menu.help')}</MenuLink>
-            <div className="flex items-center justify-between gap-3 px-3 py-2">
-              <span className="text-sm text-muted">{t('common.language')}</span>
-              <LanguageSwitcher only={['ru', 'el', 'en']} />
-            </div>
+            {/* Help and privacy — small and quiet (2026-11-26, operator). */}
+            <a href="/support" role="menuitem" onClick={() => { markLeftViaMenu(); setOpen(false); }} className="block rounded-[10px] px-3 py-2 text-xs text-muted hover:bg-page" data-testid="menu-help">{t('auth.menu.help')}</a>
             <div className="my-1 border-t border-edge" />
             <button role="menuitem" onClick={logout} disabled={busy} className="w-full rounded-[10px] px-3 py-3 text-start text-sm text-danger hover:bg-page disabled:opacity-60">
               {busy ? t('auth.signingOut') : t('auth.logOut')}
