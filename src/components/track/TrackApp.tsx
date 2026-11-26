@@ -525,11 +525,10 @@ export default function TrackApp() {
                       </div>
                       <span className="shrink-0 rounded-[8px] border border-edge bg-page px-2.5 py-1.5 font-mono text-base font-bold tracking-wide max-[359px]:px-1.5 max-[359px]:text-sm">{view.confirmedDriver.plate}</span>
                     </div>
-                    <p className="mt-2 text-xs text-muted">{t('track.prebook.confirmedNote')}</p>
                   </div>
                 )}
                 {view.shared && !terminal && <SharedBadge s={view.shared} to={view.dropoff.label} />}
-                {view.span && !terminal && view.status === 'REQUESTED' && <p className="mt-2 text-xs font-semibold text-accent" data-testid="track-span">🕒 {t('booking.slots.pickupSpan', { from: fmt.time(view.span.from), to: fmt.time(view.span.to) })}</p>}
+                {view.span && !terminal && view.status === 'REQUESTED' && <p className="mt-2 text-xs font-semibold text-accent" data-testid="track-span">🕒 {t('booking.slots.pickupSpan', { from: fmt.time(view.span.from) })} <span className="block text-xs font-normal text-muted">{t('booking.slots.mayShift')}</span></p>}
                 {view.arrive && !terminal && <p className="mt-2 text-xs font-semibold text-accent" data-testid="track-arrive">🏁 {t('rides.prebookings.arrive', { from: fmt.time(view.arrive.from), to: fmt.time(view.arrive.by) })}</p>}
                 {view.flightNumber && !terminal && <p className="mt-2 font-mono text-xs text-muted">✈ {t('track.prebook.flightRow', { flight: formatFlight(view.flightNumber) })}</p>}
                 {view.status === 'NO_DRIVER' && view.canRetry && (

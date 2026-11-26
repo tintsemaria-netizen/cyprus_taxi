@@ -175,7 +175,6 @@ const track: Catalog<typeof en> = {
   },
   prebook: {
     confirmedTitle: 'Ο οδηγός επιβεβαιώθηκε',
-    confirmedNote: 'Το τηλέφωνο και η ζωντανή θέση του οδηγού εμφανίζονται περίπου 30 λεπτά πριν την παραλαβή.',
     flightRow: 'Πτήση: {flight}',
   },
   newRide: 'Νέα κράτηση',

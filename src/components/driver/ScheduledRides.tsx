@@ -95,7 +95,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
       onKeyDown={(e) => { if (e.key === 'Enter') setOpenId(i.bookingId); }}
       className="cursor-pointer rounded-[12px] border border-edge bg-elevated p-3 active:bg-white/[0.04]">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-semibold">{i.span ? `${fmt.dateTime(i.span.from)}–${fmt.time(i.span.to)}` : fmt.dateTime(i.pickupAt)}</span>
+        <span className="font-semibold">{fmt.dateTime(i.span ? i.span.from : i.pickupAt)}{i.span && <span className="block text-xs font-normal text-muted">{t('driver.scheduled.mayShift')}</span>}</span>
         <span className="flex shrink-0 gap-1">
           <span className="rounded-md border-2 border-white/25 px-2 py-0.5 text-[13px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${i.vClass}` as 'common.vClass.COMFORT')}</span>
         </span>
@@ -280,7 +280,7 @@ function ScheduledDetail({ id, busy, onBack, onTake, onRelease }: { id: string; 
           {!d ? <p className="py-6 text-center text-sm text-muted">{t('common.loading')}</p> : (
             <>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-lg font-bold">{d.span ? `${fmt.dateTime(d.span.from)}–${fmt.time(d.span.to)}` : fmt.dateTime(d.pickupAt)}</span>
+                <span className="text-lg font-bold">{fmt.dateTime(d.span ? d.span.from : d.pickupAt)}{d.span && <span className="block text-xs font-normal text-muted">{t('driver.scheduled.mayShift')}</span>}</span>
                 {/* A pair has no client row: the class stays up here (2026-11-26). */}
                 {d.pair && <span className="shrink-0 rounded-md border-2 border-white/25 px-2 py-0.5 text-[15px] font-bold uppercase tracking-wide text-ink/80">{t(`common.vClass.${d.vClass}` as 'common.vClass.COMFORT')}</span>}
               </div>

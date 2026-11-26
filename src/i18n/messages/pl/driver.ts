@@ -397,6 +397,7 @@ const driver: Catalog<typeof en> = {
     release: "Zwolnij",
     releaseTitle: "Zwolnić tę rezerwację?",
     releaseBody: "Pasażer zostanie powiadomiony, a przejazd wróci do innych kierowców.",
+    mayShift: "Godzina może się przesunąć, jeśli znajdzie się współpasażer.",
     infoBtn: "Info",
     rule1: "Do {min} min przed odbiorem bierzesz dowolne kursy.",
     rule2: "Od {min} min przed odbiorem dostajesz tylko kursy, po których zdążysz na odbiór.",

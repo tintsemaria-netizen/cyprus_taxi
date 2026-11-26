@@ -394,6 +394,7 @@ const driver = {
     release: 'Release',
     releaseTitle: 'Release this pre-booked ride?',
     releaseBody: 'The passenger will be told and the ride goes back to other drivers.',
+    mayShift: "The time may shift if a co-rider is found.",
     infoBtn: "Info",
     rule1: "Until {min} min before pickup you take any rides.",
     rule2: "From {min} min before pickup you only get rides after which you still make the pickup.",

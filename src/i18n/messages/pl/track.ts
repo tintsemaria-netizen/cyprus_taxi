@@ -184,7 +184,6 @@ const track: Catalog<typeof en> = {
   },
   prebook: {
     confirmedTitle: "Kierowca potwierdzony",
-    confirmedNote: "Numer telefonu i pozycja na żywo pojawią się około 30 minut przed odbiorem.",
     flightRow: "Lot: {flight}",
   },
   newRide: "Nowe zamówienie",

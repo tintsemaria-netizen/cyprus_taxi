@@ -184,7 +184,6 @@ const track: Catalog<typeof en> = {
   },
   prebook: {
     confirmedTitle: "تم تأكيد السائق",
-    confirmedNote: "يظهر رقم هاتفه وموقعه المباشر قبل الانطلاق بنحو 30 دقيقة.",
     flightRow: "الرحلة الجوية: {flight}",
   },
   newRide: "طلب جديد",

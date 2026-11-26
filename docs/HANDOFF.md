@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-26 — pickup time «по факту» (branch span-fact)
+- Co-rider pre-bookings show ONE time (sharePickupFrom = the hour the passenger chose) + «Время может сместиться, если
+  найдётся попутчик» (booking.slots.mayShift / driver.scheduled.mayShift, 8 langs) instead of «11:00–11:15»:
+  tracking, «Мои предзаказы», booking form, «Предзаказ оформлен», driver ScheduledRides card + detail.
+- Removed track.prebook.confirmedNote («Телефон и местоположение … появятся …»).
+
 ## 2026-11-26 — driver pre-bookings: info button, class by client, tappable cards (branch prebook-detail)
 - ScheduledRides: class badge next to the client in the opened ride; per-card time rules removed; «ⓘ Инфо» under the tabs
   opens all pre-booking rules (rule1–5 + ruleFar, 8 langs). Minutes come from GET /driver/scheduled `rules`

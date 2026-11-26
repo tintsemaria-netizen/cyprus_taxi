@@ -180,7 +180,6 @@ const track: Catalog<typeof en> = {
   },
   prebook: {
     confirmedTitle: 'Водитель подтверждён',
-    confirmedNote: 'Телефон и местоположение водителя появятся примерно за 30 минут до подачи.',
     flightRow: 'Рейс: {flight}',
   },
   newRide: 'Новый заказ',

@@ -397,6 +397,7 @@ const driver: Catalog<typeof en> = {
     release: "Libérer",
     releaseTitle: "Libérer cette course réservée ?",
     releaseBody: "Le passager sera prévenu et la course retournera aux autres chauffeurs.",
+    mayShift: "L’heure peut changer si un covoitureur est trouvé.",
     infoBtn: "Infos",
     rule1: "Jusqu’à {min} min avant la prise en charge, vous prenez toutes les courses.",
     rule2: "À partir de {min} min avant, vous ne recevez que des courses qui vous laissent arriver à temps.",

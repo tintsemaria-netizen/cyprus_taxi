@@ -397,6 +397,7 @@ const driver: Catalog<typeof en> = {
     release: "Abgeben",
     releaseTitle: "Diese vorbestellte Fahrt abgeben?",
     releaseBody: "Der Fahrgast wird informiert und die Fahrt geht zurück an andere Fahrer.",
+    mayShift: "Die Zeit kann sich verschieben, wenn ein Mitfahrer gefunden wird.",
     infoBtn: "Info",
     rule1: "Bis {min} Min. vor der Abholung nehmen Sie beliebige Fahrten an.",
     rule2: "Ab {min} Min. vor der Abholung bekommen Sie nur Fahrten, nach denen Sie die Abholung noch schaffen.",

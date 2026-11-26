@@ -1206,8 +1206,10 @@ export default function BookingApp() {
       <p className="text-[13px] font-semibold text-accent">{t('share.terms.auto')}</p>
       {/* Simple (operator 2026-11-23): the window and the 15-minute limit — no pickup editor (no board since 2026-11-25). */}
       {arriveCalc ? (
-        <p className="mt-1 text-[15px] font-bold leading-snug" data-testid="share-terms-times">{(departMode ? t('booking.slots.pickupSpan', { from: fmt.clock(arriveCalc.leaveFrom.slice(11)), to: fmt.clock(arriveCalc.leaveBy.slice(11)) }) : t('share.terms.arrive', { af: fmt.clock(arriveFromT), at: fmt.clock(arriveToT) }))}</p>
-      ) : departMode ? null /* no hint line here (operator 2026-11-25): the hour list below says it */ : <p className="mt-1 text-xs text-muted">{t('share.terms.needWindow')}</p>}
+        <p className="mt-1 text-[15px] font-bold leading-snug" data-testid="share-terms-times">{(departMode ? t('booking.slots.pickupSpan', { from: fmt.clock(arriveCalc.leaveFrom.slice(11)) }) : t('share.terms.arrive', { af: fmt.clock(arriveFromT), at: fmt.clock(arriveToT) }))}</p>
+      ) : null}
+      {arriveCalc && departMode && <p className="text-xs text-muted">{t('booking.slots.mayShift')}</p>}
+      {arriveCalc ? null : departMode ? null /* no hint line here (operator 2026-11-25): the hour list below says it */ : <p className="mt-1 text-xs text-muted">{t('share.terms.needWindow')}</p>}
       <p className="mt-1 text-xs">{t('share.terms.extra', { n: cfg?.share?.termsMaxExtraMin ?? 15 })}</p>
       <p className="mt-1.5 text-xs text-muted" data-testid="share-min-note">{t('share.booking.minNote', { h: shareMinH })}</p>
     </div>
@@ -1285,7 +1287,8 @@ export default function BookingApp() {
       </div>
       {arriveCalc && (
         <div className="mt-2 rounded-[10px] border border-accent/50 bg-accent/15 px-3 py-2 text-[13px] font-medium text-ink" data-testid="arrive-leave">
-          <p className="text-[15px] font-bold">{t('booking.slots.pickupSpan', { from: fmt.clock(arriveCalc.leaveFrom.slice(11)), to: fmt.clock(arriveCalc.leaveBy.slice(11)) })}</p>
+          <p className="text-[15px] font-bold">{t('booking.slots.pickupSpan', { from: fmt.clock(arriveCalc.leaveFrom.slice(11)) })}</p>
+          <p className="text-xs text-muted">{t('booking.slots.mayShift')}</p>
           {joinPick && <p className="mt-0.5 font-semibold text-accent" data-testid="share-terms-with">👥 {t('booking.slots.withChosen')}</p>}
         </div>
       )}
@@ -1785,7 +1788,8 @@ export default function BookingApp() {
                     <div className="text-center">
                       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent/15 text-2xl text-accent">✓</div>
                       <h2 className="mt-3 text-xl font-bold">{t('booking.prebooked.title')}</h2>
-                      <p className="mt-1 text-sm text-muted">{t('booking.prebooked.when', { when: wallText(doneAt ?? '') + (doneTo ? `–${doneTo}` : '') })}</p>
+                      <p className="mt-1 text-sm text-muted">{t('booking.prebooked.when', { when: wallText(doneAt ?? '') })}</p>
+                      {doneTo && <p className="mt-0.5 text-xs text-muted">{t('booking.slots.mayShift')}</p>}
                       <p className="mt-2 text-sm text-muted">{t('booking.prebooked.body')}</p>
                       {joinResult && <p role="status" data-testid="join-result" className={`mt-3 rounded-[12px] border px-3 py-2 text-sm ${joinResult.ok ? 'border-accent/40 bg-accent/10 text-accent' : 'border-warn/40 bg-warn/10 text-warn'}`}>{joinResult.text}</p>}
                       <div className="mt-5 space-y-2">
