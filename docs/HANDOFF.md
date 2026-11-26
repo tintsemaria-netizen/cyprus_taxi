@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-26 ~15:15 — «‹» beside the page title on passenger pages (deployed 2437c20, branch title-arrow)
+- /rides, /rides/[id] (date + status row above the map), /rides/[id]/receipt (inside the receipt card; also in loading/error), /prebookings, /support, /privacy + /terms (LegalShell): PassengerTopBar back={false}, BackArrow before the h1 (same trail fallbacks as before).
+- Not changed: /welcome (landing), the ride screen (operator removed the arrow there earlier).
+- Full suite 516 passed; live ready, /rides chunk has the new title row. Not checked on a real phone.
+
 ## 2026-11-26 ~12:20 — passenger account menu + profile settings + receipts (deployed 102ff99, branch menu-tidy)
 - Account menu: language = round button right of the name (LanguageSwitcher `round`), «Помощь и конфиденциальность» small, «Выйти» removed from the menu.
 - /account: each category opens as its own screen (hash #personal/#security/#receipts/#theme/#notifications; #places only from the menu; old #data → #personal); «‹» beside each page title (top-bar arrow off on this page); «Выйти» small, left, with ConfirmSheet (auth.logOutAsk, 8 langs).
