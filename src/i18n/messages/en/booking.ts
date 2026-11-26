@@ -195,7 +195,6 @@ const booking = {
   },
   pickupPoint: 'Pickup here is only at one point: {name}',
   pickupPoints: 'Pickup here only at the «{name}» pickup points — choose one:',
-  spotOk: "Got it",
   dropPoint: 'Drop-off here only at one point: {point}',
   dropPoints: 'Drop-off here only at the «{name}» drop-off points — choose one:',
   pickupAt: {

@@ -203,7 +203,6 @@ const booking: Catalog<typeof en> = {
   },
   pickupPoint: 'Здесь подача только в одной точке: {name}',
   pickupPoints: 'Здесь подача только в точках подачи «{name}» — выберите удобную:',
-  spotOk: "Понятно",
   dropPoint: 'Высадка здесь только в одной точке: {point}',
   dropPoints: 'Высадка здесь только в точках «{name}» — выберите удобную:',
   pickupAt: {

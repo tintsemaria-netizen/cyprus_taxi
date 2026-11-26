@@ -4,7 +4,7 @@
 - BookingApp: when pickup+dropoff are set on the form step and one of them was moved to a territory / no-go-zone point,
   the map stays on that point (spotFocus, zoom 15, all markers noFit); the whole route shows from the class step on.
 - Territory banners sit just below the focused point (pinPoint(fitPadding).y + 34) and are see-through (bg-elevated/55).
-- booking.spotOk key exists (8 langs) but is unused now («Понятно» removed by the operator).
+- «Понятно» was tried and removed by the operator (no key left).
 
 ## 2026-11-26 — finished ride: receipt + rating window + «ride.completed» push (branch ride-done)
 - completeTrip enqueues a passenger push `ride.completed` {totalC} (sw.js MSG_TEXT, 8 langs; `ride.completedNoSum` fallback),
