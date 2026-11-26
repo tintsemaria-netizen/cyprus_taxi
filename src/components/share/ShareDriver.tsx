@@ -173,11 +173,12 @@ export function CoRiderLegPill({ leg, share, pair, onChanged, onError }: { leg: 
   );
 }
 
-/** Profile switch «Беру попутчиков». */
+/** Switch «Беру попутчиков»: a short line + a small ⓘ that opens what the driver needs to know (2026-11-26). */
 export function AcceptsSharedToggle() {
   const { t } = useT();
   const [on, setOn] = useState<boolean | null>(null);
   const [pct, setPct] = useState(30);
+  const [info, setInfo] = useState(false);
   useEffect(() => { api<{ acceptsShared: boolean; discountPct: number }>('/driver/share/settings').then((r) => { setOn(r.acceptsShared); setPct(r.discountPct); }).catch(() => {}); }, []);
   async function toggle(v: boolean) {
     setOn(v);
@@ -185,15 +186,24 @@ export function AcceptsSharedToggle() {
     catch { setOn(!v); }
   }
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-3" data-testid="accepts-shared">
-      <span className="min-w-0">
-        <span className="block text-sm">{t('share.driver.setting')}</span>
-        <span className="block text-xs text-muted">{t('share.driver.settingHint', { pct })}</span>
-      </span>
-      <input type="checkbox" role="switch" className="sr-only" checked={!!on} disabled={on === null} onChange={(e) => toggle(e.target.checked)} />
-      <span aria-hidden className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? 'bg-accent' : 'bg-edge-strong'}`}>
-        <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? 'start-[22px]' : 'start-0.5'}`} />
-      </span>
-    </label>
+    <div data-testid="accepts-shared">
+      <div className="flex items-center justify-between gap-3">
+        <span className="min-w-0">
+          <span className="flex items-center gap-1.5 text-sm">
+            {t('share.driver.setting')}
+            <button type="button" onClick={() => setInfo((v) => !v)} aria-expanded={info} aria-label="info" data-testid="share-info"
+              className={`flex h-5 w-5 items-center justify-center rounded-full border text-[11px] font-bold leading-none ${info ? 'border-accent text-accent' : 'border-edge-strong text-muted'}`}>i</button>
+          </span>
+          <span className="block text-xs text-muted">{t('share.driver.settingHint')}</span>
+        </span>
+        <label className="cursor-pointer">
+          <input type="checkbox" role="switch" className="sr-only" aria-label={t('share.driver.setting')} checked={!!on} disabled={on === null} onChange={(e) => toggle(e.target.checked)} />
+          <span aria-hidden className={`relative block h-7 w-12 shrink-0 rounded-full transition ${on ? 'bg-accent' : 'bg-edge-strong'}`}>
+            <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? 'start-[22px]' : 'start-0.5'}`} />
+          </span>
+        </label>
+      </div>
+      {info && <p className="mt-2 whitespace-pre-line rounded-[10px] border border-edge bg-page px-3 py-2 text-xs leading-relaxed text-muted" data-testid="share-info-text">{t('share.driver.settingInfo', { pct })}</p>}
+    </div>
   );
 }

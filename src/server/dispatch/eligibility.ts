@@ -79,7 +79,7 @@ export async function findBestCandidate(
     const binding = d.bindings[0];
     if (!binding || !binding.vehicle.active) return null;
     const v = binding.vehicle;
-    if (!carTakes(v.vClass, d.takesComfort, booking.vClass)) return null; // an XL car takes Comfort too (unless switched off)
+    if (!carTakes(v.vClass, d.takesComfort, booking.vClass, d.takesXl)) return null; // an XL car takes Comfort too (unless switched off)
     if (v.seats < booking.passengerCount) return null;
     const loc = d.location;
     if (!loc) return null;
@@ -227,7 +227,7 @@ async function finishingCandidates(
     const d = r.driver, b = r.booking, v = r.vehicle;
     if (hasNext.has(d.id) || twoLegs.has(d.id) || shared.has(b.id)) return;
     if (!d.active || !d.user.active || !d.onDuty || f.tried.has(d.id) || f.blockedIds.has(d.id) || f.offerBusy.has(d.id)) return;
-    if (!v.active || !carTakes(v.vClass, d.takesComfort, f.vClass) || v.seats < f.passengerCount) return;
+    if (!v.active || !carTakes(v.vClass, d.takesComfort, f.vClass, d.takesXl) || v.seats < f.passengerCount) return;
     const loc = d.location;
     if (!loc || computeFreshness(loc.sampledAt, loc.receivedAt, now) !== 'fresh') return;
     const drop = { lat: b.dropoffLat, lng: b.dropoffLng };

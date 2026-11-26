@@ -46,11 +46,7 @@ const driver: Catalog<typeof en> = {
   },
   // «Стоянка с очередью» (2026-11-25).
   // «Брать заказы Comfort» for an XL car (2026-11-25).
-  classes: {
-    comfort: "Δέχομαι κούρσες Comfort",
-    onHint: "Το αυτοκίνητό σας είναι XL: λαμβάνετε κούρσες XL και Comfort (οι Comfort με τιμή Comfort).",
-    offHint: "Μόνο κούρσες XL.",
-  },
+  classes: { title: "Παραγγελίες Comfort & XL", turnedOn: "Ενεργοποιήσατε τις παραγγελίες {cls}.", turnedOff: "Απενεργοποιήσατε τις παραγγελίες {cls}.", keepOne: "Τουλάχιστον μία κατηγορία πρέπει να μείνει ενεργή." },
   // Delete the account in the app (2026-11-26).
   deleteAccount: {
     button: "Διαγραφή λογαριασμού",
@@ -345,6 +341,7 @@ const driver: Catalog<typeof en> = {
   },
   prebookFab: { single: "P", pair: "PS", singleAria: "Νέα προκράτηση", pairAria: "Νέα κοινή προκράτηση" },
   nav: {
+    settings: "Ρυθμίσεις",
     myFleet: "Ο στόλος μου",
     orders: 'Παραγγελίες',
     work: 'Διαδρομές & έσοδα',

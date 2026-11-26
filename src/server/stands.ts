@@ -76,8 +76,8 @@ export async function standQueueOrder(standIds: string[]): Promise<{ driverId: s
 /** Queue entries with each driver's car class (orders are matched by class, so «cars ahead» counts his class). */
 async function queueWithClass(standIds: string[]) {
   const rows = await prisma.standQueue.findMany({ where: { standId: { in: standIds } }, orderBy: [{ enteredAt: 'asc' }, { driverId: 'asc' }] });
-  const b = await prisma.driverVehicleBinding.findMany({ where: { driverId: { in: rows.map((r) => r.driverId) }, endedAt: null }, select: { driverId: true, driver: { select: { takesComfort: true } }, vehicle: { select: { vClass: true } } } });
-  const cls = new Map(b.map((x) => [x.driverId, { vClass: x.vehicle.vClass as string, takes: takesClasses(x.vehicle.vClass, x.driver.takesComfort) }]));
+  const b = await prisma.driverVehicleBinding.findMany({ where: { driverId: { in: rows.map((r) => r.driverId) }, endedAt: null }, select: { driverId: true, driver: { select: { takesComfort: true, takesXl: true } }, vehicle: { select: { vClass: true } } } });
+  const cls = new Map(b.map((x) => [x.driverId, { vClass: x.vehicle.vClass as string, takes: takesClasses(x.vehicle.vClass, x.driver.takesComfort, x.driver.takesXl) }]));
   return rows.map((r) => ({ ...r, vClass: cls.get(r.driverId)?.vClass ?? 'COMFORT', takes: cls.get(r.driverId)?.takes ?? ['COMFORT'] }));
 }
 

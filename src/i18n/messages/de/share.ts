@@ -123,7 +123,8 @@ const share: Catalog<typeof en> = {
     noShowConfirm: "Fahrgast nicht erschienen? Seine Fahrt wird storniert; der andere zahlt den vollen Preis.",
     noShowFee: "No-Show-Gebühr: {amount}",
     setting: "Mitfahrer mitnehmen",
-    settingHint: "Nur Flughafen und Überland. Jeder Fahrgast erhält {pct}% Rabatt; Sie verdienen beide Fahrpreise.",
+    settingHint: "Nur Flughafen und Überland.",
+    settingInfo: "• Nur Fahrten ab Flughafen Larnaka oder Paphos und zwischen Larnaka, Nikosia, Paphos und Ayia Napa. Nicht innerhalb einer Stadt.\n• Höchstens zwei Aufträge im Auto. Alle Fahrgäste und Koffer müssen hineinpassen.\n• Jeder Fahrgast erhält {pct}% Rabatt; Sie verdienen beide Fahrpreise.\n• Unterwegs kann «Mitfahrer auf dem Weg» kommen: wie viel länger die Fahrt dauert, die Reihenfolge der Stopps und Ihr Verdienst. Keine Antwort gilt als «Nein».\n• Eine Vorbestellung mit Mitfahrer ist ein Auftrag für zwei unter «Vorbestellungen».\n• Storniert ein Fahrgast oder erscheint nicht, zahlt der andere den vollen Preis.",
     boardPair: "Geteilt · Personen: {n} · Koffer: {bags}",
     boardSecond: "2. Fahrgast {time}: {from} → {to}",
     state: {

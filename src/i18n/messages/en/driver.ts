@@ -43,11 +43,7 @@ const driver = {
   },
   // «Стоянка с очередью» (2026-11-25).
   // «Брать заказы Comfort» for an XL car (2026-11-25).
-  classes: {
-    comfort: "Take Comfort orders",
-    onHint: "Your car is XL: you get XL and Comfort orders (Comfort orders at the Comfort price).",
-    offHint: "XL orders only.",
-  },
+  classes: { title: "Comfort & XL orders", turnedOn: "You switched {cls} orders on.", turnedOff: "You switched {cls} orders off.", keepOne: "Keep at least one class on." },
   // Delete the account in the app (2026-11-26).
   deleteAccount: {
     button: "Delete account",
@@ -342,6 +338,7 @@ const driver = {
   },
   prebookFab: { single: "P", pair: "PS", singleAria: "New pre-booking", pairAria: "New shared pre-booking" },
   nav: {
+    settings: "Settings",
     myFleet: "My fleet",
     orders: 'Orders',
     work: 'Trips & earnings',

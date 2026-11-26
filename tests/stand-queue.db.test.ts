@@ -50,7 +50,7 @@ async function cleanup() {
     await (prisma[t] as unknown as { deleteMany: (a: object) => Promise<unknown> }).deleteMany({});
   }
   await prisma.booking.deleteMany({});
-  await prisma.driver.updateMany({ where: { publicName: { in: ['Andreas', 'Maria', 'Petros'] } }, data: { onDuty: false, available: false, takesComfort: true } });
+  await prisma.driver.updateMany({ where: { publicName: { in: ['Andreas', 'Maria', 'Petros'] } }, data: { onDuty: false, available: false, takesComfort: true, takesXl: true } });
 }
 beforeEach(cleanup);
 afterAll(async () => { await cleanup(); await prisma.noGoZone.deleteMany({ where: { OR: [{ kind: 'STAND' }, { name: 'Test port' }] } }); invalidateNoGoCache(); });

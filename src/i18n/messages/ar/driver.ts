@@ -46,11 +46,7 @@ const driver: Catalog<typeof en> = {
   },
   // «Стоянка с очередью» (2026-11-25).
   // «Брать заказы Comfort» for an XL car (2026-11-25).
-  classes: {
-    comfort: "قبول طلبات Comfort",
-    onHint: "سيارتك XL: تصلك طلبات XL وComfort (Comfort بسعر Comfort).",
-    offHint: "طلبات XL فقط.",
-  },
+  classes: { title: "طلبات Comfort و XL", turnedOn: "قمت بتشغيل طلبات {cls}.", turnedOff: "قمت بإيقاف طلبات {cls}.", keepOne: "يجب أن تبقى فئة واحدة على الأقل مفعّلة." },
   // Delete the account in the app (2026-11-26).
   deleteAccount: {
     button: "حذف الحساب",
@@ -345,6 +341,7 @@ const driver: Catalog<typeof en> = {
   },
   prebookFab: { single: "P", pair: "PS", singleAria: "حجز مسبق جديد", pairAria: "حجز مسبق مشترك جديد" },
   nav: {
+    settings: "الإعدادات",
     myFleet: "أسطولي",
     orders: "الطلبات",
     work: "الرحلات والأرباح",

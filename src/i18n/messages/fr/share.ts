@@ -123,7 +123,8 @@ const share: Catalog<typeof en> = {
     noShowConfirm: "Le passager n’est pas venu ? Sa course est annulée ; l’autre paie le plein tarif.",
     noShowFee: "Frais de non-présentation : {amount}",
     setting: "Je prends des covoyageurs",
-    settingHint: "Aéroport et interurbain uniquement. Chaque passager a {pct}% de réduction ; vous touchez les deux courses.",
+    settingHint: "Aéroport et interurbain uniquement.",
+    settingInfo: "• Uniquement les courses depuis l’aéroport de Larnaca ou Paphos et entre Larnaca, Nicosie, Paphos et Ayia Napa. Pas à l’intérieur d’une même ville.\n• Au plus deux commandes dans la voiture. Tous les passagers et valises doivent tenir.\n• Chaque passager a {pct}% de réduction ; vous touchez les deux courses.\n• En route, vous pouvez recevoir « Covoitureur en chemin » : combien de temps en plus, l’ordre des arrêts et votre gain. Sans réponse, c’est « Non ».\n• Une réservation avec covoitureur est une seule commande pour deux dans « Réservations ».\n• Si un passager annule ou ne se présente pas, l’autre paie le prix plein.",
     boardPair: "Partagé · personnes : {n} · valises : {bags}",
     boardSecond: "2e passager {time} : {from} → {to}",
     state: {

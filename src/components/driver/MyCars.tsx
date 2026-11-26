@@ -20,7 +20,7 @@ interface Data { online: boolean; onTrip: boolean; cars: Car[]; access: Access[]
 
 const SLOTS = ['vehicle_reg', 'insurance', 'taxi_licence', 'vehicle_front', 'vehicle_rear'];
 
-export function MyCars() {
+export function MyCars({ bare = false }: { bare?: boolean } = {}) {
   const { t, tError } = useT();
   const [d, setD] = useState<Data | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -41,7 +41,7 @@ export function MyCars() {
 
   return (
     <div className="space-y-4" data-testid="my-cars">
-      <h1 className="text-xl font-bold">{t('driver.cars.title')}</h1>
+      {!bare && <h1 className="text-xl font-bold">{t('driver.cars.title')}</h1>}
       {msg && <p role="status" className={`rounded-[12px] border px-3 py-2 text-sm ${msg.ok ? 'border-accent/40 text-accent' : 'border-danger/40 text-danger'}`}>{msg.text}</p>}
 
       {d.asks.length > 0 && (

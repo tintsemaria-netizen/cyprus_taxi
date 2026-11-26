@@ -36,14 +36,17 @@ async function pushAdmins(p: Omit<Push, 'audience'>) {
 
 // ---------- Who may use which car ----------
 
-/** Cars this driver may work on: his own, allowed ones, and the one he is on now (cars set up by the admin). */
+/** Cars this driver may work on: his own, allowed ones, the one he is on now, and (2026-11-26) a car the
+ *  ADMIN set him up on earlier (no owner, no fleet) — switching away from it must not lose it. A fleet car
+ *  or another driver's car still needs its yes (CarAccess); an old binding alone does not keep it. */
 export async function allowedVehicleIds(driverId: string): Promise<Set<string>> {
-  const [own, access, bound] = await Promise.all([
+  const [own, access, bound, adminCars] = await Promise.all([
     prisma.vehicle.findMany({ where: { ownerDriverId: driverId }, select: { id: true } }),
     prisma.carAccess.findMany({ where: { driverId, status: 'APPROVED' }, select: { vehicleId: true } }),
     prisma.driverVehicleBinding.findMany({ where: { activeDriverId: driverId }, select: { vehicleId: true } }),
+    prisma.driverVehicleBinding.findMany({ where: { driverId, vehicle: { ownerDriverId: null, fleetId: null } }, select: { vehicleId: true }, distinct: ['vehicleId'] }),
   ]);
-  return new Set([...own.map((v) => v.id), ...access.map((a) => a.vehicleId), ...bound.map((b) => b.vehicleId)]);
+  return new Set([...own.map((v) => v.id), ...access.map((a) => a.vehicleId), ...bound.map((b) => b.vehicleId), ...adminCars.map((b) => b.vehicleId)]);
 }
 
 /** Document states of a car added through «Мои машины» (same rules as the driver's own documents). */

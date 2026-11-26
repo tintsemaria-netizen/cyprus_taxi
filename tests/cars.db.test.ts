@@ -193,4 +193,18 @@ describe('«Мои машины»', () => {
     expect((await myCars(o.id)).granted).toEqual([]);
     void v;
   });
+
+  it('a car the admin set him up on stays his after switching away (2026-11-26); a fleet car does not', async () => {
+    const d = await driver('H1'); const o = await driver('O1');
+    const adminCar = await car('CT-951'); await bind(d.id, adminCar.id);
+    const own = await car('CT-952', { ownerDriverId: d.id });
+    expect((await switchCar(d.id, own.id)).ok).toBe(true);
+    expect((await myCars(d.id)).cars.map((c) => c.plate).sort()).toEqual(['CT-951', 'CT-952']);
+    expect((await switchCar(d.id, adminCar.id)).ok).toBe(true); // and back
+    // A fleet car he once drove is not kept by the old binding alone.
+    const fl = await prisma.fleet.create({ data: { name: 'CT fleet', ownerId: (await prisma.driver.findUniqueOrThrow({ where: { id: o.id } })).userId } });
+    const fleetCar = await car('CT-953', { fleetId: fl.id });
+    await prisma.driverVehicleBinding.create({ data: { driverId: d.id, vehicleId: fleetCar.id, endedAt: new Date() } }); // drove it before
+    expect((await myCars(d.id)).cars.map((c) => c.plate)).not.toContain('CT-953');
+  });
 });
