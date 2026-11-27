@@ -17,11 +17,17 @@ export function SamsungDarkHint() {
   }, []);
   if (!show) return null;
   const close = () => { try { localStorage.setItem(KEY, '1'); } catch { /* ignore */ } setShow(false); };
+  // With a very large phone font the card was taller than the screen and «Понятно» could not be reached
+  // (Samsung, operator 2026-11-27): the text scrolls, the button and × always stay on screen.
   return (
-    <div role="dialog" aria-modal="true" data-testid="samsung-dark-hint" className="fixed inset-x-3 z-[95] rounded-[16px] border border-edge bg-elevated p-4 text-sm text-ink shadow-2xl"
-      style={{ top: 'calc(env(safe-area-inset-top) + 12px)' }}>
-      <p className="leading-5">{t('common.samsungDark.text')}</p>
-      <button type="button" onClick={close} className="btn-primary mt-3 min-h-[44px] w-full">{t('common.samsungDark.ok')}</button>
+    <div role="dialog" aria-modal="true" data-testid="samsung-dark-hint" className="fixed inset-x-3 z-[95] flex flex-col rounded-[16px] border border-edge bg-elevated text-sm text-ink shadow-2xl"
+      style={{ top: 'calc(env(safe-area-inset-top) + 12px)', maxHeight: 'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)' }}>
+      <button type="button" onClick={close} aria-label={t('common.close')} data-testid="samsung-dark-close"
+        className="absolute end-1.5 top-1.5 flex h-10 w-10 items-center justify-center rounded-full text-2xl text-muted">×</button>
+      <p className="min-h-0 flex-1 overflow-y-auto overscroll-contain break-words px-4 pe-12 pt-4 leading-snug">{t('common.samsungDark.text')}</p>
+      <div className="shrink-0 p-4 pt-3">
+        <button type="button" onClick={close} className="btn-primary min-h-[44px] w-full">{t('common.samsungDark.ok')}</button>
+      </div>
     </div>
   );
 }

@@ -18,7 +18,7 @@ export function RatePassengerSheet({ bookingId, passengerName, onDone }: { booki
     finally { setBusy(false); }
   }
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="ratepax-title">
+    <div className="fixed inset-0 [&>*]:max-h-[calc(100dvh-1.5rem)] [&>*]:overflow-y-auto z-50 flex items-end justify-center bg-black/60 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="ratepax-title">
       {/* Bigger window and stars (2026-11-17): easy to hit in the car holder. */}
       <div className="flex min-h-[62dvh] w-full max-w-md flex-col justify-center rounded-t-[24px] border border-edge bg-elevated px-6 pt-7 sm:rounded-[24px]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}>
         <div className="text-base font-semibold text-accent">✓ {t('driver.close.completed')}</div>

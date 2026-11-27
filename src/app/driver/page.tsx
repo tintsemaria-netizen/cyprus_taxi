@@ -1442,7 +1442,7 @@ function DropoffChangedBanner({ label, fare, onClose }: { label: string; fare: s
   useEffect(() => { const id = setTimeout(() => closeRef.current(), 7000); return () => clearTimeout(id); }, []);
   return (
     <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex justify-center px-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}>
-      <div role="alert" data-testid="dropoff-changed" className="pointer-events-auto w-full max-w-md rounded-[16px] border-2 border-accent bg-page p-4 shadow-[0_8px_24px_rgba(0,0,0,0.45)]">
+      <div role="alert" data-testid="dropoff-changed" className="pointer-events-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-[16px] border-2 border-accent bg-page p-4 shadow-[0_8px_24px_rgba(0,0,0,0.45)]">
         <div className="text-sm font-semibold text-accent">📍 {t('driver.dropoffChanged')}</div>
         <div className="mt-1 text-[19px] font-semibold leading-snug text-ink">{label}</div>
         {fare && <div className="mt-1 text-[17px] font-bold text-accent" data-testid="dropoff-changed-fare">{t('driver.dropoffNewPrice', { fare })}</div>}

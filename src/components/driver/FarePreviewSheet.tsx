@@ -28,7 +28,7 @@ export function FarePreviewSheet({ bookingId, passengerName: _passengerName, onC
 
   return (
     // No «Назад» button (2026-11-17): a tap on the dimmed map around the sheet closes it instead.
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="fare-title"
+    <div className="fixed inset-0 [&>*]:max-h-[calc(100dvh-1.5rem)] [&>*]:overflow-y-auto z-50 flex items-end justify-center bg-black/60 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="fare-title"
       onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
       <div className="w-full max-w-md rounded-t-[20px] border border-edge bg-elevated p-5 sm:rounded-[20px]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}>
         <h2 id="fare-title" className="text-xl font-bold">{t('driver.close.title')}</h2>
