@@ -3389,3 +3389,8 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Already OK before: AccountMenu, the earnings pop-up, the nav/track menus, ConfirmSheet, the TrackRoute dialogs.
 - CLAUDE.md operator rule added: every future small pop-up uses useDismiss.
 - Evidence: tsc clean; vitest 532 passed / 1 skipped; live health ready; the driver chunks contain the capture/once swallow.
+
+## 2026-11-27 — deployed 88c43e2 (territory-flash)
+- Passenger map: the notice for a territory with ONE pickup point («Здесь подача только в одной точке…») shows for 3 s and then hides. The same goes for ONE drop-off point. Code: `useFlash` in src/components/useFlash.ts, keyed by the territory name.
+- With several points the notice stays, because its buttons are the choice.
+- Evidence: tsc clean; vitest 532 passed / 1 skipped; live health ready; the home chunks contain pickup-territory and the `d:${name}` flash key.
