@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-27 — «меньше минуты» instead of «0 мин (примерно)»
+
+- Passenger track and the shared-trip page: pickupEtaMin < 1 → `track.etaUnderMin` (8 languages), without «примерно».
+  Driver screens already show at least 1 min.
+
 ## 2026-11-27 — smooth live-trip camera (operator: jerky, slow camera to the car)
 
 - GoogleMapView: with `keepInView` the framing effect no longer does instant fitBounds (marker set / route / sheet

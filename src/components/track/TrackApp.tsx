@@ -399,8 +399,10 @@ export default function TrackApp() {
   if (view.finishingAt && !onTrip) markers.push({ id: 'fin', lat: view.finishingAt.lat, lng: view.finishingAt.lng, kind: 'stop', label: '', noFit: false });
   if (liveLocation) markers.push({ id: 'v', lat: liveLocation.lat, lng: liveLocation.lng, kind: 'vehicle', label: t('track.yourDriver'), stale: liveLocation.freshness === 'stale' || dr.estimated });
 
-  const etaMinText = view.pickupEtaMin != null ? tp('common.minutes', view.pickupEtaMin) : null;
-  const etaText = !disconnected && etaMinText ? (view.pickupEtaApprox ? t('track.etaApprox', { min: etaMinText }) : etaMinText) : null;
+  // Under a minute (2026-11-27, operator: «0 мин (примерно)» looked odd) → «меньше минуты», no «примерно».
+  const etaUnder = view.pickupEtaMin != null && view.pickupEtaMin < 1;
+  const etaMinText = view.pickupEtaMin != null ? (etaUnder ? t('track.etaUnderMin') : tp('common.minutes', view.pickupEtaMin)) : null;
+  const etaText = !disconnected && etaMinText ? (view.pickupEtaApprox && !etaUnder ? t('track.etaApprox', { min: etaMinText }) : etaMinText) : null;
   const statusLabel = STATUS_KEYS.has(view.status) ? t(`common.status.${view.status}` as MsgKey) : view.status;
   const headline =
     (view.status === 'EN_ROUTE' || view.status === 'ASSIGNED') && view.vehicle && view.finishingNearby

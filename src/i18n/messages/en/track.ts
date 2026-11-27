@@ -31,6 +31,7 @@ const track = {
   repeatRide: 'Order again',
   yourDriver: 'Your driver',
   etaApprox: '{min} (approx.)',
+  etaUnderMin: "less than a minute",
   finishingEta: '{name} is finishing a ride nearby and will come to you — {eta}',
   finishing: '{name} is finishing a ride nearby and will come to you next',
   meetDriver: 'Meet {name}',

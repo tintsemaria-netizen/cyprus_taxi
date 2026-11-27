@@ -70,8 +70,10 @@ export default function SharePage() {
   else markers.push({ id: 'p', lat: view.pickup.lat, lng: view.pickup.lng, kind: 'pickup', label: view.pickup.label });
   if (view.location) markers.push({ id: 'v', lat: view.location.lat, lng: view.location.lng, kind: 'vehicle', label: t('track.share.car'), stale: view.location.freshness === 'stale' });
 
-  const etaMinText = view.pickupEtaMin != null ? tp('common.minutes', view.pickupEtaMin) : null;
-  const etaText = etaMinText ? (view.pickupEtaApprox ? t('track.etaApprox', { min: etaMinText }) : etaMinText) : null;
+  // Under a minute (2026-11-27, operator: «0 мин (примерно)» looked odd) → «меньше минуты», no «примерно».
+  const etaUnder = view.pickupEtaMin != null && view.pickupEtaMin < 1;
+  const etaMinText = view.pickupEtaMin != null ? (etaUnder ? t('track.etaUnderMin') : tp('common.minutes', view.pickupEtaMin)) : null;
+  const etaText = etaMinText ? (view.pickupEtaApprox && !etaUnder ? t('track.etaApprox', { min: etaMinText }) : etaMinText) : null;
   const statusLabel = STATUS_KEYS.has(view.status) ? t(`track.share.status.${view.status}` as MsgKey) : view.status;
 
   return (
