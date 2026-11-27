@@ -3375,3 +3375,10 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Tapping such a car now shows `InlineError` (src/components/InlineError.tsx): a semi-transparent dark-red bubble over everything with an arrow at the tapped car. It hides after 2.5 s. Texts: lockedOnline / lockedTrip / new driver.cars.busyPick (8 languages).
 - Possible follow-up offered: flip the bubble above the car near the bottom of the screen.
 - Evidence: tsc clean; vitest 532 passed / 1 skipped; live health ready; the driver chunks contain inline-error.
+
+## 2026-11-27 — deployed 6066875 (dismiss-outside)
+- `useDismiss(open, onClose, refs)` (src/components/useDismiss.ts) closes a pop-up on a pointerdown outside it or on Escape, and swallows the following click so the closing tap presses nothing else.
+- Used by: the driver's car list (DriverCard), the pre-booking ⓘ rules (ScheduledRides), the co-rider ⓘ note (AcceptsSharedToggle), the admin zone panel ☰ menu (ZoneWorkspace).
+- Already OK before: AccountMenu, the earnings pop-up, the nav/track menus, ConfirmSheet, the TrackRoute dialogs.
+- CLAUDE.md operator rule added: every future small pop-up uses useDismiss.
+- Evidence: tsc clean; vitest 532 passed / 1 skipped; live health ready; the driver chunks contain the capture/once swallow.
