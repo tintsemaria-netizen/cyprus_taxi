@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IL-Y Kierowca</string>
+    <string name="overlay_title">Wyświetlać IL-Y nad innymi aplikacjami?</string>
+    <string name="overlay_text">Wtedy, gdy korzystasz z Waze lub Map Google, na ekranie zostaje mała okrągła ikona IL-Y: jedno dotknięcie i wracasz do zleceń. Znajdź IL-Y Kierowca na liście i włącz „Wyświetlanie nad innymi aplikacjami”.</string>
+    <string name="overlay_allow">Zezwól</string>
+    <string name="overlay_later">Później</string>
+    <string name="bubble_channel">Ikona IL-Y</string>
+    <string name="bubble_note">IL-Y działa — dotknij, aby otworzyć</string>
+    <string name="bubble_open">Otwórz IL-Y</string>
+</resources>

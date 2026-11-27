@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IL-Y Chauffeur</string>
+    <string name="overlay_title">Afficher IL-Y par-dessus les autres applis ?</string>
+    <string name="overlay_text">Une petite icône ronde IL-Y reste alors à l’écran pendant que vous utilisez Waze ou Google Maps : un appui et vous revenez à vos courses. Trouvez IL-Y Chauffeur dans la liste et activez « Afficher par-dessus les autres applis ».</string>
+    <string name="overlay_allow">Autoriser</string>
+    <string name="overlay_later">Plus tard</string>
+    <string name="bubble_channel">Icône IL-Y</string>
+    <string name="bubble_note">IL-Y est actif — appuyez pour ouvrir</string>
+    <string name="bubble_open">Ouvrir IL-Y</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IL-Y Οδηγός</string>
+    <string name="overlay_title">Εμφάνιση του IL-Y πάνω από άλλες εφαρμογές;</string>
+    <string name="overlay_text">Τότε, ενώ είστε στο Waze ή στους Χάρτες Google, ένα μικρό στρογγυλό εικονίδιο IL-Y μένει στην οθόνη: ένα πάτημα και επιστρέφετε στις παραγγελίες. Βρείτε το IL-Y Οδηγός στη λίστα και ενεργοποιήστε «Προβολή πάνω από άλλες εφαρμογές».</string>
+    <string name="overlay_allow">Να επιτρέπεται</string>
+    <string name="overlay_later">Αργότερα</string>
+    <string name="bubble_channel">Εικονίδιο IL-Y</string>
+    <string name="bubble_note">Το IL-Y λειτουργεί — πατήστε για άνοιγμα</string>
+    <string name="bubble_open">Άνοιγμα IL-Y</string>
+</resources>

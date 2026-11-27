@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IL-Y Fahrer</string>
+    <string name="overlay_title">IL-Y über anderen Apps anzeigen?</string>
+    <string name="overlay_text">Dann bleibt ein kleines rundes IL-Y-Symbol auf dem Bildschirm, während Sie Waze oder Google Maps nutzen: ein Tippen und Sie sind zurück bei Ihren Aufträgen. Suchen Sie IL-Y Fahrer in der Liste und aktivieren Sie «Über anderen Apps einblenden».</string>
+    <string name="overlay_allow">Erlauben</string>
+    <string name="overlay_later">Später</string>
+    <string name="bubble_channel">IL-Y-Symbol</string>
+    <string name="bubble_note">IL-Y läuft — tippen zum Öffnen</string>
+    <string name="bubble_open">IL-Y öffnen</string>
+</resources>

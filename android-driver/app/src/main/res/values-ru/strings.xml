@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IL-Y Водитель</string>
+    <string name="overlay_title">Показывать IL-Y поверх других приложений?</string>
+    <string name="overlay_text">Тогда, пока вы в Waze или Google Maps, на экране будет маленький круглый значок IL-Y: одно нажатие — и вы снова в заказах. Найдите в списке IL-Y Водитель и включите «Поверх других приложений».</string>
+    <string name="overlay_allow">Разрешить</string>
+    <string name="overlay_later">Позже</string>
+    <string name="bubble_channel">Значок IL-Y</string>
+    <string name="bubble_note">IL-Y работает — нажмите, чтобы открыть</string>
+    <string name="bubble_open">Открыть IL-Y</string>
+</resources>

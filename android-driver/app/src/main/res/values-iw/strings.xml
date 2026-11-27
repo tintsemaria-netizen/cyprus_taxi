@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IL-Y נהג</string>
+    <string name="overlay_title">להציג את IL-Y מעל אפליקציות אחרות?</string>
+    <string name="overlay_text">כך, בזמן שאתם ב-Waze או במפות Google, סמל IL-Y עגול וקטן יישאר על המסך: לחיצה אחת ואתם חוזרים להזמנות. מצאו את IL-Y נהג ברשימה והפעילו «הצגה מעל אפליקציות אחרות».</string>
+    <string name="overlay_allow">לאפשר</string>
+    <string name="overlay_later">אחר כך</string>
+    <string name="bubble_channel">סמל IL-Y</string>
+    <string name="bubble_note">IL-Y פועל — הקישו לפתיחה</string>
+    <string name="bubble_open">פתיחת IL-Y</string>
+</resources>

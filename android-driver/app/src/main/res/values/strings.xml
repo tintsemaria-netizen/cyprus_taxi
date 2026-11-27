@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IL-Y Driver</string>
+    <string name="overlay_title">Show IL-Y over other apps?</string>
+    <string name="overlay_text">Then a small round IL-Y icon stays on the screen while you use Waze or Google Maps: one tap brings you back to your orders. Find IL-Y Driver in the list and switch on «Allow display over other apps».</string>
+    <string name="overlay_allow">Allow</string>
+    <string name="overlay_later">Later</string>
+    <string name="bubble_channel">IL-Y icon</string>
+    <string name="bubble_note">IL-Y is running — tap to open</string>
+    <string name="bubble_open">Open IL-Y</string>
+</resources>

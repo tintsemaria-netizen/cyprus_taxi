@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IL-Y سائق</string>
+    <string name="overlay_title">عرض IL-Y فوق التطبيقات الأخرى؟</string>
+    <string name="overlay_text">عندها تبقى أيقونة IL-Y دائرية صغيرة على الشاشة أثناء استخدامك Waze أو خرائط Google: نقرة واحدة وتعود إلى طلباتك. ابحث عن IL-Y سائق في القائمة وفعّل «الظهور فوق التطبيقات الأخرى».</string>
+    <string name="overlay_allow">سماح</string>
+    <string name="overlay_later">لاحقًا</string>
+    <string name="bubble_channel">أيقونة IL-Y</string>
+    <string name="bubble_note">IL-Y يعمل — انقر للفتح</string>
+    <string name="bubble_open">فتح IL-Y</string>
+</resources>
