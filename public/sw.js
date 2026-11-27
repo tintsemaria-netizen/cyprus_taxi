@@ -558,6 +558,16 @@ const MSG_TEXT = {
     he: ["הנסיעה שהזמנתם בעוד 30 דקות", "איסוף ב־{timeT} — {place}."],
     ar: ["رحلتك المحجوزة بعد 30 دقيقة", "الالتقاء الساعة {timeT} — {place}."],
   },
+  'drv.dropoffChanged': {
+    ru: ["Клиент изменил адрес высадки", "Построен новый маршрут."],
+    en: ["The passenger changed the destination", "A new route has been built."],
+    el: ["Ο επιβάτης άλλαξε τον προορισμό", "Δημιουργήθηκε νέα διαδρομή."],
+    de: ["Der Fahrgast hat das Ziel geändert", "Eine neue Route wurde berechnet."],
+    fr: ["Le passager a changé la destination", "Un nouvel itinéraire a été calculé."],
+    pl: ["Pasażer zmienił cel podróży", "Wyznaczono nową trasę."],
+    he: ["הנוסע שינה את היעד", "נבנה מסלול חדש."],
+    ar: ["غيّر الراكب الوجهة", "تم إنشاء مسار جديد."],
+  },
   'drv.stopAdded': {
     ru: ["Пассажир добавил остановку", "Построен новый маршрут."],
     en: ["Stop added by the passenger", "A new route has been built."],

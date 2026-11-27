@@ -154,7 +154,9 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   const statusRef = useRef<string | null>(null);
   // Launch fixes §5 (ported 2026-11-23): a pre-pickup ride that disappears without the driver's own action
   // (no GPS, dispatch took it off, passenger cancelled) gets a line of explanation instead of a silent gap.
-  const prevTripRef = useRef<{ bookingId: string; status: string } | null>(null);
+  const prevTripRef = useRef<{ bookingId: string; status: string; drop: string } | null>(null);
+  // The passenger changed the drop-off (2026-11-27): a banner with the new address, a chime, gone after 7 s.
+  const [dropChanged, setDropChanged] = useState<{ label: string; at: number } | null>(null);
   const ownActionRef = useRef<string | null>(null);
   const tRef = useRef(t); tRef.current = t;
   const load = useCallback(async () => {
@@ -162,7 +164,11 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
       const d = await api<CurrentTrip>('/driver/current-trip');
       const prev = prevTripRef.current;
       if (prev && !d.trip && ['ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(prev.status) && ownActionRef.current !== prev.bookingId) setBanner(tRef.current('driver.rideRemoved'));
-      prevTripRef.current = d.trip ? { bookingId: d.trip.bookingId, status: d.trip.status } : null;
+      const drop = d.trip ? `${d.trip.dropoff.lat},${d.trip.dropoff.lng}` : '';
+      if (prev && d.trip && prev.bookingId === d.trip.bookingId && prev.drop !== drop) {
+        setDropChanged({ label: d.trip.dropoff.label, at: Date.now() }); playOfferChime(); vibrateOffer();
+      }
+      prevTripRef.current = d.trip ? { bookingId: d.trip.bookingId, status: d.trip.status, drop } : null;
       statusRef.current = d.trip?.status ?? null; setData(d);
     }
     catch (e) { if (e instanceof ApiRequestError) setBanner(tErrRef.current(e)); }
@@ -422,6 +428,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
           onGiveBackNext={data.next ? giveBackNext : null} />
         {/* Ride-share (Task 022): the second passenger's leg, and a co-rider proposal to decide on the spot. */}
         {trip.status === 'IN_PROGRESS' && data.gpsMeter && <GpsMeterCard m={data.gpsMeter} />}
+        {dropChanged && <DropoffChangedBanner key={dropChanged.at} label={dropChanged.label} onClose={() => setDropChanged(null)} />}
         {data.coRider && <CoRiderLegPill leg={data.coRider} share={data.share ?? null} pair={data.pair ?? null} onChanged={() => { void load(); void loadDash(); }} onError={setBanner} />}
         {data.shareProposal && <DriverShareProposalSheet key={data.shareProposal.groupId} p={data.shareProposal} onAnswered={() => { void load(); }} />}
         {/* Next order while finishing this trip (2026-11-25): the offer here; the accepted next ride is only in the ≡ menu. */}
@@ -1346,6 +1353,23 @@ function NextOfferCard({ offer, secs, busy, onAccept, onDecline }: { offer: Offe
           <button className="btn-ghost min-h-[44px] !text-danger border border-danger/40" disabled={busy} onClick={() => onDecline(offer.offerId)} data-testid="next-decline">{t('driver.offer.decline')}</button>
           <button className="btn-primary min-h-[44px]" disabled={busy || secs === 0} onClick={() => onAccept(offer.offerId)} data-testid="next-accept">{t('driver.offer.accept')}</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// «Клиент изменил адрес высадки» (operator 2026-11-27): on top of the trip screen, the new address, a «Понятно»
+// button that is not required — the banner goes away by itself after 7 s. The route is already rebuilt.
+function DropoffChangedBanner({ label, onClose }: { label: string; onClose: () => void }) {
+  const { t } = useT();
+  const closeRef = useRef(onClose); closeRef.current = onClose; // the parent re-renders every 1–5 s: keep ONE 7 s timer
+  useEffect(() => { const id = setTimeout(() => closeRef.current(), 7000); return () => clearTimeout(id); }, []);
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex justify-center px-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}>
+      <div role="alert" data-testid="dropoff-changed" className="pointer-events-auto w-full max-w-md rounded-[16px] border-2 border-accent bg-page/95 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.45)]">
+        <div className="text-sm font-semibold text-accent">📍 {t('driver.dropoffChanged')}</div>
+        <div className="mt-1 text-[19px] font-semibold leading-snug text-ink">{label}</div>
+        <button type="button" onClick={onClose} data-testid="dropoff-changed-ok" className="btn-primary mt-3 min-h-[44px] w-full">{t('driver.dropoffChangedOk')}</button>
       </div>
     </div>
   );

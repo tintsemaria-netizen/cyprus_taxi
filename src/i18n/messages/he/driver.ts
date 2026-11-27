@@ -3,6 +3,8 @@ import type en from '../en/driver';
 
 const driver: Catalog<typeof en> = {
   rideRemoved: "הנסיעה הוסרה ממך (בוטלה או הועברה לנהג אחר) — אין צורך לנסוע לאיסוף.",
+  dropoffChanged: "הנוסע שינה את היעד",
+  dropoffChangedOk: "הבנתי",
   units: {
     kmShort: "ק״מ",
     mShort: "מ׳",

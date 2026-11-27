@@ -44,6 +44,7 @@ const errors: Catalog<typeof en> = {
   NOT_COMPLETED: "Sie können eine Fahrt erst nach ihrem Ende bewerten.",
   NOT_ELIGIBLE: "Ihr Konto kann gerade keine Fahrten annehmen.",
   SHARE_NO_STOP: "Bei einer Fahrt mit Mitfahrer ist kein Zwischenstopp möglich.",
+  SHARE_NO_DROPOFF_CHANGE: "Bei einer Fahrt mit Mitfahrer bitten Sie den Fahrer, das Ziel zu ändern.",
   STOP_LOCKED: "Das Auto ist bereits am Zwischenstopp — er kann nicht mehr geändert werden.",
   NOT_FOUND: "Nicht gefunden.",
   NOT_RETRYABLE: "Für diese Fahrt kann nicht erneut gesucht werden.",

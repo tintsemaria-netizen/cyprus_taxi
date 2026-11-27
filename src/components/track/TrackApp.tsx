@@ -200,7 +200,8 @@ export default function TrackApp() {
   // Economical (2026-11-18): the driver's route is fetched once per leg and again only when the car
   // left it (> 50 m) or after 2 min — not every ~10 m as before. The passed part is cut off locally.
   const routeFetch = useRef<{ leg: string; at: number; n: number }>({ leg: '', at: 0, n: 0 });
-  const legKey = drvLoc && rleg ? rleg : planned ? `plan:${view!.pickup.lat},${view!.pickup.lng}>${view!.dropoff.lat},${view!.dropoff.lng}` : '';
+  // The destination is part of the key (2026-11-27): a changed drop-off redraws the line at once.
+  const legKey = drvLoc && rleg ? (rleg === 'dropoff' ? `dropoff:${view!.dropoff.lat},${view!.dropoff.lng}` : rleg) : planned ? `plan:${view!.pickup.lat},${view!.pickup.lng}>${view!.dropoff.lat},${view!.dropoff.lng}` : '';
   if (legKey !== routeFetch.current.leg) routeFetch.current = { leg: legKey, at: 0, n: routeFetch.current.n + 1 };
   else if (drvLoc && rleg && routeFetch.current.at && Date.now() - routeFetch.current.at > 15_000
     && (Date.now() - routeFetch.current.at > 120_000 || (routeLineRef.current.length > 1 && offRouteM(routeLineRef.current, drvLoc) > 50))) routeFetch.current = { leg: legKey, at: 0, n: routeFetch.current.n + 1 };
@@ -611,7 +612,7 @@ export default function TrackApp() {
 
                 {/* Route (2026-11-15): the same dotted box as when ordering, with room between points;
                     a stop can be added/removed in the middle until the car reaches it. */}
-                <TrackRoute onCancel={view.status === 'SEARCHING' && view.canCancel ? () => setConfirmCancel(true) : null} price={terminal ? null : view.shared ? fareRangeText(view.shared.fareCents, 'SHARED_FIXED', (c) => fmt.money(c)) : view.fareCents != null ? fareRangeText(view.fareCents, view.priceType, (c) => fmt.money(c), view.fareMinCents) : null} view={view} editable={!terminal && !view.stop?.arrivedAt && !(view.status === 'NO_DRIVER' && !view.canRetry) && !(view.scheduledAt && view.status !== 'REQUESTED')} canAddStop={!view.shareOptIn && !view.shared} onChanged={load} />
+                <TrackRoute onCancel={view.status === 'SEARCHING' && view.canCancel ? () => setConfirmCancel(true) : null} price={terminal ? null : view.shared ? fareRangeText(view.shared.fareCents, 'SHARED_FIXED', (c) => fmt.money(c)) : view.fareCents != null ? fareRangeText(view.fareCents, view.priceType, (c) => fmt.money(c), view.fareMinCents) : null} view={view} editable={!terminal && !view.stop?.arrivedAt && !(view.status === 'NO_DRIVER' && !view.canRetry) && !(view.scheduledAt && view.status !== 'REQUESTED')} canAddStop={!view.shareOptIn && !view.shared} canChangeDropoff={['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(view.status) && !view.shareOptIn && !view.shared} onChanged={load} />
                 {view.stop?.arrivedAt && !view.stop.departedAt && (
                   <p className="mt-2 rounded-[10px] border border-[#FFC83D]/40 bg-[#FFC83D]/10 px-3 py-2 text-xs text-[#FFC83D]">{view.stop.waitStartedAt ? t('track.stopWaitingPaid') : t('track.atStop')}</p>
                 )}
@@ -727,8 +728,9 @@ function Centered({ children }: { children: React.ReactNode }) {
 // rows, and the stop in the middle — add one if plans changed, or remove it — while the car has
 // not reached it. The estimate is re-quoted on the server; the driver is notified.
 type RoutePoint = { lat: number; lng: number; label: string };
-function TrackRoute({ view, editable, canAddStop = true, onChanged, price, onCancel }: { price?: string | null; onCancel?: (() => void) | null; view: { pickup: RoutePoint; dropoff: RoutePoint; stop?: (RoutePoint & { arrivedAt?: string | null }) | null }; editable: boolean; canAddStop?: boolean; onChanged: () => void }) {
+function TrackRoute({ view, editable, canAddStop = true, canChangeDropoff = false, onChanged, price, onCancel }: { price?: string | null; onCancel?: (() => void) | null; view: { pickup: RoutePoint; dropoff: RoutePoint; stop?: (RoutePoint & { arrivedAt?: string | null }) | null }; editable: boolean; canAddStop?: boolean; canChangeDropoff?: boolean; onChanged: () => void }) {
   const { t, tError } = useT();
+  const [changingDrop, setChangingDrop] = useState(false);
   const [picking, setPicking] = useState(false);
   const [sel, setSel] = useState<Selected | null>(null);
   const [text, setText] = useState('');
@@ -774,6 +776,11 @@ function TrackRoute({ view, editable, canAddStop = true, onChanged, price, onCan
                 : <span className="block h-3.5 w-3.5 rounded-full bg-accent" />}
             </span>
             <span className="min-w-0 flex-1 py-2 text-[15px] font-medium leading-snug text-ink">{r.label}</span>
+            {/* «Изменить» the drop-off during the ride (operator 2026-11-27): new price first, then the driver is told. */}
+            {r.dot === 'd' && canChangeDropoff && (
+              <button type="button" onClick={() => setChangingDrop(true)} data-testid="track-change-dropoff"
+                className="shrink-0 rounded-full border border-edge-strong px-3 py-1 text-xs font-medium text-muted hover:text-ink">{t('track.dropoffChange')}</button>
+            )}
             {r.dot === 's' && editable && (
               <button type="button" disabled={busy} onClick={() => void save(null)} aria-label={t('booking.form.removeStop')} className="flex h-9 w-8 shrink-0 items-center justify-center text-xl text-muted hover:text-danger">×</button>
             )}
@@ -790,6 +797,7 @@ function TrackRoute({ view, editable, canAddStop = true, onChanged, price, onCan
         </div>
       )}
       {err && !picking && <p className="mt-1 text-xs text-danger">{err}</p>}
+      {changingDrop && <ChangeDropoffSheet onClose={() => setChangingDrop(false)} onDone={() => { setChangingDrop(false); onChanged(); }} />}
       {picking && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label={t('booking.form.addStop')}
           onClick={(e) => { if (e.target === e.currentTarget && !busy) setPicking(false); }}>
@@ -807,6 +815,60 @@ function TrackRoute({ view, editable, canAddStop = true, onChanged, price, onCan
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// New drop-off during the ride (2026-11-27): pick the address → the server re-quotes the whole route →
+// the passenger sees the new price (and the old one) → «Подтвердить» applies it and tells the driver.
+type DropPreview = { quoteId: string; fareCents: number; priceType: string; oldFareCents: number | null; oldPriceType: string | null; fareMinCents: number | null };
+function ChangeDropoffSheet({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const { t, tError, fmt } = useT();
+  const [sel, setSel] = useState<Selected | null>(null);
+  const [text, setText] = useState('');
+  const [prev, setPrev] = useState<DropPreview | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const pick = async (s: Selected | null) => {
+    setSel(s); setPrev(null); setErr(null);
+    if (!s) return;
+    setBusy(true);
+    try { setPrev(await api<DropPreview>('/tracking/dropoff', { method: 'POST', body: { lat: s.lat, lng: s.lng, label: s.label } })); }
+    catch (e) { setErr(e instanceof ApiRequestError ? tError(e) : t('common.somethingWrong')); }
+    finally { setBusy(false); }
+  };
+  const confirm = async () => {
+    if (!sel || !prev) return;
+    setBusy(true); setErr(null);
+    try { await api('/tracking/dropoff', { method: 'POST', body: { lat: sel.lat, lng: sel.lng, label: sel.label, quoteId: prev.quoteId } }); onDone(); }
+    catch (e) { setErr(e instanceof ApiRequestError ? tError(e) : t('common.somethingWrong')); setPrev(null); }
+    finally { setBusy(false); }
+  };
+  const money = (c: number, type: string | null, min?: number | null) => fareRangeText(c, type, (x) => fmt.money(x), min);
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label={t('track.dropoffTitle')}
+      onClick={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
+      <div className="card w-full max-w-md p-4" style={{ marginBottom: 'env(safe-area-inset-bottom)' }} data-testid="change-dropoff">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold">{t('track.dropoffTitle')}</h2>
+          <button type="button" onClick={onClose} aria-label={t('common.close')} className="flex h-10 w-10 items-center justify-center rounded-full text-2xl text-muted">×</button>
+        </div>
+        <div className="mt-3">
+          <PlacesInput kind="To" value={sel} text={text} onText={setText} onSelect={(s) => void pick(s)} autoFocus />
+        </div>
+        {busy && !prev && <p className="mt-3 text-sm text-muted">{t('common.loading')}</p>}
+        {prev && (
+          <div className="mt-3 rounded-[12px] border border-edge-strong bg-elevated p-3" data-testid="dropoff-price">
+            <div className="text-[17px] font-bold text-ink">{t('track.dropoffNewPrice', { fare: money(prev.fareCents, prev.priceType, prev.fareMinCents) })}</div>
+            {prev.oldFareCents != null && <div className="mt-0.5 text-sm text-muted">{t('track.dropoffWas', { fare: money(prev.oldFareCents, prev.oldPriceType, prev.fareMinCents) })}</div>}
+            <p className="mt-2 text-xs text-muted">{t('track.dropoffNote')}</p>
+          </div>
+        )}
+        {err && <p className="mt-2 text-xs text-danger">{err}</p>}
+        <button type="button" className="btn-primary mt-3 min-h-[52px] w-full" disabled={!prev || busy} onClick={() => void confirm()} data-testid="dropoff-confirm">
+          {busy && prev ? t('common.loading') : t('track.dropoffConfirm')}
+        </button>
+      </div>
     </div>
   );
 }

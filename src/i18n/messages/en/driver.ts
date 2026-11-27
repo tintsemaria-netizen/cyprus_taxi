@@ -1,5 +1,7 @@
 const driver = {
   rideRemoved: "This ride was taken off you (cancelled or given to another driver) — no need to go to the pickup.",
+  dropoffChanged: "The passenger changed the destination",
+  dropoffChangedOk: "OK",
   units: {
     kmShort: 'km',
     mShort: 'm',

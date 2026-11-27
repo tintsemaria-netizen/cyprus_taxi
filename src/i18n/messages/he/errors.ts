@@ -44,6 +44,7 @@ const errors: Catalog<typeof en> = {
   NOT_COMPLETED: "אפשר לדרג נסיעה רק אחרי שהסתיימה.",
   NOT_ELIGIBLE: "החשבון שלך לא יכול לקבל נסיעות כרגע.",
   SHARE_NO_STOP: "בנסיעה עם נוסע משותף אי אפשר להוסיף עצירה.",
+  SHARE_NO_DROPOFF_CHANGE: "בנסיעה עם נוסע משותף, בקשו מהנהג לשנות את היעד.",
   STOP_LOCKED: "הרכב כבר בעצירה — אי אפשר לשנות אותה עוד.",
   NOT_FOUND: "לא נמצא.",
   NOT_RETRYABLE: "אי אפשר לחפש שוב לנסיעה הזו.",

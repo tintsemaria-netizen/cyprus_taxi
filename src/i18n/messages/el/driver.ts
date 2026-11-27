@@ -3,6 +3,8 @@ import type en from '../en/driver';
 
 const driver: Catalog<typeof en> = {
   rideRemoved: "Η διαδρομή αφαιρέθηκε από εσάς (ακυρώθηκε ή δόθηκε σε άλλον οδηγό) — δεν χρειάζεται να πάτε στην παραλαβή.",
+  dropoffChanged: "Ο επιβάτης άλλαξε τον προορισμό",
+  dropoffChangedOk: "Εντάξει",
   units: {
     kmShort: 'χλμ',
     mShort: 'μ',
