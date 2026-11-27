@@ -1,6 +1,7 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { flyCamera } from '@/components/GoogleMapView';
 import { areaBlock, loadNoGo, pickerOutlines, pickerSpot } from '@/lib/area-client';
 import { areaStroke } from '@/components/GoogleMapView';
 import LiftPin from '@/components/LiftPin';
@@ -227,8 +228,8 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
       showUser(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy ?? 0, gen);
       const mayRecenter = explicit ? userMoveCount.current === moveAtRequest : userMoveCount.current === 0;
       if (mayRecenter && mapRef.current) {
-        mapRef.current.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        mapRef.current.setZoom(pos.coords.accuracy && pos.coords.accuracy > 1000 ? 13 : 16);
+        // One smooth move (2026-11-27, operator): pan and zoom together, not a pan and then a zoom jump.
+        { const el = containerRef.current; flyCamera(mapRef.current, { lat: pos.coords.latitude, lng: pos.coords.longitude, zoom: pos.coords.accuracy && pos.coords.accuracy > 1000 ? 13 : 16 }, el?.clientWidth ?? 390, el?.clientHeight ?? 600, 1200, () => {}); }
       }
     };
     const onErr = (err: GeolocationPositionError, triedLow: boolean) => {

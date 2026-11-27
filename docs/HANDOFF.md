@@ -1,5 +1,9 @@
 # Session handoff
 
+## 2026-11-27 — picker «Моё местоположение» one smooth flight
+
+- GoogleMapPicker: the my-location recentre uses `flyCamera` (GoogleMapView export) instead of panTo + setZoom.
+
 ## 2026-11-27 — map picker zooms in to a territory point
 
 - GoogleMapPicker / MapPicker: settling in/near a territory point now also zooms to 17 (smooth 0.7 s), once per
