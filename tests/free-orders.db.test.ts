@@ -88,8 +88,15 @@ describe('free orders board', () => {
     const offer = await getDriverActiveOffer(maria);
     expect(offer).not.toBeNull();
     expect((await listFreeOrders(maria)).map((o) => o.bookingId)).not.toContain(b.id);
-    // Maria declines; nobody else eligible → the ride opens (still SEARCHING for the passenger).
+    // Maria declines; nobody else eligible → round 2 (operator 2026-11-27): Maria gets it once more, still not on the board.
     await rejectOffer(offer!.offerId, maria);
+    await runOnce(); // round 2 starts
+    await runOnce();
+    const again = await getDriverActiveOffer(maria);
+    expect(again).not.toBeNull();
+    expect((await listFreeOrders(maria)).map((o) => o.bookingId)).not.toContain(b.id);
+    // Declines again → the ride opens (still SEARCHING for the passenger).
+    await rejectOffer(again!.offerId, maria);
     await runOnce();
     const job = (await prisma.dispatchJob.findUnique({ where: { bookingId: b.id } }))!;
     expect(job.openedAt).not.toBeNull();
