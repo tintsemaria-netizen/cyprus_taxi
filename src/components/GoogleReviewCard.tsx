@@ -65,6 +65,6 @@ export function GoogleReviewCard({ compact = false, modal = false, onClose }: { 
   );
   // modal (2026-11-17): a separate window over everything, right after the passenger rated the trip.
   // Portal to <body> so no sheet/header stacking context can sit on top of it.
-  if (modal) return createPortal(<div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 px-4" onClick={later} role="dialog" aria-modal="true">{card}</div>, document.body);
+  if (modal) return createPortal(<div className="fixed inset-0 [&>*]:max-h-[calc(100dvh-1.5rem)] [&>*]:overflow-y-auto z-[1000] flex items-center justify-center bg-black/60 px-4" onClick={later} role="dialog" aria-modal="true">{card}</div>, document.body);
   return card;
 }

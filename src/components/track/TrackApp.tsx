@@ -776,7 +776,7 @@ function TrackRoute({ view, editable, canAddStop = true, canChangeDropoff = fals
       {err && !picking && <p className="mt-1 text-xs text-danger">{err}</p>}
       {changingDrop && <ChangeDropoffSheet onClose={() => setChangingDrop(false)} onDone={() => { setChangingDrop(false); onChanged(); }} />}
       {picking && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label={t('booking.form.addStop')}
+        <div className="fixed inset-0 z-[70] [&>*]:max-h-[calc(100dvh-1.5rem)] [&>*]:overflow-y-auto flex items-end justify-center bg-black/55 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label={t('booking.form.addStop')}
           onClick={(e) => { if (e.target === e.currentTarget && !busy) setPicking(false); }}>
           <div className="card w-full max-w-md p-4" style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
             <div className="flex items-center justify-between">
@@ -823,7 +823,7 @@ function ChangeDropoffSheet({ onClose, onDone }: { onClose: () => void; onDone: 
   };
   const money = (c: number, type: string | null, min?: number | null) => fareRangeText(c, type, (x) => fmt.money(x), min);
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label={t('track.dropoffTitle')}
+    <div className="fixed inset-0 z-[70] [&>*]:max-h-[calc(100dvh-1.5rem)] [&>*]:overflow-y-auto flex items-end justify-center bg-black/55 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label={t('track.dropoffTitle')}
       onClick={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
       <div className="card w-full max-w-md p-4" style={{ marginBottom: 'env(safe-area-inset-bottom)' }} data-testid="change-dropoff">
         <div className="flex items-center justify-between">

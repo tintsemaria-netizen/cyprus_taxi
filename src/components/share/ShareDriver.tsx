@@ -43,7 +43,7 @@ export function DriverShareProposalSheet({ p, onAnswered }: { p: DriverShareProp
   }
   const adults = p.passengers - p.children;
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 sm:items-center" role="alertdialog" aria-modal="true" aria-labelledby="dsp-title" data-testid="driver-share-proposal">
+    <div className="fixed inset-0 [&>*]:max-h-[calc(100dvh-1.5rem)] [&>*]:overflow-y-auto z-[70] flex items-end justify-center bg-black/55 sm:items-center" role="alertdialog" aria-modal="true" aria-labelledby="dsp-title" data-testid="driver-share-proposal">
       <div className="ily-offer-in w-full max-w-md rounded-t-[20px] border-2 border-accent bg-elevated p-5 sm:rounded-[20px]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}>
         <div className="flex items-center justify-between">
           <h2 id="dsp-title" className="font-semibold text-accent">👥 {t('share.driver.title')}</h2>
@@ -128,7 +128,7 @@ export function CoRiderLegPill({ leg, share, pair, onChanged, onError }: { leg: 
         <span className="shrink-0 text-xs text-accent">{statusText}</span>
       </button>
       {open && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="leg-title"
+        <div className="fixed inset-0 [&>*]:max-h-[calc(100dvh-1.5rem)] [&>*]:overflow-y-auto z-[70] flex items-end justify-center bg-black/55 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="leg-title"
           onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
           <div className="w-full max-w-md rounded-t-[20px] border border-edge bg-elevated p-5 sm:rounded-[20px]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}>
             <div className="flex items-center justify-between gap-2">

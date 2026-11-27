@@ -35,7 +35,7 @@ export function NotifyPrompt({ pushUrl, active }: { pushUrl: string; active: boo
   if (!show) return null;
   const done = () => { try { localStorage.setItem(ASKED_KEY, '1'); } catch { /* ignore */ } setShow(false); };
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label={t('common.notifyPrompt.title')}>
+    <div className="fixed inset-0 [&>*]:max-h-[calc(100dvh-1.5rem)] [&>*]:overflow-y-auto z-[80] flex items-end justify-center bg-black/55 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label={t('common.notifyPrompt.title')}>
       <div className="card w-full max-w-sm p-5" style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="text-3xl" aria-hidden>🔔</div>
         <h2 className="mt-2 text-lg font-bold">{t('common.notifyPrompt.title')}</h2>
