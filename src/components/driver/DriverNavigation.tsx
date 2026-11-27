@@ -13,11 +13,11 @@ import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { ChatPanel } from '@/components/ChatPanel';
 import { FarePreviewSheet } from './FarePreviewSheet';
 import { useSheetDrag } from '@/components/useSheetDrag';
+import { meterWaitingCents } from '@/lib/tariff';
 import { useHideClipped } from '@/components/useHideClipped';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { api } from '@/lib/api-client';
 import { formatFlight } from '@/lib/flight';
-import { meterWaitingCents, meterWaitingRatePerHourCents } from '@/lib/tariff';
 import { useT, type MsgKey } from '@/i18n/I18nProvider';
 import { INTL_TAG } from '@/i18n/config';
 import SwipeButton from '@/components/SwipeButton';
@@ -292,34 +292,6 @@ export function DriverNavigation(props: {
   const routeLine = useMemo(() => (route ? route.path.slice(Math.max(0, (progress?.seg ?? 0))).map(([la, ln]) => [ln, la] as [number, number]) : []), [route, progress?.seg]);
   const externalHref = `https://www.google.com/maps/dir/?api=1&destination=${target.lat},${target.lng}&travelmode=driving`;
 
-  // ---- Paid waiting meter at the stop (no grace; added to the main fare) ----
-  let stopNode: React.ReactNode = null;
-  if (atStop && stop) {
-    if (stop.waitStartedAt) {
-      const secs = Math.max(0, Math.floor((nowMs - new Date(stop.waitStartedAt).getTime()) / 1000));
-      const cents = meterWaitingCents(new Date(stop.waitStartedAt), new Date(nowMs));
-      stopNode = (
-        <div>
-          <div className="flex items-center justify-between gap-2"><span className="text-warn">⏱ {t('driver.stop.paidWaiting')}</span><span className="font-mono text-lg text-warn">{Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')} · {fmt.money(cents)}</span></div>
-          <div className="mt-0.5 text-xs text-muted">{t('driver.stop.rateNote', { rate: fmt.money(meterWaitingRatePerHourCents(new Date(nowMs))) })}</div>
-        </div>
-      );
-    } else {
-      stopNode = <span className="text-muted">{t('driver.stop.atStopHint')}</span>;
-    }
-  }
-
-  // ---- Waiting timer at pickup ----
-  let waitingNode: React.ReactNode = null;
-  if (trip.status === 'ARRIVED' && trip.waiting) {
-    const elapsed = Math.max(0, Math.floor((nowMs - new Date(trip.waiting.arrivedAt).getTime()) / 1000));
-    const freeLeft = Math.max(0, trip.waiting.graceSeconds - elapsed);
-    const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-    waitingNode = freeLeft > 0
-      ? (() => { const [before, after] = t('driver.trip.freeWaitingLeft', { time: '\u0000' }).split('\u0000'); return <span>{before}<span className="font-mono text-accent">{mmss(freeLeft)}</span>{after}</span>; })()
-      : <span className="text-warn">{trip.waiting.paidRateCentsPerMin > 0 ? t('driver.trip.freeWaitingElapsedPaid', { rate: fmt.money(trip.waiting.paidRateCentsPerMin) }) : t('driver.trip.freeWaitingElapsedFree')}</span>;
-  }
-
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-page" data-testid="driver-nav">
       {/* No manoeuvre banner and no notice strip on top (2026-11-19): the map uses the whole screen;
@@ -440,6 +412,10 @@ export function DriverNavigation(props: {
           {leg === 'stop' && !atStop && <button className={STAGE_BTN} onClick={() => props.onTripAction('stop', { action: 'arrived' })}><EdgeShine />{t('driver.stop.arrived')}</button>}
           {atStop && (
             <>
+              {/* Paid stop waiting on (operator 2026-11-27): only the running count, no captions. */}
+              {stop?.waitStartedAt && (() => { const secs = Math.max(0, Math.floor((nowMs - new Date(stop.waitStartedAt).getTime()) / 1000)); return (
+                <div className="mx-auto flex h-[53px] w-[65%] items-center justify-center rounded-full border border-warn/60 bg-page/95 font-mono text-[18px] font-bold text-warn shadow-lg" data-testid="stop-wait-count">⏱ {Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')} · {fmt.money(meterWaitingCents(new Date(stop.waitStartedAt), new Date(nowMs)))}</div>
+              ); })()}
               {!stop?.waitStartedAt && <button className="relative mx-auto block h-[53px] w-[65%] rounded-full border border-warn/60 bg-page/95 text-[16px] font-bold text-warn shadow-lg" onClick={() => props.onTripAction('stop', { action: 'wait' })}><EdgeShine />⏱ {t('driver.stop.startWaiting')}</button>}
               <button className={STAGE_BTN} onClick={() => props.onTripAction('stop', { action: 'continue' })}><EdgeShine />{t('driver.stop.continue')}</button>
             </>
@@ -501,9 +477,7 @@ export function DriverNavigation(props: {
           {trip.status === 'IN_PROGRESS' && <span className={`ms-auto rounded-md border px-2 py-0.5 text-sm font-bold ${trip.payment === 'CARD' ? 'border-danger/60 text-danger' : 'border-[#34C759]/60 text-[#34C759]'}`}>{trip.payment === 'CARD' ? 'card' : 'cash'}</span>}
           <span className={`text-muted ${trip.status === 'IN_PROGRESS' ? '' : 'ms-auto'}`}>{t(`common.vClass.${trip.vClass}` as MsgKey)}</span>
         </div>
-        {waitingNode && <div className="mt-2 rounded-[12px] border border-edge bg-page p-3 text-sm">{waitingNode}</div>}
         {stop && leg === 'pickup' && <div className="mt-1 text-sm"><span className="text-muted">{t('driver.stop.via')}</span> <span className="font-medium">{stop.label}</span></div>}
-        {stopNode && <div className="mt-2 rounded-[12px] border border-edge bg-page p-3 text-sm">{stopNode}</div>}
 
         {/* Comment and flight are in ☰ (operator, 2026-11-23), not in the panel. */}
         {/* The pair's stops with the time between them live in ☰ → «Подробности о заказе» (operator, 2026-11-23). */}

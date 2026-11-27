@@ -1,5 +1,14 @@
 # Session handoff
 
+## 2026-11-27 — waiting notices removed (operator)
+
+- Passenger ride screen: removed the pickup free/paid waiting box, «На остановке · идёт платное ожидание» and
+  «Местоположение в реальном времени» (gpsApprox / livePaused warnings kept). Dead 1 s timer removed.
+- Driver navigation: removed the pickup free/paid waiting line and the stop panel hint/«Платное ожидание» box.
+  When stop paid waiting is on, the spot of the «Включить платное ожидание» button shows only `⏱ m:ss · €` (testid
+  `stop-wait-count`). Unused texts deleted in 8 languages. Server waiting/no-show logic unchanged.
+- Checked: TrackApp, DriverNavigation, driver page, ShareDriver, sw.js pushes — no other such notices.
+
 ## 2026-11-27 — passenger: chat above ☰, late-cancel fees (dormant), arrived tidy (branch arrived-tidy)
 - TrackApp: «💬» round button above ☰ whenever a driver is assigned (unread badge); the «Чат» button left the code row
   (track.chat.short removed). «Местоположение в реальном времени» hidden at ARRIVED. Cancel window at ARRIVED has no ETA;

@@ -91,7 +91,6 @@ export default function TrackApp() {
   const [chatUnread, setChatUnread] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
-  const [nowMs, setNowMs] = useState(0);
   const [routeLine, setRouteLine] = useState<[number, number][]>([]);
   const routeLineRef = useRef<[number, number][]>([]);
   routeLineRef.current = routeLine; // [lng,lat] driver→pickup / →destination
@@ -324,15 +323,6 @@ export default function TrackApp() {
     }
   }, [view?.status]);
   // During the trip the map follows the car closely (north-up); a gesture frees it for 4 s.
-
-  // Tick the pickup-waiting timer once per second while the driver is waiting.
-  const arrived = view?.status === 'ARRIVED';
-  useEffect(() => {
-    if (!arrived) return;
-    setNowMs(Date.now());
-    const iv = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(iv);
-  }, [arrived]);
 
   async function retry() {
     if (!view) return;
@@ -595,36 +585,10 @@ export default function TrackApp() {
                   </div>
                 )}
 
-                {/* pickup waiting timer (after arrival) */}
-                {view.status === 'ARRIVED' && view.waiting && (() => {
-                  const elapsed = Math.max(0, Math.floor((nowMs - new Date(view.waiting.arrivedAt).getTime()) / 1000));
-                  const freeLeft = Math.max(0, view.waiting.graceSeconds - elapsed);
-                  const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-                  return (
-                    <div className="mt-3 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
-                      {freeLeft > 0
-                        ? <span>{rich(t('track.waitingFree', { time: SLOT }), <span className="font-mono text-accent">{mmss(freeLeft)}</span>)}</span>
-                        : <span className="text-warn">{view.waiting.paidRateCentsPerMin > 0 ? t('track.waitingElapsedPaid', { rate: fmt.money(view.waiting.paidRateCentsPerMin) }) : t('track.waitingElapsed')}</span>}
-                    </div>
-                  );
-                })()}
-
                 {/* Route (2026-11-15): the same dotted box as when ordering, with room between points;
                     a stop can be added/removed in the middle until the car reaches it. */}
                 <TrackRoute onCancel={view.status === 'SEARCHING' && view.canCancel ? () => setConfirmCancel(true) : null} price={terminal ? null : view.shared ? fareRangeText(view.shared.fareCents, 'SHARED_FIXED', (c) => fmt.money(c)) : view.fareCents != null ? fareRangeText(view.fareCents, view.priceType, (c) => fmt.money(c), view.fareMinCents) : null} view={view} editable={!terminal && !view.stop?.arrivedAt && !(view.status === 'NO_DRIVER' && !view.canRetry) && !(view.scheduledAt && view.status !== 'REQUESTED')} canAddStop={!view.shareOptIn && !view.shared} onChanged={load} />
-                {view.stop?.arrivedAt && !view.stop.departedAt && (
-                  <p className="mt-2 rounded-[10px] border border-[#FFC83D]/40 bg-[#FFC83D]/10 px-3 py-2 text-xs text-[#FFC83D]">{view.stop.waitStartedAt ? t('track.stopWaitingPaid') : t('track.atStop')}</p>
-                )}
-
                 {liveLocation && dr.estimated && <p className="mt-2 text-xs text-warn" data-testid="gps-approx">📡 {t('track.gpsApprox')}</p>}
-                {/* Not once the driver is at the pickup (operator 2026-11-26). */}
-                {liveLocation && !dr.estimated && view.status !== 'ARRIVED' && (
-                  <p className="mt-2 text-xs text-muted">
-                    {t(liveLocation.poorAccuracy ? 'track.locationLineLowAcc' : 'track.locationLine', {
-                      freshness: ['fresh', 'stale', 'disconnected'].includes(liveLocation.freshness) ? t(`track.freshness.${liveLocation.freshness}` as MsgKey) : liveLocation.freshness,
-                    })}
-                  </p>
-                )}
                 {disconnected && <p className="mt-2 text-xs text-warn">{t('track.livePaused')}</p>}
                 {(view.status === 'EN_ROUTE' || view.status === 'ASSIGNED') && !liveLocation && !disconnected && <p className="mt-2 text-xs text-muted">{t('track.etaUnavailable')}</p>}
 

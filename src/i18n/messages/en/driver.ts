@@ -121,9 +121,6 @@ const driver = {
     call: '📞 Call',
     navigate: '🧭 Navigate',
     navigateWarning: 'Switching to another app pauses your live location. Come back to IL-Y regularly so the passenger can see you.',
-    freeWaitingLeft: 'Free waiting: {time} left',
-    freeWaitingElapsedPaid: 'Free waiting elapsed · paid {rate}/min',
-    freeWaitingElapsedFree: 'Free waiting elapsed (no pre-pickup charge)',
     onTheWay: "I'm on the way",
     arrived: "I've arrived",
     startCodePlaceholder: 'Passenger start code (4 digits)',
@@ -414,7 +411,7 @@ const driver = {
   },
   close: { questions: "Any questions?", changePrice: "Change the price", editLabel: "Taximeter amount, €", editNote: "Check it: after «Complete» the amount cannot be changed.", belowMin: "Not below the minimum price: {amount}", prebookMin: '{zone}: at least {amount}. If the meter shows less, the passenger pays {amount}.', title: 'Trip cost', subtitle: 'Check the amount with {name} before completing.', loadFailed: 'Could not load the amount. You can still complete the trip.', fare: 'Fare', estimate: 'Trip (estimate)', pickupWait: 'Waiting at pickup', stopWait: 'Paid waiting at the stop', total: 'Total', meterNote: 'Regulated meter: the final amount is what the taximeter shows.', confirm: 'Complete trip', back: 'Back', completed: 'Trip completed' },
   ratePax: { title: 'Rate {name}', skip: 'Skip' },
-  stop: { rateNote: 'Taximeter waiting rate: {rate}/h, added to the fare', paidWaiting: 'Paid waiting', atStopHint: 'Passenger at the stop. Start paid waiting if they ask you to wait.', atStop: 'At the stop', via: 'Via stop:', arrived: 'Arrived at the stop', startWaiting: 'Start paid waiting', continue: 'Continue to the destination' },
+  stop: { atStop: 'At the stop', via: 'Via stop:', arrived: 'Arrived at the stop', startWaiting: 'Start paid waiting', continue: 'Continue to the destination' },
   navigation: {
     shareTrip: 'Share trip',
     shareTitle: 'IL-Y trip',
