@@ -3,6 +3,9 @@ import { config } from '@/lib/config';
 import { findBestCandidate, RADIUS_STAGES_KM } from './eligibility';
 import { startSearchTx, searchDeadline } from './search';
 import { FREE_BOARD_SEC } from './free-orders';
+
+/** Offer rounds before the free-orders board (operator 2026-11-27: «два круга»). */
+export const OFFER_ROUNDS = 2;
 import { runPreassignments } from './preassign';
 import { createOffer, expireOffer } from './offers';
 import { rematchBooking } from './lifecycle';
@@ -214,6 +217,13 @@ async function processJob(jobId: string): Promise<void> {
       await dissolveUnclaimedTx(tx, job.bookingId);
     });
     return; // next tick: the host searches alone; the co-rider is promoted by promoteScheduled
+  }
+  if (!candidate && job.offerRound < OFFER_ROUNDS && job.triedDriverIds.length > job.blockedDriverIds.length) {
+    // Second round (operator 2026-11-27): everyone nearby declined or missed it → offer it to them once more,
+    // nearest first, from the first radius again. A driver who released / lost this ride stays out.
+    await prisma.dispatchJob.update({ where: { id: jobId }, data: { offerRound: { increment: 1 }, triedDriverIds: job.blockedDriverIds, radiusStage: 0 } });
+    await prisma.bookingEvent.create({ data: { bookingId: job.bookingId, type: 'OFFER_ROUND', actorType: 'SYSTEM', beforeStatus: 'SEARCHING', afterStatus: 'SEARCHING', reason: `round ${job.offerRound + 1}` } });
+    return; // next tick searches again
   }
   if (!candidate) {
     // Every eligible nearby driver has been offered the ride (or there is none): open it to all

@@ -796,6 +796,11 @@ model DispatchJob {
   deadlineAt     DateTime
   triedDriverIds String[]  @default([])
   radiusStage    Int       @default(0)
+  // Two rounds of offers (operator 2026-11-27): when every nearby driver has declined / missed it, the ride is
+  // offered to them all once more, nearest first, before it goes to the free-orders board. Drivers in
+  // blockedDriverIds (the one who released or lost this ride) are never offered it again, in any round.
+  offerRound       Int      @default(1)
+  blockedDriverIds String[] @default([])
   // Set when automatic offers to nearby drivers are exhausted: the ride is then on the drivers'
   // free-orders board until deadlineAt (FREE_BOARD_SEC), after which it becomes NO_DRIVER.
   openedAt       DateTime?
