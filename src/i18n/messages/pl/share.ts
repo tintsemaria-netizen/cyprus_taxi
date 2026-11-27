@@ -124,7 +124,7 @@ const share: Catalog<typeof en> = {
     noShowFee: "Opłata za niestawienie się: {amount}",
     setting: "Biorę współpasażerów",
     settingHint: "Tylko lotnisko i międzymiastowe.",
-    settingInfo: "• Tylko kursy z lotniska w Larnace lub Pafos i między Larnaką, Nikozją, Pafos i Ayia Napa. Nie w obrębie jednego miasta.\n• Najwyżej dwa zlecenia w aucie. Wszyscy pasażerowie i walizki muszą się zmieścić.\n• Każdy pasażer ma {pct}% zniżki; Ty zarabiasz oba kursy.\n• W drodze może przyjść «Współpasażer po drodze»: o ile dłużej potrwa kurs, kolejność przystanków i Twój zarobek. Brak odpowiedzi oznacza «Nie».\n• Rezerwacja ze współpasażerem to jedno zlecenie dla dwojga w «Rezerwacjach».\n• Jeśli jeden pasażer odwoła lub nie wyjdzie, drugi płaci pełną cenę.",
+    settingInfo: "• Tylko przejazdy na lotniska w Larnace i Pafos i z nich oraz między Larnaką, Nikozją, Limassol, Pafos i Ayia Napa. W obrębie jednego miasta nie ma współpasażerów.\n• Najwyżej dwa zlecenia w aucie. Wszyscy pasażerowie i walizki muszą się zmieścić.\n• Każdy pasażer ma {pct}% zniżki; Ty zarabiasz oba kursy.\n• W drodze może przyjść «Współpasażer po drodze»: o ile dłużej potrwa kurs, kolejność przystanków i Twój zarobek. Brak odpowiedzi oznacza «Nie».\n• Rezerwacja ze współpasażerem to jedno zlecenie dla dwojga w «Rezerwacjach».\n• Jeśli jeden pasażer odwoła lub nie wyjdzie, drugi płaci pełną cenę. Przycisk nieobecności pojawia się {min} min po Twoim przyjeździe.",
     boardPair: "Wspólny · osoby: {n} · walizki: {bags}",
     boardSecond: "2. pasażer {time}: {from} → {to}",
     state: {
@@ -160,7 +160,7 @@ const share: Catalog<typeof en> = {
   },
   board: {
     booked: "Szukamy współpasażera i damy znać, gdy go znajdziemy. Jeśli nie, jedziesz sam w normalnej cenie.",
-    joinSent: 'Gotowe — jedziecie razem, −30%.',
+    joinSent: 'Gotowe — jedziecie razem, −{pct}%.',
     joinFailed: 'Nie wysłano ({reason}). Szukamy dalej automatycznie.',
   },
 };

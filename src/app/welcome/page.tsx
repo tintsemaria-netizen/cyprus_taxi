@@ -5,18 +5,25 @@
 import { PassengerTopBar } from '@/components/PassengerTopBar';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { WelcomeAnimation } from '@/components/WelcomeAnimation';
+import { useEffect, useState } from 'react';
 import { useT } from '@/i18n/I18nProvider';
+import { api } from '@/lib/api-client';
 import { LegalLinks } from '@/components/LegalShell';
 
+// «Попутчик» first (2026-11-27, operator): what only IL-Y has.
 const FEATURES = [
-  ['✈', 'airport'],
   ['👥', 'share'],
+  ['✈', 'airport'],
   ['🗓', 'prebook'],
   ['📍', 'track'],
 ] as const;
 
 export default function Welcome() {
   const { t } = useT();
+  // The co-rider discount from the server settings (2026-11-27, operator: a changed rule must change everywhere),
+  // 30 % until it loads.
+  const [pct, setPct] = useState(30);
+  useEffect(() => { api<{ share?: { discountPct?: number } }>('/public/config', { timeoutMs: 8000 }).then((c) => { if (typeof c.share?.discountPct === 'number') setPct(c.share.discountPct); }).catch(() => {}); }, []);
   return (
     <div className="min-h-[100dvh]">
       {/* The first page: no back arrow, no «Войти» (2026-11-26, operator). */}
@@ -38,8 +45,8 @@ export default function Welcome() {
             <div key={k} className="ily-in flex gap-3 rounded-[16px] border border-edge bg-elevated p-4" style={{ animationDelay: `${0.3 + i * 0.12}s` }}>
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xl font-bold text-accent">{icon}</span>
               <span className="min-w-0">
-                <span className="block font-semibold">{t(`promo.${k}T` as 'promo.airportT')}</span>
-                <span className="mt-0.5 block text-sm text-muted">{t(`promo.${k}D` as 'promo.airportD')}</span>
+                <span className="block font-semibold">{t(`promo.${k}T` as 'promo.shareT', { pct })}</span>
+                <span className="mt-0.5 block text-sm text-muted">{t(`promo.${k}D` as 'promo.shareD', { pct })}</span>
               </span>
             </div>
           ))}

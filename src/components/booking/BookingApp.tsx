@@ -1046,7 +1046,7 @@ export default function BookingApp() {
           const myId = (res as unknown as { bookingId?: string }).bookingId;
           setJoinResult(null);
           if (myId) api('/passenger/share-board', { method: 'POST', body: { myBookingId: myId, otherBookingId: joinPick } })
-            .then(() => setJoinResult({ ok: true, text: t('share.board.joinSent') }))
+            .then(() => setJoinResult({ ok: true, text: t('share.board.joinSent', { pct: cfg?.share?.discountPct ?? 30 }) }))
             .catch((e) => setJoinResult({ ok: false, text: t('share.board.joinFailed', { reason: e instanceof ApiRequestError ? tError(e) : t('common.networkError') }) }));
           setJoinPick(null);
           return;

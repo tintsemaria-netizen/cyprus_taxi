@@ -12,7 +12,8 @@ export async function GET() {
   const ctx = await requireDriver();
   if (!isDriverCtx(ctx)) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();
   const d = await prisma.driver.findUnique({ where: { id: ctx.driver.id }, select: { acceptsShared: true } });
-  return apiOk({ acceptsShared: !!d?.acceptsShared, discountPct: config.share.discountPct });
+  // noShowMin (2026-11-27): when «Не вышел» becomes available — 3 free + 2 paid minutes, as for every ride.
+  return apiOk({ acceptsShared: !!d?.acceptsShared, discountPct: config.share.discountPct, noShowMin: Math.round(config.dispatch.waitingGraceSeconds / 60) + config.dispatch.lateCancelAfterPaidMin });
 }
 
 const schema = z.object({ acceptsShared: z.boolean() });

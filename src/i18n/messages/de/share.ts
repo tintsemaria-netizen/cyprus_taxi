@@ -124,7 +124,7 @@ const share: Catalog<typeof en> = {
     noShowFee: "No-Show-Gebühr: {amount}",
     setting: "Mitfahrer mitnehmen",
     settingHint: "Nur Flughafen und Überland.",
-    settingInfo: "• Nur Fahrten ab Flughafen Larnaka oder Paphos und zwischen Larnaka, Nikosia, Paphos und Ayia Napa. Nicht innerhalb einer Stadt.\n• Höchstens zwei Aufträge im Auto. Alle Fahrgäste und Koffer müssen hineinpassen.\n• Jeder Fahrgast erhält {pct}% Rabatt; Sie verdienen beide Fahrpreise.\n• Unterwegs kann «Mitfahrer auf dem Weg» kommen: wie viel länger die Fahrt dauert, die Reihenfolge der Stopps und Ihr Verdienst. Keine Antwort gilt als «Nein».\n• Eine Vorbestellung mit Mitfahrer ist ein Auftrag für zwei unter «Vorbestellungen».\n• Storniert ein Fahrgast oder erscheint nicht, zahlt der andere den vollen Preis.",
+    settingInfo: "• Nur Fahrten zu und von den Flughäfen Larnaka und Paphos und zwischen Larnaka, Nikosia, Limassol, Paphos und Ayia Napa. Innerhalb einer Stadt gibt es keine Mitfahrer.\n• Höchstens zwei Aufträge im Auto. Alle Fahrgäste und Koffer müssen hineinpassen.\n• Jeder Fahrgast erhält {pct}% Rabatt; Sie verdienen beide Fahrpreise.\n• Unterwegs kann «Mitfahrer auf dem Weg» kommen: wie viel länger die Fahrt dauert, die Reihenfolge der Stopps und Ihr Verdienst. Keine Antwort gilt als «Nein».\n• Eine Vorbestellung mit Mitfahrer ist ein Auftrag für zwei unter «Vorbestellungen».\n• Storniert ein Fahrgast oder erscheint nicht, zahlt der andere den vollen Preis. Die Taste «Nicht erschienen» erscheint {min} Min. nach Ihrer Ankunft.",
     boardPair: "Geteilt · Personen: {n} · Koffer: {bags}",
     boardSecond: "2. Fahrgast {time}: {from} → {to}",
     state: {
@@ -160,7 +160,7 @@ const share: Catalog<typeof en> = {
   },
   board: {
     booked: "Wir suchen einen Mitfahrer und melden uns, sobald wir einen finden. Sonst fahren Sie allein zum normalen Preis.",
-    joinSent: 'Fertig — Sie fahren gemeinsam, −30%.',
+    joinSent: 'Fertig — Sie fahren gemeinsam, −{pct}%.',
     joinFailed: 'Nicht gesendet ({reason}). Wir suchen automatisch weiter.',
   },
 };

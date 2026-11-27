@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-27 — co-rider texts everywhere (operator rule «a changed rule is changed everywhere»)
+
+- /welcome: «Попутчик» card first, new text (operator), discount `{pct}` from /public/config.
+- Driver «Беру попутчиков» info: to AND from LCA/PFO, Limassol added; «Не вышел» after {min} (grace + paid min,
+  from /driver/share/settings `noShowMin`). share.board.joinSent uses {pct}. 8 languages.
+- CLAUDE.md: new operator rule «A changed rule is changed everywhere it is told».
+
 ## 2026-11-27 — picker «Моё местоположение» one smooth flight
 
 - GoogleMapPicker: the my-location recentre uses `flyCamera` (GoogleMapView export) instead of panTo + setZoom.

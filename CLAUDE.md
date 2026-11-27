@@ -28,6 +28,11 @@ Confirmed beta target: https://cyprustaxi.ackedberryes.store on 92.39.53.229. Cl
 - Check everywhere (2026-11-22): the project is large. When you fix a problem or change behaviour, search the whole
   codebase for the same pattern — passenger, driver, admin, fleet, share, pre-booking, server and worker — and fix or
   list every other place it occurs. Tell the operator where you checked and what else you found.
+- A changed rule is changed everywhere it is told (2026-11-27): when a rule, price, time or limit changes (fees,
+  waiting minutes, discounts, who sees what button when), update every text that describes it in the same change —
+  info «ⓘ» cards, the /welcome page, driver and passenger hints, confirm sheets, push texts (`public/sw.js`), e-mails,
+  admin help — in all languages. Prefer reading the number from the server setting over writing it into the text.
+  Tell the operator which texts you changed.
 - Language (2026-11-22): every person (passenger, driver, staff) first gets the phone's / browser's language; once
   they choose a language it stays fixed for them. Screens, e-mails and push notifications all follow it — a new
   notification gets a text key in `public/sw.js` MSG_TEXT (8 languages), never English-only text.

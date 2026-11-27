@@ -183,7 +183,8 @@ export function AcceptsSharedToggle() {
   const infoBtnRef = useRef<HTMLButtonElement | null>(null);
   const infoBoxRef = useRef<HTMLParagraphElement | null>(null);
   useDismiss(info, () => setInfo(false), [infoBtnRef, infoBoxRef]); // a tap elsewhere closes it (2026-11-27)
-  useEffect(() => { api<{ acceptsShared: boolean; discountPct: number }>('/driver/share/settings').then((r) => { setOn(r.acceptsShared); setPct(r.discountPct); }).catch(() => {}); }, []);
+  const [noShowMin, setNoShowMin] = useState(5);
+  useEffect(() => { api<{ acceptsShared: boolean; discountPct: number; noShowMin?: number }>('/driver/share/settings').then((r) => { setOn(r.acceptsShared); setPct(r.discountPct); if (typeof r.noShowMin === 'number') setNoShowMin(r.noShowMin); }).catch(() => {}); }, []);
   async function toggle(v: boolean) {
     setOn(v);
     try { const r = await api<{ acceptsShared: boolean }>('/driver/share/settings', { method: 'PATCH', body: { acceptsShared: v } }); setOn(r.acceptsShared); }
@@ -207,7 +208,7 @@ export function AcceptsSharedToggle() {
           </span>
         </label>
       </div>
-      {info && <p ref={infoBoxRef} className="mt-2 whitespace-pre-line rounded-[10px] border border-edge bg-page px-3 py-2 text-xs leading-relaxed text-muted" data-testid="share-info-text">{t('share.driver.settingInfo', { pct })}</p>}
+      {info && <p ref={infoBoxRef} className="mt-2 whitespace-pre-line rounded-[10px] border border-edge bg-page px-3 py-2 text-xs leading-relaxed text-muted" data-testid="share-info-text">{t('share.driver.settingInfo', { pct, min: noShowMin })}</p>}
     </div>
   );
 }
