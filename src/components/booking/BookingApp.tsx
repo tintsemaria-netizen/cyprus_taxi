@@ -1,5 +1,6 @@
 'use client';
 
+import { useFlash } from '@/components/useFlash';
 import { PASSENGER_GUEST } from '@/lib/features';
 import { FixedTop } from '@/components/FixedTop';
 import { useKeyboardViewport } from '@/components/useKeyboardViewport';
@@ -665,6 +666,12 @@ export default function BookingApp() {
   // Drop-off points (2026-11-24, operator): a destination inside a territory that has them goes to the nearest
   // one; the passenger may choose another with the chips. The server snaps the same way.
   const dropTerr = useMemo(() => (dropoff ? dropTerritoryAt(dropoff) : null), [dropoff?.lat, dropoff?.lng, noGoReady]); // eslint-disable-line react-hooks/exhaustive-deps
+  // One point only = nothing to choose: the notice shows for 3 s and goes away (operator 2026-11-27). With several
+  // points it stays, because its buttons are the choice.
+  const terrFlash = useFlash(terr && terr.t.points.length <= 1 ? `p:${terr.t.name}` : null);
+  const dropFlash = useFlash(dropTerr && (dropTerr.t.dropPoints ?? []).length <= 1 ? `d:${dropTerr.t.name}` : null);
+  const showTerr = !!terr && (terr.t.points.length > 1 || terrFlash);
+  const showDropTerr = !!dropTerr && (dropTerr.t.dropPoints ?? []).length > 0 && ((dropTerr.t.dropPoints ?? []).length > 1 || dropFlash);
   const chooseDrop = (i: number) => {
     if (!dropTerr) return;
     const sp = (dropTerr.t.dropPoints ?? [])[i]; if (!sp) return;
@@ -1454,11 +1461,11 @@ export default function BookingApp() {
           ) : (
             <AutoMapView markers={spotFocus ? mapMarkersNoFit : mapMarkers} areas={mapAreas} route={route?.line} fitRoute={!spotFocus} fleet={fleet} fleetLikeSelf focus={spotFocus ?? (pickup && dropoff ? null : camFocus)} focusZoom={spotFocus ? 17 : pickup && dropoff ? undefined : camZoom} center={myLoc ?? { lat: 34.92, lng: 33.2 }} zoom={myLoc ? 14 : 9} interactive fitPadding={fitPadding} recenterTick={recenterTick} holdCamera={onSpot && !landing} onGlideEnd={() => { if (landTimer.current) window.clearTimeout(landTimer.current); setLanding(false); }} glideMs={landing ? SPOT_GLIDE_MS : undefined} onUserMove={() => { setMapMoved(true); if (centerModeRef.current) setPinLift(true); }} onCenterPick={onCenterPick} className="h-full w-full" />
           )}
-          {step === 'form' && (terr || dropTerr) && (
+          {step === 'form' && (showTerr || showDropTerr) && (
             // Below the point the map is centred on, and see-through (operator 2026-11-26), so the point stays visible.
             <div className="pointer-events-none absolute inset-x-3 z-[6] mx-auto max-w-sm space-y-2"
               style={{ top: mapBox.h > 0 ? pinPoint(fitPadding, mapBox.w, mapBox.h).y + 34 : '58%' }}>
-              {terr && (
+              {terr && showTerr && (
             <div className="pointer-events-auto rounded-[14px] border border-[#4C9AFF]/70 bg-elevated/55 px-3 py-2 backdrop-blur-[2px] text-[13px] leading-snug text-ink shadow-lg" data-testid="pickup-territory">
               <div className="flex items-start gap-2"><div className="flex-1 font-medium">📍 {t(terr.t.points.length > 1 ? 'booking.pickupPoints' : 'booking.pickupPoint', { name: terr.t.name })}</div></div>
               {terr.t.points.length > 1 && (
@@ -1473,7 +1480,7 @@ export default function BookingApp() {
               )}
             </div>
               )}
-              {dropTerr && (dropTerr.t.dropPoints ?? []).length > 0 && (
+              {dropTerr && showDropTerr && (
                 <div className="pointer-events-auto rounded-[14px] border border-[#FFC83D]/70 bg-elevated/55 px-3 py-2 backdrop-blur-[2px] text-[13px] leading-snug text-ink shadow-lg" data-testid="drop-territory">
                   <div className="flex items-start gap-2"><div className="flex-1 font-medium">🏁 {t((dropTerr.t.dropPoints ?? []).length > 1 ? 'booking.dropPoints' : 'booking.dropPoint', { name: dropTerr.t.name, point: (dropTerr.t.dropPoints ?? [])[Math.max(0, dropTerr.on)]?.name || dropTerr.t.name })}</div></div>
                   {(dropTerr.t.dropPoints ?? []).length > 1 && (
