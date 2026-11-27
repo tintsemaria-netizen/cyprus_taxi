@@ -392,6 +392,11 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     }
   }, [markers, ready, fitPadding]);
 
+  // Camera animation state shared by the framing flight and the keep-in-view glide (2026-11-27).
+  const keepAnim = useRef(0);
+  const lastCam = useRef(0);
+  const flyUntil = useRef(0);
+  const lastTarget = useRef<{ lat: number; lng: number; zoom: number } | null>(null);
   // Frame the view. Keyed on a signature that IGNORES vehicle movement, so a moving
   // driver dot animates freely without the map re-fitting/zooming every GPS tick — it
   // only re-frames when the stops (pickup/dropoff) or the marker set change.
@@ -408,6 +413,28 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     const box = containerRef.current?.getBoundingClientRect();
     const pad = safePadding(fitPadding ?? { top: 70, right: 70, bottom: 70, left: 70 }, box?.width ?? 0, box?.height ?? 0);
     const fm = markers.filter((m) => !m.noFit); // later stops of a shared ride are shown, not framed
+    // Live trip (2026-11-27): one smooth flight to the car, the stops and the route — never a series of
+    // instant jumps (marker set, route, sheet height). The keep-in-view glide takes over afterwards.
+    if (keepInView) {
+      const el = containerRef.current;
+      const pts = fm.map((m) => ({ lat: m.lat, lng: m.lng }));
+      if (route) route.forEach(([lng, lat]) => pts.push({ lat, lng }));
+      if (!el || pts.length < 2) return;
+      const target = cameraFor(pts, el.clientWidth, el.clientHeight, pad);
+      if (!target) return;
+      const tgt = { ...target.center, zoom: Math.max(MIN_FIT_ZOOM, target.zoom) };
+      // A re-run during the flight with about the same framing (the sheet settling) keeps that flight.
+      const lt = lastTarget.current;
+      if (lt && performance.now() < flyUntil.current) {
+        const sc = toScreen(tgt, lt, lt.zoom, el.clientWidth, el.clientHeight);
+        if (Math.abs(sc.x - el.clientWidth / 2) < 40 && Math.abs(sc.y - el.clientHeight / 2) < 40 && Math.abs(tgt.zoom - lt.zoom) < 0.3) return;
+      }
+      cancelAnimationFrame(keepAnim.current);
+      flyUntil.current = performance.now() + 1600;
+      lastTarget.current = tgt;
+      flyCamera(map, tgt, el.clientWidth, el.clientHeight, 1500, (id) => { keepAnim.current = id; }, () => { flyUntil.current = 0; lastCam.current = 0; });
+      return;
+    }
     // One point + a drawn route (2026-11-19: trip in progress while the car's position is not known)
     // frames the whole route too, instead of a close-up of the destination with the line cut off.
     if (fm.length >= 2 || (fm.length === 1 && fitRoute && route && route.length > 1)) {
@@ -431,13 +458,14 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitKey, ready, idle.returnTick, padKey, recenterTick, keepInView ? (routeKey ? 'route' : '') : routeKey]);
 
-  // Keep-in-view camera (2026-11-18). Economical: one check per GPS update, a camera move only when a
-  // point left the view (or the remaining route got much smaller), at most every 3 s, eased over 1 s.
-  const keepAnim = useRef(0);
-  const lastCam = useRef(0);
+  // Keep-in-view camera (2026-11-18; continuous since 2026-11-27, operator: it moved in 3-second jerks and
+  // crept towards the car). Every GPS update glides the camera to the new framing over the same time the car
+  // glides (about the gap between updates), linearly, so camera and car move together without stops.
+  // An unchanged framing (a re-render without a new position) never restarts the glide.
   useEffect(() => {
     const map = mapRef.current, el = containerRef.current;
     if (!keepInView || !map || !el || !ready || followRef.current || idle.active.current) return;
+    if (performance.now() < flyUntil.current) return; // the framing flight is still on
     const pts: { lat: number; lng: number }[] = markers.filter((m) => !m.noFit).map((m) => ({ lat: m.lat, lng: m.lng }));
     if (route) route.forEach(([lng, lat]) => pts.push({ lat, lng }));
     if (pts.length < 2) return;
@@ -447,17 +475,25 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
     if (!target) return;
     const c = map.getCenter?.(); const z = map.getZoom?.();
     if (!c || z == null) return;
-    const cur = { lat: c.lat(), lng: c.lng() };
-    const inView = pts.every((p) => { const s = toScreen(p, cur, z, W, H); return s.x >= pad.left * 0.6 && s.x <= W - pad.right * 0.6 && s.y >= pad.top * 0.6 && s.y <= H - pad.bottom * 0.6; });
+    const lt = lastTarget.current;
+    const same = (a: { lat: number; lng: number; zoom: number }, b: { lat: number; lng: number; zoom: number }) => {
+      const s = toScreen(b, a, a.zoom, W, H);
+      return Math.abs(s.x - W / 2) < 2 && Math.abs(s.y - H / 2) < 2 && Math.abs(a.zoom - b.zoom) < 0.02;
+    };
+    const tgt = { ...target.center, zoom: target.zoom };
+    if (lt && same(lt, tgt)) return; // nothing new to frame
+    const cur = { lat: c.lat(), lng: c.lng(), zoom: z };
+    lastTarget.current = tgt;
+    if (same(cur, tgt)) return;
     const now = performance.now();
-    if (inView && target.zoom - z < 0.6) return;
-    if (inView && now - lastCam.current < 3000) return;
+    const gap = lastCam.current ? now - lastCam.current : 0;
     lastCam.current = now;
+    const dur = gap ? Math.max(900, Math.min(6000, gap * 0.95)) : 1000;
     cancelAnimationFrame(keepAnim.current);
-    const start = now, from = { ...cur, zoom: z };
+    const start = now, from = cur;
     const step = (tNow: number) => {
-      const k = Math.min(1, (tNow - start) / 1000), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-      map.moveCamera({ center: { lat: from.lat + (target.center.lat - from.lat) * e, lng: from.lng + (target.center.lng - from.lng) * e }, zoom: from.zoom + (target.zoom - from.zoom) * e });
+      const k = Math.min(1, (tNow - start) / dur);
+      map.moveCamera({ center: { lat: from.lat + (tgt.lat - from.lat) * k, lng: from.lng + (tgt.lng - from.lng) * k }, zoom: from.zoom + (tgt.zoom - from.zoom) * k });
       if (k < 1) keepAnim.current = requestAnimationFrame(step);
     };
     keepAnim.current = requestAnimationFrame(step);
@@ -589,6 +625,30 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
 }
 
 // Web-Mercator helpers for the keep-in-view camera (map not rotated, no tilt).
+/** One smooth camera flight (2026-11-27, operator: the camera reached the car in a series of jumps). Moves in
+ *  world (Mercator) coordinates with an ease-in-out; a hop longer than about a screen zooms out on the way and
+ *  back in, so the map never pans across a city at street zoom. Returns the animation id (cancel with
+ *  cancelAnimationFrame) via `onId`. */
+export function flyCamera(map: any, to: { lat: number; lng: number; zoom: number }, W: number, H: number, durMs: number, onId: (id: number) => void, onDone?: () => void) {
+  const c = map.getCenter?.(), z0 = map.getZoom?.();
+  if (!c || z0 == null) { map.moveCamera({ center: { lat: to.lat, lng: to.lng }, zoom: to.zoom }); onDone?.(); return; }
+  const a = worldXY({ lat: c.lat(), lng: c.lng() }), b = worldXY(to);
+  // Zoom at which both ends fit on the screen: dip to it when the hop is longer than the view.
+  const span = Math.max(Math.abs(b.x - a.x) * 256 / Math.max(1, W * 0.8), Math.abs(b.y - a.y) * 256 / Math.max(1, H * 0.8));
+  const zFit = span > 0 ? -Math.log2(span) : 21;
+  const zMid = Math.min(z0, to.zoom, zFit);
+  const dip = Math.max(0, Math.min(z0, to.zoom) - zMid);
+  const start = performance.now();
+  const step = (now: number) => {
+    const k = Math.min(1, (now - start) / durMs), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+    const p = fromWorld(a.x + (b.x - a.x) * e, a.y + (b.y - a.y) * e);
+    const zoom = z0 + (to.zoom - z0) * e - dip * Math.sin(Math.PI * k);
+    map.moveCamera({ center: p, zoom });
+    if (k < 1) onId(requestAnimationFrame(step)); else onDone?.();
+  };
+  onId(requestAnimationFrame(step));
+}
+
 function worldXY(p: { lat: number; lng: number }): { x: number; y: number } {
   const s = Math.sin((Math.max(-85, Math.min(85, p.lat)) * Math.PI) / 180);
   return { x: (p.lng + 180) / 360, y: 0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI) };

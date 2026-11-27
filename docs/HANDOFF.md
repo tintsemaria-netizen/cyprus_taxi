@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-27 — smooth live-trip camera (operator: jerky, slow camera to the car)
+
+- GoogleMapView: with `keepInView` the framing effect no longer does instant fitBounds (marker set / route / sheet
+  height each jumped); it runs one `flyCamera` (world-coord ease, zooms out on long hops, 1.5 s). The keep-in-view
+  glide is continuous: every GPS update glides camera to the new framing over the car's glide time, no 3 s throttle.
+  Affects passenger track and driver navigation (follow off). Not verified on a real Google map locally (no key).
+- Test: tests/fly-camera.test.ts.
+
 ## 2026-11-27 — no-show for every ride (operator)
 
 - `driverNoShow` (was driverShareNoShow; route POST /driver/bookings/:id/no-show) works for every ride, allowed
