@@ -121,6 +121,45 @@ describe('autonomous dispatch worker', () => {
     expect(secondNear).toBeNull(); // rejected driver not re-offered
   });
 
+  it('two rounds (operator 2026-11-27): everyone declined → offered to them all once more, nearest first → then the board', async () => {
+    const near = await placeDriver('Andreas', 1);
+    const far = await placeDriver('Maria', 2);
+    const b = await newSearchingBooking();
+    const declineCurrent = async (id: string) => { const o = await getDriverActiveOffer(id); expect(o).not.toBeNull(); expect((await rejectOffer(o!.offerId, id)).ok).toBe(true); };
+    // Round 1
+    await runOnce(); await declineCurrent(near);
+    await runOnce(); await declineCurrent(far);
+    // Nobody left → round 2 starts, nothing on the board yet.
+    await runOnce();
+    let job = await prisma.dispatchJob.findUnique({ where: { bookingId: b.id } });
+    expect([job!.offerRound, job!.openedAt, job!.triedDriverIds]).toEqual([2, null, []]);
+    expect(await prisma.bookingEvent.count({ where: { bookingId: b.id, type: 'OFFER_ROUND' } })).toBe(1);
+    // Round 2: the nearest again, then the next.
+    await runOnce(); await declineCurrent(near);
+    await runOnce(); await declineCurrent(far);
+    // No third round → the free-orders board.
+    await runOnce();
+    job = await prisma.dispatchJob.findUnique({ where: { bookingId: b.id } });
+    expect(job!.offerRound).toBe(2);
+    expect(job!.openedAt).not.toBeNull();
+  });
+
+  it('two rounds: a driver who released the ride is not offered it again in round 2', async () => {
+    const near = await placeDriver('Andreas', 1);
+    const far = await placeDriver('Maria', 2);
+    const b = await newSearchingBooking();
+    // As if Andreas had taken and released it: the search restarts with him blocked.
+    await prisma.dispatchJob.update({ where: { bookingId: b.id }, data: { triedDriverIds: [near], blockedDriverIds: [near] } });
+    await runOnce();
+    expect(await getDriverActiveOffer(near)).toBeNull();
+    const o = await getDriverActiveOffer(far); expect(o).not.toBeNull();
+    await rejectOffer(o!.offerId, far);
+    await runOnce(); // round 2 starts
+    await runOnce();
+    expect(await getDriverActiveOffer(near)).toBeNull();
+    expect(await getDriverActiveOffer(far)).not.toBeNull();
+  });
+
   it('expired offer is released and the next candidate is offered', async () => {
     const near = await placeDriver('Andreas', 1);
     const far = await placeDriver('Maria', 2);

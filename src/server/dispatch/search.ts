@@ -18,7 +18,7 @@ export async function startSearchTx(
 ): Promise<void> {
   await tx.dispatchJob.deleteMany({ where: { bookingId } });
   await tx.dispatchJob.create({
-    data: { bookingId, deadlineAt: opts.deadlineAt ?? searchDeadline(), triedDriverIds: opts.triedDriverIds ?? [] },
+    data: { bookingId, deadlineAt: opts.deadlineAt ?? searchDeadline(), triedDriverIds: opts.triedDriverIds ?? [], blockedDriverIds: opts.triedDriverIds ?? [] },
   });
 }
 
