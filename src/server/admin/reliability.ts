@@ -34,9 +34,10 @@ export interface ReliabilityRow {
 
 const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : null);
 
-export async function driverReliability(from: Date, to: Date): Promise<ReliabilityRow[]> {
+/** All active drivers, or one (`onlyDriverId` — the driver's own «Моя надёжность», 2026-11-27: the same figures as the admin's). */
+export async function driverReliability(from: Date, to: Date, onlyDriverId?: string): Promise<ReliabilityRow[]> {
   const drivers = await prisma.driver.findMany({
-    where: { active: true },
+    where: onlyDriverId ? { id: onlyDriverId } : { active: true },
     select: { id: true, publicName: true, eligibility: true, onDuty: true, location: { select: { sampledAt: true } }, bindings: { where: { endedAt: null }, select: { vehicle: { select: { plate: true, vClass: true, active: true } } } } },
     orderBy: { publicName: 'asc' },
   });

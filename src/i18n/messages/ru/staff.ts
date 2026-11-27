@@ -107,6 +107,7 @@ const staff: Catalog<typeof en> = {
     onDuty: 'на линии',
     off: 'не на линии',
     noVehicle: 'нет машины',
+    emergency: "Экстренный контакт",
     bind: 'Привязать машину…',
     resetPw: 'Сбросить пароль',
     empty: 'Водителей пока нет.',

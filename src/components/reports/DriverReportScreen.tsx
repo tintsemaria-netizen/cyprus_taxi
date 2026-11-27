@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ReliabilityCard } from '@/components/driver/DriverProfileParts';
+import { formatIban } from '@/lib/iban';
 import { BackArrow } from '@/components/BackArrow';
 import { api } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
@@ -9,7 +11,9 @@ import { useSlotName } from '@/components/driver/DriverDocs';
 
 // One driver's full report screen (2026-11-20) for the admin and the fleet owner: header with back «‹»,
 // then the driver's own earnings / done & not done / hours & km screens. `base` = '/admin/drivers' or '/fleet/drivers'.
-interface Head { publicName: string; login: string; phone: string; onDuty: boolean; vehicle: { plate: string; label: string } | null; documents: ReportDoc[] | null }
+interface Head { publicName: string; login: string; phone: string; onDuty: boolean; vehicle: { plate: string; label: string } | null; documents: ReportDoc[] | null;
+  /** Admin only (2026-11-27): the driver's emergency contact and payout details. */
+  private?: { email: string | null; emergencyName: string | null; emergencyPhone: string | null; iban: string | null; ibanHolder: string | null } | null }
 interface ReportDoc { slot: string; status: string; expiresAt: string | null; renewal: { status: string; uploadedAt: string } | null }
 
 export function DriverReportScreen({ id, base, backHref }: { id: string; base: string; backHref: string }) {
@@ -26,7 +30,16 @@ export function DriverReportScreen({ id, base, backHref }: { id: string; base: s
           {d && <div className="truncate text-xs text-muted">@{d.login} · {d.phone} · {d.onDuty ? t('staff.drivers.onDuty') : t('staff.drivers.off')} · {d.vehicle ? `${d.vehicle.label} (${d.vehicle.plate})` : t('staff.drivers.noVehicle')}</div>}
         </div>
       </div>
+      {d?.private && (
+        <div className="mt-3 space-y-1 rounded-[12px] border border-edge p-3 text-sm" data-testid="driver-private">
+          <div><span className="text-muted">E-mail: </span>{d.private.email ?? '—'}</div>
+          <div><span className="text-muted">{t('staff.drivers.emergency')}: </span>{d.private.emergencyPhone ? `${d.private.emergencyName ?? ''} ${d.private.emergencyPhone}`.trim() : '—'}</div>
+          <div><span className="text-muted">IBAN: </span>{d.private.iban ? `${formatIban(d.private.iban)}${d.private.ibanHolder ? ` · ${d.private.ibanHolder}` : ''}` : '—'}</div>
+        </div>
+      )}
       {d?.documents && d.documents.length > 0 && <ReportDocs docs={d.documents} />}
+      {/* «Рейтинг и надёжность» (2026-11-27, operator): the same card the driver sees about himself. */}
+      {!missing && d && <div className="mt-3 rounded-[12px] border border-edge p-3" data-testid="report-reliability"><div className="mb-1 text-sm font-semibold">{t('driver.nav.rating')}</div><ReliabilityCard path={`${base}/${id}/reliability`} staff /></div>}
       {!missing && <div className="mt-4"><EarningsReport apiBase={`${base}/${id}/report`} initialRange="today" /></div>}
     </div>
   );

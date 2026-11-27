@@ -199,7 +199,6 @@ export function AcceptsSharedToggle() {
             <button type="button" ref={infoBtnRef} onClick={() => setInfo((v) => !v)} aria-expanded={info} aria-label="info" data-testid="share-info"
               className={`flex h-5 w-5 items-center justify-center rounded-full border text-[11px] font-bold leading-none ${info ? 'border-accent text-accent' : 'border-edge-strong text-muted'}`}>i</button>
           </span>
-          <span className="block text-xs text-muted">{t('share.driver.settingHint')}</span>
         </span>
         <label className="cursor-pointer">
           <input type="checkbox" role="switch" className="sr-only" aria-label={t('share.driver.setting')} checked={!!on} disabled={on === null} onChange={(e) => toggle(e.target.checked)} />

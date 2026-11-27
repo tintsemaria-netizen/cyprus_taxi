@@ -108,6 +108,12 @@ model Driver {
   takesComfort  Boolean @default(true)
   // XL car: also take XL orders (2026-11-26, operator: separate «Comfort» / «XL» switches; one stays on).
   takesXl       Boolean @default(true)
+  // Driver profile (2026-11-27, operator): who to call if something happens to him on the road, and where
+  // payouts would go once card payments exist (IBAN, checksum-validated; holder as on the bank account).
+  emergencyName  String?
+  emergencyPhone String?
+  iban           String?
+  ibanHolder     String?
 
   bindings       DriverVehicleBinding[]
   assignments    Assignment[]

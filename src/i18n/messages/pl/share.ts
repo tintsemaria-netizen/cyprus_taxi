@@ -123,7 +123,6 @@ const share: Catalog<typeof en> = {
     noShowConfirm: "Pasażer nie przyszedł? Jego kurs zostanie anulowany; drugi płaci pełną cenę.",
     noShowFee: "Opłata za niestawienie się: {amount}",
     setting: "Biorę współpasażerów",
-    settingHint: "Tylko lotnisko i międzymiastowe.",
     settingInfo: "• Tylko przejazdy na lotniska w Larnace i Pafos i z nich oraz między Larnaką, Nikozją, Limassol, Pafos i Ayia Napa. W obrębie jednego miasta nie ma współpasażerów.\n• Najwyżej dwa zlecenia w aucie. Wszyscy pasażerowie i walizki muszą się zmieścić.\n• Każdy pasażer ma {pct}% zniżki; Ty zarabiasz oba kursy.\n• W drodze może przyjść «Współpasażer po drodze»: o ile dłużej potrwa kurs, kolejność przystanków i Twój zarobek. Brak odpowiedzi oznacza «Nie».\n• Rezerwacja ze współpasażerem to jedno zlecenie dla dwojga w «Rezerwacjach».\n• Jeśli jeden pasażer odwoła lub nie wyjdzie, drugi płaci pełną cenę. Przycisk nieobecności pojawia się {min} min po Twoim przyjeździe.",
     boardPair: "Wspólny · osoby: {n} · walizki: {bags}",
     boardSecond: "2. pasażer {time}: {from} → {to}",

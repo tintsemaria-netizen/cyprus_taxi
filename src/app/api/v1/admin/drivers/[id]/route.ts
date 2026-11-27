@@ -3,6 +3,7 @@ import { requireStaff, isStaffCtx, hashPassword } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { generateToken } from '@/lib/crypto';
 import { z } from 'zod';
+import { driverProfile } from '@/server/driver/profile';
 import { driverHead } from '@/server/reports/driver-report';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +22,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!isStaffCtx(ctx)) return ctx.error === 401 ? Errors.unauthorized() : Errors.forbidden();
   const { id } = await params;
   const driver = await driverHead(id);
-  return driver ? apiOk({ driver }) : Errors.notFound();
+  if (!driver) return Errors.notFound();
+  // Admin only, not the fleet owner (2026-11-27): e-mail, emergency contact, IBAN.
+  const p = await driverProfile(id);
+  return apiOk({ driver: { ...driver, private: p ? { email: p.email, emergencyName: p.emergencyName, emergencyPhone: p.emergencyPhone, iban: p.iban, ibanHolder: p.ibanHolder } : null } });
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {

@@ -24,6 +24,7 @@ import { filterFix, initialFilterState, accuracyLevel, type FilterState } from '
 import { DriverHomeMap } from '@/components/driver/DriverHomeMap';
 import { DriverDocs, useSlotName } from '@/components/driver/DriverDocs';
 import { MyCars } from '@/components/driver/MyCars';
+import { MyDataSection, OrderSoundSetting, ReliabilityCard } from '@/components/driver/DriverProfileParts';
 import { unlockOfferSound, playOfferChime, vibrateOffer, keepScreenOn } from '@/lib/driver-alerts';
 import { autoOpenNav, readNavPrefs, writeNavPrefs, type NavPrefs } from '@/lib/nav-app';
 import { formatFlight } from '@/lib/flight';
@@ -505,25 +506,27 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
                 </>}>
                 <ScheduledRides onCount={onPrebookCount} />
               </MenuRow>
-              <MenuRow id="profile" open={menuSec} setOpen={setMenuSec} label={t('driver.nav.profile')} testId="drawer-profile">
-                <ProfileSection dash={dash} />
-              </MenuRow>
+              {/* Driver menu by purpose (2026-11-27, operator): work things at the bottom, then settings, his
+                  rating, his details, documents, help on top. */}
               <MenuRow id="trips" open={menuSec} setOpen={setMenuSec} label={t('driver.nav.trips')} testId="drawer-trips">
                 <TripsSection onOpen={setActiveDetailId} activeDetail={activeDetailId} onCloseDetail={() => setActiveDetailId(null)} onSettled={() => { loadDash(); }} />
               </MenuRow>
-              {/* «Мои машины» + what he takes: ride-share and (XL) Comfort — next to the car choice (2026-11-26). */}
               <MenuRow id="cars" open={menuSec} setOpen={setMenuSec} label={t('driver.cars.menu')} testId="drawer-cars"
                 badges={carAsks > 0 ? <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white">{carAsks}</span> : null}>
-                <div className="space-y-4">
-                  <div className="rounded-[12px] border border-edge p-3">
-                    <AcceptsSharedToggle />
-                    <TakesComfortToggle />
-                  </div>
-                  <MyCars bare />
-                </div>
+                <MyCars bare />
               </MenuRow>
-              <MenuRow id="settings" open={menuSec} setOpen={setMenuSec} label={t('driver.nav.settings')} testId="drawer-settings">
-                <SettingsSection />
+              <MenuRow id="app" open={menuSec} setOpen={setMenuSec} label={t('driver.nav.appSettings')} testId="drawer-app">
+                <AppSettingsSection />
+              </MenuRow>
+              <MenuRow id="settings" open={menuSec} setOpen={setMenuSec} label={t('driver.nav.workSettings')} testId="drawer-settings">
+                <WorkSettingsSection />
+              </MenuRow>
+              <MenuRow id="profile" open={menuSec} setOpen={setMenuSec} label={t('driver.nav.rating')} testId="drawer-profile">
+                <RatingSection dash={dash} />
+              </MenuRow>
+              <MenuRow id="me" open={menuSec} setOpen={setMenuSec} label={t('driver.nav.myData')} testId="drawer-me">
+                <MyDataSection />
+                <AccountSection />
               </MenuRow>
               <MenuRow id="docs" open={menuSec} setOpen={setMenuSec} label={t('driver.profile.documents')} testId="drawer-docs">
                 <DriverDocs bare />
@@ -569,9 +572,13 @@ function TakesComfortToggle() {
   const timer = useRef<number | undefined>(undefined);
   useEffect(() => { api<{ vClass: string | null; takesComfort: boolean; takesXl: boolean }>('/driver/classes').then(setSt).catch(() => {}); }, []);
   useEffect(() => () => window.clearTimeout(timer.current), []);
-  if (!st || st.vClass !== 'XL') return null;
+  // Shown for every car (2026-11-27, operator): a Comfort car takes only Comfort — both switches are fixed, a tap
+  // on XL says why.
+  if (!st || !st.vClass) return null;
+  const xlCar = st.vClass === 'XL';
   const flash = (text: string) => { setNote(text); window.clearTimeout(timer.current); timer.current = window.setTimeout(() => setNote(null), 3000); };
   async function toggle(key: 'takesComfort' | 'takesXl', v: boolean) {
+    if (!xlCar) { flash(t('driver.classes.xlOnly')); return; }
     const cls = key === 'takesComfort' ? 'Comfort' : 'XL';
     const other = key === 'takesComfort' ? st!.takesXl : st!.takesComfort;
     if (!v && !other) { flash(t('driver.classes.keepOne')); return; }
@@ -583,9 +590,9 @@ function TakesComfortToggle() {
     } catch { setSt((x) => (x ? { ...x, [key]: !v } : x)); }
   }
   const mini = (k: 'takesComfort' | 'takesXl', label: string) => {
-    const on = st[k];
+    const on = xlCar ? st[k] : k === 'takesComfort';
     return (
-      <label key={k} className="flex cursor-pointer flex-col items-center gap-1" data-testid={`class-${label}`}>
+      <label key={k} className={`flex cursor-pointer flex-col items-center gap-1 ${xlCar ? '' : 'opacity-50'}`} data-testid={`class-${label}`}>
         <span className="text-xs font-semibold">{label}</span>
         <input type="checkbox" role="switch" className="sr-only" aria-label={label} checked={on} onChange={(e) => toggle(k, e.target.checked)} />
         <span aria-hidden className={`relative block h-5 w-9 rounded-full transition ${on ? 'bg-accent' : 'bg-edge-strong'}`}>
@@ -595,7 +602,7 @@ function TakesComfortToggle() {
     );
   };
   return (
-    <div className="mt-3 border-t border-edge pt-3" data-testid="takes-comfort">
+    <div data-testid="takes-comfort">
       <div className="text-sm">{t('driver.classes.title')}</div>
       <div className="mt-2 flex gap-8">
         {mini('takesComfort', 'Comfort')}
@@ -1140,7 +1147,7 @@ function TripDetailModal({ bookingId, onClose, onSettled }: { bookingId: string;
 }
 
 // ---- Profile ----
-type MenuSec = 'prebook' | 'profile' | 'trips' | 'cars' | 'settings' | 'docs' | 'help';
+type MenuSec = 'prebook' | 'profile' | 'trips' | 'cars' | 'settings' | 'docs' | 'help' | 'app' | 'me';
 
 /** One menu section (2026-11-26): the row; when open, its content right above it (bottom-up menu). */
 function MenuRow({ id, open, setOpen, label, badges, testId, children }: { id: MenuSec; open: MenuSec | null; setOpen: (v: MenuSec | null) => void; label: string; badges?: React.ReactNode; testId: string; children: React.ReactNode }) {
@@ -1251,12 +1258,9 @@ function CarPick({ onDone, openCars, tError }: { onDone: () => void; openCars: (
 }
 
 /** Профиль (2026-11-26): rating and access; «Выйти» and «Удалить аккаунт» live here. */
-function ProfileSection({ dash }: { dash: Dashboard | null }) {
+function RatingSection({ dash }: { dash: Dashboard | null }) {
   const { t, tp } = useT();
   const { tOr } = useDriverFmt();
-  const [askOut, setAskOut] = useState(false);
-  const [outBusy, setOutBusy] = useState(false);
-  async function signOut() { setOutBusy(true); await api('/auth/logout', { method: 'POST' }).catch(() => {}); window.location.href = '/driver/login'; }
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 text-sm">
@@ -1265,6 +1269,20 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
           ? <span className="font-semibold text-accent" title={tp('driver.profile.ratings', dash.driver.rating.count)}>★ {dash.driver.rating.average?.toFixed(1)} <span className="text-xs font-normal text-muted">({dash.driver.rating.count})</span></span>
           : <span className="text-xs text-muted">{t('driver.profile.noRatings')}</span>)}
       </div>
+      <ReliabilityCard />
+    </div>
+  );
+}
+
+/** «Мои данные» bottom (2026-11-27): password, «Выйти», delete the account. */
+function AccountSection() {
+  const { t } = useT();
+  const [askOut, setAskOut] = useState(false);
+  const [outBusy, setOutBusy] = useState(false);
+  async function signOut() { setOutBusy(true); await api('/auth/logout', { method: 'POST' }).catch(() => {}); window.location.href = '/driver/login'; }
+  return (
+    <div className="mt-3 space-y-3 border-t border-edge pt-3">
+      <StaffPasswordForm bare />
       {/* «Выйти» small, on the left, with a question first — as the passenger's (2026-11-27, operator). */}
       <button type="button" onClick={() => setAskOut(true)} className="px-1 py-1 text-sm text-danger hover:underline" data-testid="driver-signout">{t('driver.profile.signOut')}</button>
       {askOut && <ConfirmSheet title={t('auth.logOutAsk')} confirmLabel={t('driver.profile.signOut')} danger busy={outBusy} onConfirm={signOut} onCancel={() => setAskOut(false)} />}
@@ -1275,15 +1293,24 @@ function ProfileSection({ dash }: { dash: Dashboard | null }) {
 }
 
 /** Настройки (2026-11-26): notifications, app colour, password (the language is the round button by the card). */
-function SettingsSection() {
+function WorkSettingsSection() {
+  return (
+    <div className="divide-y divide-edge">
+      {/* «Настройки работы» (2026-11-27, operator): co-riders, the order classes, the navigator. */}
+      <div className="pb-3"><AcceptsSharedToggle /></div>
+      <div className="py-3"><TakesComfortToggle /></div>
+      <NavAppSetting />
+    </div>
+  );
+}
+
+/** «Звук и вид» (2026-11-27, operator): the new-order sound, the app colour, notifications. */
+function AppSettingsSection() {
   const { t } = useT();
   const [themeOpen, setThemeOpen] = useState(false);
   return (
     <div className="divide-y divide-edge">
-      <div className="flex items-center justify-between gap-3 pb-3">
-        <span className="text-sm">{t('driver.profile.notifications')}</span>
-        <NotifyToggle pushUrl="/driver/push" className="text-end" />
-      </div>
+      <div className="pb-3"><OrderSoundSetting /></div>
       {/* «Цвет приложения» opens / closes like the menu rows (2026-11-26, operator). */}
       <div className="py-3">
         <button type="button" onClick={() => setThemeOpen((v) => !v)} aria-expanded={themeOpen} data-testid="theme-toggle"
@@ -1293,8 +1320,10 @@ function SettingsSection() {
         </button>
         {themeOpen && <div className="mt-2"><ThemePicker role="driver" /></div>}
       </div>
-      <NavAppSetting />
-      <div className="pt-3"><StaffPasswordForm bare /></div>
+      <div className="flex items-center justify-between gap-3 py-3">
+        <span className="text-sm">{t('driver.profile.notifications')}</span>
+        <NotifyToggle pushUrl="/driver/push" className="text-end" />
+      </div>
     </div>
   );
 }

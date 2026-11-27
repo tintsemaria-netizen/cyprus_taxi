@@ -1,5 +1,20 @@
 # Session handoff
 
+## 2026-11-27 — driver menu by purpose; profile, sound, reliability (operator)
+
+- Drawer (top→bottom): Помощь, Документы, «Мои данные», «Рейтинг и надёжность», «Настройки работы», «Звук и вид»,
+  Мои машины, Поездки, Предзаказы. Components in src/components/driver/DriverProfileParts.tsx; texts driver.me.* (8 langs).
+- «Мои данные»: phone change by SMS code to the new number (POST /driver/profile/phone; moves StaffUser.login,
+  Driver.phone, applicant phone; needs Twilio on prod), e-mail change by e-mail code (POST /driver/profile/email;
+  codes in PhoneVerification provider 'email'; needs RESEND on prod; devCode only outside production), emergency
+  contact + IBAN (mod-97, src/lib/iban.ts) via PATCH /driver/profile. Migration 20261127230000_driver_profile_fields.
+  Admin driver card shows e-mail / emergency / IBAN (not the fleet owner).
+- Sound of a new order: tone chime/bell/pulse, volume, vibration, preview — localStorage `ily-offer-sound`
+  (src/lib/driver-alerts.ts). Screen wake lock was already automatic.
+- Reliability: driverReliability(from,to,onlyDriverId) → server/reports/reliability-view.ts; ReliabilityCard on the
+  driver menu, the admin's and the fleet owner's driver card (/admin|fleet/drivers/:id/reliability).
+- Tests: tests/driver-profile.db.test.ts.
+
 ## 2026-11-27 — co-rider texts everywhere (operator rule «a changed rule is changed everywhere»)
 
 - /welcome: «Попутчик» card first, new text (operator), discount `{pct}` from /public/config.

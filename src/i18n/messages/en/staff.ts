@@ -105,6 +105,7 @@ const staff = {
     onDuty: 'on duty',
     off: 'off',
     noVehicle: 'no vehicle',
+    emergency: "Emergency contact",
     bind: 'Bind vehicle…',
     resetPw: 'Reset password',
     empty: 'No drivers yet.',
