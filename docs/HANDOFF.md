@@ -3307,3 +3307,10 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Evidence: tsc clean; vitest 527 passed / 1 skipped (3 new in tests/passenger-dropoff.db.test.ts); live: health ready; the chunks contain dropoff-changed, track-change-dropoff, dropoff-confirm; sw.js contains drv.dropoffChangedRange; /api/v1/tracking/dropoff answers 401 without a session.
 - Not checked on a real phone: the sound/vibration and the push.
 - Parked: docs/todo/DRIVER-GPS-LOSS.md, docs/todo/METER-CALIBRATION.md (data collection).
+
+## 2026-11-27 — deployed 23cdecd (offer-rounds)
+- Dispatch: two rounds of offers (`OFFER_ROUNDS = 2`, worker.ts). When nobody is left in round 1, the job moves to offerRound 2: triedDriverIds is reset to blockedDriverIds, radiusStage to 0, and an OFFER_ROUND event is written. After round 2 the ride goes to the free-orders board as before.
+- `DispatchJob.blockedDriverIds` is set by startSearchTx from the initial triedDriverIds: the driver who released the ride or lost it to GPS loss. Those drivers are never re-offered the ride.
+- Migration 20261127200000_offer_rounds (2 columns, defaults). The search deadline is unchanged at 180 s, so round 2 may be cut short when many drivers are nearby. The operator was offered 4–5 min; no answer yet.
+- Round-2 declines count in reliability (acceptance / missed); the operator was told.
+- Evidence: tsc clean; vitest 530 passed / 1 skipped (2 new tests in dispatch.db; free-orders test updated); live health = ready. Not observed: a live round 2 on a real order. The live migration was not checked directly; there is no DB access from here.
