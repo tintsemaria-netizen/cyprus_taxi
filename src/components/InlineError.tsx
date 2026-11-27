@@ -10,9 +10,9 @@ export function InlineError({ text, onClose }: { text: string; onClose: () => vo
   useEffect(() => { const id = setTimeout(() => closeRef.current(), 2500); return () => clearTimeout(id); }, []);
   return (
     <div role="alert" data-testid="inline-error" onClick={onClose}
-      className="absolute inset-x-1 top-full z-[60] mt-2 rounded-[10px] bg-[#6B2E2E] px-3 py-2 text-xs font-semibold leading-snug text-[#FFD6D6] shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
+      className="absolute inset-x-1 top-full z-[60] mt-2 rounded-[10px] bg-[#6B2E2E]/75 backdrop-blur-sm px-3 py-2 text-xs font-semibold leading-snug text-[#FFD6D6] shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
       {/* the arrow pointing up at the tapped row */}
-      <span aria-hidden className="absolute -top-1.5 start-8 h-3 w-3 rotate-45 bg-[#6B2E2E]" />
+      <span aria-hidden className="absolute -top-1.5 start-8 h-3 w-3 rotate-45 bg-[#6B2E2E]/75" />
       <span className="relative">{text}</span>
     </div>
   );
