@@ -5,6 +5,7 @@ import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { compressImageForUpload, UPLOAD_TARGET_BYTES } from '@/lib/image-compress';
 import { useRefreshOnReturn } from '@/components/useRefreshOnReturn';
+import { InlineError } from '@/components/InlineError';
 import { useSlotName } from '@/components/driver/DriverDocs';
 
 // «Мои машины» (2026-11-24, operator): the driver works only on a car in the system that he is allowed on.
@@ -26,6 +27,7 @@ export function MyCars({ bare = false }: { bare?: boolean } = {}) {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [mode, setMode] = useState<null | 'existing' | 'new'>(null);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ id: string; text: string } | null>(null);
   const load = useCallback(() => { api<Data>('/driver/cars').then(setD).catch(() => {}); }, []);
   useEffect(() => { load(); }, [load]);
   useRefreshOnReturn(load);
@@ -42,6 +44,7 @@ export function MyCars({ bare = false }: { bare?: boolean } = {}) {
   return (
     <div className="space-y-4" data-testid="my-cars">
       {!bare && <h1 className="text-xl font-bold">{t('driver.cars.title')}</h1>}
+
       {msg && <p role="status" className={`rounded-[12px] border px-3 py-2 text-sm ${msg.ok ? 'border-accent/40 text-accent' : 'border-danger/40 text-danger'}`}>{msg.text}</p>}
 
       {d.asks.length > 0 && (
@@ -59,25 +62,26 @@ export function MyCars({ bare = false }: { bare?: boolean } = {}) {
 
       <section className="card p-4">
         <div className="mb-1 font-medium">{t('driver.cars.mine')}</div>
-        {locked && <p className="mb-2 text-xs text-warn">{d.onTrip ? t('driver.cars.lockedTrip') : t('driver.cars.lockedOnline')}</p>}
         {d.cars.length === 0 ? <p className="text-sm text-muted">{t('driver.cars.none')}</p> : (
           <ul className="divide-y divide-edge">
             {d.cars.map((c) => (
-              <li key={c.id} className="flex items-center gap-3 py-3" data-testid={`car-${c.plate}`}>
+              <li key={c.id} className="relative flex items-center gap-3 py-3" data-testid={`car-${c.plate}`}>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="rounded-[6px] border border-edge px-1.5 font-mono text-sm font-bold">{c.plate}</span>
                     {c.current && <span className="text-xs font-semibold text-accent">✓ {t('driver.cars.current')}</span>}
                   </div>
                   <div className="truncate text-sm text-muted">{c.color} {c.make} {c.model} · {t(`common.vClass.${c.vClass}` as never)}</div>
-                  {c.busy && !c.current && <div className="text-xs text-warn">{t('driver.cars.busy')}</div>}
                   {c.expired && <div className="text-xs text-danger">{t('driver.cars.expired')}</div>}
+                  {/* The reason a car can't be taken pops up in red here on the tap (operator 2026-11-27). */}
                   {c.docs.length > 0 && <CarDocs car={c} onDone={load} />}
                 </div>
                 {!c.current && (
-                  <button className="btn-primary !min-h-0 shrink-0 !py-1.5 text-xs" disabled={busy || locked || c.busy || !!c.expired} data-testid={`car-switch-${c.plate}`}
-                    onClick={() => run(() => api('/driver/cars/switch', { method: 'POST', body: { vehicleId: c.id } }), t('driver.cars.switched', { plate: c.plate }))}>{t('driver.cars.workOn')}</button>
+                  <button className="btn-primary !min-h-0 shrink-0 !py-1.5 text-xs" disabled={busy || !!c.expired} data-testid={`car-switch-${c.plate}`}
+                    onClick={() => locked ? setNotice({ id: c.id, text: d.onTrip ? t('driver.cars.lockedTrip') : t('driver.cars.lockedOnline') }) : c.busy ? setNotice({ id: c.id, text: t('driver.cars.busyPick') }) : run(() => api('/driver/cars/switch', { method: 'POST', body: { vehicleId: c.id } }), t('driver.cars.switched', { plate: c.plate }))}>{t('driver.cars.workOn')}</button>
                 )}
+                {/* The reason a car can't be taken: a red bubble over everything, arrow at this car (operator 2026-11-27). */}
+                {notice?.id === c.id && <InlineError key={notice.text} text={notice.text} onClose={() => setNotice(null)} />}
               </li>
             ))}
           </ul>
