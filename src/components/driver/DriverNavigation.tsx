@@ -74,7 +74,8 @@ export function DriverNavigation(props: {
   const co = coRiderNext(props.pair);
   const leg: 'pickup' | 'stop' | 'dropoff' | 'co' = co ? 'co' : trip.status !== 'IN_PROGRESS' ? 'pickup' : stop && !stop.departedAt ? 'stop' : 'dropoff';
   // A stop added / removed / moved by the passenger changes the key → a new route is built (2026-11-22).
-  const legKey = co ? `co${co.n}` : leg === 'stop' && stop ? `stop:${stop.lat},${stop.lng}` : leg;
+  // A drop-off changed by the passenger (2026-11-27) likewise changes the key → the route is rebuilt.
+  const legKey = co ? `co${co.n}` : leg === 'stop' && stop ? `stop:${stop.lat},${stop.lng}` : leg === 'dropoff' ? `dropoff:${trip.dropoff.lat},${trip.dropoff.lng}` : leg;
   const target = co ? co : leg === 'dropoff' ? trip.dropoff : leg === 'stop' ? stop! : trip.pickup;
   const atStop = leg === 'stop' && !!stop?.arrivedAt; // standing at the stop (maybe paid waiting)
   const coWaiting = co?.status === 'ARRIVED';

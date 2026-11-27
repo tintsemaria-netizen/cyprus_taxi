@@ -44,6 +44,7 @@ const errors: Catalog<typeof en> = {
   NOT_COMPLETED: "Vous ne pouvez noter une course qu’une fois terminée.",
   NOT_ELIGIBLE: "Votre compte ne peut pas prendre de courses pour le moment.",
   SHARE_NO_STOP: "Un trajet avec covoyageur ne peut pas avoir d’arrêt.",
+  SHARE_NO_DROPOFF_CHANGE: "Pour un trajet avec covoyageur, demandez au chauffeur de changer la destination.",
   STOP_LOCKED: "La voiture est déjà à l’arrêt — il ne peut plus être modifié.",
   NOT_FOUND: "Introuvable.",
   NOT_RETRYABLE: "Cette course ne peut pas être relancée.",

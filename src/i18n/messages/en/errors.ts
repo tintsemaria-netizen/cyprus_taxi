@@ -43,6 +43,7 @@ const errors = {
   NOT_COMPLETED: 'You can rate a ride only after it is completed.',
   NOT_ELIGIBLE: 'Your account can’t take rides right now.',
   SHARE_NO_STOP: 'A ride with a co-rider cannot have a stop.',
+  SHARE_NO_DROPOFF_CHANGE: "In a ride with a co-rider, ask the driver to change the destination.",
   STOP_LOCKED: 'The car is already at the stop — it can no longer be changed.',
   NOT_FOUND: 'Not found.',
   NOT_RETRYABLE: 'This ride cannot be searched again.',

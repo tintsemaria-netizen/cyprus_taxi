@@ -44,6 +44,7 @@ const errors: Catalog<typeof en> = {
   NOT_COMPLETED: "Przejazd możesz ocenić dopiero po jego zakończeniu.",
   NOT_ELIGIBLE: "Twoje konto nie może teraz przyjmować przejazdów.",
   SHARE_NO_STOP: "W przejeździe ze współpasażerem nie można dodać przystanku.",
+  SHARE_NO_DROPOFF_CHANGE: "W przejeździe ze współpasażerem poproś kierowcę o zmianę celu.",
   STOP_LOCKED: "Samochód jest już na przystanku — nie można go zmienić.",
   NOT_FOUND: "Nie znaleziono.",
   NOT_RETRYABLE: "Dla tego przejazdu nie można ponownie szukać kierowcy.",

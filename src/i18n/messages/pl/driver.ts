@@ -3,6 +3,9 @@ import type en from '../en/driver';
 
 const driver: Catalog<typeof en> = {
   rideRemoved: "Ten przejazd został ci odebrany (odwołany lub przekazany innemu kierowcy) — nie jedź na odbiór.",
+  dropoffChanged: "Pasażer zmienił cel podróży",
+  dropoffNewPrice: "Nowa cena: {fare}",
+  dropoffChangedOk: "OK",
   units: {
     kmShort: "km",
     mShort: "m",

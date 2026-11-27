@@ -393,6 +393,8 @@ export async function driverCurrentTrip(driverId: string) {
       luggageCount: b.luggageCount,
       childCount: b.childCount,
       fareCents: b.fareCents,
+      priceType: b.priceType, // the driver's banner shows the new price after a drop-off change (2026-11-27)
+      fareMinCents: b.fareMinCents ?? null,
       vClass: b.vClass,
       scheduledAt: b.scheduledAt?.toISOString() ?? null,
       waiting: waiting ? { arrivedAt: waiting.arrivedAt.toISOString(), graceSeconds: waiting.graceSeconds, paidRateCentsPerMin: waiting.paidRateCentsPerMin } : null,
