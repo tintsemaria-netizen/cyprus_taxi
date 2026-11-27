@@ -1222,7 +1222,7 @@ function CarPick({ onDone, openCars, tError }: { onDone: () => void; openCars: (
             {d.cars.map((c) => {
               const off = c.current || busy || !!c.expired;
               return (
-                <li key={c.id}>
+                <li key={c.id} className="relative">
                   <button type="button" disabled={off} onClick={() => choose(c)} data-testid={`pick-${c.plate}`}
                     className={`flex w-full items-center gap-2 px-2 py-2 text-start ${(off || c.busy) && !c.current ? 'opacity-60' : ''}`}>
                     <span className="rounded-[6px] border border-edge px-1.5 font-mono text-xs font-bold">{c.plate}</span>

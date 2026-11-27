@@ -65,7 +65,7 @@ export function MyCars({ bare = false }: { bare?: boolean } = {}) {
         {d.cars.length === 0 ? <p className="text-sm text-muted">{t('driver.cars.none')}</p> : (
           <ul className="divide-y divide-edge">
             {d.cars.map((c) => (
-              <li key={c.id} className="flex items-center gap-3 py-3" data-testid={`car-${c.plate}`}>
+              <li key={c.id} className="relative flex items-center gap-3 py-3" data-testid={`car-${c.plate}`}>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="rounded-[6px] border border-edge px-1.5 font-mono text-sm font-bold">{c.plate}</span>
@@ -74,13 +74,14 @@ export function MyCars({ bare = false }: { bare?: boolean } = {}) {
                   <div className="truncate text-sm text-muted">{c.color} {c.make} {c.model} · {t(`common.vClass.${c.vClass}` as never)}</div>
                   {c.expired && <div className="text-xs text-danger">{t('driver.cars.expired')}</div>}
                   {/* The reason a car can't be taken pops up in red here on the tap (operator 2026-11-27). */}
-                  {notice?.id === c.id && <div className="mt-1 [&>div]:mx-0"><InlineError key={notice.text} text={notice.text} onClose={() => setNotice(null)} /></div>}
                   {c.docs.length > 0 && <CarDocs car={c} onDone={load} />}
                 </div>
                 {!c.current && (
                   <button className="btn-primary !min-h-0 shrink-0 !py-1.5 text-xs" disabled={busy || !!c.expired} data-testid={`car-switch-${c.plate}`}
                     onClick={() => locked ? setNotice({ id: c.id, text: d.onTrip ? t('driver.cars.lockedTrip') : t('driver.cars.lockedOnline') }) : c.busy ? setNotice({ id: c.id, text: t('driver.cars.busyPick') }) : run(() => api('/driver/cars/switch', { method: 'POST', body: { vehicleId: c.id } }), t('driver.cars.switched', { plate: c.plate }))}>{t('driver.cars.workOn')}</button>
                 )}
+                {/* The reason a car can't be taken: a red bubble over everything, arrow at this car (operator 2026-11-27). */}
+                {notice?.id === c.id && <InlineError key={notice.text} text={notice.text} onClose={() => setNotice(null)} />}
               </li>
             ))}
           </ul>
