@@ -1,5 +1,6 @@
 'use client';
 
+import { AREA_FILL_OPACITY, AREA_LINE_OPACITY, AREA_LINE_WIDTH_EXPR } from '@/lib/area-style';
 import { routeStrokeExpr } from '@/lib/route-stroke';
 import { useEffect, useRef, useState } from 'react';
 import type * as maplibregl from 'maplibre-gl';
@@ -360,8 +361,8 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     const src = map.getSource('areas') as maplibregl.GeoJSONSource | undefined;
     if (src) { src.setData(data as never); return; }
     map.addSource('areas', { type: 'geojson', data: data as never });
-    map.addLayer({ id: 'areas-fill', type: 'fill', source: 'areas', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.16 } });
-    map.addLayer({ id: 'areas-line', type: 'line', source: 'areas', layout: { 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 1.5, 13, 2, 14, 2.5, 15, 3.5, 16, 4.5], 'line-opacity': 0.95 } }); // thinner when zoomed out (2026-11-25)
+    map.addLayer({ id: 'areas-fill', type: 'fill', source: 'areas', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': AREA_FILL_OPACITY } });
+    map.addLayer({ id: 'areas-line', type: 'line', source: 'areas', layout: { 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': AREA_LINE_WIDTH_EXPR as never, 'line-opacity': AREA_LINE_OPACITY } }); // thinner when zoomed out (2026-11-25), thinner still (2026-11-27)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [areasKey, ready]);
 

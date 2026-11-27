@@ -3,7 +3,7 @@
 
 import { flyCamera } from '@/components/GoogleMapView';
 import { areaBlock, loadNoGo, pickerOutlines, pickerSpot } from '@/lib/area-client';
-import { areaStroke } from '@/components/GoogleMapView';
+import { areaStroke, AREA_FILL_OPACITY, AREA_LINE_OPACITY } from '@/lib/area-style';
 import LiftPin from '@/components/LiftPin';
 import { useEffect, useRef, useState } from 'react';
 import { useTwoFingerCamera } from '@/components/useTwoFingerCamera';
@@ -252,7 +252,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
     terrPolys.current.forEach((o) => o.setMap(null));
     terrPolys.current = [];
     if (!map || !g || !mapLoaded) return;
-    terrPolys.current = outlines.map((poly) => new g.Polygon({ map, paths: poly.map(([lat, lng]) => ({ lat, lng })), strokeColor: '#4C9AFF', strokeOpacity: 0.95, strokeWeight: areaStroke(map.getZoom()), fillColor: '#4C9AFF', fillOpacity: 0.16, clickable: false, zIndex: 0 }));
+    terrPolys.current = outlines.map((poly) => new g.Polygon({ map, paths: poly.map(([lat, lng]) => ({ lat, lng })), strokeColor: '#4C9AFF', strokeOpacity: AREA_LINE_OPACITY, strokeWeight: areaStroke(map.getZoom()), fillColor: '#4C9AFF', fillOpacity: AREA_FILL_OPACITY, clickable: false, zIndex: 0 }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outlinesKey, mapLoaded]);
 

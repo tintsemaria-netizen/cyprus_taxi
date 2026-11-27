@@ -1,5 +1,6 @@
 'use client';
 
+import { AREA_FILL_OPACITY, AREA_LINE_OPACITY, AREA_LINE_WIDTH_EXPR } from '@/lib/area-style';
 import { areaBlock, loadNoGo, pickerOutlines, pickerSpot } from '@/lib/area-client';
 import LiftPin from '@/components/LiftPin';
 import { useEffect, useRef, useState } from 'react';
@@ -319,8 +320,8 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
     const src = map.getSource('pk-terr') as any;
     if (src) { src.setData(data); return; }
     map.addSource('pk-terr', { type: 'geojson', data });
-    map.addLayer({ id: 'pk-terr-fill', type: 'fill', source: 'pk-terr', paint: { 'fill-color': '#4C9AFF', 'fill-opacity': 0.16 } });
-    map.addLayer({ id: 'pk-terr-line', type: 'line', source: 'pk-terr', paint: { 'line-color': '#4C9AFF', 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 1.5, 13, 2, 14, 2.5, 15, 3.5, 16, 4.5], 'line-opacity': 0.95 } });
+    map.addLayer({ id: 'pk-terr-fill', type: 'fill', source: 'pk-terr', paint: { 'fill-color': '#4C9AFF', 'fill-opacity': AREA_FILL_OPACITY } });
+    map.addLayer({ id: 'pk-terr-line', type: 'line', source: 'pk-terr', paint: { 'line-color': '#4C9AFF', 'line-width': AREA_LINE_WIDTH_EXPR as never, 'line-opacity': AREA_LINE_OPACITY } });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outlinesKey, mapLoaded]);
 
