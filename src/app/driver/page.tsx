@@ -23,6 +23,7 @@ import { DriverHomeMap } from '@/components/driver/DriverHomeMap';
 import { DriverDocs, useSlotName } from '@/components/driver/DriverDocs';
 import { MyCars } from '@/components/driver/MyCars';
 import { unlockOfferSound, playOfferChime, vibrateOffer, keepScreenOn } from '@/lib/driver-alerts';
+import { autoOpenNav, readNavPrefs, writeNavPrefs, type NavPrefs } from '@/lib/nav-app';
 import { formatFlight } from '@/lib/flight';
 import { useT, useLocale, MsgKey } from '@/i18n/I18nProvider';
 import { rememberPushLocale } from '@/lib/push-client';
@@ -375,6 +376,8 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   useEffect(() => { if (!ticking) return; setNowMs(Date.now()); const t = setInterval(() => setNowMs(Date.now()), 500); return () => clearInterval(t); }, [ticking]);
 
   async function acceptCurrentOffer(id: string) {
+    // The navigator to the client, right in the tap (operator 2026-11-27); not for a next order taken mid-trip.
+    if (offer && offer.offerId === id && !offer.afterTrip) autoOpenNav(offer.pickup.lat, offer.pickup.lng);
     setOfferBusy(true);
     try { await api(`/driver/offers/${id}/accept`, { method: 'POST' }); setOffer(null); setTab('home'); await load(); await loadDash(); }
     catch (e) { if (e instanceof ApiRequestError) setBanner(tErrRef.current(e)); setOffer(null); }
@@ -391,6 +394,10 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
     if (!data?.trip) return;
     const done = data.trip;
     ownActionRef.current = done.bookingId; // the driver's own action — no «ride removed» line
+    // The navigator to the next point, right in the tap (operator 2026-11-27): after the start → the stop (if any)
+    // or the destination; leaving the stop → the destination.
+    if (path === 'start') { const s = done.stop && !done.stop.departedAt ? done.stop : done.dropoff; autoOpenNav(s.lat, s.lng); }
+    if (path === 'stop' && body.action === 'continue') autoOpenNav(done.dropoff.lat, done.dropoff.lng);
     try {
       await api(`/driver/bookings/${done.bookingId}/${path}`, { method: 'POST', body: { expectedRevision: done.revision, ...body } });
       if (path === 'complete') setRateFor({ bookingId: done.bookingId, name: done.passengerName }); // then rate the passenger
@@ -913,6 +920,8 @@ function FreeOrdersSection({ pos, onDuty, onTaken }: { pos: { lat: number; lng: 
   }, [load]);
 
   async function take(id: string) {
+    const o = orders?.find((x) => x.bookingId === id);
+    if (o) autoOpenNav(o.pickup.lat, o.pickup.lng); // the navigator to the client, in the tap (2026-11-27)
     setBusyId(id); setMsg(null);
     try { await api(`/driver/free-orders/${id}/claim`, { method: 'POST' }); onTaken(); }
     catch (e) { setMsg(e instanceof ApiRequestError ? tError(e) : t('common.somethingWrong')); setViewId(null); void load(); }
@@ -1275,7 +1284,48 @@ function SettingsSection() {
         </button>
         {themeOpen && <div className="mt-2"><ThemePicker role="driver" /></div>}
       </div>
+      <NavAppSetting />
       <div className="pt-3"><StaffPasswordForm bare /></div>
+    </div>
+  );
+}
+
+/** «Навигатор» (operator 2026-11-27): Google Maps or Waze, and whether it opens by itself after «Принять» /
+ *  «Взять заказ» (to the client) and «Начать поездку» / leaving the stop (to the next point). On this phone. */
+function NavAppSetting() {
+  const { t } = useT();
+  const [p, setP] = useState<NavPrefs>({ auto: false, app: 'google' });
+  const [pick, setPick] = useState(false);
+  const name = (a: NavPrefs['app']) => (a === 'waze' ? 'Waze' : 'Google Maps');
+  useEffect(() => { setP(readNavPrefs()); }, []);
+  const save = (n: NavPrefs) => { setP(n); writeNavPrefs(n); };
+  return (
+    <div className="py-3" data-testid="nav-app-setting">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm">{t('driver.navApp.auto')}</span>
+        <button type="button" role="switch" aria-checked={p.auto} onClick={() => save({ ...p, auto: !p.auto })} data-testid="nav-auto"
+          className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${p.auto ? 'bg-accent' : 'bg-edge-strong'}`}>
+          <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${p.auto ? 'start-[22px]' : 'start-0.5'}`} />
+        </button>
+      </div>
+      {/* One row «Навигатор · Google Maps ›»; a tap opens the choice (operator 2026-11-27), like «Цвет приложения». */}
+      <button type="button" onClick={() => setPick((v) => !v)} aria-expanded={pick} data-testid="nav-app-row"
+        className="mt-3 flex w-full items-center justify-between gap-3 text-start text-sm">
+        <span>{t('driver.navApp.which')}</span>
+        <span className="flex items-center gap-2 text-muted">{name(p.app)}
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`transition-transform ${pick ? 'rotate-90' : 'rtl:-scale-x-100'}`}><path d="M9 5l7 7-7 7" /></svg>
+        </span>
+      </button>
+      {pick && (
+        <div className="mt-2 overflow-hidden rounded-[12px] bg-page">
+          {(['google', 'waze'] as const).map((a) => (
+            <button key={a} type="button" onClick={() => { save({ ...p, app: a }); setPick(false); }} aria-pressed={p.app === a} data-testid={`nav-app-${a}`}
+              className={`flex min-h-[46px] w-full items-center justify-between px-3 text-sm ${p.app === a ? 'font-semibold text-accent' : 'text-ink'}`}>
+              {name(a)}{p.app === a && <span aria-hidden>✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

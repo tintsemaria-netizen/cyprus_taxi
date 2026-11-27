@@ -6,6 +6,7 @@ const driver: Catalog<typeof en> = {
   dropoffChanged: "Ο επιβάτης άλλαξε τον προορισμό",
   dropoffNewPrice: "Νέα τιμή: {fare}",
   dropoffChangedOk: "Εντάξει",
+  navApp: { auto: "Αυτόματο άνοιγμα πλοήγησης", which: "Πλοήγηση" },
   units: {
     kmShort: 'χλμ',
     mShort: 'μ',
