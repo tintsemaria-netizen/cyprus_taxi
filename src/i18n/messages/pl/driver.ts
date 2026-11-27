@@ -248,6 +248,7 @@ const driver: Catalog<typeof en> = {
     none: "Brak aut.",
     current: "teraz",
     busy: "Inny kierowca jest nim teraz online",
+    busyPick: "Nie możesz wybrać tego auta: pracuje na nim teraz inny kierowca.",
     expired: "Wygasło ubezpieczenie lub licencja taxi",
     switched: "Teraz pracujesz na {plate}.",
     workOn: "Pracuj na tym",

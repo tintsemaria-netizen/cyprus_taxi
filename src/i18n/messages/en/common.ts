@@ -10,6 +10,7 @@ const common = {
   book: 'Book',
   cancel: 'Cancel',
   close: 'Close',
+  gotIt: "Got it",
   back: 'Back',
   retry: 'Try again',
   loading: 'Loading…',

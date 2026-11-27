@@ -13,6 +13,7 @@ import { ThemePicker } from '@/components/ThemePicker';
 import { ClientLine, RouteLines, PREBOOK_FREE_COLOR } from '@/components/driver/OrderBits';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
+import { NoticeSheet } from '@/components/NoticeSheet';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { ScheduledRides } from '@/components/driver/ScheduledRides';
 import { DriverNavigation, type NavTrip } from '@/components/driver/DriverNavigation';
@@ -1200,9 +1201,13 @@ function CarPick({ onDone, openCars, tError }: { onDone: () => void; openCars: (
   const [d, setD] = useState<{ online: boolean; onTrip: boolean; cars: PickCar[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { api<{ online: boolean; onTrip: boolean; cars: PickCar[] }>('/driver/cars').then(setD).catch((e) => setErr(tError(e))); }, []);
   async function choose(c: PickCar) {
+    // No lines that always stand there (operator 2026-11-27): the reason comes in a small window on the tap.
+    if (d && (d.online || d.onTrip)) { setNotice(d.onTrip ? t('driver.cars.lockedTrip') : t('driver.cars.lockedOnline')); return; }
+    if (c.busy) { setNotice(t('driver.cars.busyPick')); return; }
     setBusy(true); setErr(null);
     try { await api('/driver/cars/switch', { method: 'POST', body: { vehicleId: c.id } }); onDone(); }
     catch (e) { setErr(e instanceof ApiRequestError ? tError(e) : t('driver.cars.failed')); }
@@ -1213,18 +1218,16 @@ function CarPick({ onDone, openCars, tError }: { onDone: () => void; openCars: (
     <div className="mt-2 rounded-[12px] border border-edge bg-elevated p-2" data-testid="car-pick">
       {!d ? <p className="p-2 text-sm text-muted">{err ?? t('common.loading')}</p> : (
         <>
-          {locked && <p className="px-2 pb-1 text-xs text-warn">{d.onTrip ? t('driver.cars.lockedTrip') : t('driver.cars.lockedOnline')}</p>}
           <ul className="divide-y divide-edge">
             {d.cars.map((c) => {
-              const off = c.current || locked || busy || c.busy || !!c.expired;
+              const off = c.current || busy || !!c.expired;
               return (
                 <li key={c.id}>
                   <button type="button" disabled={off} onClick={() => choose(c)} data-testid={`pick-${c.plate}`}
-                    className={`flex w-full items-center gap-2 px-2 py-2 text-start ${off && !c.current ? 'opacity-60' : ''}`}>
+                    className={`flex w-full items-center gap-2 px-2 py-2 text-start ${(off || c.busy) && !c.current ? 'opacity-60' : ''}`}>
                     <span className="rounded-[6px] border border-edge px-1.5 font-mono text-xs font-bold">{c.plate}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-xs text-muted">{c.make} {c.model} · {t(`common.vClass.${c.vClass}` as never)}</span>
-                      {c.busy && !c.current && <span className="block text-[11px] text-warn">{t('driver.cars.busy')}</span>}
                       {c.expired && <span className="block text-[11px] text-danger">{t('driver.cars.expired')}</span>}
                     </span>
                     {c.current && <span className="shrink-0 text-xs font-semibold text-accent">✓ {t('driver.cars.current')}</span>}
@@ -1235,6 +1238,7 @@ function CarPick({ onDone, openCars, tError }: { onDone: () => void; openCars: (
           </ul>
           {err && <p className="px-2 pt-1 text-xs text-danger">{err}</p>}
           <button type="button" onClick={openCars} className="mt-1 w-full px-2 py-2 text-start text-xs text-accent">+ {t('driver.cars.addNew')}</button>
+          {notice && <NoticeSheet text={notice} onClose={() => setNotice(null)} />}
         </>
       )}
     </div>

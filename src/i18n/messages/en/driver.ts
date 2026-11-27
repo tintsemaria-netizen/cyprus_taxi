@@ -245,6 +245,7 @@ const driver = {
     none: "No cars yet.",
     current: "now",
     busy: "Another driver is online in it now",
+    busyPick: "You can’t choose this car: another driver is working on it right now.",
     expired: "Insurance or taxi licence expired",
     switched: "You now work on {plate}.",
     workOn: "Work on this one",
