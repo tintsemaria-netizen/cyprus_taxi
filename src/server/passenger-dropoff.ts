@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { createQuote, consumeQuote, type QuoteInput } from '@/server/quote';
 import { enqueueDriver } from '@/server/push';
 import { lookupPostcode } from '@/server/postcode';
+import { fareRangeCents } from '@/lib/price-type';
 
 // The passenger changes the drop-off during the ride (operator 2026-11-27): from the moment a driver
 // is assigned until the trip ends. Two steps: PREVIEW re-quotes the whole route (pickup → stop → new
@@ -74,9 +75,11 @@ export async function confirmDropoff(bookingId: string, to: DropoffPoint, quoteI
     await tx.bookingEvent.create({ data: { bookingId, type: 'DROPOFF_CHANGED', actorType: 'PASSENGER', actorId: 'tracking', beforeStatus: cur!.status, afterStatus: cur!.status } });
     const a = await tx.assignment.findFirst({ where: { activeBookingId: bookingId } });
     if (a?.activeDriverId) {
-      // No street names in the push (operator 2026-11-22); the trip screen shows the new address.
-      await enqueueDriver(tx, a.activeDriverId, 'The passenger changed the destination', 'A new route has been built.',
-        { tag: `dropoff-${bookingId}`, dedupeKey: `dropoff-${bookingId}-${u.revision}`, msg: { k: 'drv.dropoffChanged' } });
+      // No street names in the push (operator 2026-11-22); the new price is in it (operator 2026-11-27).
+      const [lo, hi] = fareRangeCents(fareCents, c.priceType, u.fareMinCents);
+      const money = (x: number) => `€${(x / 100).toFixed(2)}`;
+      await enqueueDriver(tx, a.activeDriverId, 'The passenger changed the destination', `New price: ${lo === hi ? money(lo) : `${money(lo)}–${money(hi)}`}.`,
+        { tag: `dropoff-${bookingId}`, dedupeKey: `dropoff-${bookingId}-${u.revision}`, msg: lo === hi ? { k: 'drv.dropoffChanged', p: { fareC: lo } } : { k: 'drv.dropoffChangedRange', p: { loC: lo, hiC: hi } } });
     }
     return { ok: true as const, fareCents: u.fareCents ?? null, priceType: u.priceType ?? null };
   });

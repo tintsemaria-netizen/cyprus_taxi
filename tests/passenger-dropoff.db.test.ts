@@ -57,6 +57,11 @@ describe('passenger changes the drop-off during the ride', () => {
     expect(await prisma.bookingEvent.count({ where: { bookingId, type: 'DROPOFF_CHANGED', actorType: 'PASSENGER' } })).toBe(1);
     const push = await prisma.notificationOutbox.findFirst({ where: { audience: `DRIVER:${userId}`, tag: `dropoff-${bookingId}` } });
     expect(push).not.toBeNull();
+    // The new price is in the push (operator 2026-11-27): one amount or the estimate range, in euro cents.
+    const m = push!.msg as { k: string; p: Record<string, number> };
+    expect(['drv.dropoffChanged', 'drv.dropoffChangedRange']).toContain(m.k);
+    if (m.k === 'drv.dropoffChanged') expect(m.p.fareC).toBe(b.fareCents);
+    else expect(m.p.loC).toBeLessThanOrEqual(b.fareCents!), expect(m.p.hiC).toBeGreaterThanOrEqual(b.fareCents!);
   });
 
   it('a quote for another address does not apply', async () => {
