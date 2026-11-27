@@ -13,6 +13,11 @@ export function useDismiss(open: boolean, onClose: () => void, refs: RefObject<H
     const onDown = (e: PointerEvent) => {
       const t = e.target as Node | null;
       if (t && refsRef.current.some((r) => r.current?.contains(t))) return;
+      // That tap only closes the pop-up: the click that follows it is swallowed, so it does not also press
+      // whatever lies under the finger (the menu moves when the list folds away).
+      const swallow = (ev: MouseEvent) => { ev.preventDefault(); ev.stopPropagation(); };
+      document.addEventListener('click', swallow, { capture: true, once: true });
+      setTimeout(() => document.removeEventListener('click', swallow, { capture: true }), 600);
       closeRef.current();
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeRef.current(); };
