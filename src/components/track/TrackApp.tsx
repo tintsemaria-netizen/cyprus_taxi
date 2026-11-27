@@ -46,6 +46,7 @@ interface TrackView {
   location: null | { lat: number; lng: number; freshness: string; poorAccuracy: boolean; sampledAt: string };
   pickupEta: string | null;
   pickupEtaMin: number | null;
+  dropoffEtaMin?: number | null;
   /** The driver is finishing another ride nearby first (next order, 2026-11-25). */
   finishingNearby?: boolean;
   /** Where the driver drops his current passenger off — a bare point, nothing else (2026-11-25). */
@@ -409,7 +410,8 @@ export default function TrackApp() {
   // On the way to the destination (2026-11-27, operator: no arrival time): the route's road time, scaled to
   // the part still ahead of the car → «Прибытие в 14:32 · 25 мин».
   const dropEtaMin = view.status === 'IN_PROGRESS' && liveTrip && routeMeta?.leg === 'dropoff' && routeMeta.lenM > 0 && shownRoute.length > 1
-    ? Math.max(1, Math.round(routeMeta.etaMin * Math.min(1, lineLenM(shownRoute) / routeMeta.lenM))) : null;
+    ? Math.max(1, Math.round(routeMeta.etaMin * Math.min(1, lineLenM(shownRoute) / routeMeta.lenM)))
+    : view.status === 'IN_PROGRESS' && view.dropoffEtaMin != null ? Math.max(1, view.dropoffEtaMin) : null; // server road ETA when the line is missing
   const arriveText = dropEtaMin != null ? t('track.arriveAt', { time: fmt.time(new Date(Date.now() + dropEtaMin * 60_000).toISOString()), min: tp('common.minutes', dropEtaMin) }) : null;
   const etaMinText = view.pickupEtaMin != null ? (etaUnder ? t('track.etaUnderMin') : tp('common.minutes', view.pickupEtaMin)) : null;
   const etaText = !disconnected && etaMinText ? (view.pickupEtaApprox && !etaUnder ? t('track.etaApprox', { min: etaMinText }) : etaMinText) : null;

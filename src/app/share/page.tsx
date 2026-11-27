@@ -22,6 +22,7 @@ interface ShareView {
   location: null | { lat: number; lng: number; freshness: string; sampledAt: string };
   pickupEta: string | null;
   pickupEtaMin: number | null;
+  dropoffEtaMin?: number | null;
   pickupEtaApprox: boolean;
 }
 
@@ -29,7 +30,7 @@ const STATUS_KEYS = new Set(['REQUESTED', 'SEARCHING', 'NO_DRIVER', 'ASSIGNED', 
 
 export default function SharePage() {
   const kbBox = useKeyboardViewport(); // keep the header below the status bar while typing (iOS)
-  const { t, tp, tError } = useT();
+  const { t, tp, tError, fmt } = useT();
   const [view, setView] = useState<ShareView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const token = useRef<string>('');
@@ -75,6 +76,9 @@ export default function SharePage() {
   const etaMinText = view.pickupEtaMin != null ? (etaUnder ? t('track.etaUnderMin') : tp('common.minutes', view.pickupEtaMin)) : null;
   const etaText = etaMinText ? (view.pickupEtaApprox && !etaUnder ? t('track.etaApprox', { min: etaMinText }) : etaMinText) : null;
   const statusLabel = STATUS_KEYS.has(view.status) ? t(`track.share.status.${view.status}` as MsgKey) : view.status;
+  // On the way to the destination (2026-11-27): «Прибытие в 14:32 · 25 мин», as on the passenger's screen.
+  const arriveText = view.status === 'IN_PROGRESS' && view.dropoffEtaMin != null
+    ? t('track.arriveAt', { time: fmt.time(new Date(Date.now() + Math.max(1, view.dropoffEtaMin) * 60_000).toISOString()), min: tp('common.minutes', Math.max(1, view.dropoffEtaMin)) }) : null;
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={kbBox}>
@@ -92,7 +96,7 @@ export default function SharePage() {
           <div className="pointer-events-auto w-full sm:absolute sm:bottom-4 sm:start-4 sm:w-[400px]">
             <div className="card max-h-[60dvh] overflow-y-auto p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
               <h1 className="text-xl font-bold" role="status" aria-live="polite">
-                {etaText && view.status !== 'IN_PROGRESS' ? t('track.share.headlineEta', { status: statusLabel, eta: etaText }) : statusLabel}
+                {arriveText ?? (etaText && view.status !== 'IN_PROGRESS' ? t('track.share.headlineEta', { status: statusLabel, eta: etaText }) : statusLabel)}
               </h1>
               {view.vehicle && (
                 <div className="mt-3 flex items-center justify-between gap-3 rounded-[12px] border border-edge bg-elevated p-3">

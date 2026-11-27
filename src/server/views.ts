@@ -74,6 +74,8 @@ export async function trackingView(bookingId: string) {
   let pickupEta: string | null = null;
   let pickupEtaMin: number | null = null;
   let pickupEtaApprox = false;
+  // On the way to the destination (2026-11-27): road minutes from the car to the drop-off (cached like the pickup ETA).
+  let dropoffEtaMin: number | null = null;
   // His driver is still finishing another ride nearby (next order, 2026-11-25): told honestly, and the
   // minutes count the rest of that ride.
   const finishingNearby = !!active?.queuedDriverId;
@@ -120,6 +122,9 @@ export async function trackingView(bookingId: string) {
           pickupEta = `≈ ${eta.etaMin} min${eta.source === 'approx' ? ' (approx)' : ''}`;
           pickupEtaMin = eta.etaMin;
           pickupEtaApprox = eta.source === 'approx';
+        } else if (booking.status === 'IN_PROGRESS' && freshness === 'fresh') {
+          const dest = booking.stopLat != null && booking.stopLng != null && !booking.stopDepartedAt ? null : { lat: booking.dropoffLat, lng: booking.dropoffLng };
+          if (dest) dropoffEtaMin = (await driverToPickupEta(`${booking.id}:drop`, active.driverId, { lat: loc.lat, lng: loc.lng }, dest)).etaMin;
         }
       }
     }
@@ -182,6 +187,7 @@ export async function trackingView(bookingId: string) {
     pickupEta: pickupEta ?? (booking.status === 'EN_ROUTE' || booking.status === 'ASSIGNED' ? 'ETA unavailable' : null),
     pickupEtaMin,
     pickupEtaApprox,
+    dropoffEtaMin,
     finishingNearby,
     finishingAt,
     fareCents: booking.fareCents ?? null,
@@ -265,6 +271,7 @@ export async function shareView(bookingId: string) {
     pickupEta: live ? v.pickupEta : null,
     pickupEtaMin: live ? v.pickupEtaMin : null,
     pickupEtaApprox: live ? v.pickupEtaApprox : false,
+    dropoffEtaMin: v.status === 'IN_PROGRESS' ? v.dropoffEtaMin : null,
   };
 }
 

@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-27 — arrival time on the shared-trip page
+
+- trackingView: `dropoffEtaMin` (IN_PROGRESS, fresh GPS, no pending stop) via the cached road ETA (key booking:drop,
+  20 s TTL); share view passes it. /share headline «Прибытие в HH:MM · N мин»; TrackApp uses it as a fallback.
+
 ## 2026-11-27 — arrival time, pinch at the fingers, smooth car turns (operator)
 
 - Passenger track IN_PROGRESS: headline `track.arriveAt` «Прибытие в HH:MM · N мин» from /routes/estimate etaMinutes,
