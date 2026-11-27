@@ -142,6 +142,13 @@ const driver: Catalog<typeof en> = {
     releaseBody: "Zostanie od razu zaproponowany innemu kierowcy, a pasażer dowie się, że szukamy nowego kierowcy.",
     releaseConfirm: "Zwolnij przejazd",
     keepRide: "Zostaw przejazd",
+    whatHappened: 'Co się stało?',
+    noShow: 'Pasażer się nie pojawił',
+    noShowIn: 'dostępne za {time}',
+    cantServe: 'Nie mogę obsłużyć tego pasażera',
+    noShowTitle: 'Pasażer się nie pojawił?',
+    noShowBody: 'Kurs zostanie zamknięty i nie trafi do innego kierowcy. Pasażer dostanie informację, że czekałeś, a on nie przyszedł. To nie liczy się jako Twoja odmowa.',
+    noShowConfirm: 'Zamknij kurs',
   },
   home: {
     earnedToday: "zarobiono dziś",

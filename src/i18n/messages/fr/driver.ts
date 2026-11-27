@@ -142,6 +142,13 @@ const driver: Catalog<typeof en> = {
     releaseBody: "Elle sera immédiatement proposée à un autre chauffeur et le passager sera informé que nous cherchons un nouveau chauffeur.",
     releaseConfirm: "Libérer la course",
     keepRide: "Garder la course",
+    whatHappened: "Que s'est-il passé ?",
+    noShow: "Le passager ne s'est pas présenté",
+    noShowIn: 'disponible dans {time}',
+    cantServe: 'Je ne peux pas prendre ce passager',
+    noShowTitle: "Le passager ne s'est pas présenté ?",
+    noShowBody: "La course sera fermée et ne sera pas donnée à un autre chauffeur. Le passager sera informé que vous avez attendu et qu'il n'est pas venu. Cela ne compte pas comme votre refus.",
+    noShowConfirm: 'Fermer la course',
   },
   home: {
     earnedToday: "gagnés aujourd’hui",

@@ -142,6 +142,13 @@ const driver: Catalog<typeof en> = {
     releaseBody: "Sie wird sofort einem anderen Fahrer angeboten, und der Fahrgast erfährt, dass wir einen neuen Fahrer suchen.",
     releaseConfirm: "Fahrt abgeben",
     keepRide: "Fahrt behalten",
+    whatHappened: 'Was ist passiert?',
+    noShow: 'Fahrgast nicht erschienen',
+    noShowIn: 'verfügbar in {time}',
+    cantServe: 'Ich kann diesen Fahrgast nicht fahren',
+    noShowTitle: 'Fahrgast nicht erschienen?',
+    noShowBody: 'Die Fahrt wird geschlossen und keinem anderen Fahrer gegeben. Der Fahrgast erfährt, dass Sie gewartet haben und er nicht kam. Das zählt nicht als Ihre Ablehnung.',
+    noShowConfirm: 'Fahrt schließen',
   },
   home: {
     earnedToday: "heute verdient",

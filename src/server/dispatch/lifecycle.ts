@@ -7,6 +7,8 @@ import { randomInt } from 'crypto';
 import { Prisma, Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
+import { paysByCard } from '@/lib/payment-method';
+import { noShowAfterSec } from '@/lib/late-cancel';
 import { computeFreshness } from '@/lib/freshness';
 import { haversineMeters } from '@/lib/geo';
 import { isAirportPoint } from '@/lib/airports';
@@ -360,12 +362,13 @@ function safeParse(s: string): unknown {
   try { return JSON.parse(s); } catch { return null; }
 }
 
-// ---- Ride-share no-show (Task 022) ----
-// The driver waited at the pickup of a shared ride (past the free waiting time) and the passenger
-// never came. That leg is cancelled; on a pre-booked pair the no-show owes noShowFeePct of their
-// shared price (recorded on the group — charged by card once card payments exist). The other
-// passenger keeps riding at the full price (leaveShareTx).
-export async function driverShareNoShow(bookingId: string, driverId: string, expectedRevision: number): Promise<LifeResult> {
+// ---- No-show (Task 022 for shared rides; every ride since 2026-11-27, operator) ----
+// The driver waited at the pickup (3 free + 2 paid minutes) and the passenger never came. The ride is closed
+// — NOT given to another driver — and it is not the driver's refusal. The passenger owes the no-show fee
+// (LATE_CANCEL_FEE_CENTS, 4 €); a pre-booked shared pair keeps its own fee (SHARE_NO_SHOW_FEE_CENTS, 10 €).
+// Fees are recorded only; they are charged by card once card payments exist (cash: nothing is taken).
+// On a shared ride the other passenger keeps riding at the full price (leaveShareTx).
+export async function driverNoShow(bookingId: string, driverId: string, expectedRevision: number): Promise<LifeResult> {
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT 1 FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
     const b = await tx.booking.findUnique({ where: { id: bookingId } });
@@ -374,19 +377,28 @@ export async function driverShareNoShow(bookingId: string, driverId: string, exp
     if (b.status !== 'ARRIVED') return err(409, 'BAD_STATE', 'Only after you arrived at the pickup.');
     const a = await activeAssignmentFor(tx, bookingId, driverId);
     if (!a) return err(403, 'FORBIDDEN', 'Not your assignment.');
-    const g = await tx.shareGroup.findFirst({ where: { OR: [{ activeHostBookingId: bookingId }, { activeGuestBookingId: bookingId }], status: 'ACCEPTED' } });
-    if (!g) return err(409, 'NOT_SHARED', 'Only for a shared ride.');
     const w = await tx.waitingSession.findUnique({ where: { bookingId } });
-    if (w && Date.now() - w.arrivedAt.getTime() < w.graceSeconds * 1000) return err(409, 'TOO_EARLY', 'Wait until the free waiting time is over.');
-    const sharedPrice = g.hostBookingId === bookingId ? g.hostCents : g.guestCents;
-    const fee = g.mode === 'PREBOOK' ? noShowFeeCents(sharedPrice) : null;
-    await leaveShareTx(tx, bookingId, 'no-show', fee != null ? { noShowFeeCents: fee } : {});
+    if (!w || Date.now() - w.arrivedAt.getTime() < noShowAfterSec(w.graceSeconds, { afterPaidMin: config.dispatch.lateCancelAfterPaidMin }) * 1000) {
+      return err(409, 'TOO_EARLY', 'Wait until the free and paid waiting time is over.');
+    }
+    const g = await tx.shareGroup.findFirst({ where: { OR: [{ activeHostBookingId: bookingId }, { activeGuestBookingId: bookingId }], status: 'ACCEPTED' } });
+    let fee: number;
+    if (g) {
+      const sharedPrice = g.hostBookingId === bookingId ? g.hostCents : g.guestCents;
+      fee = g.mode === 'PREBOOK' ? noShowFeeCents(sharedPrice) : Math.min(config.dispatch.lateCancelFeeCents, sharedPrice);
+      await leaveShareTx(tx, bookingId, 'no-show', { noShowFeeCents: fee });
+    } else {
+      fee = config.dispatch.lateCancelFeeCents;
+    }
+    const card = paysByCard(b);
     await tx.assignment.update({ where: { id: a.id }, data: { endedAt: new Date(), reason: 'no-show', activeBookingId: null, activeDriverId: null, activeVehicleId: null, queuedDriverId: null } });
     await afterLegEndedTx(tx, a);
-    const u = await tx.booking.update({ where: { id: bookingId }, data: { status: 'CANCELED', revision: { increment: 1 } } });
-    await tx.bookingEvent.create({ data: { bookingId, type: 'NO_SHOW', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'ARRIVED', afterStatus: 'CANCELED', reason: fee != null ? `no-show fee ${fee} cents` : 'no-show' } });
+    const u = await tx.booking.update({ where: { id: bookingId }, data: { status: 'CANCELED', revision: { increment: 1 }, ...(card && fee > 0 ? { lateCancelFeeCents: fee } : {}) } });
+    await tx.bookingEvent.create({ data: { bookingId, type: 'NO_SHOW', actorType: 'DRIVER', actorId: driverId, beforeStatus: 'ARRIVED', afterStatus: 'CANCELED', reason: fee > 0 ? `no-show fee ${fee} cents${card ? '' : ' (not charged: no card payment)'}` : 'no-show' } });
     await recordEvent(tx, { eventType: 'booking.canceled', aggregateType: 'booking', aggregateId: bookingId, aggregateVersion: u.revision, correlationId: bookingId, payload: { bookingId, status: 'CANCELED', actorType: 'DRIVER', reason: 'no-show', noShowFeeCents: fee } });
-    await enqueuePassenger(tx, bookingId, 'Ride canceled — no-show', fee != null ? `The driver waited but you did not come. A no-show fee of €${(fee / 100).toFixed(2)} applies.` : 'The driver waited but you did not come.', { msg: fee != null ? { k: 'ride.noShowFee', p: { feeC: fee } } : { k: 'ride.noShow' } });
+    // The passenger hears of a fee only when it is really charged (card).
+    const charged = card && fee > 0;
+    await enqueuePassenger(tx, bookingId, 'Ride canceled — no-show', charged ? `The driver waited but you did not come. A no-show fee of €${(fee / 100).toFixed(2)} applies.` : 'The driver waited but you did not come.', { msg: charged ? { k: 'ride.noShowFee', p: { feeC: fee } } : { k: 'ride.noShow' } });
     return ok(u.status, u.revision, { noShowFeeCents: fee });
   });
 }

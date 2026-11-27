@@ -8,7 +8,7 @@ const dbName = (() => {
 import { prisma } from '@/lib/db';
 import { createBooking } from '@/server/bookings';
 import { assignBooking, changeStatus } from '@/server/assignments';
-import { arriveAtPickup, startTrip, completeTrip, driverCancelPrePickup } from '@/server/dispatch/lifecycle';
+import { arriveAtPickup, startTrip, completeTrip, driverCancelPrePickup, driverNoShow } from '@/server/dispatch/lifecycle';
 import { passengerSetStartCode } from '@/server/passenger-start-code';
 import { runOnce } from '@/server/dispatch/worker';
 import type { CreateBookingInput } from '@/lib/validation';
@@ -169,6 +169,28 @@ describe('M3 trip lifecycle', () => {
     const job = await prisma.dispatchJob.findUnique({ where: { bookingId: t.bookingId } });
     expect(job!.triedDriverIds).toContain(t.driverId); // won't be re-offered immediately
     expect(await prisma.assignment.findFirst({ where: { activeDriverId: t.driverId } })).toBeNull();
+  });
+
+  it('no-show (2026-11-27): only after 3 free + 2 paid minutes; closes the ride — no rematch, not the driver\'s refusal', async () => {
+    const t = await assignedBooking('Andreas', 20);
+    expect((await changeStatus({ bookingId: t.bookingId, to: 'EN_ROUTE', expectedRevision: t.revision, actor: 'DRIVER', driverId: t.driverId })).ok).toBe(true);
+    let b = (await prisma.booking.findUnique({ where: { id: t.bookingId } }))!;
+    expect((await arriveAtPickup(t.bookingId, t.driverId, b.revision)).ok).toBe(true);
+    b = (await prisma.booking.findUnique({ where: { id: t.bookingId } }))!;
+    // 4 minutes after arrival: still too early.
+    await prisma.waitingSession.update({ where: { bookingId: t.bookingId }, data: { arrivedAt: new Date(Date.now() - 4 * 60_000) } });
+    const early = await driverNoShow(t.bookingId, t.driverId, b.revision);
+    expect(early.ok ? '' : early.code).toBe('TOO_EARLY');
+    await prisma.waitingSession.update({ where: { bookingId: t.bookingId }, data: { arrivedAt: new Date(Date.now() - 5 * 60_000 - 1000) } });
+    const ns = await driverNoShow(t.bookingId, t.driverId, b.revision);
+    expect(ns.ok && ns.extra).toEqual({ noShowFeeCents: 400 });
+    b = (await prisma.booking.findUnique({ where: { id: t.bookingId } }))!;
+    expect(b.status).toBe('CANCELED');
+    expect(b.lateCancelFeeCents).toBeNull(); // cash: recorded in the event only, never charged
+    expect(await prisma.bookingEvent.findFirst({ where: { bookingId: t.bookingId, type: 'REMATCH' } })).toBeNull();
+    expect((await prisma.bookingEvent.findFirst({ where: { bookingId: t.bookingId, type: 'NO_SHOW' } }))?.reason).toContain('not charged');
+    expect(await prisma.assignment.findFirst({ where: { activeDriverId: t.driverId } })).toBeNull();
+    expect((await prisma.driver.findUnique({ where: { id: t.driverId } }))!.available).toBe(true);
   });
 
   it('prolonged pre-pickup GPS loss rematches; IN_PROGRESS is never rematched', async () => {

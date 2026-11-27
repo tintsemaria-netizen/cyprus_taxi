@@ -139,6 +139,13 @@ const driver = {
     releaseBody: 'It will be offered to another driver straight away and the passenger will be told we are finding a new driver.',
     releaseConfirm: 'Release ride',
     keepRide: 'Keep the ride',
+    whatHappened: 'What happened?',
+    noShow: "Passenger didn't show up",
+    noShowIn: 'available in {time}',
+    cantServe: "I can't serve this passenger",
+    noShowTitle: "Passenger didn't show up?",
+    noShowBody: "The ride will be closed and not given to another driver. The passenger will be told you waited and they didn't come. It does not count as your refusal.",
+    noShowConfirm: 'Close the ride',
   },
   home: {
     earnedToday: 'earned today',

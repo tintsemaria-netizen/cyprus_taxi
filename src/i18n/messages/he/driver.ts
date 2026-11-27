@@ -142,6 +142,13 @@ const driver: Catalog<typeof en> = {
     releaseBody: "היא תוצע מיד לנהג אחר, והנוסע יקבל הודעה שאנחנו מחפשים נהג חדש.",
     releaseConfirm: "שחרור הנסיעה",
     keepRide: "להשאיר את הנסיעה",
+    whatHappened: 'מה קרה?',
+    noShow: 'הנוסע לא הגיע',
+    noShowIn: 'זמין בעוד {time}',
+    cantServe: 'אני לא יכול לשרת את הנוסע הזה',
+    noShowTitle: 'הנוסע לא הגיע?',
+    noShowBody: 'הנסיעה תיסגר ולא תועבר לנהג אחר. הנוסע יקבל הודעה שחיכית והוא לא הגיע. זה לא נחשב כסירוב שלך.',
+    noShowConfirm: 'סגור נסיעה',
   },
   home: {
     earnedToday: "הרווחתם היום",

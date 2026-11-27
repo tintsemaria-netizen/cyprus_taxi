@@ -15,12 +15,13 @@ describe('late-cancel fees', () => {
     expect(lateCancelAt(list, at(5))?.feeCents).toBe(400);
     expect(lateCancelAfterMin(180, r)).toBe(5);
   });
-  it('pre-booking: free until 30 min before pickup, 10 € inside the 30 min; at the pickup the larger fee', () => {
+  it('pre-booking: free until 30 min before pickup, 10 € inside the 30 min; at the pickup the ordinary 3 + 2 min → 4 €', () => {
     const pickupAt = at(60);
     expect(lateCancelAt(lateCancelSchedule({ pickupAt, waiting: null }, true, r), at(29))).toBeNull();
     expect(lateCancelAt(lateCancelSchedule({ pickupAt, waiting: null }, true, r), at(30))).toMatchObject({ kind: 'prebook', feeCents: 1000 });
-    const both = lateCancelSchedule({ pickupAt, waiting: { arrivedAt: at(58), graceSeconds: 180 } }, true, r);
-    expect(lateCancelAt(both, at(70))?.feeCents).toBe(1000);
+    const arrived = lateCancelSchedule({ pickupAt, waiting: { arrivedAt: at(58), graceSeconds: 180 } }, true, r);
+    expect(lateCancelAt(arrived, at(62))).toBeNull();
+    expect(lateCancelAt(arrived, at(63))).toMatchObject({ kind: 'noShow', feeCents: 400 });
   });
   it('never with cash; no ride pays by card yet — the rule is dormant', () => {
     expect(lateCancelSchedule({ pickupAt: at(10), waiting: { arrivedAt: T, graceSeconds: 180 } }, false, r)).toEqual([]);

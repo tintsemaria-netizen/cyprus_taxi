@@ -7,7 +7,7 @@ import { prisma } from '@/lib/db';
 import { config } from '@/lib/config';
 import { createBooking } from '@/server/bookings';
 import { assignBooking, changeStatus } from '@/server/assignments';
-import { arriveAtPickup, startTrip, completeTrip, driverShareNoShow } from '@/server/dispatch/lifecycle';
+import { arriveAtPickup, startTrip, completeTrip, driverNoShow } from '@/server/dispatch/lifecycle';
 import { tryLiveShare, answerShare, expireShares, matchPrebookings, fitPair, proposePrebook } from '@/server/share';
 import { scheduledBoard, claimScheduled, runPreassignments } from '@/server/dispatch/preassign';
 import { driverCurrentTrip, trackingView } from '@/server/views';
@@ -689,9 +689,9 @@ describe('pre-booked ride-share', () => {
     gb = await fresh(b.id);
     expect((await arriveAtPickup(b.id, d.driverId, gb.revision)).ok).toBe(true);
     gb = await fresh(b.id);
-    expect((await driverShareNoShow(b.id, d.driverId, gb.revision)).ok).toBe(false); // too early
+    expect((await driverNoShow(b.id, d.driverId, gb.revision)).ok).toBe(false); // too early
     await prisma.waitingSession.update({ where: { bookingId: b.id }, data: { arrivedAt: new Date(Date.now() - 10 * MIN) } });
-    const ns = await driverShareNoShow(b.id, d.driverId, gb.revision);
+    const ns = await driverNoShow(b.id, d.driverId, gb.revision);
     expect(ns.ok && ns.extra).toEqual({ noShowFeeCents: 1000 }); // flat €10
     expect((await fresh(b.id)).status).toBe('CANCELED');
     const ha = await fresh(a.id);

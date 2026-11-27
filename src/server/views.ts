@@ -1,7 +1,7 @@
 import { pairStopsFor } from '@/server/pair-route';
 import { completedTotalCents } from '@/lib/fare-total';
 import { config } from '@/lib/config';
-import { lateCancelAfterMin } from '@/lib/late-cancel';
+import { lateCancelAfterMin, noShowAfterSec } from '@/lib/late-cancel';
 import { bookingLateCancels } from '@/server/late-cancel';
 import { noDriverRetryable } from '@/lib/ride-outcome';
 import { gpsMeterFor } from '@/server/gps-meter';
@@ -398,6 +398,8 @@ export async function driverCurrentTrip(driverId: string) {
       vClass: b.vClass,
       scheduledAt: b.scheduledAt?.toISOString() ?? null,
       waiting: waiting ? { arrivedAt: waiting.arrivedAt.toISOString(), graceSeconds: waiting.graceSeconds, paidRateCentsPerMin: waiting.paidRateCentsPerMin } : null,
+      // From when «Клиент не явился» is allowed (2026-11-27): 3 free + 2 paid minutes after arrival.
+      noShowAt: waiting ? new Date(waiting.arrivedAt.getTime() + noShowAfterSec(waiting.graceSeconds, { afterPaidMin: config.dispatch.lateCancelAfterPaidMin }) * 1000).toISOString() : null,
       allowedNext: allowedNext(b.status as BookingStatus, 'DRIVER'),
     },
   };

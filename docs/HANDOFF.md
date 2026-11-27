@@ -1,5 +1,17 @@
 # Session handoff
 
+## 2026-11-27 — no-show for every ride (operator)
+
+- `driverNoShow` (was driverShareNoShow; route POST /driver/bookings/:id/no-show) works for every ride, allowed
+  `noShowAfterSec` = grace (3 min) + LATE_CANCEL_AFTER_PAID_MIN (2) after arrival. Closes the ride (CANCELED, no
+  rematch, assignment reason 'no-show' → passengerCanceled in analytics, not the driver's refusal). Fee: 4 €
+  (LATE_CANCEL_FEE_CENTS), on-demand share min(4 €, price), pre-booked share pair keeps SHARE_NO_SHOW_FEE_CENTS 10 €.
+  Recorded only; Booking.lateCancelFeeCents and the «fee applies» push only with card (none yet).
+- Late-cancel rule: the pre-booking 10 € applies only before the driver arrived; at the pickup the ordinary 3+2 → 4 €.
+- Driver UI at ARRIVED: ☰ → «Не могу взять — отказаться» opens «Что случилось?»: «Клиент не явился» (disabled with
+  a countdown until `trip.noShowAt`) → confirm «Закрыть заказ»; «Не могу обслужить этого клиента» → the old release.
+  Texts in 8 languages. Tests: lifecycle no-show, late-cancel updated.
+
 ## 2026-11-27 — stand queue: leave countdown (operator)
 
 - `standStateFor` returns `leaveInMs` when the driver is outside the stand but still holds his place

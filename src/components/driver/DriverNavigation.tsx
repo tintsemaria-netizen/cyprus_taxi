@@ -40,6 +40,8 @@ export interface NavTrip {
   pickup: { lat: number; lng: number; label: string }; dropoff: { lat: number; lng: number; label: string; postcode?: string | null };
   payment?: 'CASH' | 'CARD'; startCodeRequired?: boolean; passengerName: string; prebooked?: boolean; passengerRating?: { average: number; count: number } | null; passengerPhone: string; note: string | null; flightNumber?: string | null; arrive?: { from: string; by: string } | null; passengerCount: number; luggageCount?: number; vClass: string;
   waiting: { arrivedAt: string; graceSeconds: number; paidRateCentsPerMin: number } | null;
+  /** From when «Клиент не явился» is allowed (3 free + 2 paid minutes after arrival, 2026-11-27). */
+  noShowAt?: string | null;
   /** Passenger's live position, only if they chose to share it, only before pickup (2026-11-15). */
   passengerLocation?: { lat: number; lng: number; accuracyM: number; ageSec: number } | null;
   /** One optional intermediate stop (2026-11-15). */
@@ -120,7 +122,7 @@ export function DriverNavigation(props: {
   useEffect(() => { if (trip.status !== prevStatus.current) { if (trip.status === 'IN_PROGRESS') setPanelOpen(false); prevStatus.current = trip.status; } }, [trip.status]);
   const swipeY = useRef<number | null>(null);
   const swiped = useRef(false);
-  const [ask, setAsk] = useState<'complete' | 'release' | null>(null);
+  const [ask, setAsk] = useState<'complete' | 'release' | 'choose' | 'noShow' | null>(null);
   const [muted, setMuted] = useState(false);
   const [clock, setClock] = useState(0); // for the arrival time; refreshed every 15 s
   useEffect(() => { setClock(Date.now()); const id = setInterval(() => setClock(Date.now()), 15_000); return () => clearInterval(id); }, []);
@@ -512,7 +514,7 @@ export function DriverNavigation(props: {
             {shareMsg && <p className="text-center text-xs text-muted" data-testid="nav-share-msg">{shareMsg}</p>}
             {/* Only for a ride-share pair (operator, 2026-11-23): an ordinary ride has nothing more to show. */}
             {props.pair && <button className="relative mx-auto block h-[53px] w-[80%] rounded-full border border-edge bg-page text-[16px] font-bold text-ink" onClick={() => { setMenuOpen(false); setDetailsOpen(true); }} data-testid="nav-details"><EdgeShine />📋 {t('driver.navigation.orderDetails')}</button>}
-            {canRelease && <button className="relative mx-auto block h-[53px] w-[80%] min-w-[260px] rounded-full border border-danger/50 bg-page px-3 text-[15px] font-bold text-danger" onClick={() => { setMenuOpen(false); setAsk('release'); }}><EdgeShine />{t('driver.trip.release')}</button>}
+            {canRelease && <button className="relative mx-auto block h-[53px] w-[80%] min-w-[260px] rounded-full border border-danger/50 bg-page px-3 text-[15px] font-bold text-danger" onClick={() => { setMenuOpen(false); setAsk(trip.status === 'ARRIVED' ? 'choose' : 'release'); }} data-testid="nav-release"><EdgeShine />{t('driver.trip.release')}</button>}
             {/* Next ride (operator 2026-11-25): one small row — the next address, a small «Отменить» on its right;
                 kept well below «Поделиться поездкой» so the wrong one is not tapped by mistake. */}
             {props.next && (
@@ -547,6 +549,29 @@ export function DriverNavigation(props: {
       {ask === 'complete' && (
         <FarePreviewSheet bookingId={trip.bookingId} passengerName={trip.passengerName}
           onConfirm={(meterCents) => { setAsk(null); props.onTripAction('complete', meterCents != null ? { meterCents } : {}, { stopGps: true }); }} onCancel={() => setAsk(null)} />
+      )}
+      {/* At the pickup (operator 2026-11-27): «Клиент не явился» (after 3 free + 2 paid minutes — the ride is
+          closed, not given to another driver, not his refusal) or «Не могу обслужить этого клиента» (as before). */}
+      {ask === 'choose' && (() => {
+        const left = trip.noShowAt ? Math.max(0, Math.ceil((new Date(trip.noShowAt).getTime() - nowMs) / 1000)) : null;
+        const ready = left === 0;
+        return (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-4 sm:items-center sm:pb-0" onClick={() => setAsk(null)}>
+            <div role="dialog" aria-modal="true" className="card w-full max-w-sm space-y-3 p-5" onClick={(e) => e.stopPropagation()} style={{ marginBottom: 'env(safe-area-inset-bottom)' }} data-testid="nav-release-choose">
+              <h2 className="text-lg font-bold">{t('driver.trip.whatHappened')}</h2>
+              <button className="block w-full rounded-full border border-danger/50 bg-page px-4 py-3 text-[15px] font-bold text-danger disabled:opacity-45" disabled={!ready} onClick={() => setAsk('noShow')} data-testid="nav-no-show">
+                {t('driver.trip.noShow')}
+                {!ready && left != null && <span className="block text-xs font-medium text-muted">{t('driver.trip.noShowIn', { time: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` })}</span>}
+              </button>
+              <button className="block w-full rounded-full border border-danger/50 bg-page px-4 py-3 text-[15px] font-bold text-danger" onClick={() => setAsk('release')} data-testid="nav-cant-serve">{t('driver.trip.cantServe')}</button>
+              <button className="block w-full rounded-full px-4 py-2 text-sm text-muted" onClick={() => setAsk(null)}>{t('driver.trip.keepRide')}</button>
+            </div>
+          </div>
+        );
+      })()}
+      {ask === 'noShow' && (
+        <ConfirmSheet title={t('driver.trip.noShowTitle')} body={t('driver.trip.noShowBody')} confirmLabel={t('driver.trip.noShowConfirm')} danger
+          onConfirm={() => { setAsk(null); props.onTripAction('no-show', {}, { stopGps: true }); }} onCancel={() => setAsk(null)} cancelLabel={t('driver.trip.keepRide')} />
       )}
       {ask === 'release' && (
         <ConfirmSheet title={t('driver.trip.releaseTitle')} body={t('driver.trip.releaseBody')} confirmLabel={t('driver.trip.releaseConfirm')} danger

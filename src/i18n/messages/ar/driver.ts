@@ -142,6 +142,13 @@ const driver: Catalog<typeof en> = {
     releaseBody: "ستُعرض فورًا على سائق آخر، وسيُبلَّغ الراكب بأننا نبحث عن سائق جديد.",
     releaseConfirm: "التخلي عن الرحلة",
     keepRide: "الاحتفاظ بالرحلة",
+    whatHappened: 'ماذا حدث؟',
+    noShow: 'الراكب لم يحضر',
+    noShowIn: 'متاح بعد {time}',
+    cantServe: 'لا أستطيع خدمة هذا الراكب',
+    noShowTitle: 'الراكب لم يحضر؟',
+    noShowBody: 'سيُغلق الطلب ولن يُعطى لسائق آخر. سيُبلَّغ الراكب أنك انتظرت ولم يأتِ. لا يُحتسب هذا رفضًا منك.',
+    noShowConfirm: 'إغلاق الطلب',
   },
   home: {
     earnedToday: "أرباح اليوم",
