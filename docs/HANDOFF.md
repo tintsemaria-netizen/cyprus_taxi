@@ -3394,3 +3394,9 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Passenger map: the notice for a territory with ONE pickup point («Здесь подача только в одной точке…») shows for 3 s and then hides. The same goes for ONE drop-off point. Code: `useFlash` in src/components/useFlash.ts, keyed by the territory name.
 - With several points the notice stays, because its buttons are the choice.
 - Evidence: tsc clean; vitest 532 passed / 1 skipped; live health ready; the home chunks contain pickup-territory and the `d:${name}` flash key.
+
+## 2026-11-27 — deployed b7b22bd (territory-thin)
+- The territory outline and fill come from one shared style, src/lib/area-style.ts: line 1 → 2.5 px by zoom (was 1.5 → 4.5), line opacity 0.8, fill 0.07 (was 0.16).
+- Used by GoogleMapView, MapView, GoogleMapPicker and MapPicker. The admin zone maps were not changed.
+- No real-map screenshot could be taken locally (no tiles); the operator saw an SVG mock with the same numbers.
+- Evidence: tsc clean; vitest 532 passed / 1 skipped; live health ready.
