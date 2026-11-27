@@ -14,6 +14,7 @@ import { ClientLine, RouteLines, PREBOOK_FREE_COLOR } from '@/components/driver/
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
 import { InlineError } from '@/components/InlineError';
+import { useDismiss } from '@/components/useDismiss';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { ScheduledRides } from '@/components/driver/ScheduledRides';
 import { DriverNavigation, type NavTrip } from '@/components/driver/DriverNavigation';
@@ -1168,6 +1169,10 @@ function DriverCard({ dash, onSwitched, openCars }: { dash: Dashboard | null; on
   const { t, tError } = useT();
   const [photo, setPhoto] = useState(true);
   const [pick, setPick] = useState(false);
+  // The car list closes on a tap anywhere else too (operator 2026-11-27).
+  const pickRef = useRef<HTMLDivElement | null>(null);
+  const plateRef = useRef<HTMLDivElement | null>(null);
+  useDismiss(pick, () => setPick(false), [pickRef, plateRef]);
   const name = dash?.driver.name ?? t('driver.profile.driverFallback');
   const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '?';
   return (
@@ -1176,7 +1181,7 @@ function DriverCard({ dash, onSwitched, openCars }: { dash: Dashboard | null; on
         {photo
           ? <img src="/api/v1/driver/photo" alt="" onError={() => setPhoto(false)} className="h-14 w-14 shrink-0 rounded-full object-cover" />
           : <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-lg font-bold text-[#0d1608]">{initials}</span>}
-        <div className="min-w-0">
+        <div className="min-w-0" ref={plateRef}>
           <div className="truncate text-[16px] font-semibold">{name}</div>
           {dash?.vehicle
             ? <>
@@ -1190,7 +1195,7 @@ function DriverCard({ dash, onSwitched, openCars }: { dash: Dashboard | null; on
             : <button type="button" onClick={() => setPick((v) => !v)} className="text-xs text-accent underline" data-testid="driver-card-plate">{t('driver.profile.noVehicle')}</button>}
         </div>
       </div>
-      {pick && <CarPick onDone={() => { setPick(false); onSwitched(); }} openCars={() => { setPick(false); openCars(); }} tError={tError} />}
+      {pick && <div ref={pickRef}><CarPick onDone={() => { setPick(false); onSwitched(); }} openCars={() => { setPick(false); openCars(); }} tError={tError} /></div>}
     </div>
   );
 }

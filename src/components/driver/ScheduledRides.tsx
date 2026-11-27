@@ -3,7 +3,8 @@
 import { type PaxRatingValue } from '@/components/driver/PaxRating';
 import { ClientLine, RouteLines } from '@/components/driver/OrderBits';
 import { fareRangeText } from '@/lib/price-type';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useDismiss } from '@/components/useDismiss';
 import { api } from '@/lib/api-client';
 import { formatFlight } from '@/lib/flight';
 import { useT } from '@/i18n/I18nProvider';
@@ -54,6 +55,9 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
   // Two lists (2026-11-13): open pre-bookings to take, and the ones this driver has accepted.
   const [view, setView] = useState<'available' | 'mine'>('available');
   const [info, setInfo] = useState(false); // «ⓘ» pre-booking rules (2026-11-26)
+  const infoBtnRef = useRef<HTMLButtonElement | null>(null);
+  const infoBoxRef = useRef<HTMLDivElement | null>(null);
+  useDismiss(info, () => setInfo(false), [infoBtnRef, infoBoxRef]); // a tap elsewhere closes it (2026-11-27)
   // Review first (2026-11-13): a card opens the ride's details; take / release from there.
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -146,12 +150,12 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
           {/* «ⓘ Инфо» under «Принятые»: all the pre-booking rules in one place (operator 2026-11-26). */}
           {board.rules && (
             <div className="-mt-1 mb-1 flex justify-end">
-              <button type="button" onClick={() => setInfo((o) => !o)} aria-expanded={info} data-testid="prebook-info"
+              <button type="button" ref={infoBtnRef} onClick={() => setInfo((o) => !o)} aria-expanded={info} data-testid="prebook-info"
                 className="rounded-full border border-edge px-2.5 py-0.5 text-xs font-medium text-muted hover:text-ink">ⓘ {t('driver.scheduled.infoBtn')}</button>
             </div>
           )}
           {info && board.rules && (
-            <div className="mb-2 space-y-1.5 rounded-[12px] border border-edge bg-page px-3 py-2.5 text-xs leading-snug text-muted" data-testid="prebook-rules">
+            <div ref={infoBoxRef} className="mb-2 space-y-1.5 rounded-[12px] border border-edge bg-page px-3 py-2.5 text-xs leading-snug text-muted" data-testid="prebook-rules">
               <div>🕒 {t('driver.scheduled.rule1', { min: board.rules.protectMin })}</div>
               <div>🧭 {t('driver.scheduled.rule2', { min: board.rules.protectMin })}</div>
               <div>🚖 {t('driver.scheduled.rule3', { min: board.rules.convertMin })}</div>

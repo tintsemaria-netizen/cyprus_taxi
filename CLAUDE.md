@@ -31,6 +31,10 @@ Confirmed beta target: https://cyprustaxi.ackedberryes.store on 92.39.53.229. Cl
 - Language (2026-11-22): every person (passenger, driver, staff) first gets the phone's / browser's language; once
   they choose a language it stays fixed for them. Screens, e-mails and push notifications all follow it — a new
   notification gets a text key in `public/sw.js` MSG_TEXT (8 languages), never English-only text.
+- Pop-ups close on a tap elsewhere (2026-11-27): every small pop-up — a list, an ⓘ note, a menu, a dropdown — closes
+  on a tap anywhere else and on Escape, not only with its own button. Use `useDismiss` from
+  `src/components/useDismiss.ts` (the tap that closes it presses nothing else). Full-screen windows with a dark
+  backdrop close on a backdrop tap. Tell the operator when you add one.
 - Resumed apps (2026-11-22): installed phone apps are resumed, not reloaded. A screen that loads data or the position
   once must refresh when it comes back (`useRefreshOnReturn` from `src/components/useRefreshOnReturn.ts`).
 
