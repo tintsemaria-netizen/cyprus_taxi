@@ -3348,3 +3348,10 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Evidence: tsc clean; live health ready; the driver chunks contain nav-app-row, nav-auto, ily_nav_app, waze.com/ul.
 - Not checked: that Maps/Waze really open on a phone.
 - KNOWN TEST ISSUE (not from this change): tests/ride-share.db.test.ts «an existing arrival-window booking pairs with a new departure-hour booking…» fails when run in the evening (Nicosia ~19:30–01:30). It builds rides ~4–5 h ahead and lists shareSlots for one Nicosia day; the two rides then fall on different days. The same test fails on origin/main without this merge. Fix: build the rides at a fixed time of day, or list both days.
+
+## 2026-11-27 — deployed f93b8a2 (samsung-hint)
+- The SamsungDarkHint was unreachable with a very large phone font (operator's Samsung): the card filled the screen and «Понятно» was off-screen.
+- Now it is a compact card: fixed 13 px text, text-size-adjust none, at most 45dvh, the text scrolls, with a × and a small «Понятно».
+- The dialog overlays got `[&>*]:max-h-[calc(100dvh-1.5rem)] [&>*]:overflow-y-auto`, so content is never taller than the screen. Files: NotifyPrompt, GoogleReviewCard, RatePassengerSheet, FarePreviewSheet, ShareDriver ×2, PassengerLoginModal, TrackApp add-stop / change-drop-off; the drop-off banner gets max-h.
+- Evidence: tsc clean; vitest 532 passed / 1 skipped (the evening ride-share test passed this time); live health ready; the chunks contain samsung-dark-close and the max-h class.
+- Not checked on a real Samsung: how Samsung Internet's own text scaling treats the fixed px text.
