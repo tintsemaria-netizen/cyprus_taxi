@@ -1,5 +1,10 @@
 # Session handoff
 
+## 2026-11-27 — map picker zooms in to a territory point
+
+- GoogleMapPicker / MapPicker: settling in/near a territory point now also zooms to 17 (smooth 0.7 s), once per
+  point (`spotZoomed`), then only pans as before. Not verified on a real Google map (no key locally).
+
 ## 2026-11-27 — arrival time on the shared-trip page
 
 - trackingView: `dropoffEtaMin` (IN_PROGRESS, fresh GPS, no pending stop) via the cached road ETA (key booking:drop,

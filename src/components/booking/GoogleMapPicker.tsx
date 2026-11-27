@@ -56,6 +56,7 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
   // next to one slides to its pickup (destination: drop-off) point, named like on the main map.
   const [terrReady, setTerrReady] = useState(false);
   const [zoomNow, setZoomNow] = useState(initial ? 16 : fallback ? 14 : 11);
+  const spotZoomed = useRef(''); // the territory point the camera already zoomed in to
   const spot = terrReady ? pickerSpot(kind, center, zoomNow) : null;
   const outlines = terrReady ? pickerOutlines(kind, center) : [];
   const outlinesKey = outlines.map((o) => o.length + ':' + o[0]?.join(',')).join('|');
@@ -167,7 +168,14 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
           terrPolys.current.forEach((o) => o.setOptions({ strokeWeight: areaStroke(z) }));
           // Let go in / next to a territory → slide onto its point (the next idle shows its name, no address lookup).
           const s = pickerSpot(kind, { lat: c.lat(), lng: c.lng() }, z);
-          if (s && (Math.abs(s.lat - c.lat()) > 3e-5 || Math.abs(s.lng - c.lng()) > 3e-5)) { map.panTo({ lat: s.lat, lng: s.lng }); return; }
+          // …and zoom in to it (2026-11-27, operator: chosen from far away, the airport stayed tiny) — once per
+          // point, so zooming out by hand afterwards is not undone.
+          const key = s ? `${s.lat.toFixed(5)},${s.lng.toFixed(5)}` : '';
+          const zoomIn = !!s && z < SPOT_ZOOM - 0.5 && spotZoomed.current !== key;
+          if (s && (zoomIn || Math.abs(s.lat - c.lat()) > 3e-5 || Math.abs(s.lng - c.lng()) > 3e-5)) {
+            if (zoomIn) { spotZoomed.current = key; glideTo(map, { lat: s.lat, lng: s.lng }, SPOT_ZOOM); } else map.panTo({ lat: s.lat, lng: s.lng });
+            return;
+          }
           if (s) return;
           reverseGeocode(c.lat(), c.lng(), draftRev.current, gen);
         });
@@ -337,4 +345,19 @@ export default function GoogleMapPicker({ kind, initial, fallback, onConfirm, on
       </div>
     </div>
   );
+}
+
+const SPOT_ZOOM = 17;
+/** A short smooth camera move to a point and zoom (Google's panTo does not zoom; setZoom jumps). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function glideTo(map: any, to: { lat: number; lng: number }, zoom: number, ms = 700) {
+  const c = map.getCenter?.(), z0 = map.getZoom?.();
+  if (!c || z0 == null || typeof requestAnimationFrame === 'undefined') { map.moveCamera({ center: to, zoom }); return; }
+  const from = { lat: c.lat(), lng: c.lng() }, t0 = performance.now();
+  const step = (now: number) => {
+    const k = Math.min(1, (now - t0) / ms), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    map.moveCamera({ center: { lat: from.lat + (to.lat - from.lat) * e, lng: from.lng + (to.lng - from.lng) * e }, zoom: z0 + (zoom - z0) * e });
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }

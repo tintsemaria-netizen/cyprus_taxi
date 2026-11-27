@@ -78,6 +78,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
   // next to one slides to its pickup (destination: drop-off) point, named like on the main map.
   const [terrReady, setTerrReady] = useState(false);
   const [zoomNow, setZoomNow] = useState(initial ? 15 : fallback ? 13 : 10);
+  const spotZoomed = useRef(''); // the territory point the camera already zoomed in to
   const spot = terrReady ? pickerSpot(kind, center, zoomNow) : null;
   const outlines = terrReady ? pickerOutlines(kind, center) : [];
   const outlinesKey = outlines.map((o) => o.length + ':' + o[0]?.join(',')).join('|');
@@ -196,7 +197,11 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
           const c = map.getCenter(), z = map.getZoom(); setZoomNow(z);
           // Let go in / next to a territory → slide onto its point.
           const s = pickerSpot(kind, { lat: c.lat, lng: c.lng }, z);
-          if (s && (Math.abs(s.lat - c.lat) > 3e-5 || Math.abs(s.lng - c.lng) > 3e-5)) map.easeTo({ center: [s.lng, s.lat], duration: 300 });
+          // …and zoom in to it once per point (2026-11-27, as the Google picker).
+          const key = s ? `${s.lat.toFixed(5)},${s.lng.toFixed(5)}` : '';
+          const zoomIn = !!s && z < 16.5 && spotZoomed.current !== key;
+          if (zoomIn) { spotZoomed.current = key; map.easeTo({ center: [s!.lng, s!.lat], zoom: 17, duration: 700 }); }
+          else if (s && (Math.abs(s.lat - c.lat) > 3e-5 || Math.abs(s.lng - c.lng) > 3e-5)) map.easeTo({ center: [s.lng, s.lat], duration: 300 });
         });
         map.on('zoomstart', userGesture);
         map.on('rotatestart', userGesture);
