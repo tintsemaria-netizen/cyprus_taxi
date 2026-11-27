@@ -1295,6 +1295,8 @@ function SettingsSection() {
 function NavAppSetting() {
   const { t } = useT();
   const [p, setP] = useState<NavPrefs>({ auto: false, app: 'google' });
+  const [pick, setPick] = useState(false);
+  const name = (a: NavPrefs['app']) => (a === 'waze' ? 'Waze' : 'Google Maps');
   useEffect(() => { setP(readNavPrefs()); }, []);
   const save = (n: NavPrefs) => { setP(n); writeNavPrefs(n); };
   return (
@@ -1306,16 +1308,24 @@ function NavAppSetting() {
           <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${p.auto ? 'start-[22px]' : 'start-0.5'}`} />
         </button>
       </div>
-      <div className="mt-3 text-xs text-muted">{t('driver.navApp.which')}</div>
-      {/* One control, two halves, no frame (operator 2026-11-27). */}
-      <div className="mt-1.5 grid grid-cols-2 rounded-full bg-page p-1">
-        {(['google', 'waze'] as const).map((a) => (
-          <button key={a} type="button" onClick={() => save({ ...p, app: a })} aria-pressed={p.app === a} data-testid={`nav-app-${a}`}
-            className={`min-h-[40px] rounded-full text-sm font-semibold transition-colors ${p.app === a ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>
-            {a === 'google' ? 'Google Maps' : 'Waze'}
-          </button>
-        ))}
-      </div>
+      {/* One row «Навигатор · Google Maps ›»; a tap opens the choice (operator 2026-11-27), like «Цвет приложения». */}
+      <button type="button" onClick={() => setPick((v) => !v)} aria-expanded={pick} data-testid="nav-app-row"
+        className="mt-3 flex w-full items-center justify-between gap-3 text-start text-sm">
+        <span>{t('driver.navApp.which')}</span>
+        <span className="flex items-center gap-2 text-muted">{name(p.app)}
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`transition-transform ${pick ? 'rotate-90' : 'rtl:-scale-x-100'}`}><path d="M9 5l7 7-7 7" /></svg>
+        </span>
+      </button>
+      {pick && (
+        <div className="mt-2 overflow-hidden rounded-[12px] bg-page">
+          {(['google', 'waze'] as const).map((a) => (
+            <button key={a} type="button" onClick={() => { save({ ...p, app: a }); setPick(false); }} aria-pressed={p.app === a} data-testid={`nav-app-${a}`}
+              className={`flex min-h-[46px] w-full items-center justify-between px-3 text-sm ${p.app === a ? 'font-semibold text-accent' : 'text-ink'}`}>
+              {name(a)}{p.app === a && <span aria-hidden>✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
