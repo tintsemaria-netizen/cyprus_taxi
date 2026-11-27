@@ -6,7 +6,7 @@ const driver: Catalog<typeof en> = {
   dropoffChanged: "Pasażer zmienił cel podróży",
   dropoffNewPrice: "Nowa cena: {fare}",
   dropoffChangedOk: "OK",
-  navApp: { auto: "Otwieraj nawigację automatycznie", autoHint: "Po „Przyjmij” — trasa do klienta; po „Rozpocznij kurs” — do celu.", which: "Nawigacja" },
+  navApp: { auto: "Otwieraj nawigację automatycznie", which: "Nawigacja" },
   units: {
     kmShort: "km",
     mShort: "m",

@@ -1306,12 +1306,12 @@ function NavAppSetting() {
           <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${p.auto ? 'start-[22px]' : 'start-0.5'}`} />
         </button>
       </div>
-      <p className="mt-1 text-xs text-muted">{t('driver.navApp.autoHint')}</p>
       <div className="mt-3 text-xs text-muted">{t('driver.navApp.which')}</div>
-      <div className="mt-1.5 grid grid-cols-2 gap-2">
+      {/* One control, two halves, no frame (operator 2026-11-27). */}
+      <div className="mt-1.5 grid grid-cols-2 rounded-full bg-page p-1">
         {(['google', 'waze'] as const).map((a) => (
           <button key={a} type="button" onClick={() => save({ ...p, app: a })} aria-pressed={p.app === a} data-testid={`nav-app-${a}`}
-            className={`min-h-[44px] rounded-[12px] border text-sm font-semibold ${p.app === a ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-muted'}`}>
+            className={`min-h-[40px] rounded-full text-sm font-semibold transition-colors ${p.app === a ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>
             {a === 'google' ? 'Google Maps' : 'Waze'}
           </button>
         ))}
