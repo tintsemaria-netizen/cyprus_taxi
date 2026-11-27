@@ -64,6 +64,8 @@ const driver: Catalog<typeof en> = {
     first: "Vous êtes premier — la prochaine course de l’aéroport est pour vous",
     keepOpen: "Gardez l’application ouverte — sinon la course passe au suivant.",
     off: "«{name}» est désactivée — aucune course n’arrive ici.",
+    leaving: "Vous avez quitté la station — votre place est gardée encore {sec} s",
+    left: "Vous avez quitté la file «{name}»",
   },
   map: {
     stop: "Arrêt",

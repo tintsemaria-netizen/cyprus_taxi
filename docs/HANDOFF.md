@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-27 — stand queue: leave countdown (operator)
+
+- `standStateFor` returns `leaveInMs` when the driver is outside the stand but still holds his place
+  (STAND_LEAVE_MS = 10 s after last inside). Driver home stand pill turns yellow: «Вы выехали со стоянки — место
+  сохранится ещё N с» (`driver-stand-leaving`), at 0 «Вы вышли из очереди «…»»; after the server drops the place a
+  6 s pill `driver-stand-left`. Not shown after a ride / going off duty. Texts in 8 languages. Queue rules unchanged.
+- Test: tests/stand-queue.db.test.ts «driving out shows the seconds…».
+
 ## 2026-11-27 — waiting notices removed (operator)
 
 - Passenger ride screen: removed the pickup free/paid waiting box, «На остановке · идёт платное ожидание» and

@@ -588,7 +588,7 @@ function TakesComfortToggle() {
   );
 }
 
-type StandState = { name: string; on: boolean; place: number | null; total: number; polygon?: [number, number][]; ahead?: number; vClass?: string; waitMin?: number | null };
+type StandState = { name: string; on: boolean; place: number | null; total: number; polygon?: [number, number][]; ahead?: number; vClass?: string; waitMin?: number | null; leaveInMs?: number | null };
 
 // ---- Home ----
 function HomeSection(props: {
@@ -621,6 +621,26 @@ function HomeSection(props: {
 
   const st = props.stand ?? null;
   const standShown = !!(data.onDuty && !trip && st && (st.on ? st.place != null : true));
+  // Drove out of the stand (2026-11-27, operator): count down the seconds the place is still kept, then say
+  // once that the place is lost. Local clock between GPS samples; the server stays the authority.
+  const [leaveAt, setLeaveAt] = useState<number | null>(null);
+  const [leftName, setLeftName] = useState<string | null>(null);
+  const [leaveNow, setLeaveNow] = useState(0);
+  const leavingRef = useRef<{ name: string } | null>(null);
+  useEffect(() => {
+    const ms = st?.on && st.place != null ? st.leaveInMs ?? null : null;
+    if (ms != null) { setLeaveAt(Date.now() + ms); setLeaveNow(Date.now()); leavingRef.current = { name: st!.name }; setLeftName(null); return; }
+    setLeaveAt(null);
+    if (!st && leavingRef.current && data.onDuty && !trip) {
+      setLeftName(leavingRef.current.name);
+      const tm = setTimeout(() => setLeftName(null), 6000);
+      leavingRef.current = null;
+      return () => clearTimeout(tm);
+    }
+    leavingRef.current = null;
+  }, [st, data.onDuty, trip]);
+  useEffect(() => { if (leaveAt == null) return; const tm = setInterval(() => setLeaveNow(Date.now()), 250); return () => clearInterval(tm); }, [leaveAt]);
+  const leaveSec = leaveAt != null ? Math.max(0, Math.ceil((leaveAt - leaveNow) / 1000)) : null;
   const [counts, setCounts] = useState({ free: 0, busy: 0 });
   const onCounts = useCallback((free: number, busy: number) => setCounts({ free, busy }), []);
   const warning = dash?.alerts.find((a) => a.level === 'warning' && a.code !== 'DOC_EXPIRING');
@@ -757,18 +777,22 @@ function HomeSection(props: {
             {/* «Стоянка с очередью» (2026-11-25, operator chose the big number): his place among the cars of his
                 class (orders are matched by class), the cars ahead and the stand. Switched off: no orders here. */}
             {standShown && st && (
-              <div className={`${pill} flex max-w-full items-center gap-3 !rounded-[18px] px-4 py-2.5 ${st.on ? '!border-[#A78BFA]' : '!border-warn/60'}`} data-testid="driver-stand">
+              <div className={`${pill} flex max-w-full items-center gap-3 !rounded-[18px] px-4 py-2.5 ${st.on && leaveSec == null ? '!border-[#A78BFA]' : '!border-warn/60'}`} data-testid="driver-stand">
                 {st.on ? (
                   <>
                     <span className="text-[40px] font-extrabold leading-none tabular-nums text-[#A78BFA]">{(st.ahead ?? 0) + 1}</span>
                     <span className="min-w-0 text-start">
                       <span className="block text-sm font-semibold">{st.ahead ? t('driver.stand.ahead', { n: st.ahead }) : t('driver.stand.first')}</span>
                       <span className="block truncate text-[11px] text-muted">🅿 {st.name} · {t('driver.stand.inQueue', { total: st.total })}</span>
-                      {st.waitMin != null && <span className="block text-[11px] text-muted">{t('driver.stand.wait', { min: st.waitMin })}</span>}
+                      {st.waitMin != null && leaveSec == null && <span className="block text-[11px] text-muted">{t('driver.stand.wait', { min: st.waitMin })}</span>}
+                      {leaveSec != null && <span className="block text-[12px] font-semibold text-warn" data-testid="driver-stand-leaving">{leaveSec > 0 ? t('driver.stand.leaving', { sec: leaveSec }) : t('driver.stand.left', { name: st.name })}</span>}
                     </span>
                   </>
                 ) : <span className="text-sm font-medium text-warn">🅿 {t('driver.stand.off', { name: st.name })}</span>}
               </div>
+            )}
+            {!standShown && leftName && (
+              <div className={`${pill} !rounded-[18px] !border-warn/60 px-4 py-2.5 text-sm font-medium text-warn`} data-testid="driver-stand-left">🅿 {t('driver.stand.left', { name: leftName })}</div>
             )}
             <div className={`${pill} px-3 py-1 text-xs text-muted`}>
               <span className="me-1 inline-block h-2 w-2 rounded-full bg-accent align-middle" />{t('driver.map.free', { n: counts.free })}

@@ -93,7 +93,7 @@ async function waitMinutes(stand: Stand, vClass: string, nth: number, now = new 
 }
 
 /** For the driver's screen: the stand he is in and his place in its queue. */
-export async function standStateFor(driverId: string, p: { lat: number; lng: number } | null): Promise<{ name: string; on: boolean; place: number | null; total: number; polygon: [number, number][]; ahead?: number; vClass?: string; waitMin?: number | null } | null> {
+export async function standStateFor(driverId: string, p: { lat: number; lng: number } | null): Promise<{ name: string; on: boolean; place: number | null; total: number; polygon: [number, number][]; ahead?: number; vClass?: string; waitMin?: number | null; leaveInMs?: number | null } | null> {
   const entry = await prisma.standQueue.findUnique({ where: { driverId } });
   const stand = entry ? (await taxiStands()).find((s) => s.id === entry.standId) ?? null : p ? await standAt(p) : null;
   if (!stand) return null;
@@ -102,5 +102,8 @@ export async function standStateFor(driverId: string, p: { lat: number; lng: num
   // «Cars ahead» = those before him who take some of the same orders (an XL car takes Comfort too, 2026-11-25).
   const i = q.findIndex((r) => r.driverId === driverId), mine = q[i]?.vClass ?? 'COMFORT', myTakes = q[i]?.takes ?? ['COMFORT'];
   const ahead = q.slice(0, Math.max(0, i)).filter((r) => r.takes.some((c) => myTakes.includes(c))).length;
-  return { name: stand.name, on: true, place: i + 1, total: q.length, polygon: stand.polygon, ahead, vClass: mine, waitMin: await waitMinutes(stand, mine, ahead + 1).catch(() => null) };
+  // Drove out (2026-11-27, operator): the place is kept STAND_LEAVE_MS after he was last inside — the driver
+  // sees that countdown and can turn back.
+  const leaveInMs = p && !inStand(p, stand) ? Math.max(0, STAND_LEAVE_MS - (Date.now() - entry.lastInAt.getTime())) : null;
+  return { name: stand.name, on: true, place: i + 1, total: q.length, polygon: stand.polygon, ahead, vClass: mine, waitMin: await waitMinutes(stand, mine, ahead + 1).catch(() => null), leaveInMs };
 }

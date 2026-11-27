@@ -64,6 +64,8 @@ const driver: Catalog<typeof en> = {
     first: "Sie sind Erster — der nächste Flughafenauftrag gehört Ihnen",
     keepOpen: "Lassen Sie die App geöffnet — sonst geht der Auftrag an den Nächsten.",
     off: "«{name}» ist ausgeschaltet — hier kommen keine Aufträge.",
+    leaving: "Sie haben den Stand verlassen — Ihr Platz bleibt noch {sec} s",
+    left: "Sie haben die Warteschlange «{name}» verlassen",
   },
   map: {
     stop: "Zwischenstopp",

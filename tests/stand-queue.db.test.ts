@@ -81,6 +81,19 @@ describe('taxi stand queue', () => {
     expect((await prisma.booking.findUnique({ where: { id: b.id } }))!.status).not.toBe('SEARCHING');
   });
 
+  it('driving out shows the seconds the place is still kept; after them the place is gone (2026-11-27)', async () => {
+    await stand(true);
+    const m = await at('Maria', inStandP);
+    expect((await standStateFor(m, inStandP))?.leaveInMs).toBeNull();
+    const out = { lat: S.lat + 0.05, lng: S.lng };
+    const s1 = await standStateFor(m, out);
+    expect(s1?.place).toBe(1);
+    expect(s1!.leaveInMs!).toBeGreaterThan(5_000);
+    expect(s1!.leaveInMs!).toBeLessThanOrEqual(10_000);
+    await updateStandQueue(m, out, new Date(Date.now() + 11_000));
+    expect(await standStateFor(m, out)).toBeNull();
+  });
+
   it('the queue beats the nearest driver outside', async () => {
     await stand(true);
     const a = await at('Andreas', { lat: pfo.lat, lng: pfo.lng + 0.0005 }); // right at the terminal, outside the stand

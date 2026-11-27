@@ -61,6 +61,8 @@ const driver = {
     first: "You are first — the next airport order is yours",
     keepOpen: "Keep the app open — otherwise the order goes to the next driver.",
     off: "«{name}» is off — no orders come here.",
+    leaving: "You left the stand — your place is kept for {sec} s",
+    left: "You left the «{name}» queue",
   },
   map: {
     stop: 'Stop',
