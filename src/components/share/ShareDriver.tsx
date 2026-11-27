@@ -2,7 +2,8 @@
 
 import { PairLegs } from '@/components/share/PairLegs';
 import type { PairStops } from '@/lib/pair-stops';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useDismiss } from '@/components/useDismiss';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 
@@ -179,6 +180,9 @@ export function AcceptsSharedToggle() {
   const [on, setOn] = useState<boolean | null>(null);
   const [pct, setPct] = useState(30);
   const [info, setInfo] = useState(false);
+  const infoBtnRef = useRef<HTMLButtonElement | null>(null);
+  const infoBoxRef = useRef<HTMLParagraphElement | null>(null);
+  useDismiss(info, () => setInfo(false), [infoBtnRef, infoBoxRef]); // a tap elsewhere closes it (2026-11-27)
   useEffect(() => { api<{ acceptsShared: boolean; discountPct: number }>('/driver/share/settings').then((r) => { setOn(r.acceptsShared); setPct(r.discountPct); }).catch(() => {}); }, []);
   async function toggle(v: boolean) {
     setOn(v);
@@ -191,7 +195,7 @@ export function AcceptsSharedToggle() {
         <span className="min-w-0">
           <span className="flex items-center gap-1.5 text-sm">
             {t('share.driver.setting')}
-            <button type="button" onClick={() => setInfo((v) => !v)} aria-expanded={info} aria-label="info" data-testid="share-info"
+            <button type="button" ref={infoBtnRef} onClick={() => setInfo((v) => !v)} aria-expanded={info} aria-label="info" data-testid="share-info"
               className={`flex h-5 w-5 items-center justify-center rounded-full border text-[11px] font-bold leading-none ${info ? 'border-accent text-accent' : 'border-edge-strong text-muted'}`}>i</button>
           </span>
           <span className="block text-xs text-muted">{t('share.driver.settingHint')}</span>
@@ -203,7 +207,7 @@ export function AcceptsSharedToggle() {
           </span>
         </label>
       </div>
-      {info && <p className="mt-2 whitespace-pre-line rounded-[10px] border border-edge bg-page px-3 py-2 text-xs leading-relaxed text-muted" data-testid="share-info-text">{t('share.driver.settingInfo', { pct })}</p>}
+      {info && <p ref={infoBoxRef} className="mt-2 whitespace-pre-line rounded-[10px] border border-edge bg-page px-3 py-2 text-xs leading-relaxed text-muted" data-testid="share-info-text">{t('share.driver.settingInfo', { pct })}</p>}
     </div>
   );
 }

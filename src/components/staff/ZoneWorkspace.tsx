@@ -9,6 +9,7 @@ import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import dynamicImport from 'next/dynamic';
 import type { ComponentProps } from 'react';
+import { useDismiss } from '@/components/useDismiss';
 import type ZoneEditorMapT from '@/components/staff/ZoneEditorMap';
 import { useT } from '@/i18n/I18nProvider';
 
@@ -36,18 +37,21 @@ export function useZoneMap(p: MapProps): void {
 export function PanelHead({ title, info }: { title: React.ReactNode; info: React.ReactNode }) {
   const { t } = useT();
   const [menu, setMenu] = useState(false);
+  const menuBtnRef = useRef<HTMLButtonElement | null>(null);
+  const menuListRef = useRef<HTMLDivElement | null>(null);
+  useDismiss(menu, () => setMenu(false), [menuBtnRef, menuListRef]); // a tap elsewhere closes it (2026-11-27)
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
       <div className="flex items-center gap-1">
         <h1 className="min-w-0 flex-1 text-xl font-semibold">{title}</h1>
-        <button type="button" aria-label={t('staff.zoneMap.menu')} onClick={() => setMenu((v) => !v)} data-testid="panel-menu"
+        <button type="button" ref={menuBtnRef} aria-label={t('staff.zoneMap.menu')} onClick={() => setMenu((v) => !v)} data-testid="panel-menu"
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink hover:bg-white/5 ${menu ? 'bg-white/10' : ''}`}>
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" /></svg>
         </button>
       </div>
       {menu && (
-        <div className="absolute end-10 top-10 z-20 min-w-[160px] rounded-[12px] border border-edge bg-elevated p-1 shadow-xl" data-testid="panel-menu-list">
+        <div ref={menuListRef} className="absolute end-10 top-10 z-20 min-w-[160px] rounded-[12px] border border-edge bg-elevated p-1 shadow-xl" data-testid="panel-menu-list">
           <button type="button" className="flex w-full items-center gap-2 rounded-[8px] px-3 py-2 text-start text-sm hover:bg-white/5" data-testid="panel-info"
             onClick={() => { setShow(true); setMenu(false); }}>ℹ️ {t('staff.zoneMap.info')}</button>
         </div>
