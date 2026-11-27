@@ -13,7 +13,6 @@ const common: Catalog<typeof en> = {
   book: 'הזמנה',
   cancel: 'ביטול',
   close: 'סגירה',
-  gotIt: "הבנתי",
   back: 'חזרה',
   retry: 'נסו שוב',
   loading: 'טוען…',

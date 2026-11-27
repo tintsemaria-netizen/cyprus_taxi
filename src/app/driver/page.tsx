@@ -13,7 +13,7 @@ import { ThemePicker } from '@/components/ThemePicker';
 import { ClientLine, RouteLines, PREBOOK_FREE_COLOR } from '@/components/driver/OrderBits';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { api, ApiRequestError, uuid } from '@/lib/api-client';
-import { NoticeSheet } from '@/components/NoticeSheet';
+import { InlineError } from '@/components/InlineError';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { ScheduledRides } from '@/components/driver/ScheduledRides';
 import { DriverNavigation, type NavTrip } from '@/components/driver/DriverNavigation';
@@ -1201,13 +1201,13 @@ function CarPick({ onDone, openCars, tError }: { onDone: () => void; openCars: (
   const [d, setD] = useState<{ online: boolean; onTrip: boolean; cars: PickCar[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ id: string; text: string } | null>(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { api<{ online: boolean; onTrip: boolean; cars: PickCar[] }>('/driver/cars').then(setD).catch((e) => setErr(tError(e))); }, []);
   async function choose(c: PickCar) {
-    // No lines that always stand there (operator 2026-11-27): the reason comes in a small window on the tap.
-    if (d && (d.online || d.onTrip)) { setNotice(d.onTrip ? t('driver.cars.lockedTrip') : t('driver.cars.lockedOnline')); return; }
-    if (c.busy) { setNotice(t('driver.cars.busyPick')); return; }
+    // No lines that always stand there (operator 2026-11-27): the reason pops up in red under the tapped car.
+    if (d && (d.online || d.onTrip)) { setNotice({ id: c.id, text: d.onTrip ? t('driver.cars.lockedTrip') : t('driver.cars.lockedOnline') }); return; }
+    if (c.busy) { setNotice({ id: c.id, text: t('driver.cars.busyPick') }); return; }
     setBusy(true); setErr(null);
     try { await api('/driver/cars/switch', { method: 'POST', body: { vehicleId: c.id } }); onDone(); }
     catch (e) { setErr(e instanceof ApiRequestError ? tError(e) : t('driver.cars.failed')); }
@@ -1232,13 +1232,13 @@ function CarPick({ onDone, openCars, tError }: { onDone: () => void; openCars: (
                     </span>
                     {c.current && <span className="shrink-0 text-xs font-semibold text-accent">✓ {t('driver.cars.current')}</span>}
                   </button>
+                  {notice?.id === c.id && <InlineError key={notice.text} text={notice.text} onClose={() => setNotice(null)} />}
                 </li>
               );
             })}
           </ul>
           {err && <p className="px-2 pt-1 text-xs text-danger">{err}</p>}
           <button type="button" onClick={openCars} className="mt-1 w-full px-2 py-2 text-start text-xs text-accent">+ {t('driver.cars.addNew')}</button>
-          {notice && <NoticeSheet text={notice} onClose={() => setNotice(null)} />}
         </>
       )}
     </div>

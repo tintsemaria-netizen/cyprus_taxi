@@ -13,7 +13,6 @@ const common: Catalog<typeof en> = {
   book: 'Κράτηση',
   cancel: 'Ακύρωση',
   close: 'Κλείσιμο',
-  gotIt: "Εντάξει",
   back: 'Πίσω',
   retry: 'Δοκιμάστε ξανά',
   loading: 'Φόρτωση…',
