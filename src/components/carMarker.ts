@@ -275,11 +275,21 @@ export const BRAND_PIN_SVG_RED = BRAND_PIN_SVG.replaceAll('#C8FF46', '#FF4D4D');
 // Per-frame steering while the car glides (2026-11-18): the nose follows the road direction under
 // the car (the glide path's tangent), eased a little each frame — no sideways driving from a GPS fix
 // that landed beside the road, no snapping. Shares state with orientVehicle (dataset).
-export function steerVehicle(el: HTMLElement, mapHeading: number, targetBearing: number, ease = 0.18): void {
+// Smooth turns (2026-11-27, operator: the car jerked left/right on bends): time-based easing (≈ 0.45 s) and at
+// most 90°/s, so a corner of the drawn line or a GPS wobble turns the car gently instead of snapping it.
+export const STEER_TAU_MS = 450;
+export const STEER_MAX_DEG_PER_S = 90;
+export function steerVehicle(el: HTMLElement, mapHeading: number, targetBearing: number, now = typeof performance !== 'undefined' ? performance.now() : Date.now()): void {
   el.dataset.mapHeading = String(mapHeading);
   el.dataset.bearing = String(targetBearing);
   const cur = Number(el.dataset.bearingShown);
-  const next = Number.isFinite(cur) ? cur + ((((targetBearing - cur + 540) % 360) - 180) * ease) : targetBearing;
+  const last = Number(el.dataset.steerAt);
+  el.dataset.steerAt = String(now);
+  const dt = Number.isFinite(last) ? Math.max(0, Math.min(200, now - last)) : 16;
+  const delta = Number.isFinite(cur) ? ((targetBearing - cur + 540) % 360) - 180 : 0;
+  const want = delta * (1 - Math.exp(-dt / STEER_TAU_MS));
+  const cap = (STEER_MAX_DEG_PER_S * dt) / 1000;
+  const next = Number.isFinite(cur) ? cur + Math.max(-cap, Math.min(cap, want)) : targetBearing;
   el.dataset.bearingShown = String(next);
   setVehicleHeading(el, ((next - mapHeading) % 360 + 360) % 360);
 }

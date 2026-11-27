@@ -40,6 +40,7 @@ const track: Catalog<typeof en> = {
   yourDriver: "Twój kierowca",
   etaApprox: "{min} (ok.)",
   etaUnderMin: "mniej niż minuta",
+  arriveAt: "Przyjazd o {time} · {min}",
   finishingEta: '{name} kończy kurs w pobliżu i przyjedzie do Ciebie — {eta}',
   finishing: '{name} kończy kurs w pobliżu i przyjedzie do Ciebie zaraz potem',
   meetDriver: "Spotkaj się z {name}",

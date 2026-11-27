@@ -92,6 +92,8 @@ export default function TrackApp() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
   const [routeLine, setRouteLine] = useState<[number, number][]>([]);
+  // Road time and length of the fetched route (2026-11-27): the arrival time on the way to the destination.
+  const [routeMeta, setRouteMeta] = useState<{ etaMin: number; lenM: number; leg: string } | null>(null);
   const routeLineRef = useRef<[number, number][]>([]);
   routeLineRef.current = routeLine; // [lng,lat] driver→pickup / →destination
   const [disconnected, setDisconnected] = useState(false); // hide stale live data
@@ -213,11 +215,14 @@ export default function TrackApp() {
     routeFetch.current.at = Date.now(); // also after a failed fetch: retry in 15 s+, not never / in a loop
     (async () => {
       try {
-        const r = await api<{ available?: boolean; path?: [number, number][] }>('/routes/estimate', {
+        const r = await api<{ available?: boolean; path?: [number, number][]; etaMinutes?: number }>('/routes/estimate', {
           method: 'POST', body: { from: { lat: from.lat, lng: from.lng }, to: { lat: to.lat, lng: to.lng } }, timeoutMs: 9000,
         });
-        if (alive && r.available !== false && r.path) setRouteLine(r.path.map(([la, ln]) => [ln, la] as [number, number]));
-        else if (alive) setRouteLine([]);
+        if (alive && r.available !== false && r.path) {
+          const line = r.path.map(([la, ln]) => [ln, la] as [number, number]);
+          setRouteLine(line);
+          setRouteMeta(typeof r.etaMinutes === 'number' ? { etaMin: r.etaMinutes, lenM: lineLenM(line), leg: rleg ?? '' } : null);
+        } else if (alive) { setRouteLine([]); setRouteMeta(null); }
       } catch { /* keep last geometry */ }
     })();
     return () => { alive = false; };
@@ -401,6 +406,11 @@ export default function TrackApp() {
 
   // Under a minute (2026-11-27, operator: «0 мин (примерно)» looked odd) → «меньше минуты», no «примерно».
   const etaUnder = view.pickupEtaMin != null && view.pickupEtaMin < 1;
+  // On the way to the destination (2026-11-27, operator: no arrival time): the route's road time, scaled to
+  // the part still ahead of the car → «Прибытие в 14:32 · 25 мин».
+  const dropEtaMin = view.status === 'IN_PROGRESS' && liveTrip && routeMeta?.leg === 'dropoff' && routeMeta.lenM > 0 && shownRoute.length > 1
+    ? Math.max(1, Math.round(routeMeta.etaMin * Math.min(1, lineLenM(shownRoute) / routeMeta.lenM))) : null;
+  const arriveText = dropEtaMin != null ? t('track.arriveAt', { time: fmt.time(new Date(Date.now() + dropEtaMin * 60_000).toISOString()), min: tp('common.minutes', dropEtaMin) }) : null;
   const etaMinText = view.pickupEtaMin != null ? (etaUnder ? t('track.etaUnderMin') : tp('common.minutes', view.pickupEtaMin)) : null;
   const etaText = !disconnected && etaMinText ? (view.pickupEtaApprox && !etaUnder ? t('track.etaApprox', { min: etaMinText }) : etaMinText) : null;
   const statusLabel = STATUS_KEYS.has(view.status) ? t(`common.status.${view.status}` as MsgKey) : view.status;
@@ -410,7 +420,8 @@ export default function TrackApp() {
       : (view.status === 'EN_ROUTE' || view.status === 'ASSIGNED') && view.vehicle
       ? (etaText ? t('track.meetDriverEta', { name: view.vehicle.driverName, eta: etaText }) : t('track.meetDriver', { name: view.vehicle.driverName }))
       // An old order no driver was found for (2026-11-20): «Поездка не состоялась», no retry.
-      : view.status === 'NO_DRIVER' && !view.canRetry ? t('rides.detail.notHappened') : statusLabel;
+      : view.status === 'NO_DRIVER' && !view.canRetry ? t('rides.detail.notHappened')
+      : arriveText ?? statusLabel;
   const vehicleDesc = view.vehicle ? `${view.vehicle.color} ${view.vehicle.make} ${view.vehicle.model}` : '';
   const SLOT = '\u0000';
   // «Готово» and × on the finished ride (2026-11-26): not rated yet → the rating window; rated → the start page.
@@ -837,4 +848,15 @@ function ChangeDropoffSheet({ onClose, onDone }: { onClose: () => void; onDone: 
       </div>
     </div>
   );
+}
+
+/** Length of a [lng,lat] line in metres (equirectangular — fine for a city route). */
+function lineLenM(line: [number, number][]): number {
+  let m = 0;
+  for (let i = 1; i < line.length; i++) {
+    const [ln1, la1] = line[i - 1], [ln2, la2] = line[i];
+    const x = (ln2 - ln1) * Math.cos(((la1 + la2) / 2) * Math.PI / 180), y = la2 - la1;
+    m += Math.hypot(x, y) * 111_320;
+  }
+  return m;
 }

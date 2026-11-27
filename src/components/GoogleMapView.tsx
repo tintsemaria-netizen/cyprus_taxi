@@ -377,7 +377,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
           m.position = here; // linear in time = steady speed
           // Nose forward (2026-11-18): look a little ahead along the glide; ignore sub-metre wiggles.
           if (steer && t < 1) {
-            const ahead = path(Math.min(1, t + 0.08));
+            const ahead = path(Math.min(1, t + 0.2)); // look further ahead (2026-11-27): small kinks of the line no longer twitch the nose
             if (distanceM(here, ahead) > 0.8) steerVehicle(steer, mapRef.current?.getHeading?.() ?? 0, bearing(here, ahead));
           }
           if (t < 1) animMap.current.set(mk.id, requestAnimationFrame(step));

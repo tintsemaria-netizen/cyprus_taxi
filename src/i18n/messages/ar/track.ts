@@ -40,6 +40,7 @@ const track: Catalog<typeof en> = {
   yourDriver: "سائقك",
   etaApprox: "{min} (تقريبًا)",
   etaUnderMin: "أقل من دقيقة",
+  arriveAt: "الوصول الساعة {time} · {min}",
   finishingEta: '{name} ينهي رحلة قريبة وسيصل إليك — {eta}',
   finishing: '{name} ينهي رحلة قريبة وسيأتي إليك بعدها مباشرة',
   meetDriver: "قابل {name}",

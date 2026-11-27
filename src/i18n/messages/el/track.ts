@@ -35,6 +35,7 @@ const track: Catalog<typeof en> = {
   yourDriver: 'Ο οδηγός σας',
   etaApprox: '{min} (περίπου)',
   etaUnderMin: "λιγότερο από ένα λεπτό",
+  arriveAt: "Άφιξη στις {time} · {min}",
   finishingEta: 'Ο/Η {name} ολοκληρώνει μια κούρσα κοντά και έρχεται σε εσάς — {eta}',
   finishing: 'Ο/Η {name} ολοκληρώνει μια κούρσα κοντά και έρχεται σε εσάς αμέσως μετά',
   meetDriver: '{name} έρχεται',

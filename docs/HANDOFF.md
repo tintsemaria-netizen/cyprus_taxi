@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-27 — arrival time, pinch at the fingers, smooth car turns (operator)
+
+- Passenger track IN_PROGRESS: headline `track.arriveAt` «Прибытие в HH:MM · N мин» from /routes/estimate etaMinutes,
+  scaled to the remaining (trimmed) route length. Share page has no arrival time yet (offered).
+- useTwoFingerCamera: the world point between the fingers stays under them (zoom/rotate around it, two-finger pan).
+  All Google maps (track, driver, picker, zone editor). Not verified on a real Google map (no key locally).
+- carMarker.steerVehicle: time-based easing τ 450 ms, max 90°/s; GoogleMapView lookahead t+0.2.
+
 ## 2026-11-27 — «меньше минуты» instead of «0 мин (примерно)»
 
 - Passenger track and the shared-trip page: pickupEtaMin < 1 → `track.etaUnderMin` (8 languages), without «примерно».

@@ -32,6 +32,7 @@ const track = {
   yourDriver: 'Your driver',
   etaApprox: '{min} (approx.)',
   etaUnderMin: "less than a minute",
+  arriveAt: "Arriving at {time} · {min}",
   finishingEta: '{name} is finishing a ride nearby and will come to you — {eta}',
   finishing: '{name} is finishing a ride nearby and will come to you next',
   meetDriver: 'Meet {name}',
