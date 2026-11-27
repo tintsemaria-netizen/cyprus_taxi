@@ -3286,3 +3286,12 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Driver: a small left «Выйти» with ConfirmSheet (driver-signout); the round language button next to DriverCard in the drawer (the language row was removed from Settings); the free-order detail has a small «‹ Назад» top right (free-back), the seconds by the title, and one big «Взять заказ» (free-take).
 - Evidence: tsc clean; vitest 523 passed / 1 skipped; live /api/v1/health/ready = ready; driver chunks contain driver-signout, free-back, free-take, #FFA94D, #A78BFA.
 - Not visually checked live: NextOfferCard and the co-rider trip (need a real trip).
+
+## 2026-11-27 — deployed 1cab967 (dropoff-change)
+- The passenger changes the drop-off during the ride (ASSIGNED / EN_ROUTE / ARRIVED / IN_PROGRESS; never with a co-rider). Code: src/server/passenger-dropoff.ts, POST /api/v1/tracking/dropoff. Without quoteId it returns a preview (new price, old price); with quoteId it applies the change.
+- Fixed prices are re-quoted too: in the fixed zone → the new fixed price; outside → the meter estimate. The pre-booking minimum is kept. Event: DROPOFF_CHANGED.
+- Driver: the banner `DropoffChangedBanner` (driver/page.tsx) shows the new address and the new price, with a chime and vibration. «Понятно» is optional; the banner hides after 7 s. Push keys: drv.dropoffChanged {fareC} and drv.dropoffChangedRange {loC,hiC}, 8 languages. The navigation legKey includes the drop-off coordinates. The passenger's route line includes them too (TrackApp legKey).
+- Merge conflict in TrackApp: the other session had removed the stop-wait note. I kept that removal, plus canChangeDropoff.
+- Evidence: tsc clean; vitest 527 passed / 1 skipped (3 new in tests/passenger-dropoff.db.test.ts); live: health ready; the chunks contain dropoff-changed, track-change-dropoff, dropoff-confirm; sw.js contains drv.dropoffChangedRange; /api/v1/tracking/dropoff answers 401 without a session.
+- Not checked on a real phone: the sound/vibration and the push.
+- Parked: docs/todo/DRIVER-GPS-LOSS.md, docs/todo/METER-CALIBRATION.md (data collection).
