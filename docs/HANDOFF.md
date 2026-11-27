@@ -3365,3 +3365,9 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - The dialog overlays got `[&>*]:max-h-[calc(100dvh-1.5rem)] [&>*]:overflow-y-auto`, so content is never taller than the screen. Files: NotifyPrompt, GoogleReviewCard, RatePassengerSheet, FarePreviewSheet, ShareDriver ×2, PassengerLoginModal, TrackApp add-stop / change-drop-off; the drop-off banner gets max-h.
 - Evidence: tsc clean; vitest 532 passed / 1 skipped (the evening ride-share test passed this time); live health ready; the chunks contain samsung-dark-close and the max-h class.
 - Not checked on a real Samsung: how Samsung Internet's own text scaling treats the fixed px text.
+
+## 2026-11-27 — deployed f313eec (carpick-msg)
+- Car choice (CarPick in the driver menu, and MyCars «Работать на этой»): the standing lines «Чтобы сменить машину, уйдите с линии» and «На ней сейчас на линии другой водитель» were removed.
+- Tapping such a car now shows `InlineError` (src/components/InlineError.tsx): a semi-transparent dark-red bubble over everything with an arrow at the tapped car. It hides after 2.5 s. Texts: lockedOnline / lockedTrip / new driver.cars.busyPick (8 languages).
+- Possible follow-up offered: flip the bubble above the car near the bottom of the screen.
+- Evidence: tsc clean; vitest 532 passed / 1 skipped; live health ready; the driver chunks contain inline-error.
