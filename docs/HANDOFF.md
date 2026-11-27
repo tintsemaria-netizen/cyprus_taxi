@@ -3327,3 +3327,16 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Migration 20261127200000_offer_rounds (2 columns, defaults). The search deadline is unchanged at 180 s, so round 2 may be cut short when many drivers are nearby. The operator was offered 4–5 min; no answer yet.
 - Round-2 declines count in reliability (acceptance / missed); the operator was told.
 - Evidence: tsc clean; vitest 530 passed / 1 skipped (2 new tests in dispatch.db; free-orders test updated); live health = ready. Not observed: a live round 2 on a real order. The live migration was not checked directly; there is no DB access from here.
+
+## 2026-11-27 — deployed ba0d56b (auto-nav)
+- Driver Settings gets a «Навигатор» block (NavAppSetting in driver/page.tsx; src/lib/nav-app.ts, localStorage `ily_nav_app`, per phone):
+  - a switch «Открывать навигатор автоматически»;
+  - a «Навигатор · Google Maps ›» row; a tap opens the choice between Google Maps and Waze.
+- Auto-open happens inside the tap (popup rules):
+  - «Принять» (not afterTrip) and «Взять заказ» → to the pickup;
+  - «Начать поездку» → to the stop or the destination;
+  - stop «Продолжить» → to the destination.
+- The map button on the trip screen and the «navigation unavailable» link use the chosen app. With Waze the button is a plain blue arrow, not the brand logo.
+- Evidence: tsc clean; live health ready; the driver chunks contain nav-app-row, nav-auto, ily_nav_app, waze.com/ul.
+- Not checked: that Maps/Waze really open on a phone.
+- KNOWN TEST ISSUE (not from this change): tests/ride-share.db.test.ts «an existing arrival-window booking pairs with a new departure-hour booking…» fails when run in the evening (Nicosia ~19:30–01:30). It builds rides ~4–5 h ahead and lists shareSlots for one Nicosia day; the two rides then fall on different days. The same test fails on origin/main without this merge. Fix: build the rides at a fixed time of day, or list both days.
