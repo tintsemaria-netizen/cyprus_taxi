@@ -3,6 +3,7 @@ const driver = {
   dropoffChanged: "The passenger changed the destination",
   dropoffNewPrice: "New price: {fare}",
   dropoffChangedOk: "OK",
+  navApp: { auto: "Open the navigator automatically", autoHint: "After «Accept» — the route to the client; after «Start trip» — to the destination.", which: "Navigator" },
   units: {
     kmShort: 'km',
     mShort: 'm',

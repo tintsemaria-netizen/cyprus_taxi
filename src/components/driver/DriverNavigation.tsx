@@ -9,6 +9,7 @@ import { BackArrow } from '@/components/BackArrow';
 import { ApiRequestError } from '@/lib/api-client';
 import { navZoomTarget, nextNavZoom, smoothSpeed, NAV_ZOOM_MAX } from '@/lib/nav-zoom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { navUrl, readNavPrefs, NAV_PREFS_EVENT, type NavPrefs } from '@/lib/nav-app';
 import AutoMapView, { MapMarker } from '@/components/AutoMapView';
 import { ChatPanel } from '@/components/ChatPanel';
 import { FarePreviewSheet } from './FarePreviewSheet';
@@ -84,6 +85,8 @@ export function DriverNavigation(props: {
   const waitingAtPickup = co ? coWaiting : trip.status === 'ARRIVED' || atStop;
   const arrivedText = leg === 'pickup' || co?.kind === 'pickup' ? t('driver.navigation.arrivedPickup') : leg === 'stop' ? t('driver.navigation.arrivedStop') : t('driver.navigation.arrivedDestination');
 
+  const [navPrefs, setNavPrefs] = useState<NavPrefs>({ auto: false, app: 'google' });
+  useEffect(() => { const on = () => setNavPrefs(readNavPrefs()); on(); window.addEventListener(NAV_PREFS_EVENT, on); return () => window.removeEventListener(NAV_PREFS_EVENT, on); }, []);
   const [route, setRoute] = useState<NavRoute | null>(null);
   const [routeState, setRouteState] = useState<'loading' | 'ok' | 'unavailable'>('loading');
   const [following, setFollowing] = useState(true);
@@ -293,7 +296,8 @@ export function DriverNavigation(props: {
   if (paxLoc) markers.push({ id: 'pax', lat: paxLoc.lat, lng: paxLoc.lng, kind: 'person', label: trip.passengerName });
   const paxFromPickupM = paxLoc ? Math.round(metersBetween(paxLoc, trip.pickup)) : null;
   const routeLine = useMemo(() => (route ? route.path.slice(Math.max(0, (progress?.seg ?? 0))).map(([la, ln]) => [ln, la] as [number, number]) : []), [route, progress?.seg]);
-  const externalHref = `https://www.google.com/maps/dir/?api=1&destination=${target.lat},${target.lng}&travelmode=driving`;
+  // The driver's navigator (Settings, 2026-11-27): Google Maps or Waze.
+  const externalHref = navUrl(navPrefs.app, target.lat, target.lng);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-page" data-testid="driver-nav">
@@ -315,7 +319,7 @@ export function DriverNavigation(props: {
         ) : !pos ? (
           <div className="text-[17px] font-semibold">{t('driver.navigation.needGps')}</div>
         ) : routeState === 'unavailable' ? (
-          <div className="flex items-center justify-between gap-3"><span className="text-[15.5px] font-semibold">{t('driver.navigation.unavailable')}</span><a href={externalHref} target="_blank" rel="noreferrer" className="shrink-0 rounded-[10px] border border-edge px-2.5 py-1.5 text-[14.5px] font-semibold text-accent">{t('driver.navigation.openExternal')}</a></div>
+          <div className="flex items-center justify-between gap-3"><span className="text-[15.5px] font-semibold">{t('driver.navigation.unavailable')}</span><a href={externalHref} target="_blank" rel="noreferrer" className="shrink-0 rounded-[10px] border border-edge px-2.5 py-1.5 text-[14.5px] font-semibold text-accent">{navPrefs.app === 'waze' ? 'Waze' : t('driver.navigation.openExternal')}</a></div>
         ) : rerouting ? (
           <div className="text-[18px] font-bold">{t('driver.navigation.rerouting')}</div>
         ) : upcoming ? (
@@ -355,8 +359,15 @@ export function DriverNavigation(props: {
             {chatUnread > 0 && <span className="absolute -end-1 -top-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-bold text-[#10191C]">{chatUnread > 9 ? '9+' : chatUnread}</span>}
           </button>
           <div className="h-[58px]" aria-hidden />
-          <a href={externalHref} target="_blank" rel="noreferrer" aria-label={t('driver.navigation.googleMaps')} title={t('driver.navigation.googleMaps')}
+          <a href={externalHref} target="_blank" rel="noreferrer" aria-label={navPrefs.app === 'waze' ? 'Waze' : t('driver.navigation.googleMaps')} title={navPrefs.app === 'waze' ? 'Waze' : t('driver.navigation.googleMaps')} data-testid="nav-external"
             className="pointer-events-auto flex h-[58px] w-[58px] items-center justify-center [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.55))]">
+            {navPrefs.app === 'waze' ? (
+              // Waze chosen: a plain navigation arrow (not the brand logo).
+              <svg viewBox="0 0 24 24" width="46" height="46" aria-hidden>
+                <circle cx="12" cy="12" r="11" fill="#33CCFF" />
+                <path d="M12 5.5l5 12-5-2.6-5 2.6z" fill="#fff" />
+              </svg>
+            ) : (
             <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden>
               <path d="M12 2.2c-3.9 0-7 3-7 6.9 0 5.1 7 12.7 7 12.7s7-7.6 7-12.7c0-3.9-3.1-6.9-7-6.9z" fill="#34A853" />
               <path d="M12 2.2c-2.2 0-4.1 1-5.4 2.5L12 10.1l5.4-5.4C16.1 3.2 14.2 2.2 12 2.2z" fill="#4285F4" />
@@ -364,6 +375,7 @@ export function DriverNavigation(props: {
               <path d="M17.4 4.7 12 10.1l6 3c.6-1.4 1-2.7 1-4 0-1.7-.6-3.2-1.6-4.4z" fill="#FBBC04" />
               <circle cx="12" cy="9.1" r="2.6" fill="#fff" />
             </svg>
+            )}
           </a>
         </div>
       {/* ☰ right above the stage button (2026-11-18): rides up and down with the sheet. */}
