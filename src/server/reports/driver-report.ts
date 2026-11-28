@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db';
 import { apiOk, Errors } from '@/lib/http';
 import { earningsSummary, earningsDaily } from '@/server/driver/earnings';
 import { driverAnalytics, mondayOf } from '@/server/driver/analytics';
-import { dutyToday } from '@/server/driver/duty';
+import { dutyToday, orderKmInWindow } from '@/server/driver/duty';
 import { driverWindow } from '@/server/driver/window';
 import { listDriverTrips } from '@/server/driver/trips';
 import { nicosiaDayKey, nicosiaMidnightUtc, startOfNicosiaDay } from '@/lib/timezone';
@@ -65,6 +65,32 @@ export async function reportStatementCsv(driverId: string, url: URL, label = 'dr
   });
 }
 
+/** Monthly statement (2026-11-28, operator: «выписка за месяц для налоговой»): one Cyprus calendar month —
+ *  earnings by currency (cash / card), trips done and not done, hours online, km on orders, per day. Shared by the
+ *  driver, the admin and the fleet owner; the screen prints it to PDF. `month` = YYYY-MM (default: this month). */
+export async function reportMonthly(driverId: string, url: URL) {
+  const raw = url.searchParams.get('month');
+  const nowKey = nicosiaDayKey(new Date()).slice(0, 7);
+  const month = raw && /^\d{4}-(0[1-9]|1[0-2])$/.test(raw) && raw <= nowKey ? raw : nowKey;
+  const [y, m] = month.split('-').map(Number);
+  const first = `${month}-01`;
+  const next = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`;
+  const from = nicosiaMidnightUtc(first), end = nicosiaMidnightUtc(next);
+  const to = end > new Date() ? new Date() : end;
+  const days = Math.round((end.getTime() - from.getTime()) / 86_400_000);
+  const [summary, daily, an, km, d] = await Promise.all([
+    earningsSummary(driverId, from, to), earningsDaily(driverId, from, to), driverAnalytics(driverId, first, days),
+    orderKmInWindow(driverId, from, to),
+    prisma.driver.findUnique({ where: { id: driverId }, select: { publicName: true, phone: true, bindings: { where: { endedAt: null }, select: { vehicle: { select: { plate: true, make: true, model: true } } }, take: 1 } } }),
+  ]);
+  return {
+    month, from: from.toISOString(), to: to.toISOString(), generatedAt: new Date().toISOString(),
+    driver: d ? { name: d.publicName, phone: d.phone, vehicle: d.bindings[0] ? `${d.bindings[0].vehicle.make} ${d.bindings[0].vehicle.model} · ${d.bindings[0].vehicle.plate}` : null } : null,
+    summary, daily, km,
+    notDone: an.driverCanceled.count + an.missedOffers.count,
+  };
+}
+
 export function csvCell(v: string | number | null): string {
   let s = v == null ? '' : String(v);
   if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`; // neutralize spreadsheet formula injection
@@ -103,6 +129,7 @@ export async function driverReportResponse(driverId: string, part: string, url: 
     case 'earnings': return apiOk(await reportEarnings(driverId, url));
     case 'duty': return apiOk(await reportDuty(driverId));
     case 'analytics': return apiOk(await reportAnalytics(driverId, url));
+    case 'monthly': return apiOk(await reportMonthly(driverId, url));
     case 'export': {
       const d = await prisma.driver.findUnique({ where: { id: driverId }, select: { user: { select: { login: true } } } });
       return reportStatementCsv(driverId, url, d?.user.login ?? 'driver');

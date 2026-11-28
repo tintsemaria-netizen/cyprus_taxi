@@ -70,3 +70,17 @@ describe('driver profile', () => {
     expect(all.find((r) => r.driverId === driverId)?.offers).toEqual(one[0].offers);
   });
 });
+
+import { reportMonthly } from '@/server/reports/driver-report';
+describe('monthly statement (2026-11-28)', () => {
+  it('a Cyprus calendar month: from the 1st, earnings, trips, km; a future month falls back to this one', async () => {
+    const r = await reportMonthly(driverId, new URL('http://x/?month=2026-02'));
+    expect(r.month).toBe('2026-02');
+    expect(r.from).toBe('2026-01-31T22:00:00.000Z'); // 1 Feb 00:00 Cyprus (UTC+2)
+    expect(r.driver?.name).toBe('Maria');
+    expect(typeof r.km).toBe('number');
+    expect(Array.isArray(r.summary.byCurrency)).toBe(true);
+    const bad = await reportMonthly(driverId, new URL('http://x/?month=2999-01'));
+    expect(bad.month).not.toBe('2999-01');
+  });
+});

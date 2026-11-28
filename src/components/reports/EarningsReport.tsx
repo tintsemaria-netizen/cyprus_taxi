@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { MonthlyStatement } from '@/components/reports/MonthlyStatement';
 import { useT } from '@/i18n/I18nProvider';
 import { api } from '@/lib/api-client';
 import { BackArrow } from '@/components/BackArrow';
@@ -18,6 +19,7 @@ export type Range = 'today' | 'week' | 'month';
 export function EarningsReport({ initialRange = 'week', openAnalytics, apiBase = '/driver', exportHref, title, onBack }: { initialRange?: Range; openAnalytics?: boolean; apiBase?: string; exportHref?: (range: Range) => string; title?: string; onBack?: () => void } = {}) {
   const { t, tp, tError } = useT();
   const [analytics, setAnalytics] = useState(!!openAnalytics);
+  const [statement, setStatement] = useState(false);
   const [duty, setDuty] = useState(false); // «Время на линии» tile → hours & km pane (2026-11-20) // «Выполнено заказов» tile → analytics sub-screen (2026-11-19)
   const { money, dur } = useReportFmt();
   const [range, setRange] = useState<Range>(initialRange);
@@ -33,6 +35,7 @@ export function EarningsReport({ initialRange = 'week', openAnalytics, apiBase =
   useRefreshOnReturn(load); // resumed app: fresh data at once (2026-11-22)
 
   const max = Math.max(1, ...(data?.daily.map((d) => d.recordedEarningsCents) ?? [0]));
+  if (statement) return <MonthlyStatement path={apiBase === '/driver' ? '/driver/monthly' : `${apiBase}/monthly`} onClose={() => setStatement(false)} />;
   if (analytics) return <DriverAnalytics apiBase={apiBase} onBack={() => setAnalytics(false)} />;
   // Hours & km in the earnings screen too (2026-11-20, operator): the same pane as on the map card.
   if (duty) return <div className="card p-4" data-testid="earnings-duty"><DutyPane apiBase={apiBase} onBack={() => setDuty(false)} onClose={() => setDuty(false)} /></div>;
@@ -97,6 +100,8 @@ export function EarningsReport({ initialRange = 'week', openAnalytics, apiBase =
               </>
             )}
           </div>
+          {/* Monthly statement (2026-11-28): the same screen for the driver, the admin and the fleet owner. */}
+          <button type="button" className="btn-secondary block w-full text-center" onClick={() => setStatement(true)} data-testid="open-statement">📄 {t('driver.statement.open')}</button>
           <a href={exportHref ? exportHref(range) : `/api/v1${apiBase === '/driver' ? '/driver/earnings' : apiBase}/export?range=${range}`} className="btn-ghost block w-full text-center">{t('driver.earnings.download')}</a>
         </>
       )}

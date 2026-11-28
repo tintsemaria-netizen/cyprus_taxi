@@ -1,5 +1,13 @@
 # Session handoff
 
+## 2026-11-28 — monthly statement (operator)
+
+- `reportMonthly(driverId, url?month=YYYY-MM)` in server/reports/driver-report.ts (Cyprus calendar month; earnings
+  by currency cash/card, done / pending-meter / not done, online hours, `orderKmInWindow` km, per day). Routes:
+  /driver/monthly, /admin|fleet/drivers/:id/report/monthly (shared `driverReportResponse`).
+- src/components/reports/MonthlyStatement.tsx from EarningsReport («📄 Выписка за месяц (PDF)»): month ‹ ›, white
+  A4 sheet, «Сохранить PDF / Печать» = window.print() with print CSS (only the sheet). driver.statement.* 8 langs.
+
 ## 2026-11-27 — driver menu by purpose; profile, sound, reliability (operator)
 
 - Drawer (top→bottom): Помощь, Документы, «Мои данные», «Рейтинг и надёжность», «Настройки работы», «Звук и вид»,

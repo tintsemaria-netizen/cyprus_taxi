@@ -135,3 +135,22 @@ export async function dutyToday(driverId: string, dayStart: Date, weekStart: Dat
     week, onlineNow: sessions.some((s) => !s.offlineAt),
   };
 }
+
+/** Km driven on orders inside [from, to) (to the client + A → B, by GPS; with no track for a completed ride,
+ *  the booked A → B distance), as on the «Время на линии» window — for the monthly statement (2026-11-28). */
+export async function orderKmInWindow(driverId: string, from: Date, to: Date, now: Date = new Date()): Promise<number> {
+  const asgs = await prisma.assignment.findMany({
+    where: { driverId, assignedAt: { lt: to }, OR: [{ endedAt: null }, { endedAt: { gt: from } }] },
+    select: { assignedAt: true, endedAt: true, reason: true, booking: { select: { quoteId: true } } },
+  });
+  const quoteIds = asgs.map((a) => a.booking.quoteId).filter((x): x is string => !!x);
+  const quotes = new Map((quoteIds.length ? await prisma.quote.findMany({ where: { id: { in: quoteIds } }, select: { id: true, distanceMeters: true } }) : []).map((q) => [q.id, q.distanceMeters]));
+  let km = 0;
+  for (const a of asgs) {
+    const f = Math.max(a.assignedAt.getTime(), from.getTime()), t = Math.min(a.endedAt?.getTime() ?? now.getTime(), now.getTime(), to.getTime());
+    if (t <= f) continue;
+    const g = await gpsKm(driverId, new Date(f), new Date(t));
+    km += g.points >= 2 ? g.km : a.reason === 'completed' && a.booking.quoteId && quotes.has(a.booking.quoteId) ? quotes.get(a.booking.quoteId)! / 1000 : 0;
+  }
+  return Math.round(km * 10) / 10;
+}
