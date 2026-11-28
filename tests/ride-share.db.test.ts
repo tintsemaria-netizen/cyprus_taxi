@@ -445,7 +445,11 @@ describe('pre-booked ride-share', () => {
     const drive = Math.ceil(approxLegMin(lcaNear, limCentre));
     const hourAt = new Date(old.arriveBy!.getTime() - (drive + 25) * MIN); hourAt.setUTCSeconds(0, 0);
     const neu = await prisma.booking.update({ where: { id: (await scheduled(lcaNear, limCentre, 300)).id }, data: { scheduledAt: new Date(hourAt.getTime() + 15 * MIN), shareEarlyMin: 15, shareWaitMin: 0 } });
-    const listed = (await shareSlots(nicosiaDayKey(hourAt), lca, marina)).slots.flatMap((x) => x.orders);
+    // Late in the evening the two orders fall on different Nicosia days (2026-11-28: the test failed only after
+    // ~19:00) — list both days and count each order once.
+    const days = [...new Set([nicosiaDayKey(hourAt), nicosiaDayKey(new Date(old.scheduledAt!.getTime() - (old.shareEarlyMin ?? 0) * MIN))])];
+    const all = (await Promise.all(days.map((d) => shareSlots(d, lca, marina)))).flatMap((r) => r.slots.flatMap((x) => x.orders));
+    const listed = [...new Map(all.map((o) => [JSON.stringify(o), o])).values()];
     expect(listed.length).toBe(2); // the arrival-window one and the new hour one; not the legacy one
     expect(await matchPrebookings()).toBe(1);
     const g = (await prisma.shareGroup.findFirst({ where: { OR: [{ hostBookingId: old.id }, { guestBookingId: old.id }] } }))!;

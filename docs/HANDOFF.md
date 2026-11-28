@@ -3457,3 +3457,17 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Still unchecked on a phone: drop-off change banner/push, offer round 2, Waze/Maps auto-open, NextOfferCard, co-rider trip.
 - Open: e-mail receipts need the operator's Resend account + DNS on Cloudflare + RESEND_API_KEY/EMAIL_FROM in
   deploy/.env.production (key never in chat); GPS-loss minutes/penalty decision; evening-only ride-share test fix (mine to do).
+
+## 2026-11-28 — Deployed: rotated Google map fix (merge 0111097c)
+- Bug (operator screenshot at PFO): on a map turned with two fingers the logo landed beside the territory point and
+  bounced between the centre and the point; the centre-pin pickup was also read from the wrong spot. Cause: the
+  fitPadding offset in `centerPointAt` and the centre-pin `idle` pick in GoogleMapView assumed north up.
+  Fix: `screenToWorld(dx, dy, heading, scale)` in `src/components/mapFit.ts`, used by both. Test tests/map-rotation.test.ts.
+- Checked: GoogleMapPicker uses map.getCenter (no offset) — fine; MapLibre handles rotation natively — fine.
+  Not changed: keep-in-view `cameraFor` (tracking / driver nav) also assumes north up, but those maps ease back to
+  north on idle return — only a brief offset.
+- Verified live: /health/ready ready; chunk 04o1xdiqfd2lq.js contains screenToWorld with getHeading. Not verified on a
+  real rotated phone map.
+- Full vitest before deploy: 541 pass, 1 fail = the known evening-only ride-share test; fixed after the deploy (test
+  now lists both Nicosia days when the two orders straddle midnight) — 33/33 in that file.
+- Branch offer-tones (5 new new-order sounds, WAVs sent to the operator) — NOT merged, waiting for the operator's choice.
