@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import type * as maplibregl from 'maplibre-gl';
 import { loadMaplibre } from '@/lib/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { publicMapConfig } from '@/lib/config';
+import { publicMapConfig, vectorStyleUrl } from '@/lib/config';
 import { api } from '@/lib/api-client';
 import type { Selected } from './PlacesInput';
 import { useT, translate } from '@/i18n/I18nProvider';
@@ -183,7 +183,7 @@ export default function MapPicker({ kind, initial, fallback, onConfirm, onCancel
         const start = centerRef.current;
         const map = new maplibre.Map({
           container: containerRef.current,
-          style: demoStyle(),
+          style: vectorStyleUrl(currentTheme() === 'light') ?? demoStyle(),
           center: [start.lng, start.lat],
           zoom: initial ? 15 : fallback ? 13 : 10,
           attributionControl: { compact: true },

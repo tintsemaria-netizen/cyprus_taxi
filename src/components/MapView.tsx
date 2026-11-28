@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import type * as maplibregl from 'maplibre-gl';
 import { loadMaplibre } from '@/lib/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { publicMapConfig } from '@/lib/config';
+import { publicMapConfig, vectorStyleUrl } from '@/lib/config';
 import { vehicleMarkerEl, personMarkerEl, orientVehicle, pickupPinEl, navArrowEl, numberedStopEl, spotEl } from './carMarker';
 import { useIdleReturn } from './useIdleReturn';
 import { smoothRoute } from './routeSmooth';
@@ -161,7 +161,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
         if (cancelled || !containerRef.current) return;
         map = new maplibre.Map({
           container: containerRef.current,
-          style: demoStyle(),
+          style: vectorStyleUrl(currentTheme() === 'light') ?? demoStyle(),
           center: [center?.lng ?? CYPRUS_CENTER.lng, center?.lat ?? CYPRUS_CENTER.lat],
           zoom,
           interactive,
@@ -322,7 +322,7 @@ export default function MapView({ markers = [], route, center, zoom = 9, interac
     const map = mapRef.current;
     if (!map || !ready || !follow || idle.active.current) return;
     // Demo raster tiles run out past z16 in places; cap the fallback map there.
-    map.easeTo({ center: [follow.lng, follow.lat], bearing: follow.heading, zoom: Math.min(16, follow.zoom ?? 16), pitch: follow.tilt ?? 45, duration: 800 });
+    map.easeTo({ center: [follow.lng, follow.lat], bearing: follow.heading, zoom: vectorStyleUrl(currentTheme() === 'light') ? (follow.zoom ?? 17) : Math.min(16, follow.zoom ?? 16), pitch: follow.tilt ?? 45, duration: 800 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [followKey, ready]);
 

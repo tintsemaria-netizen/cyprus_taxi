@@ -74,6 +74,8 @@ export function proxy(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith('/api/v1/') && MUTATING.has(req.method)) reqHeaders.set(MUTATION_HEADER, `${req.method} ${req.nextUrl.pathname}`);
   const res = NextResponse.next({ request: { headers: reqHeaders } });
   const tiles = tileOrigin();
+  // Free vector map (2026-11-28): OpenFreeMap style, tiles, fonts and icons all come from one host.
+  const vec = 'https://tiles.openfreemap.org';
   // Google Maps JS SDK resource hosts (per Google's CSP guidance). The vector/WebGL
   // map's shared-label worker fetches label images from *.gstatic.com AND data: URIs
   // via connect-src, so both must be allowed there (this only surfaces on real GPU
@@ -92,8 +94,8 @@ export function proxy(req: NextRequest) {
     "worker-src 'self' blob:",
     "child-src 'self' blob:",
     `style-src 'self' 'unsafe-inline' ${g.style}`,
-    `img-src 'self' data: blob: ${tiles} https://server.arcgisonline.com https://*.arcgisonline.com https://api.maptiler.com ${g.img}`,
-    `connect-src 'self' data: blob: ${tiles} https://server.arcgisonline.com https://*.arcgisonline.com https://api.maptiler.com ${g.connect}`,
+    `img-src 'self' data: blob: ${tiles} ${vec} https://server.arcgisonline.com https://*.arcgisonline.com https://api.maptiler.com ${g.img}`,
+    `connect-src 'self' data: blob: ${tiles} ${vec} https://server.arcgisonline.com https://*.arcgisonline.com https://api.maptiler.com ${g.connect}`,
     `font-src 'self' data: ${g.font}`,
     "object-src 'none'",
     "base-uri 'self'",

@@ -220,4 +220,14 @@ export const publicMapConfig = {
     process.env.NEXT_PUBLIC_MAP_TILES ||
     'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
   attribution: process.env.NEXT_PUBLIC_MAP_ATTRIBUTION || 'Tiles © Esri · © OpenStreetMap contributors',
+  // Free vector map (2026-11-28), e.g. OpenFreeMap: https://tiles.openfreemap.org/styles/dark (light: …/positron).
+  // When set, the MapLibre maps use it instead of the raster demo tiles.
+  styleUrl: process.env.NEXT_PUBLIC_MAP_STYLE_URL || '',
+  styleUrlLight: process.env.NEXT_PUBLIC_MAP_STYLE_URL_LIGHT || process.env.NEXT_PUBLIC_MAP_STYLE_URL || '',
 };
+
+/** The vector style URL for the current theme, or null = the raster demo style. */
+export function vectorStyleUrl(light: boolean): string | null {
+  const u = light ? publicMapConfig.styleUrlLight : publicMapConfig.styleUrl;
+  return u || null;
+}
