@@ -677,7 +677,7 @@ export default function TrackApp() {
       ); })()}
       {safety && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-4 sm:items-center sm:pb-0" onClick={() => setSafety(false)}>
-          <div role="dialog" aria-modal="true" aria-labelledby="safety-title" className="card w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-labelledby="safety-title" className="card max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto overscroll-contain p-5" onClick={(e) => e.stopPropagation()}>
             <h2 id="safety-title" className="text-lg font-bold">{t('track.safetyTitle')}</h2>
             <a href="tel:112" className="mt-4 block w-full rounded-[12px] border border-danger bg-danger/15 px-4 py-3 text-center font-semibold text-danger">{t('track.callEmergency')}</a>
             <div className="mt-4 rounded-[12px] border border-edge bg-elevated p-3 text-sm">
@@ -780,7 +780,7 @@ function TrackRoute({ view, editable, canAddStop = true, canChangeDropoff = fals
       {picking && (
         <div className="fixed inset-0 z-[70] [&>*]:max-h-[calc(100dvh-1.5rem)] [&>*]:overflow-y-auto flex items-end justify-center bg-black/55 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label={t('booking.form.addStop')}
           onClick={(e) => { if (e.target === e.currentTarget && !busy) setPicking(false); }}>
-          <div className="card w-full max-w-md p-4" style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
+          <div className="card max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain p-4" style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold">{t('booking.form.addStop')}</h2>
               <button type="button" onClick={() => setPicking(false)} aria-label={t('track.closeToStart')} className="flex h-10 w-10 items-center justify-center rounded-full text-2xl text-muted">×</button>
@@ -827,7 +827,7 @@ function ChangeDropoffSheet({ onClose, onDone }: { onClose: () => void; onDone: 
   return (
     <div className="fixed inset-0 z-[70] [&>*]:max-h-[calc(100dvh-1.5rem)] [&>*]:overflow-y-auto flex items-end justify-center bg-black/55 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label={t('track.dropoffTitle')}
       onClick={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
-      <div className="card w-full max-w-md p-4" style={{ marginBottom: 'env(safe-area-inset-bottom)' }} data-testid="change-dropoff">
+      <div className="card max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain p-4" style={{ marginBottom: 'env(safe-area-inset-bottom)' }} data-testid="change-dropoff">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">{t('track.dropoffTitle')}</h2>
           <button type="button" onClick={onClose} aria-label={t('common.close')} className="flex h-10 w-10 items-center justify-center rounded-full text-2xl text-muted">×</button>

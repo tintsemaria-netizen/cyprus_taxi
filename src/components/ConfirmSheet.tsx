@@ -42,7 +42,7 @@ export function ConfirmSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-4 sm:items-center sm:pb-0" onClick={onCancel}>
-      <div role="alertdialog" aria-modal="true" aria-labelledby="cs-title" aria-describedby={body ? 'cs-body' : undefined} className="card w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()} style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
+      <div role="alertdialog" aria-modal="true" aria-labelledby="cs-title" aria-describedby={body ? 'cs-body' : undefined} className="card max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto overscroll-contain p-5" onClick={(e) => e.stopPropagation()} style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
         <h2 id="cs-title" className="text-lg font-bold">{title}</h2>
         {body && <div id="cs-body" className="mt-2 text-sm text-muted">{body}</div>}
         {input && (

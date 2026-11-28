@@ -1183,7 +1183,20 @@ function MenuRow({ id, open, setOpen, label, badges, testId, children }: { id: M
     return () => { window.clearTimeout(tm); window.removeEventListener('resize', fit); };
   }, [on]);
   // After the height limit is applied: bring the whole section (frame top … its row) into view.
-  useEffect(() => { if (on && bodyMax) window.requestAnimationFrame(() => ref.current?.scrollIntoView({ block: 'end' })); }, [on, bodyMax]);
+  // …and again whenever the content changes height while open (2026-11-28, operator: «Мои машины» loads its cars
+  // after opening, grew and pushed its own row off the screen).
+  useEffect(() => {
+    if (!on || !bodyMax) return;
+    const el = ref.current;
+    if (!el) return;
+    const show = () => window.requestAnimationFrame(() => ref.current?.scrollIntoView({ block: 'end' }));
+    show();
+    if (typeof ResizeObserver === 'undefined') return;
+    let last = el.offsetHeight;
+    const ro = new ResizeObserver(() => { const h = el.offsetHeight; if (h !== last) { last = h; show(); } });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [on, bodyMax]);
   return (
     <section ref={ref} className={`flex flex-col rounded-[12px] border ${on ? 'border-accent/60' : 'border-edge'} bg-elevated`}>
       {on && <div className="overflow-y-auto overscroll-contain border-b border-edge px-3 pb-3 pt-3" style={bodyMax ? { maxHeight: bodyMax } : undefined} data-testid={`${testId}-body`}>{children}</div>}

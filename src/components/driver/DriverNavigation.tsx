@@ -569,7 +569,7 @@ export function DriverNavigation(props: {
         const ready = left === 0;
         return (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-4 sm:items-center sm:pb-0" onClick={() => setAsk(null)}>
-            <div role="dialog" aria-modal="true" className="card w-full max-w-sm space-y-3 p-5" onClick={(e) => e.stopPropagation()} style={{ marginBottom: 'env(safe-area-inset-bottom)' }} data-testid="nav-release-choose">
+            <div role="dialog" aria-modal="true" className="card max-h-[calc(100dvh-2rem)] w-full max-w-sm space-y-3 overflow-y-auto overscroll-contain p-5" onClick={(e) => e.stopPropagation()} style={{ marginBottom: 'env(safe-area-inset-bottom)' }} data-testid="nav-release-choose">
               <h2 className="text-lg font-bold">{t('driver.trip.whatHappened')}</h2>
               <button className="block w-full rounded-full border border-danger/50 bg-page px-4 py-3 text-[15px] font-bold text-danger disabled:opacity-45" disabled={!ready} onClick={() => setAsk('noShow')} data-testid="nav-no-show">
                 {t('driver.trip.noShow')}

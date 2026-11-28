@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-28 — everything opened fits the screen (operator rule, CLAUDE.md)
+
+- Driver MenuRow: ResizeObserver re-scrolls the opened section when its content loads later («Мои машины»).
+- Height limit + inner scroll added to: ConfirmSheet, PassengerLoginModal, RateTripModal, NotifyPrompt, TrackApp
+  safety / change-dropoff / other cards, DriverNavigation «Что случилось?», dispatch booking modal, PlacesInput list.
+
 ## 2026-11-28 — driver menu: an opened section fits the screen (operator)
 
 - MenuRow: the body gets maxHeight = drawer scroll area − its row (scrolls inside), then the section is scrolled

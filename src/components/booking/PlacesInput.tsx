@@ -227,7 +227,7 @@ export function PlacesInput({ kind, value, text, onText, onSelect, error, traili
         document.body,
       )}
       {open && (results.length > 0 || loading || status !== 'idle') && (
-        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-[12px] border border-edge bg-elevated shadow-card" role="listbox" id={`${inputId}-list`}>
+        <div className="absolute z-30 mt-1 max-h-[50dvh] w-full overflow-y-auto overscroll-contain rounded-[12px] border border-edge bg-elevated shadow-card" role="listbox" id={`${inputId}-list`}>
           {loading && !results.length && <div className="px-4 py-3 text-sm text-muted">{t('booking.places.searching')}</div>}
           {!loading && status === 'none' && <div className="px-4 py-3 text-sm text-muted">{t('booking.places.none')}</div>}
           {!loading && status === 'unavailable' && <div className="px-4 py-3 text-sm text-warn">{t('booking.places.unavailable')}</div>}

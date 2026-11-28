@@ -106,7 +106,7 @@ export function RateTripModal({ rideId, onClose, onDone, postUrl, inline }: { ri
   if (inline) return <div className="rounded-[16px] border border-accent/40 bg-accent/5 p-4">{content}</div>;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={onClose}>
-      <div className="card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>{content}</div>
+      <div className="card max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto overscroll-contain p-6" onClick={(e) => e.stopPropagation()}>{content}</div>
     </div>
   );
 }

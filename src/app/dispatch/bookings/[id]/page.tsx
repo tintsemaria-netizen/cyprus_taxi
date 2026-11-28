@@ -260,7 +260,7 @@ function AssignDialog({ bookingId, revision, isReassign, onClose, onDone }: { bo
   return (
     <>
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4" onClick={onClose}>
-      <div className="card w-full max-w-md p-4" onClick={(e) => e.stopPropagation()}>
+      <div className="card max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain p-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">{isReassign ? t('staff.booking.reassignTitle') : t('staff.booking.assignDriver')}</h3>
           <button className="text-muted hover:text-ink" onClick={onClose}>✕</button>

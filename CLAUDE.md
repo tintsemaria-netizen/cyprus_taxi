@@ -40,6 +40,11 @@ Confirmed beta target: https://cyprustaxi.ackedberryes.store on 92.39.53.229. Cl
   on a tap anywhere else and on Escape, not only with its own button. Use `useDismiss` from
   `src/components/useDismiss.ts` (the tap that closes it presses nothing else). Full-screen windows with a dark
   backdrop close on a backdrop tap. Tell the operator when you add one.
+- Everything opened fits the screen (2026-11-28): a window, sheet, pop-up, dropdown or opened menu section is
+  never taller than the visible screen (small phones, open keyboard): limit it (`max-h-[calc(100dvh-2rem)]`,
+  `max-h-[50dvh]` for lists) and let the content scroll inside, header / title and its main button staying in view.
+  If it loads data after opening, keep it in view when it grows (driver `MenuRow` does this with a ResizeObserver).
+  Check new windows on a 320×480 screen before showing the operator.
 - Resumed apps (2026-11-22): installed phone apps are resumed, not reloaded. A screen that loads data or the position
   once must refresh when it comes back (`useRefreshOnReturn` from `src/components/useRefreshOnReturn.ts`).
 

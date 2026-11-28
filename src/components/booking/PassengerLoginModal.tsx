@@ -60,7 +60,7 @@ export function PassengerLoginModal({ onDone, onClose, onBeforeLeave }: { onDone
 
   return (
     <div className="fixed inset-0 [&>*]:max-h-[calc(100dvh-1.5rem)] [&>*]:overflow-y-auto z-50 flex items-end justify-center bg-black/60 px-4 pb-4 sm:items-center sm:pb-0" onClick={onClose}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="plm-title" className="card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="plm-title" className="card max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
         <h2 id="plm-title" className="text-lg font-bold">{t('auth.modal.title')}</h2>
         <p className="mt-1 text-sm text-muted">{t('auth.modal.subtitle')}</p>
         {/* «Продолжить с Google» here too (2026-11-22): the route is kept and comes back after Google. */}
