@@ -3436,3 +3436,12 @@ person; forged state → /login?oauth=failed. tests/oauth-google.db.test.ts. 345
 - Used by GoogleMapView, MapView, GoogleMapPicker and MapPicker. The admin zone maps were not changed.
 - No real-map screenshot could be taken locally (no tiles); the operator saw an SVG mock with the same numbers.
 - Evidence: tsc clean; vitest 532 passed / 1 skipped; live health ready.
+
+## 2026-11-28 — Operator phone checks (stage 1)
+- Checked OK by the operator on a phone: car-pick red bubble + pop-ups close on a tap elsewhere (useDismiss);
+  3 s pickup/drop-off territory notice + thinner area lines; compact Samsung Internet dark-mode hint (deployed in
+  670012d0 — operator: keep as is).
+- Decision: driver search deadline stays 3 minutes (no change).
+- Still unchecked on a phone: drop-off change banner/push, offer round 2, Waze/Maps auto-open, NextOfferCard, co-rider trip.
+- Open: e-mail receipts need the operator's Resend account + DNS on Cloudflare + RESEND_API_KEY/EMAIL_FROM in
+  deploy/.env.production (key never in chat); GPS-loss minutes/penalty decision; evening-only ride-share test fix (mine to do).
