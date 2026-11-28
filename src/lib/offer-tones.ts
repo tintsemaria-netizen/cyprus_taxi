@@ -2,8 +2,8 @@
 // Pure data, shared by the browser player (driver-alerts.ts) and scripts/render-offer-tones.ts, which
 // writes the same notes to WAV files so the operator can listen before a deploy.
 
-export type OfferTone = 'chime' | 'bell' | 'pulse' | 'fanfare' | 'marimba' | 'rhythm' | 'trill';
-export const OFFER_TONES: OfferTone[] = ['fanfare', 'marimba', 'rhythm', 'trill', 'chime', 'bell', 'pulse'];
+export type OfferTone = 'chime' | 'bell' | 'pulse' | 'fanfare' | 'marimba' | 'rhythm' | 'trill' | 'retro';
+export const OFFER_TONES: OfferTone[] = ['fanfare', 'marimba', 'rhythm', 'trill', 'retro', 'chime', 'bell', 'pulse'];
 
 export interface ToneNote {
   f: number; // frequency, Hz
@@ -21,7 +21,7 @@ function mallet(f: number, at: number, len: number): ToneNote[] {
   return [{ f, at, len, wave: 'sine' }, { f: f * 4, at, len: Math.min(0.08, len), wave: 'sine', level: 0.25 }];
 }
 
-export const TONES: Record<OfferTone, ToneNote[]> = {
+export const TONES = {
   // The three original short tones (2026-11-27).
   chime: [{ f: 880, at: 0, len: 0.16 }, { f: 1320, at: 0.18, len: 0.16 }],
   bell: [{ f: 1046, at: 0, len: 0.5 }, { f: 1568, at: 0.02, len: 0.45 }, { f: 784, at: 0.55, len: 0.5 }],
@@ -59,7 +59,24 @@ export const TONES: Record<OfferTone, ToneNote[]> = {
     { f: C5 * 4, at: 0.62, len: 0.7, wave: 'triangle', hold: 0.25 },
     { f: E5 * 2, at: 0.62, len: 0.7, wave: 'triangle', level: 0.5, hold: 0.25 },
   ],
-};
+  retro: [],
+} as Record<OfferTone, ToneNote[]>;
+
+/** Retro ≈1.7 s: an original monophonic tune in the style of a 2000s button phone (square wave).
+ *  Deliberately NOT the Nokia tune — that one is Nokia's registered sound trademark. */
+const RETRO: [number, number][] = [
+  [1046.5, 1], [1318.51, 1], [1567.98, 1], [1318.51, 1], [1396.91, 1], [1760, 1], [1567.98, 2],
+  [1174.66, 1], [1396.91, 1], [1318.51, 1], [1174.66, 1], [1046.5, 3],
+];
+{
+  let at = 0;
+  TONES.retro = RETRO.map(([f, beats]) => {
+    const len = beats * 0.12 - 0.02;
+    const n: ToneNote = { f, at, len, wave: 'square', level: 0.5, hold: Math.max(0, len - 0.06) };
+    at += beats * 0.12;
+    return n;
+  });
+}
 
 /** Total length of a tone, s. */
 export function toneLength(tone: OfferTone): number {

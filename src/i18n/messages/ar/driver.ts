@@ -429,7 +429,7 @@ const driver: Catalog<typeof en> = {
     relGoodStaff: "كل شيء ضمن المعدل.",
     emailCodeSubject: "IL-Y: رمز تغيير البريد الإلكتروني",
     emailCodeBody: "رمزك في IL-Y لتغيير البريد الإلكتروني: {code}. صالح لمدة 10 دقائق. إن لم تكن أنت، تجاهل هذه الرسالة.",
-    tone: { chime: "مزدوج", bell: "جرس", pulse: "صفير", fanfare: "نفير", marimba: "ماريمبا", rhythm: "إيقاع", trill: "زغردة" },
+    tone: { chime: "مزدوج", bell: "جرس", pulse: "صفير", fanfare: "نفير", marimba: "ماريمبا", rhythm: "إيقاع", trill: "زغردة", retro: "كلاسيكي" },
   },
   nav: {
     myData: "بياناتي",

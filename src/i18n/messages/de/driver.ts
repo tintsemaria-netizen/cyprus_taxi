@@ -429,7 +429,7 @@ const driver: Catalog<typeof en> = {
     relGoodStaff: "Alles im Rahmen.",
     emailCodeSubject: "IL-Y: Code zur Änderung Ihrer E-Mail",
     emailCodeBody: "Ihr IL-Y-Code zur Änderung der E-Mail: {code}. Er gilt 10 Minuten. Wenn Sie das nicht waren, ignorieren Sie diese E-Mail.",
-    tone: { chime: "Doppelton", bell: "Glocke", pulse: "Signal", fanfare: "Fanfare", marimba: "Marimba", rhythm: "Rhythmus", trill: "Triller" },
+    tone: { chime: "Doppelton", bell: "Glocke", pulse: "Signal", fanfare: "Fanfare", marimba: "Marimba", rhythm: "Rhythmus", trill: "Triller", retro: "Retro" },
   },
   nav: {
     myData: "Meine Daten",

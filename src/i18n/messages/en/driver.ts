@@ -426,7 +426,7 @@ const driver = {
     relGoodStaff: "All within the norm.",
     emailCodeSubject: "IL-Y: code to change your e-mail",
     emailCodeBody: "Your IL-Y code to change your e-mail: {code}. It is valid for 10 minutes. If this was not you, ignore this e-mail.",
-    tone: { chime: "Double", bell: "Bell", pulse: "Beeps", fanfare: "Fanfare", marimba: "Marimba", rhythm: "Rhythm", trill: "Trill" },
+    tone: { chime: "Double", bell: "Bell", pulse: "Beeps", fanfare: "Fanfare", marimba: "Marimba", rhythm: "Rhythm", trill: "Trill", retro: "Retro" },
   },
   nav: {
     myData: "My details",
