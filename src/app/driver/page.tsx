@@ -307,6 +307,8 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   const [prebookCount, setPrebookCount] = useState(0);
   // Others asking for his car (2026-11-24): a red count on «Мои машины» in the menu.
   const [carAsks, setCarAsks] = useState(0);
+  const [carsAdd, setCarsAdd] = useState(false);
+  const [carsKey, setCarsKey] = useState(0); // a fresh «Мои машины» each time it is opened // «Мои машины» screen opened from «+ Добавить новую машину» (2026-11-28)
   useEffect(() => { if (drawer) api<{ asks: unknown[] }>('/driver/cars').then((r) => setCarAsks(r.asks.length)).catch(() => {}); }, [drawer]);
   const [prebookPair, setPrebookPair] = useState(false); // any open pre-booking is a ride-share pair
   const [, setPrebookMine] = useState(0); // pre-bookings this driver has taken
@@ -468,7 +470,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
           data={data} dash={dash} gps={gps} pos={pos} stand={stand} offer={offer} offerSecs={offerSecs} offerBusy={offerBusy}
           onDuty={setDuty} onStartGps={startGps} onStopGps={stopGps}
           onAccept={acceptCurrentOffer} onDecline={declineCurrentOffer} goTrips={() => { setMenuSec('trips'); setDrawer(true); }}
-          openCars={() => setTab('cars')}
+          openCars={() => { setCarsAdd(false); setCarsKey((k) => k + 1); setTab('cars'); }}
           openDocs={() => { setMenuSec('docs'); setDrawer(true); window.setTimeout(() => document.getElementById('driver-docs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 350); }}
           goEarnings={(to) => { setEarnEntry(to ?? 'summary'); setTab('earnings'); }}
           refreshDash={loadDash}
@@ -498,7 +500,8 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
       )}
       {/* Count AND «is a pair» come together, so the map button never shows «П» for a moment before «ПП» (2026-11-19). */}
       {/* «Мои машины» (2026-11-24): a sub-screen — the ‹ back arrow is in the top bar. */}
-      {tab === 'cars' && <div className="mx-auto max-w-lg px-4 pb-28 pt-3"><MyCars /></div>}
+      {/* Full screen (2026-11-28, operator): the back arrow «‹» is in the top bar, as on every driver sub-screen. */}
+      {tab === 'cars' && <div className="mx-auto max-w-lg px-4 pb-28 pt-3" data-testid="cars-screen"><h1 className="mb-3 text-xl font-semibold">{t(carsAdd ? 'driver.cars.addTitle' : 'driver.cars.menu')}</h1><MyCars key={carsKey} startNew={carsAdd} onAddDone={() => setCarsAdd(false)} /></div>}
       {/* «Заработок» (2026-11-20, operator): no longer a menu tab — the earnings pill on the map opens a small
           «today» card, its «Подробнее» opens this full screen (back arrow «‹» in the top bar, like other sub-screens). */}
       {tab === 'earnings' && <div className="mx-auto max-w-lg px-4 pb-28 pt-3" data-testid="earnings-screen"><EarningsReport key={earnEntry} initialRange="today" openAnalytics={earnEntry === 'analytics'} /></div>}
@@ -510,7 +513,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         {/* «Визитка» on top (2026-11-26, operator): photo, name, car and plate; × on the right. */}
         <div className="flex shrink-0 items-start gap-3 px-4 pb-3 pt-3">
-          <DriverCard dash={dash} onSwitched={loadDash} openCars={() => setMenuSec('cars')} />
+          <DriverCard dash={dash} onSwitched={loadDash} carAsks={carAsks} openCars={(add) => { setCarsAdd(add); setCarsKey((k) => k + 1); setDrawer(false); setTab('cars'); window.scrollTo(0, 0); }} />
           {/* Language: a round button next to the card, as in the passenger's menu (2026-11-27, operator). */}
           <LanguageSwitcher round only={DRIVER_LOCALES} className="mt-2" />
           <button type="button" onClick={() => setDrawer(false)} aria-label={t('common.close')} className="-me-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-2xl text-ink hover:bg-white/5">×</button>
@@ -526,10 +529,8 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
               <MenuRow id="trips" open={menuSec} setOpen={setMenuSec} label={t('driver.nav.trips')} testId="drawer-trips">
                 <TripsSection onOpen={setActiveDetailId} activeDetail={activeDetailId} onCloseDetail={() => setActiveDetailId(null)} onSettled={() => { loadDash(); }} />
               </MenuRow>
-              <MenuRow id="cars" open={menuSec} setOpen={setMenuSec} label={t('driver.cars.menu')} testId="drawer-cars"
-                badges={carAsks > 0 ? <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white">{carAsks}</span> : null}>
-                <MyCars bare />
-              </MenuRow>
+              {/* «Мои машины» left the menu (2026-11-28, operator): the plate under the name switches cars;
+                  «+ Добавить новую машину» there opens the full «Мои машины» screen. */}
               <MenuRow id="app" open={menuSec} setOpen={setMenuSec} label={t('driver.nav.appSettings')} testId="drawer-app">
                 <AppSettingsSection />
               </MenuRow>
@@ -1214,7 +1215,7 @@ function MenuRow({ id, open, setOpen, label, badges, testId, children }: { id: M
 
 /** «Визитка» at the top of the menu (2026-11-26): his photo, name, and under it the car and plate.
  *  Tapping the plate lists his other cars to switch to (same rules as «Мои машины»: off the line, no ride). */
-function DriverCard({ dash, onSwitched, openCars }: { dash: Dashboard | null; onSwitched: () => void; openCars: () => void }) {
+function DriverCard({ dash, onSwitched, openCars, carAsks = 0 }: { dash: Dashboard | null; onSwitched: () => void; openCars: (add: boolean) => void; carAsks?: number }) {
   const { t, tError } = useT();
   const [photo, setPhoto] = useState(true);
   const [pick, setPick] = useState(false);
@@ -1238,19 +1239,20 @@ function DriverCard({ dash, onSwitched, openCars }: { dash: Dashboard | null; on
                 <button type="button" onClick={() => setPick((v) => !v)} aria-expanded={pick} data-testid="driver-card-plate"
                   className="mt-1 inline-flex items-center gap-1 rounded-[6px] border border-edge-strong px-1.5 font-mono text-xs font-bold tracking-wider text-ink">
                   {dash.vehicle.plate}
+                  {carAsks > 0 && <span className="ms-0.5 min-w-[16px] rounded-full bg-danger px-1 text-center font-sans text-[10px] leading-[16px] text-white">{carAsks}</span>}
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`text-muted transition-transform ${pick ? 'rotate-180' : ''}`}><path d="M6 9l6 6 6-6" /></svg>
                 </button>
               </>
             : <button type="button" onClick={() => setPick((v) => !v)} className="text-xs text-accent underline" data-testid="driver-card-plate">{t('driver.profile.noVehicle')}</button>}
         </div>
       </div>
-      {pick && <div ref={pickRef}><CarPick onDone={() => { setPick(false); onSwitched(); }} openCars={() => { setPick(false); openCars(); }} tError={tError} /></div>}
+      {pick && <div ref={pickRef}><CarPick carAsks={carAsks} onDone={() => { setPick(false); onSwitched(); }} openCars={(add) => { setPick(false); openCars(add); }} tError={tError} /></div>}
     </div>
   );
 }
 
 interface PickCar { id: string; plate: string; make: string; model: string; color: string; vClass: string; current: boolean; busy: boolean; expired: string | null }
-function CarPick({ onDone, openCars, tError }: { onDone: () => void; openCars: () => void; tError: (e: unknown) => string }) {
+function CarPick({ onDone, openCars, tError, carAsks = 0 }: { onDone: () => void; openCars: (add: boolean) => void; tError: (e: unknown) => string; carAsks?: number }) {
   const { t } = useT();
   const [d, setD] = useState<{ online: boolean; onTrip: boolean; cars: PickCar[] } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -1292,7 +1294,9 @@ function CarPick({ onDone, openCars, tError }: { onDone: () => void; openCars: (
             })}
           </ul>
           {err && <p className="px-2 pt-1 text-xs text-danger">{err}</p>}
-          <button type="button" onClick={openCars} className="mt-1 w-full px-2 py-2 text-start text-xs text-accent">+ {t('driver.cars.addNew')}</button>
+          {/* Another driver asks to work on my car (was the «Мои машины» badge): opens the cars screen. */}
+          {carAsks > 0 && <button type="button" onClick={() => openCars(false)} className="mt-1 w-full px-2 py-2 text-start text-xs font-semibold text-danger" data-testid="car-asks">{t('driver.cars.asks', { n: carAsks })} ›</button>}
+          <button type="button" onClick={() => openCars(true)} className="mt-1 w-full px-2 py-2 text-start text-xs text-accent" data-testid="car-add">+ {t('driver.cars.addNew')}</button>
         </>
       )}
     </div>

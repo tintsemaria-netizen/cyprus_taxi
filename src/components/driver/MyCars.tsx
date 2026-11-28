@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useDismiss } from '@/components/useDismiss';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { compressImageForUpload, UPLOAD_TARGET_BYTES } from '@/lib/image-compress';
@@ -21,14 +22,16 @@ interface Data { online: boolean; onTrip: boolean; cars: Car[]; access: Access[]
 
 const SLOTS = ['vehicle_reg', 'insurance', 'taxi_licence', 'vehicle_front', 'vehicle_rear'];
 
-export function MyCars({ bare = false }: { bare?: boolean } = {}) {
+export function MyCars({ bare = false, startNew = false, onAddDone }: { bare?: boolean; startNew?: boolean; onAddDone?: () => void } = {}) {
   const { t, tError } = useT();
   const [d, setD] = useState<Data | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [mode, setMode] = useState<null | 'existing' | 'new'>(null);
+  const [mode, setMode] = useState<null | 'existing' | 'new'>(startNew ? 'new' : null); // «+ Добавить новую машину» opens the form
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ id: string; text: string } | null>(null);
   const load = useCallback(() => { api<Data>('/driver/cars').then(setD).catch(() => {}); }, []);
+  // The add window closed (sent or «Отмена»): the screen becomes «Мои машины» again.
+  useEffect(() => { if (startNew && mode === null) onAddDone?.(); }, [startNew, mode, onAddDone]);
   useEffect(() => { load(); }, [load]);
   useRefreshOnReturn(load);
 
@@ -40,6 +43,20 @@ export function MyCars({ bare = false }: { bare?: boolean } = {}) {
   }
   if (!d) return <p className="p-4 text-sm text-muted">{t('common.loading')}</p>;
   const locked = d.online || d.onTrip;
+
+  // «Добавить машину» as its own full window (2026-11-28, operator): only the form (and a switch to «уже есть в
+  // системе»); after sending, the normal «Мои машины» page shows the new car's progress.
+  if (startNew && mode !== null) {
+    return (
+      <div className="space-y-4" data-testid="car-add-window">
+        {msg && <p className={`text-sm ${msg.ok ? 'text-accent' : 'text-danger'}`} role="status">{msg.text}</p>}
+        {/* One narrow tile (2026-11-28, operator): shows the choice; a tap opens the two options. */}
+        <KindPick mode={mode} setMode={setMode} />
+        {mode === 'existing' && <ExistingForm busy={busy} onCancel={() => setMode(null)} onSend={(plate) => run(async () => { await api('/driver/cars/access', { method: 'POST', body: { plate } }); setMode(null); }, t('driver.cars.asked'))} />}
+        {mode === 'new' && <NewForm busy={busy} onCancel={() => setMode(null)} onSend={(vehicle) => run(async () => { await api('/driver/cars/new', { method: 'POST', body: { vehicle } }); setMode(null); }, t('driver.cars.started'))} />}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4" data-testid="my-cars">
@@ -270,6 +287,34 @@ function CarDocs({ car, onDone }: { car: Car; onDone: () => void }) {
         );
       })}
       {msg && <p className={`text-xs ${msg.ok ? 'text-accent' : 'text-danger'}`} role="status">{msg.text}</p>}
+    </div>
+  );
+}
+
+/** «Новая машина / Машина уже есть в системе» as one narrow tile with a small list (closes on a tap elsewhere). */
+function KindPick({ mode, setMode }: { mode: 'new' | 'existing'; setMode: (m: 'new' | 'existing') => void }) {
+  const { t } = useT();
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  useDismiss(open, () => setOpen(false), [boxRef]);
+  const label = (m: 'new' | 'existing') => t(m === 'new' ? 'driver.cars.addNew' : 'driver.cars.addExisting');
+  return (
+    <div ref={boxRef} className="relative" data-testid="car-kind">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} data-testid="car-kind-btn"
+        className="flex w-full items-center justify-between gap-2 rounded-[12px] border border-edge bg-elevated px-3 py-2 text-sm font-semibold">
+        <span className="truncate">{label(mode)}</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`shrink-0 text-muted transition-transform ${open ? 'rotate-180' : ''}`}><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <div className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-[12px] border border-edge bg-elevated shadow-card" role="listbox">
+          {(['new', 'existing'] as const).map((m) => (
+            <button key={m} type="button" role="option" aria-selected={mode === m} onClick={() => { setMode(m); setOpen(false); }} data-testid={`car-kind-${m}`}
+              className={`flex w-full items-center justify-between px-3 py-2.5 text-start text-sm ${mode === m ? 'text-accent' : ''}`}>
+              {label(m)}{mode === m && <span>✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

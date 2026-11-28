@@ -254,6 +254,8 @@ const driver = {
     waiting: "Waiting for: {who}",
     addExisting: "A car already in the system",
     addNew: "Add a new car",
+    asks: "Requests for your car: {n}",
+    addTitle: "Add a car",
     asked: "Request sent.",
     started: "Fill in the car's documents below and send them for checking.",
     existingHint: "For example a fleet car or another driver's car. Enter the plate — the request goes to the fleet owner, or to the car's owner and the operator.",

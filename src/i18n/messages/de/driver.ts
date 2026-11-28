@@ -257,6 +257,8 @@ const driver: Catalog<typeof en> = {
     waiting: "Warten auf: {who}",
     addExisting: "Ein Auto, das schon im System ist",
     addNew: "Neues Auto hinzufügen",
+    asks: "Anfragen für Ihr Auto: {n}",
+    addTitle: "Auto hinzufügen",
     asked: "Anfrage gesendet.",
     started: "Füllen Sie unten die Dokumente des Autos aus und senden Sie sie zur Prüfung.",
     existingHint: "Z. B. ein Flottenauto oder das Auto eines anderen Fahrers. Kennzeichen eingeben — die Anfrage geht an den Flotteninhaber bzw. an den Besitzer und den Betreiber.",

@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-28 — «Мои машины» out of the driver menu (operator)
+
+- Drawer: no «Мои машины» row. The plate under the name opens CarPick: switch car, «Запросы на вашу машину: N ›»
+  (red count also on the plate), «+ Добавить новую машину» → full-screen tab 'cars' (`carsAdd`) titled «Добавить
+  машину»: MyCars `startNew` shows only the form, kind chosen in one narrow tile (`KindPick`, useDismiss);
+  sending/cancel returns to the normal «Мои машины» page (`onAddDone`). Checked 320×480.
+
 ## 2026-11-28 — everything opened fits the screen (operator rule, CLAUDE.md)
 
 - Driver MenuRow: ResizeObserver re-scrolls the opened section when its content loads later («Мои машины»).
