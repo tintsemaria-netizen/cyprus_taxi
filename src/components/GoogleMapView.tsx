@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadGoogleMaps, MAP_ID } from '@/lib/google-maps';
 import { CYPRUS_BOUNDS } from '@/lib/config';
 import type { MapMarker } from './MapView';
-import { pinPoint, fitKeyOf, safePadding } from './mapFit';
+import { pinPoint, fitKeyOf, safePadding, screenToWorld } from './mapFit';
 import { vehicleMarkerEl, orientVehicle, steerVehicle, bearing, personMarkerEl, pickupPinEl, navArrowEl, numberedStopEl, spotEl } from './carMarker';
 import { distanceM } from '@/lib/gpsFilter';
 import { useIdleReturn } from './useIdleReturn';
@@ -82,8 +82,8 @@ function centerPointAt(map: any, lat: number, lng: number, pad: any, zoom: numbe
   // middle and an animated pan back — after the centre-pin pick the map must not shift under the logo.
   const proj = map.getProjection?.(), g = (window as any).google?.maps;
   if (proj && g?.Point) {
-    const w = proj.fromLatLngToPoint(new g.LatLng(lat, lng)), scale = 2 ** zoom;
-    const c = proj.fromPointToLatLng(new g.Point(w.x + dx / scale, w.y + dy / scale));
+    const w = proj.fromLatLngToPoint(new g.LatLng(lat, lng)), o = screenToWorld(dx, dy, map.getHeading?.() ?? 0, 2 ** zoom);
+    const c = proj.fromPointToLatLng(new g.Point(w.x + o.x, w.y + o.y));
     const cur = map.getCenter?.();
     const z0 = map.getZoom?.() ?? zoom;
     if (cur && Math.abs(z0 - zoom) < 1e-6 && Math.abs(cur.lat() - c.lat()) < 1e-7 && Math.abs(cur.lng() - c.lng()) < 1e-7) { onDone?.(); return; } // already there
@@ -102,7 +102,7 @@ function centerPointAt(map: any, lat: number, lng: number, pad: any, zoom: numbe
     return;
   }
   map.moveCamera({ center: { lat, lng }, zoom });
-  if (dx || dy) map.panBy(Math.round(dx), Math.round(dy));
+  if (dx || dy) map.panBy(Math.round(dx), Math.round(dy)); // panBy is in screen pixels — right on a rotated map too
 }
 function framePoint(map: any, g: any, lat: number, lng: number, pad: any, maxZoom = 16) {
   // ~650m half-box → street zoom at 16; each zoom level out doubles the box (zoom 13 ≈ half a city).
@@ -262,8 +262,8 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 9, i
             const proj = map.getProjection?.(), c = map.getCenter?.(), z = map.getZoom?.();
             if (!proj || !c || z == null) return;
             const pt = pinPoint(padRef.current, box.clientWidth, box.clientHeight);
-            const scale = 2 ** z, w = proj.fromLatLngToPoint(c);
-            const ll = proj.fromPointToLatLng(new g.Point(w.x + (pt.x - box.clientWidth / 2) / scale, w.y + (pt.y - box.clientHeight / 2) / scale));
+            const w = proj.fromLatLngToPoint(c), o = screenToWorld(pt.x - box.clientWidth / 2, pt.y - box.clientHeight / 2, map.getHeading?.() ?? 0, 2 ** z);
+            const ll = proj.fromPointToLatLng(new g.Point(w.x + o.x, w.y + o.y));
             if (ll) centerPickRef.current({ lat: ll.lat(), lng: ll.lng(), zoom: z });
           });
         }

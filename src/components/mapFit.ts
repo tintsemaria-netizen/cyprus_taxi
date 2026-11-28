@@ -34,3 +34,11 @@ export function pinPoint(pad: Pad | undefined, width: number, height: number): {
   const p = pad ? safePadding(pad, width, height) : { top: 0, right: 0, bottom: 0, left: 0 };
   return { x: p.left + (width - p.left - p.right) / 2, y: p.top + (height - p.top - p.bottom) / 2 };
 }
+
+/** A screen offset (px, x right / y down) as a world-coordinate offset at zoom 0, for a map turned by `heading`
+ *  degrees (2026-11-28, operator: on a rotated map the logo ended beside the airport point and the pickup was
+ *  read from the wrong spot — the offset was applied as if north were up). */
+export function screenToWorld(dx: number, dy: number, heading: number, scale: number): { x: number; y: number } {
+  const h = (heading * Math.PI) / 180, cos = Math.cos(h), sin = Math.sin(h);
+  return { x: (dx * cos - dy * sin) / scale, y: (dx * sin + dy * cos) / scale };
+}
