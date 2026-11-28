@@ -313,6 +313,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   const onPrebookCount = useCallback((n: number, pair: boolean, mine: number) => { setPrebookCount(n); setPrebookPair(pair); setPrebookMine(mine); }, []);
   // Free orders count for the bottom-nav badge (rides automatic dispatch could not place).
   const [freeCount, setFreeCount] = useState(0);
+  const [freeView, setFreeView] = useState<'now' | 'prebook'>('now'); // «Свободные» tiles (2026-11-28)
   useEffect(() => {
     if (!data?.onDuty || data.trip) { setFreeCount(0); return; }
     let alive = true;
@@ -473,9 +474,29 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
           refreshDash={loadDash}
         />
       )}
-      {tab === 'free' && <FreeOrdersSection pos={pos} onDuty={!!data.onDuty} onTaken={async () => { setFreeCount(0); setTab('home'); await load(); await loadDash(); }} />}
+      {/* «Свободные» = two tiles (2026-11-28, operator): free orders now and pre-bookings — one screen for
+          everything a driver can take himself. The «П» button and the old 'prebook' tab open the second tile. */}
+      {(tab === 'free' || tab === 'prebook') && (
+        <div className="mx-auto max-w-lg space-y-3 px-4 pb-28 pt-3" data-testid="free-tab">
+          <div className="grid grid-cols-2 gap-2" role="tablist">
+            {([['now', t('driver.free.tileNow'), freeCount], ['prebook', t('driver.free.tilePrebook'), prebookCount]] as const).map(([v, label, n]) => {
+              const on = (tab === 'prebook' ? 'prebook' : freeView) === v;
+              return (
+                <button key={v} type="button" role="tab" aria-selected={on} data-testid={`free-tile-${v}`}
+                  onClick={() => { setFreeView(v); setTab('free'); }}
+                  className={`flex items-center justify-center gap-2 rounded-[14px] border px-3 py-3 transition ${on ? 'border-accent bg-accent/10' : 'border-edge bg-elevated'}`}>
+                  <span className={`text-[16px] font-bold ${on ? 'text-accent' : 'text-ink'}`}>{label}</span>
+                  {n > 0 && <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white">{n}</span>}
+                </button>
+              );
+            })}
+          </div>
+          {(tab === 'prebook' ? 'prebook' : freeView) === 'now'
+            ? <FreeOrdersSection pos={pos} onDuty={!!data.onDuty} onTaken={async () => { setFreeCount(0); setTab('home'); await load(); await loadDash(); }} />
+            : <ScheduledRides onCount={onPrebookCount} />}
+        </div>
+      )}
       {/* Count AND «is a pair» come together, so the map button never shows «П» for a moment before «ПП» (2026-11-19). */}
-      {tab === 'prebook' && <ScheduledRides onCount={onPrebookCount} />}
       {/* «Мои машины» (2026-11-24): a sub-screen — the ‹ back arrow is in the top bar. */}
       {tab === 'cars' && <div className="mx-auto max-w-lg px-4 pb-28 pt-3"><MyCars /></div>}
       {/* «Заработок» (2026-11-20, operator): no longer a menu tab — the earnings pill on the map opens a small
@@ -550,7 +571,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
       {/* New pre-booking (2026-11-19): a round button on the right of the map, a little below the middle —
           «П» for a pre-booking, «ПП» when it is a ride-share pair; pulses between its colour and a soft red. */}
       {tab === 'home' && !offer && !data.trip && prebookCount > 0 && (
-        <button type="button" onClick={() => setTab('prebook')} data-testid="prebook-fab"
+        <button type="button" onClick={() => { setFreeView('prebook'); setTab('free'); }} data-testid="prebook-fab"
           aria-label={prebookPair ? t('driver.prebookFab.pairAria') : t('driver.prebookFab.singleAria')}
           className={`ily-fab-pulse fixed end-3 top-[58%] z-30 flex h-14 w-14 items-center justify-center rounded-full text-[18px] font-extrabold shadow-card ${prebookPair ? 'text-white' : 'text-[#0d1608]'}`}
           // «ПП» (ride-share pair) is the better-paid one: bright red (2026-11-19, operator).
@@ -945,8 +966,6 @@ function FreeOrdersSection({ pos, onDuty, onTaken }: { pos: { lat: number; lng: 
 
   return (
     <div className="space-y-3">
-      <h1 className="text-xl font-semibold">{t('driver.free.title')}</h1>
-      <p className="text-xs text-muted">{t('driver.free.hint')}</p>
       {!onDuty && <p className="rounded-[12px] border border-warn/40 bg-warn/10 p-3 text-sm text-warn">{t('driver.free.goOnline')}</p>}
       {msg && <p className="rounded-[12px] border border-danger/40 bg-danger/10 p-3 text-sm text-danger">{msg}</p>}
       {orders === null ? <p className="py-8 text-center text-sm text-muted">{t('common.loading')}</p>

@@ -1,5 +1,12 @@
 # Session handoff
 
+## 2026-11-28 — driver «Свободные» = two tiles (operator)
+
+- Bottom tab «Свободные»: tiles «Свободные» (free orders, hint text removed) and «Предзаказы» (the pre-booking board),
+  red counts; the «П/ПП» button and the old 'prebook' tab open the second tile (`freeView`). Board switches small,
+  full-width «Свободные / Принятые» (driver.scheduled.available shortened, 8 langs) with a small round «i» at the end.
+  The board is still also in the driver menu «Предзаказы» (operator asked whether to remove — no answer yet).
+
 ## 2026-11-28 — monthly statement (operator)
 
 - `reportMonthly(driverId, url?month=YYYY-MM)` in server/reports/driver-report.ts (Cyprus calendar month; earnings

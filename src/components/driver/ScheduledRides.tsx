@@ -136,24 +136,26 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
       {err && <p role="alert" className="rounded-[12px] border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{err}</p>}
       {!board ? <p className="text-sm text-muted">{t('common.loading')}</p> : (
         <>
-          <div className="flex gap-1 rounded-[12px] border border-edge bg-elevated p-1" role="tablist">
+          {/* Small switches and «ⓘ Инфо» on one line, Info right of «Принятые» (2026-11-28, operator). */}
+          {/* Wider switches (2026-11-28, operator): they fill the line, «i» at the end. */}
+          <div className="flex items-center gap-2">
+          <div className="flex flex-1 gap-1 rounded-full border border-edge bg-elevated p-0.5" role="tablist">
             {(['available', 'mine'] as const).map((v) => {
               const n = v === 'available' ? board.available.filter((i) => !i.conflict).length : board.mine.length;
               return (
-                <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)} className={`relative flex-1 rounded-[9px] px-3 py-2 text-sm font-medium ${view === v ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>
+                <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)} className={`relative flex-1 rounded-full px-4 py-1 text-xs font-semibold ${view === v ? 'bg-accent text-[#0d1608]' : 'text-muted'}`}>
                   {v === 'available' ? t('driver.scheduled.available') : t('driver.scheduled.mine')}
                   {n > 0 && <span className={`ms-1.5 inline-block min-w-[18px] rounded-full px-1 text-center text-[10px] font-bold leading-[18px] bg-danger text-white`}>{n}</span>}
                 </button>
               );
             })}
           </div>
-          {/* «ⓘ Инфо» under «Принятые»: all the pre-booking rules in one place (operator 2026-11-26). */}
-          {board.rules && (
-            <div className="-mt-1 mb-1 flex justify-end">
-              <button type="button" ref={infoBtnRef} onClick={() => setInfo((o) => !o)} aria-expanded={info} data-testid="prebook-info"
-                className="rounded-full border border-edge px-2.5 py-0.5 text-xs font-medium text-muted hover:text-ink">ⓘ {t('driver.scheduled.infoBtn')}</button>
-            </div>
-          )}
+            {board.rules && (
+              // Just «i» in its circle (2026-11-28, operator), as «Беру попутчиков».
+              <button type="button" ref={infoBtnRef} onClick={() => setInfo((o) => !o)} aria-expanded={info} aria-label={t('driver.scheduled.infoBtn')} data-testid="prebook-info"
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold leading-none ${info ? 'border-accent text-accent' : 'border-edge-strong text-muted'}`}>i</button>
+            )}
+          </div>
           {info && board.rules && (
             <div ref={infoBoxRef} className="mb-2 space-y-1.5 rounded-[12px] border border-edge bg-page px-3 py-2.5 text-xs leading-snug text-muted" data-testid="prebook-rules">
               <div>🕒 {t('driver.scheduled.rule1', { min: board.rules.protectMin })}</div>
