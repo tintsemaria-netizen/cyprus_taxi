@@ -515,7 +515,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
           <LanguageSwitcher round only={DRIVER_LOCALES} className="mt-2" />
           <button type="button" onClick={() => setDrawer(false)} aria-label={t('common.close')} className="-me-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-2xl text-ink hover:bg-white/5">×</button>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+        <div data-drawer-scroll className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
           {drawer && (
             // Bottom-up (2026-11-26, operator): the rows sit at the bottom, «Предзаказы» lowest, and a section
             // opens UPWARDS above its row; opening one closes the one that was open.
@@ -1166,12 +1166,28 @@ type MenuSec = 'prebook' | 'profile' | 'trips' | 'cars' | 'settings' | 'docs' | 
 function MenuRow({ id, open, setOpen, label, badges, testId, children }: { id: MenuSec; open: MenuSec | null; setOpen: (v: MenuSec | null) => void; label: string; badges?: React.ReactNode; testId: string; children: React.ReactNode }) {
   const on = open === id;
   const ref = useRef<HTMLElement>(null);
-  // The content opens above the row: keep the row where the finger is (scrolled to the bottom of the view).
-  useEffect(() => { if (on) window.setTimeout(() => ref.current?.scrollIntoView({ block: 'end' }), 50); }, [on]);
+  const rowRef = useRef<HTMLButtonElement>(null);
+  // The whole opened section is in view (2026-11-28, operator: «ничего не уходило за фон»): its body is never taller
+  // than the menu's visible area minus its own row — a long one scrolls inside the frame — and the section is
+  // scrolled so frame top and row are both on screen.
+  const [bodyMax, setBodyMax] = useState<number | null>(null);
+  useEffect(() => {
+    if (!on) return;
+    const fit = () => {
+      const box = ref.current?.closest('[data-drawer-scroll]') as HTMLElement | null;
+      if (!box) return;
+      setBodyMax(Math.max(160, box.clientHeight - (rowRef.current?.offsetHeight ?? 52) - 16));
+    };
+    const tm = window.setTimeout(fit, 50);
+    window.addEventListener('resize', fit);
+    return () => { window.clearTimeout(tm); window.removeEventListener('resize', fit); };
+  }, [on]);
+  // After the height limit is applied: bring the whole section (frame top … its row) into view.
+  useEffect(() => { if (on && bodyMax) window.requestAnimationFrame(() => ref.current?.scrollIntoView({ block: 'end' })); }, [on, bodyMax]);
   return (
     <section ref={ref} className={`flex flex-col rounded-[12px] border ${on ? 'border-accent/60' : 'border-edge'} bg-elevated`}>
-      {on && <div className="border-b border-edge px-3 pb-3 pt-3" data-testid={`${testId}-body`}>{children}</div>}
-      <button type="button" onClick={() => setOpen(on ? null : id)} aria-expanded={on} data-testid={testId}
+      {on && <div className="overflow-y-auto overscroll-contain border-b border-edge px-3 pb-3 pt-3" style={bodyMax ? { maxHeight: bodyMax } : undefined} data-testid={`${testId}-body`}>{children}</div>}
+      <button ref={rowRef} type="button" onClick={() => setOpen(on ? null : id)} aria-expanded={on} data-testid={testId}
         className="flex w-full items-center justify-between gap-2 px-4 py-3 text-start text-[16px] font-semibold">
         <span className="min-w-0 truncate">{label}</span>
         <span className="flex items-center gap-1.5">

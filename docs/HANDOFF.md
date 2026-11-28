@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-28 — driver menu: an opened section fits the screen (operator)
+
+- MenuRow: the body gets maxHeight = drawer scroll area − its row (scrolls inside), then the section is scrolled
+  into view (block end) after that limit applies — frame top and row both visible. Only the driver drawer opens
+  bottom-up; passenger ☰ and the trip sheets checked, not affected.
+
 ## 2026-11-28 — «Свободные» polish (operator)
 
 - «Предзаказы» removed from the driver menu (they live in the «Свободные» tab); the bottom «Свободные» count =
