@@ -429,7 +429,7 @@ const driver: Catalog<typeof en> = {
     relGoodStaff: "הכול בנורמה.",
     emailCodeSubject: "IL-Y: קוד לשינוי אימייל",
     emailCodeBody: "הקוד שלך ב-IL-Y לשינוי אימייל: {code}. בתוקף 10 דקות. אם זה לא היית את/ה, התעלמו מההודעה.",
-    tone: { chime: "כפול", bell: "פעמון", pulse: "צפצופים" },
+    tone: { chime: "כפול", bell: "פעמון", pulse: "צפצופים", fanfare: "תרועה", marimba: "מרימבה", rhythm: "קצב", trill: "סלסול" },
   },
   nav: {
     myData: "הפרטים שלי",

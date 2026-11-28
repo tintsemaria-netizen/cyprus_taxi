@@ -429,7 +429,7 @@ const driver: Catalog<typeof en> = {
     relGoodStaff: "Όλα εντός ορίων.",
     emailCodeSubject: "IL-Y: κωδικός αλλαγής e-mail",
     emailCodeBody: "Ο κωδικός σας IL-Y για αλλαγή e-mail: {code}. Ισχύει 10 λεπτά. Αν δεν ήσασταν εσείς, αγνοήστε αυτό το μήνυμα.",
-    tone: { chime: "Διπλός", bell: "Κουδούνι", pulse: "Σήμα" },
+    tone: { chime: "Διπλός", bell: "Κουδούνι", pulse: "Σήμα", fanfare: "Φανφάρα", marimba: "Μαρίμπα", rhythm: "Ρυθμός", trill: "Τρίλια" },
   },
   nav: {
     myData: "Τα στοιχεία μου",

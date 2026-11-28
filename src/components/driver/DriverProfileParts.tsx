@@ -6,7 +6,8 @@ import { useEffect, useState } from 'react';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useT } from '@/i18n/I18nProvider';
 import { formatIban } from '@/lib/iban';
-import { readOfferSound, writeOfferSound, previewOfferSound, type OfferSoundPrefs, type OfferTone } from '@/lib/driver-alerts';
+import { readOfferSound, writeOfferSound, previewOfferSound, type OfferSoundPrefs } from '@/lib/driver-alerts';
+import { OFFER_TONES } from '@/lib/offer-tones';
 
 interface Profile { name: string; phone: string; email: string | null; emergencyName: string | null; emergencyPhone: string | null; iban: string | null; ibanHolder: string | null; emailEditable: boolean }
 
@@ -147,14 +148,13 @@ export function OrderSoundSetting() {
   useEffect(() => { setP(readOfferSound()); }, []);
   if (!p) return null;
   const save = (n: OfferSoundPrefs) => { setP(n); writeOfferSound(n); };
-  const tones: OfferTone[] = ['chime', 'bell', 'pulse'];
   return (
     <div className="space-y-3" data-testid="order-sound">
       <div className="text-sm">{t('driver.me.sound')}</div>
-      <div className="flex gap-2">
-        {tones.map((k) => (
+      <div className="grid grid-cols-3 gap-2">
+        {OFFER_TONES.map((k) => (
           <button key={k} type="button" onClick={() => { const n = { ...p, tone: k }; save(n); previewOfferSound(n); }} data-testid={`tone-${k}`}
-            className={`flex-1 rounded-full border px-2 py-1.5 text-xs font-semibold ${p.tone === k ? 'border-accent bg-accent/15 text-accent' : 'border-edge text-muted'}`}>
+            className={`rounded-full border px-2 py-1.5 text-xs font-semibold ${p.tone === k ? 'border-accent bg-accent/15 text-accent' : 'border-edge text-muted'}`}>
             {t(`driver.me.tone.${k}` as 'driver.me.tone.chime')}
           </button>
         ))}

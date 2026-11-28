@@ -18,16 +18,17 @@ export function unlockOfferSound(): void {
 
 // Sound of a new order (2026-11-27, operator: tone, volume, vibration and «Прослушать» in the driver's settings).
 // Kept on this phone (localStorage), like the navigator choice. Tones are synthesised — no audio files.
-export type OfferTone = 'chime' | 'bell' | 'pulse';
+import { TONES, isOfferTone, type OfferTone } from './offer-tones';
+export type { OfferTone } from './offer-tones';
 export interface OfferSoundPrefs { tone: OfferTone; volume: number; vibrate: boolean }
 const PREFS_KEY = 'ily-offer-sound';
-export const DEFAULT_OFFER_SOUND: OfferSoundPrefs = { tone: 'chime', volume: 0.7, vibrate: true };
+export const DEFAULT_OFFER_SOUND: OfferSoundPrefs = { tone: 'fanfare', volume: 0.7, vibrate: true };
 
 export function readOfferSound(): OfferSoundPrefs {
   try {
     const j = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null') as Partial<OfferSoundPrefs> | null;
     if (!j) return DEFAULT_OFFER_SOUND;
-    const tone: OfferTone = j.tone === 'bell' || j.tone === 'pulse' ? j.tone : 'chime';
+    const tone: OfferTone = isOfferTone(j.tone) ? j.tone : DEFAULT_OFFER_SOUND.tone;
     const volume = typeof j.volume === 'number' ? Math.max(0, Math.min(1, j.volume)) : DEFAULT_OFFER_SOUND.volume;
     return { tone, volume, vibrate: j.vibrate !== false };
   } catch { return DEFAULT_OFFER_SOUND; }
@@ -36,29 +37,24 @@ export function writeOfferSound(p: OfferSoundPrefs): void {
   try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch { /* private mode */ }
 }
 
-// [frequency Hz, start s, length s] per tone.
-const TONES: Record<OfferTone, [number, number, number][]> = {
-  chime: [[880, 0, 0.16], [1320, 0.18, 0.16]],
-  bell: [[1046, 0, 0.5], [1568, 0.02, 0.45], [784, 0.55, 0.5]],
-  pulse: [[990, 0, 0.09], [990, 0.14, 0.09], [990, 0.28, 0.09], [990, 0.42, 0.09]],
-};
-
 function play(tone: OfferTone, volume: number): void {
   try {
     if (!ctx || ctx.state !== 'running' || volume <= 0) return;
     const now = ctx.currentTime;
-    const peak = 0.6 * volume;
-    TONES[tone].forEach(([freq, at, len]) => {
+    TONES[tone].forEach((n) => {
       const osc = ctx!.createOscillator();
       const gain = ctx!.createGain();
-      osc.type = tone === 'pulse' ? 'square' : 'sine';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.0001, now + at);
-      gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, tone === 'pulse' ? peak * 0.4 : peak), now + at + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + at + len);
+      const peak = Math.max(0.0002, 0.6 * volume * (n.level ?? 1));
+      const top = now + n.at + 0.02;
+      osc.type = n.wave ?? 'sine';
+      osc.frequency.value = n.f;
+      gain.gain.setValueAtTime(0.0001, now + n.at);
+      gain.gain.exponentialRampToValueAtTime(peak, top);
+      if (n.hold) gain.gain.setValueAtTime(peak, top + n.hold);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + n.at + n.len);
       osc.connect(gain).connect(ctx!.destination);
-      osc.start(now + at);
-      osc.stop(now + at + len + 0.02);
+      osc.start(now + n.at);
+      osc.stop(now + n.at + n.len + 0.02);
     });
   } catch { /* ignore */ }
 }
