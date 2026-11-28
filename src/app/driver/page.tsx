@@ -309,7 +309,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
   const [carAsks, setCarAsks] = useState(0);
   useEffect(() => { if (drawer) api<{ asks: unknown[] }>('/driver/cars').then((r) => setCarAsks(r.asks.length)).catch(() => {}); }, [drawer]);
   const [prebookPair, setPrebookPair] = useState(false); // any open pre-booking is a ride-share pair
-  const [prebookMine, setPrebookMine] = useState(0); // pre-bookings this driver has taken
+  const [, setPrebookMine] = useState(0); // pre-bookings this driver has taken
   const onPrebookCount = useCallback((n: number, pair: boolean, mine: number) => { setPrebookCount(n); setPrebookPair(pair); setPrebookMine(mine); }, []);
   // Free orders count for the bottom-nav badge (rides automatic dispatch could not place).
   const [freeCount, setFreeCount] = useState(0);
@@ -520,13 +520,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
             // Bottom-up (2026-11-26, operator): the rows sit at the bottom, «Предзаказы» lowest, and a section
             // opens UPWARDS above its row; opening one closes the one that was open.
             <div className="mt-auto flex flex-col-reverse gap-2 pt-2">
-              <MenuRow id="prebook" open={menuSec} setOpen={setMenuSec} label={t('driver.scheduled.tabPrebook')} testId="drawer-prebook"
-                badges={<>
-                  {prebookMine > 0 && <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white" title={t('driver.scheduled.mine')}>{prebookMine}</span>}
-                  {prebookCount > 0 && <span className="min-w-[22px] rounded-full bg-danger px-1.5 text-center text-[12px] font-bold leading-[22px] text-white">{prebookCount}</span>}
-                </>}>
-                <ScheduledRides onCount={onPrebookCount} />
-              </MenuRow>
+              {/* «Предзаказы» left the menu (2026-11-28, operator): they live in the «Свободные» tab now. */}
               {/* Driver menu by purpose (2026-11-27, operator): work things at the bottom, then settings, his
                   rating, his details, documents, help on top. */}
               <MenuRow id="trips" open={menuSec} setOpen={setMenuSec} label={t('driver.nav.trips')} testId="drawer-trips">
@@ -580,7 +574,7 @@ function Driver({ fleet }: { fleet: { id: string; name: string } | null }) {
         </button>
       )}
       {/* A new order fills the screen (2026-11-26, operator): no tabs, no menu button, no earnings while it shows. */}
-      {!offerScreen && <BottomNav tab={tab} setTab={setTab} hasOffer={!!offer} freeCount={freeCount} />}
+      {!offerScreen && <BottomNav tab={tab} setTab={setTab} hasOffer={!!offer} freeCount={freeCount + prebookCount} />}
     </div>
   );
 }
@@ -1436,7 +1430,7 @@ function DeleteDriverAccount() {
 function BottomNav({ tab, setTab, hasOffer, freeCount }: { tab: Tab; setTab: (t: Tab) => void; hasOffer: boolean; freeCount: number }) {
   const { t } = useT();
   const items: { id: Tab; label: string }[] = [
-    // Pre-bookings live in the ☰ menu now (2026-11-19); a new one shows as the round «П» button on the map.
+    // «Свободные» holds free orders AND pre-bookings (2026-11-28); its count is both together.
     { id: 'home', label: t('driver.nav.home') }, { id: 'free', label: t('driver.nav.free') },
   ];
   return (

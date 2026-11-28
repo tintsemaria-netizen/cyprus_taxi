@@ -138,7 +138,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
         <>
           {/* Small switches and «ⓘ Инфо» on one line, Info right of «Принятые» (2026-11-28, operator). */}
           {/* Wider switches (2026-11-28, operator): they fill the line, «i» at the end. */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
           <div className="flex flex-1 gap-1 rounded-full border border-edge bg-elevated p-0.5" role="tablist">
             {(['available', 'mine'] as const).map((v) => {
               const n = v === 'available' ? board.available.filter((i) => !i.conflict).length : board.mine.length;
@@ -153,7 +153,7 @@ export function ScheduledRides({ onCount }: { onCount?: (n: number, pair: boolea
             {board.rules && (
               // Just «i» in its circle (2026-11-28, operator), as «Беру попутчиков».
               <button type="button" ref={infoBtnRef} onClick={() => setInfo((o) => !o)} aria-expanded={info} aria-label={t('driver.scheduled.infoBtn')} data-testid="prebook-info"
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold leading-none ${info ? 'border-accent text-accent' : 'border-edge-strong text-muted'}`}>i</button>
+                className={`-me-2 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px] font-bold leading-none ${info ? 'border-accent text-accent' : 'border-edge-strong text-muted'}`}>i</button>
             )}
           </div>
           {info && board.rules && (

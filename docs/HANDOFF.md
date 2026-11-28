@@ -1,5 +1,11 @@
 # Session handoff
 
+## 2026-11-28 — «Свободные» polish (operator)
+
+- «Предзаказы» removed from the driver menu (they live in the «Свободные» tab); the bottom «Свободные» count =
+  free orders + open pre-bookings; the round «i» on the board is smaller and further right. A «buttons at the
+  bottom» variant was shown and declined.
+
 ## 2026-11-28 — driver «Свободные» = two tiles (operator)
 
 - Bottom tab «Свободные»: tiles «Свободные» (free orders, hint text removed) and «Предзаказы» (the pre-booking board),
